@@ -18,10 +18,10 @@ public class ExVehicleModelConfigServiceFallbackFactory implements FallbackFacto
     public ExVehicleModelConfigService create(Throwable throwable) {
         return new ExVehicleModelConfigService() {
             @Override
-            public String getVehicleBuildConfigCode(String modelCode, String exteriorCode, String interiorCode,
+            public String getVehicleBuildConfigCode(String baseModelCode, String exteriorCode, String interiorCode,
                                                     String wheelCode, String tireCode, String spareTireCode,
                                                     String adasCode, String seatCode) {
-                logger.error("车辆车系车型配置服务根据生产配置类型[{}:{}:{}:{}:{}:{}:{}:{}]得到匹配的车型配置代码调用失败", modelCode,
+                logger.error("车辆车系车型配置服务根据生产配置类型[{}:{}:{}:{}:{}:{}:{}:{}]得到匹配的车型配置代码调用失败", baseModelCode,
                         exteriorCode, interiorCode, wheelCode, tireCode, spareTireCode, adasCode, seatCode, throwable);
                 return null;
             }

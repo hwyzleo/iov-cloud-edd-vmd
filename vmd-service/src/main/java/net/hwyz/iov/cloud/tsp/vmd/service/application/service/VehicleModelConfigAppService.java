@@ -23,7 +23,7 @@ public class VehicleModelConfigAppService {
     /**
      * 根据车型配置类型获取生产配置编码
      *
-     * @param modelCode     车型编码
+     * @param baseModelCode 基础车型编码
      * @param exteriorCode  外饰编码
      * @param interiorCode  内饰编码
      * @param wheelCode     轮毂编码
@@ -33,10 +33,10 @@ public class VehicleModelConfigAppService {
      * @param seatCode      座椅编码
      * @return 生产配置编码
      */
-    public String getBuildConfigCodeByType(String modelCode, String exteriorCode, String interiorCode, String wheelCode,
+    public String getBuildConfigCodeByType(String baseModelCode, String exteriorCode, String interiorCode, String wheelCode,
                                            String tireCode, String spareTireCode, String adasCode, String seatCode) {
         List<VehBuildConfigPo> vehBuildConfigPoList = vehBuildConfigDao.selectPoByExample(VehBuildConfigPo.builder()
-                .modelCode(modelCode)
+                .baseModelCode(baseModelCode)
                 .exteriorCode(exteriorCode)
                 .interiorCode(interiorCode)
                 .wheelCode(wheelCode)
@@ -49,7 +49,7 @@ public class VehicleModelConfigAppService {
             return null;
         }
         if (vehBuildConfigPoList.size() > 1) {
-            logger.warn("车型[{}]外饰[{}]内饰[{}]轮毂[{}]轮胎[{}]备胎[{}]智驾[{}]查询车型配置编码结果数量大于1", modelCode,
+            logger.warn("车型[{}]外饰[{}]内饰[{}]轮毂[{}]轮胎[{}]备胎[{}]智驾[{}]查询车型配置编码结果数量大于1", baseModelCode,
                     exteriorCode, interiorCode, wheelCode, tireCode, spareTireCode, adasCode);
         }
         return vehBuildConfigPoList.get(0).getCode();

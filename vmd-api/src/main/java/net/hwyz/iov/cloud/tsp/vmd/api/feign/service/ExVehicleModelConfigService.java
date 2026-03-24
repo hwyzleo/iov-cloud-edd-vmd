@@ -17,7 +17,7 @@ public interface ExVehicleModelConfigService {
     /**
      * 根据车型配置类型得到匹配的生产配置代码
      *
-     * @param modelCode     车型代码
+     * @param baseModelCode 基础车型代码
      * @param exteriorCode  外饰代码
      * @param interiorCode  内饰代码
      * @param wheelCode     轮毂代码
@@ -28,7 +28,7 @@ public interface ExVehicleModelConfigService {
      * @return 生产配置代码
      */
     @GetMapping("/buildConfigCode")
-    String getVehicleBuildConfigCode(@RequestParam String modelCode, @RequestParam String exteriorCode,
+    String getVehicleBuildConfigCode(@RequestParam String baseModelCode, @RequestParam String exteriorCode,
                                      @RequestParam String interiorCode, @RequestParam String wheelCode,
                                      @RequestParam String tireCode, @RequestParam String spareTireCode,
                                      @RequestParam String adasCode, @RequestParam String seatCode);

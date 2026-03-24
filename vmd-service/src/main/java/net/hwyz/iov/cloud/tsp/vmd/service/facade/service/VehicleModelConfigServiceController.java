@@ -24,7 +24,7 @@ public class VehicleModelConfigServiceController {
     /**
      * 根据车型配置类型得到匹配的车型配置代码
      *
-     * @param modelCode     车型代码
+     * @param baseModelCode 基础车型代码
      * @param exteriorCode  外饰代码
      * @param interiorCode  内饰代码
      * @param wheelCode     轮毂代码
@@ -35,13 +35,13 @@ public class VehicleModelConfigServiceController {
      * @return 车型配置代码
      */
     @GetMapping("/buildConfigCode")
-    public String getVehicleBuildConfigCode(@RequestParam String modelCode, @RequestParam String exteriorCode,
+    public String getVehicleBuildConfigCode(@RequestParam String baseModelCode, @RequestParam String exteriorCode,
                                             @RequestParam String interiorCode, @RequestParam String wheelCode,
                                             @RequestParam String tireCode, @RequestParam String spareTireCode,
                                             @RequestParam String adasCode, @RequestParam String seatCode) {
-        logger.info("根据车型配置类型[{}:{}:{}:{}:{}:{}:{}:{}]得到匹配的车型配置代码", modelCode, exteriorCode, interiorCode,
+        logger.info("根据车型配置类型[{}:{}:{}:{}:{}:{}:{}:{}]得到匹配的车型配置代码", baseModelCode, exteriorCode, interiorCode,
                 wheelCode, tireCode, spareTireCode, adasCode, seatCode);
-        return vehicleModelConfigAppService.getBuildConfigCodeByType(modelCode, exteriorCode, interiorCode, wheelCode,
+        return vehicleModelConfigAppService.getBuildConfigCodeByType(baseModelCode, exteriorCode, interiorCode, wheelCode,
                 tireCode, spareTireCode, adasCode, seatCode);
     }
 }
