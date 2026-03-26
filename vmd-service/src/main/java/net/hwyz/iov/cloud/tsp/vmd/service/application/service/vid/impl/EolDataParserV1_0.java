@@ -243,7 +243,7 @@ public class EolDataParserV1_0 extends BaseParser implements ImportDataParser {
             // 预期下线后1天内到达前置库，2小时内入库
             exPreInboundOrderService.createOrder(PreInboundOrderExService.builder()
                     .vin(vin)
-                    .modelConfigCode(itemJson.getStr("BUILD_CONFIG"))
+                    .buildConfigCode(itemJson.getStr("BUILD_CONFIG"))
                     .warehouseLevel(WarehouseLevel.PDC.name())
                     .estimatedArrivalTime(new Date(System.currentTimeMillis() + 24 * 60 * 60 * 1000))
                     .estimatedInboundTime(new Date(System.currentTimeMillis() + 24 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000))
