@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RequestBody;
  *
  * @author hwyz_leo
  */
-@FeignClient(contextId = "exVehicleService", value = ServiceNameConstants.TSP_VMD, path = "/service/vehicle", fallbackFactory = ExVehicleServiceFallbackFactory.class)
+@FeignClient(contextId = "exVehicleService", value = ServiceNameConstants.EDD_VMD, path = "/api/service/vehicle/v1", fallbackFactory = ExVehicleServiceFallbackFactory.class)
 public interface ExVehicleService {
 
     /**

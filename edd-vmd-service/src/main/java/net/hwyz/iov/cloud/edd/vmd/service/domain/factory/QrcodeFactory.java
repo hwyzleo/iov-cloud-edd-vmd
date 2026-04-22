@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
  *
  * @author hwyz_leo
  */
-// @Component
+@Component
 public class QrcodeFactory {
 
     /**

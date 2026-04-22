@@ -1,0 +1,58 @@
+package net.hwyz.iov.cloud.edd.vmd.service.application;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.repository.dao.VehBuildConfigDao;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.repository.dao.dataobject.VmdVehBuildConfigDo;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+/**
+ * 车系车型配置相关应用服务类
+ *
+ * @author hwyz_leo
+ */
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class VehicleModelConfigAppService {
+
+    private final VehBuildConfigDao vehBuildConfigDao;
+
+    /**
+     * 根据车型配置类型获取生产配置编码
+     *
+     * @param baseModelCode 基础车型编码
+     * @param exteriorCode  外饰编码
+     * @param interiorCode  内饰编码
+     * @param wheelCode     轮毂编码
+     * @param tireCode      轮胎编码
+     * @param spareTireCode 备胎编码
+     * @param adasCode      智驾编码
+     * @param seatCode      座椅编码
+     * @return 生产配置编码
+     */
+    public String getBuildConfigCodeByType(String baseModelCode, String exteriorCode, String interiorCode, String wheelCode,
+                                           String tireCode, String spareTireCode, String adasCode, String seatCode) {
+        List<VmdVehBuildConfigDo> vehBuildConfigPoList = vehBuildConfigDao.selectPoByExample(VmdVehBuildConfigDo.builder()
+                .baseModelCode(baseModelCode)
+                .exteriorCode(exteriorCode)
+                .interiorCode(interiorCode)
+                .wheelCode(wheelCode)
+                .tireCode(tireCode)
+                .spareTireCode(spareTireCode)
+                .adasCode(adasCode)
+                .seatCode(seatCode)
+                .build());
+        if (vehBuildConfigPoList.isEmpty()) {
+            return null;
+        }
+        if (vehBuildConfigPoList.size() > 1) {
+            log.warn("车型[{}]外饰[{}]内饰[{}]轮毂[{}]轮胎[{}]备胎[{}]智驾[{}]查询车型配置编码结果数量大于1", baseModelCode,
+                    exteriorCode, interiorCode, wheelCode, tireCode, spareTireCode, adasCode);
+        }
+        return vehBuildConfigPoList.get(0).getCode();
+    }
+
+}

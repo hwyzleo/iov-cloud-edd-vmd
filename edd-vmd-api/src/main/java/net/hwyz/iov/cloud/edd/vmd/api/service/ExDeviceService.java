@@ -14,7 +14,7 @@ import java.util.List;
  *
  * @author hwyz_leo
  */
-@FeignClient(contextId = "exDeviceService", value = ServiceNameConstants.TSP_VMD, path = "/service/device", fallbackFactory = ExDeviceServiceFallbackFactory.class)
+@FeignClient(contextId = "exDeviceService", value = ServiceNameConstants.EDD_VMD, path = "/api/service/device/v1", fallbackFactory = ExDeviceServiceFallbackFactory.class)
 public interface ExDeviceService {
 
     /**

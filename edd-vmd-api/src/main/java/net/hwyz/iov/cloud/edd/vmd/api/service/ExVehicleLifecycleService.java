@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.PostMapping;
  *
  * @author hwyz_leo
  */
-@FeignClient(contextId = "exVehicleLifecycleService", value = ServiceNameConstants.TSP_VMD, path = "/service/vehicleLifecycle", fallbackFactory = ExVehicleLifecycleServiceFallbackFactory.class)
+@FeignClient(contextId = "exVehicleLifecycleService", value = ServiceNameConstants.EDD_VMD, path = "/api/service/vehicleLifecycle/v1", fallbackFactory = ExVehicleLifecycleServiceFallbackFactory.class)
 public interface ExVehicleLifecycleService {
 
     /**

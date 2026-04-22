@@ -23,7 +23,7 @@ import java.util.concurrent.TimeUnit;
  * @author hwyz_leo
  */
 @Slf4j
-// @Service
+@Service
 @RequiredArgsConstructor
 public class CacheServiceImpl implements CacheService {
 

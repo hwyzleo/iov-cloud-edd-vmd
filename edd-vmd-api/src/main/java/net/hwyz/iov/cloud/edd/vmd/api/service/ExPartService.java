@@ -15,7 +15,7 @@ import java.util.List;
  *
  * @author hwyz_leo
  */
-@FeignClient(contextId = "exPartService", value = ServiceNameConstants.TSP_VMD, path = "/service/part", fallbackFactory = ExPartServiceFallbackFactory.class)
+@FeignClient(contextId = "exPartService", value = ServiceNameConstants.EDD_VMD, path = "/api/service/part/v1", fallbackFactory = ExPartServiceFallbackFactory.class)
 public interface ExPartService {
 
     /**
