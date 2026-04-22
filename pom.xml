@@ -6,14 +6,14 @@
     <packaging>pom</packaging>
 
     <modules>
-        <module>vmd-api</module>
-        <module>vmd-service</module>
+        <module>edd-vmd-api</module>
+        <module>edd-vmd-service</module>
     </modules>
 
-    <groupId>net.hwyz.iov.cloud.tsp</groupId>
-    <artifactId>vmd</artifactId>
+    <groupId>net.hwyz.iov.cloud.edd</groupId>
+    <artifactId>edd-vmd</artifactId>
     <version>0.0.1-SNAPSHOT</version>
     <description>车辆主数据</description>
-    <name>vmd</name>
+    <name>edd-vmd</name>
 
 </project>
