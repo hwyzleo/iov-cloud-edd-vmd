@@ -1,7 +1,7 @@
 package net.hwyz.iov.cloud.edd.vmd.service.domain.repository;
 
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.aggregate.Vehicle;
 import net.hwyz.iov.cloud.framework.common.domain.BaseRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.Vehicle;
 
 /**
  * 车辆领域仓库接口

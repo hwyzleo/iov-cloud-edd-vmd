@@ -1,7 +1,7 @@
 package net.hwyz.iov.cloud.edd.vmd.service.domain.factory;
 
 import net.hwyz.iov.cloud.edd.vmd.api.vo.enums.QrcodeType;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.Qrcode;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.aggregate.Qrcode;
 import org.springframework.stereotype.Component;
 
 /**
@@ -21,13 +21,13 @@ public class QrcodeFactory {
      * @return 二维码领域对象
      */
     public Qrcode buildQrcode(QrcodeType type, String vin, String sn) {
-        Qrcode qrcodeDo = Qrcode.builder()
+        Qrcode qrcodePo = Qrcode.builder()
                 .vin(vin)
                 .sn(sn)
                 .type(type)
                 .build();
-        qrcodeDo.init(vin, sn);
-        return qrcodeDo;
+        qrcodePo.init(vin, sn);
+        return qrcodePo;
     }
 
 }

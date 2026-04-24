@@ -1,7 +1,7 @@
 package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.cache;
 
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.Qrcode;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.Vehicle;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.aggregate.Qrcode;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.aggregate.Vehicle;
 
 import java.util.Optional;
 

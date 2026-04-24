@@ -1,6 +1,6 @@
 package net.hwyz.iov.cloud.edd.vmd.service.domain.repository;
 
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.Qrcode;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.aggregate.Qrcode;
 import net.hwyz.iov.cloud.framework.common.domain.BaseRepository;
 
 import java.util.Optional;

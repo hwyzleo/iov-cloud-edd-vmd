@@ -7,8 +7,8 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.QrcodeConfirmE
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.QrcodeValidateEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.VehicleEolEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.VehicleProduceEvent;
-import net.hwyz.iov.cloud.edd.vmd.service.application.VehicleAppService;
-import net.hwyz.iov.cloud.edd.vmd.service.application.VehicleLifecycleAppService;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleAppService;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleLifecycleAppService;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 

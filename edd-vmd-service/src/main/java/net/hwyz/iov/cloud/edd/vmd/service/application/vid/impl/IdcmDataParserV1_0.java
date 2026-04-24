@@ -11,7 +11,7 @@ import net.hwyz.iov.cloud.framework.common.util.StrUtil;
 import net.hwyz.iov.cloud.tsp.idcm.api.contract.IdcmExService;
 import net.hwyz.iov.cloud.tsp.idcm.api.contract.request.BatchImportIdcmRequest;
 import net.hwyz.iov.cloud.tsp.idcm.api.feign.service.ExIdcmInfoService;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.repository.dao.dataobject.VmdVehiclePartDo;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehiclePartPo;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -43,7 +43,7 @@ public class IdcmDataParserV1_0 extends BaseParser implements ImportDataParser {
         BatchImportIdcmRequest request = new BatchImportIdcmRequest();
         request.setBatchNum(batchNum);
         request.setSupplierCode(supplier);
-        List<VmdVehiclePartDo> vehiclePartList = new ArrayList<>();
+        List<VehiclePartPo> vehiclePartList = new ArrayList<>();
         List<IdcmExService> idcmList = new ArrayList<>();
         for (Object item : items) {
             JSONObject itemJson = JSONUtil.parseObj(item);
@@ -58,7 +58,7 @@ public class IdcmDataParserV1_0 extends BaseParser implements ImportDataParser {
             Map<String, Object> extra = new HashMap<>(2);
             extra.put("HSM", hsm);
             extra.put("MAC", mac);
-            vehiclePartList.add(VmdVehiclePartDo.builder()
+            vehiclePartList.add(VehiclePartPo.builder()
                     .pn(pn)
                     .deviceCode(DeviceItem.IDCM.name())
                     .deviceItem(DeviceItem.IDCM.name())

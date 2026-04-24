@@ -11,7 +11,7 @@ import net.hwyz.iov.cloud.framework.common.util.StrUtil;
 import net.hwyz.iov.cloud.tsp.tbox.api.contract.TboxExService;
 import net.hwyz.iov.cloud.tsp.tbox.api.contract.request.BatchImportTboxRequest;
 import net.hwyz.iov.cloud.tsp.tbox.api.feign.service.ExTboxInfoService;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.repository.dao.dataobject.VmdVehiclePartDo;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehiclePartPo;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -43,7 +43,7 @@ public class TboxDataParserV1_0 extends BaseParser implements ImportDataParser {
         BatchImportTboxRequest request = new BatchImportTboxRequest();
         request.setBatchNum(batchNum);
         request.setSupplierCode(supplier);
-        List<VmdVehiclePartDo> vehiclePartList = new ArrayList<>();
+        List<VehiclePartPo> vehiclePartList = new ArrayList<>();
         List<TboxExService> tboxList = new ArrayList<>();
         for (Object item : items) {
             JSONObject itemJson = JSONUtil.parseObj(item);
@@ -62,7 +62,7 @@ public class TboxDataParserV1_0 extends BaseParser implements ImportDataParser {
             extra.put("ICCID1", iccid1);
             extra.put("ICCID2", iccid2);
             extra.put("HSM", hsm);
-            vehiclePartList.add(VmdVehiclePartDo.builder()
+            vehiclePartList.add(VehiclePartPo.builder()
                     .pn(pn)
                     .deviceCode(DeviceItem.TBOX.name())
                     .deviceItem(DeviceItem.TBOX.name())

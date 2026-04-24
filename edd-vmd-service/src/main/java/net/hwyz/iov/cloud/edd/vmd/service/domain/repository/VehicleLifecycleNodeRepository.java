@@ -1,7 +1,7 @@
 package net.hwyz.iov.cloud.edd.vmd.service.domain.repository;
 
 import net.hwyz.iov.cloud.framework.common.domain.BaseRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.VehicleLifecycleNode;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleLifecycleNode;
 
 /**
  * 车辆生命周期节点领域仓库接口

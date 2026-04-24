@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.repository.dao.SupplierDao">
+<mapper namespace="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.SupplierMapper">
 
     <!-- 通用查询映射结果 -->
-    <resultMap id="baseResultMap" type="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.repository.dao.dataobject.VmdSupplierDo">
+    <resultMap id="baseResultMap" type="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.SupplierPo">
         <id column="id" property="id" />
         <result column="description" property="description" />
         <result column="create_by" property="createBy" />
@@ -71,7 +71,7 @@
     </insert>
 
     <!-- 更新 -->
-    <update id="updatePo" parameterType="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.repository.dao.dataobject.VmdSupplierDo">
+    <update id="updatePo" parameterType="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.SupplierPo">
         UPDATE tb_supplier t SET
         <if test="code != null and code != ''">
             t.code = #{code},
@@ -186,7 +186,7 @@
     </select>
 
     <!-- 根据数据对象获取对应数据列表 -->
-    <select id="selectPoByExample" parameterType="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.repository.dao.dataobject.VmdSupplierDo" resultMap="baseResultMap">
+    <select id="selectPoByExample" parameterType="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.SupplierPo" resultMap="baseResultMap">
         SELECT <include refid="baseColumnList"/>
         FROM tb_supplier t
         WHERE t.row_valid = 1

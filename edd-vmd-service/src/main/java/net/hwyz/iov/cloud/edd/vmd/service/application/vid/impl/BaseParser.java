@@ -4,10 +4,10 @@ import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.json.JSONObject;
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.edd.vmd.service.application.VehiclePartAppService;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehiclePartAppService;
 import net.hwyz.iov.cloud.framework.common.util.StrUtil;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.repository.dao.dataobject.VmdVehDetailInfoDo;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.repository.dao.dataobject.VmdVehiclePartDo;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehDetailInfoPo;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehiclePartPo;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.List;
@@ -98,13 +98,13 @@ public class BaseParser {
      * @param batchNum         批次号
      * @param vin              车架号
      */
-    protected void handleVehicleDetail(JSONObject itemJson, Map<String, VmdVehDetailInfoDo> vehicleDetailMap, String jsonKey,
+    protected void handleVehicleDetail(JSONObject itemJson, Map<String, VehDetailInfoPo> vehicleDetailMap, String jsonKey,
                                        String keyDesc, String batchNum, String vin) {
         String keyValue = itemJson.getStr(jsonKey);
         if (StrUtil.isNotBlank(keyValue)) {
-            VmdVehDetailInfoDo vehicleDetail = vehicleDetailMap.get(jsonKey);
+            VehDetailInfoPo vehicleDetail = vehicleDetailMap.get(jsonKey);
             if (vehicleDetail == null) {
-                vehicleDetailMap.put(jsonKey, VmdVehDetailInfoDo.builder()
+                vehicleDetailMap.put(jsonKey, VehDetailInfoPo.builder()
                         .vin(vin)
                         .type(jsonKey)
                         .val(keyValue)
@@ -124,7 +124,7 @@ public class BaseParser {
      * @param vehiclePartList 车辆零件列表
      * @return 创建结果
      */
-    protected int createVehiclePart(List<VmdVehiclePartDo> vehiclePartList) {
+    protected int createVehiclePart(List<VehiclePartPo> vehiclePartList) {
         return vehiclePartAppService.createVehiclePart(vehiclePartList);
     }
 

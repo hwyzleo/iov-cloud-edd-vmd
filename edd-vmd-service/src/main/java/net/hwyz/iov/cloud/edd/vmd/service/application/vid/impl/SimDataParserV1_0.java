@@ -12,7 +12,7 @@ import net.hwyz.iov.cloud.tsp.mno.api.contract.SimExService;
 import net.hwyz.iov.cloud.tsp.mno.api.contract.enums.MnoType;
 import net.hwyz.iov.cloud.tsp.mno.api.contract.request.BatchImportSimRequest;
 import net.hwyz.iov.cloud.tsp.mno.api.feign.service.ExSimService;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.exception.VehicleImportDataException;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.VehicleImportDataException;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;

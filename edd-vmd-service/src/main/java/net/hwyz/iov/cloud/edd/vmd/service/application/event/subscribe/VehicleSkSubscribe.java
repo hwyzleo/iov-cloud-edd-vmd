@@ -5,7 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.VehicleProduceEvent;
 import net.hwyz.iov.cloud.tsp.sec.api.feign.service.ExSkService;
-import net.hwyz.iov.cloud.edd.vmd.service.application.VehicleLifecycleAppService;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleLifecycleAppService;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 

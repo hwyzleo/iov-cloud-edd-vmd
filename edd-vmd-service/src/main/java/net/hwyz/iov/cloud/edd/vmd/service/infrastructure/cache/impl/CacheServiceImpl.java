@@ -7,8 +7,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.enums.QrcodeState;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.enums.QrcodeType;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.Qrcode;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.Vehicle;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.aggregate.Qrcode;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.aggregate.Vehicle;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.cache.CacheService;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
@@ -40,11 +40,11 @@ public class CacheServiceImpl implements CacheService {
 
     @Override
     public Optional<Vehicle> getVehicle(String vin) {
-        String vehicleDoJson = redisTemplate.opsForValue().get(REDIS_KEY_PREFIX_VEHICLE + vin);
-        if (StrUtil.isBlank(vehicleDoJson)) {
+        String vehiclePoJson = redisTemplate.opsForValue().get(REDIS_KEY_PREFIX_VEHICLE + vin);
+        if (StrUtil.isBlank(vehiclePoJson)) {
             return Optional.empty();
         }
-        JSONObject jsonObject = JSONUtil.parseObj(vehicleDoJson);
+        JSONObject jsonObject = JSONUtil.parseObj(vehiclePoJson);
         return Optional.ofNullable(Vehicle.builder()
                 .vin(jsonObject.getStr("vin"))
                 .eolTime(jsonObject.getDate("eolTime"))
@@ -60,11 +60,11 @@ public class CacheServiceImpl implements CacheService {
 
     @Override
     public Optional<Qrcode> getQrcode(String qrcode) {
-        String qrcodeDoJson = redisTemplate.opsForValue().get(REDIS_KEY_PREFIX_QRCODE + qrcode);
-        if (StrUtil.isBlank(qrcodeDoJson)) {
+        String qrcodePoJson = redisTemplate.opsForValue().get(REDIS_KEY_PREFIX_QRCODE + qrcode);
+        if (StrUtil.isBlank(qrcodePoJson)) {
             return Optional.empty();
         }
-        JSONObject jsonObject = JSONUtil.parseObj(qrcodeDoJson);
+        JSONObject jsonObject = JSONUtil.parseObj(qrcodePoJson);
         return Optional.ofNullable(Qrcode.builder()
                 .vin(jsonObject.getStr("vin"))
                 .sn(jsonObject.getStr("sn"))

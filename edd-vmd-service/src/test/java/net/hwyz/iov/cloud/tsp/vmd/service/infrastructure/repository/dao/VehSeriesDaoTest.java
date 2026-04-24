@@ -2,7 +2,7 @@ package net.hwyz.iov.cloud.tsp.vmd.service.infrastructure.repository.dao;
 
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.repository.dao.VehSeriesDao;
 import net.hwyz.iov.cloud.tsp.vmd.service.BaseTest;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.repository.dao.dataobject.VmdVehSeriesDo;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehSeriesPo;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -22,7 +22,7 @@ public class VehSeriesDaoTest extends BaseTest {
     @Order(1)
     @DisplayName("新增一条记录")
     public void testInsertPo() throws Exception {
-        VmdVehSeriesDo vehSeriesPo = VmdVehSeriesDo.builder()
+        VehSeriesPo vehSeriesPo = VehSeriesPo.builder()
                 .platformCode("H")
                 .code("H01")
                 .name("寒01")

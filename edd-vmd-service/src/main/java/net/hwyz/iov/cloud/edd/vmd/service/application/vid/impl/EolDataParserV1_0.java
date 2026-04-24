@@ -8,10 +8,10 @@ import cn.hutool.json.JSONUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.publish.VehiclePublish;
-import net.hwyz.iov.cloud.edd.vmd.service.application.DeviceAppService;
-import net.hwyz.iov.cloud.edd.vmd.service.application.VehicleAppService;
-import net.hwyz.iov.cloud.edd.vmd.service.application.VehicleLifecycleAppService;
-import net.hwyz.iov.cloud.edd.vmd.service.application.VehiclePartAppService;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.DeviceAppService;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleAppService;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleLifecycleAppService;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehiclePartAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParser;
 import net.hwyz.iov.cloud.framework.common.enums.DeviceItem;
 import cn.hutool.core.date.DateUtil;
@@ -30,13 +30,13 @@ import net.hwyz.iov.cloud.tsp.mno.api.contract.VehicleNetworkExService;
 import net.hwyz.iov.cloud.tsp.mno.api.feign.service.ExVehicleNetworkService;
 import net.hwyz.iov.cloud.tsp.tbox.api.contract.VehicleTboxExService;
 import net.hwyz.iov.cloud.tsp.tbox.api.feign.service.ExVehicleTboxService;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.VehicleLifecycleNodeEnum;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.repository.dao.VehBasicInfoDao;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.repository.dao.VehDetailInfoDao;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.repository.dao.dataobject.VmdDeviceDo;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.repository.dao.dataobject.VmdVehBasicInfoDo;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.repository.dao.dataobject.VmdVehDetailInfoDo;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.repository.dao.dataobject.VmdVehiclePartDo;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.VehicleLifecycleNodeEnum;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehBasicInfoMapper;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehDetailInfoMapper;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.DevicePo;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehBasicInfoPo;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehDetailInfoPo;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehiclePartPo;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -56,9 +56,9 @@ import java.util.stream.Collectors;
 public class EolDataParserV1_0 extends BaseParser implements ImportDataParser {
 
     private final VehiclePublish vehiclePublish;
-    private final VehBasicInfoDao vehBasicInfoDao;
+    private final VehBasicInfoMapper vehBasicInfoMapper;
     private final DeviceAppService deviceAppService;
-    private final VehDetailInfoDao vehDetailInfoDao;
+    private final VehDetailInfoMapper vehDetailInfoMapper;
     private final VehicleAppService vehicleAppService;
     private final ExVehicleCcpService exVehicleCcpService;
     private final ExVehiclePartService exVehiclePartService;
@@ -81,10 +81,10 @@ public class EolDataParserV1_0 extends BaseParser implements ImportDataParser {
                 vehicleInvalidCount++;
                 continue;
             }
-            VmdVehBasicInfoDo vehBasicInfoPo = vehicleAppService.getVehicleByVin(vin);
-            Map<String, VmdVehDetailInfoDo> vehicleDetailMap = vehicleAppService.getVehicleDetailByVin(vin).stream().collect(Collectors.toMap(VmdVehDetailInfoDo::getType, v -> v));
+            VehBasicInfoPo vehBasicInfoPo = vehBasicInfoMapper.selectPoByVin(vin);
+            Map<String, VehDetailInfoPo> vehicleDetailMap = vehDetailInfoMapper.selectPoByVin(vin).stream().collect(Collectors.toMap(VehDetailInfoPo::getType, v -> v));
             if (ObjUtil.isNull(vehBasicInfoPo)) {
-                vehBasicInfoPo = new VmdVehBasicInfoDo();
+                vehBasicInfoPo = new VehBasicInfoPo();
                 vehBasicInfoPo.setVin(vin);
             }
             handleVehicleInfo(itemJson, vehBasicInfoPo, "MANUFACTURER", "manufacturerCode", "工厂数据", batchNum, vin);
@@ -138,15 +138,15 @@ public class EolDataParserV1_0 extends BaseParser implements ImportDataParser {
             handleVehicleDetail(itemJson, vehicleDetailMap, "POWER_BATTERY_TYPE", "动力电池类型", batchNum, vin);
             handleVehicleDetail(itemJson, vehicleDetailMap, "POWER_BATTERY_FACTORY", "动力电池厂商", batchNum, vin);
             if (ObjUtil.isNull(vehBasicInfoPo.getId())) {
-                vehBasicInfoDao.insertPo(vehBasicInfoPo);
+                vehBasicInfoMapper.insertPo(vehBasicInfoPo);
                 // 如果车辆是新生成，则补发车辆生产事件
                 vehiclePublish.produce(vin);
             } else {
-                vehBasicInfoDao.updatePo(vehBasicInfoPo);
+                vehBasicInfoMapper.updatePo(vehBasicInfoPo);
             }
-            List<VmdVehDetailInfoDo> needInsertDetailList = vehicleDetailMap.values().stream().filter(po -> po.getId() == null).toList();
+            List<VehDetailInfoPo> needInsertDetailList = vehicleDetailMap.values().stream().filter(po -> po.getId() == null).toList();
             if (!needInsertDetailList.isEmpty()) {
-                vehDetailInfoDao.batchInsertPo(needInsertDetailList);
+                vehDetailInfoMapper.batchInsertPo(needInsertDetailList);
             }
             if (firstEol) {
                 vehiclePublish.eol(vin, eolDate);
@@ -177,7 +177,7 @@ public class EolDataParserV1_0 extends BaseParser implements ImportDataParser {
                 }
                 String pn = partJson.getStr("PART_NO");
                 String sn = partJson.getStr("PART_SN");
-                VmdDeviceDo device = deviceAppService.getDeviceByCode(deviceCode);
+                DevicePo device = deviceAppService.getDeviceByCode(deviceCode);
                 String supplierCode = partJson.getStr("SUPPLIER_CODE");
                 String configWord = partJson.getStr("CONFIG_WORD");
                 String hardwareVersion = partJson.getStr("HARDWARE_VERSION");
@@ -201,7 +201,7 @@ public class EolDataParserV1_0 extends BaseParser implements ImportDataParser {
                         .softwarePn(softwarePn)
                         .build());
                 try {
-                    vehiclePartAppService.bindVehiclePart(VmdVehiclePartDo.builder()
+                    vehiclePartAppService.bindVehiclePart(VehiclePartPo.builder()
                             .pn(pn)
                             .sn(sn)
                             .vin(vin)

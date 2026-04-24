@@ -11,7 +11,7 @@ import net.hwyz.iov.cloud.framework.common.util.StrUtil;
 import net.hwyz.iov.cloud.tsp.ccp.api.contract.CcpExService;
 import net.hwyz.iov.cloud.tsp.ccp.api.contract.request.BatchImportCcpRequest;
 import net.hwyz.iov.cloud.tsp.ccp.api.feign.service.ExCcpInfoService;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.repository.dao.dataobject.VmdVehiclePartDo;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehiclePartPo;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -43,7 +43,7 @@ public class CcpDataParserV1_0 extends BaseParser implements ImportDataParser {
         BatchImportCcpRequest request = new BatchImportCcpRequest();
         request.setBatchNum(batchNum);
         request.setSupplierCode(supplier);
-        List<VmdVehiclePartDo> vehiclePartList = new ArrayList<>();
+        List<VehiclePartPo> vehiclePartList = new ArrayList<>();
         List<CcpExService> ccpList = new ArrayList<>();
         for (Object item : items) {
             JSONObject itemJson = JSONUtil.parseObj(item);
@@ -56,7 +56,7 @@ public class CcpDataParserV1_0 extends BaseParser implements ImportDataParser {
             }
             Map<String, Object> extra = new HashMap<>(1);
             extra.put("HSM", hsm);
-            vehiclePartList.add(VmdVehiclePartDo.builder()
+            vehiclePartList.add(VehiclePartPo.builder()
                     .pn(pn)
                     .deviceCode(DeviceItem.CCP.name())
                     .deviceItem(DeviceItem.CCP.name())

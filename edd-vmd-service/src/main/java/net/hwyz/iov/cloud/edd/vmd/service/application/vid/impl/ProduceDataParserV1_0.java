@@ -7,11 +7,11 @@ import cn.hutool.json.JSONUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.publish.VehiclePublish;
-import net.hwyz.iov.cloud.edd.vmd.service.application.VehicleAppService;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParser;
 import net.hwyz.iov.cloud.framework.common.util.StrUtil;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.repository.dao.VehBasicInfoDao;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.repository.dao.dataobject.VmdVehBasicInfoDo;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehBasicInfoMapper;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehBasicInfoPo;
 import org.springframework.stereotype.Component;
 
 /**
@@ -25,7 +25,7 @@ import org.springframework.stereotype.Component;
 public class ProduceDataParserV1_0 extends BaseParser implements ImportDataParser {
 
     private final VehiclePublish vehiclePublish;
-    private final VehBasicInfoDao vehBasicInfoDao;
+    private final VehBasicInfoMapper vehBasicInfoMapper;
     private final VehicleAppService vehicleAppService;
 
     @Override
@@ -40,9 +40,9 @@ public class ProduceDataParserV1_0 extends BaseParser implements ImportDataParse
                 vehicleInvalidCount++;
                 continue;
             }
-            VmdVehBasicInfoDo vehBasicInfoPo = vehicleAppService.getVehicleByVin(vin);
+            VehBasicInfoPo vehBasicInfoPo = vehBasicInfoMapper.selectPoByVin(vin);
             if (ObjUtil.isNull(vehBasicInfoPo)) {
-                vehBasicInfoPo = new VmdVehBasicInfoDo();
+                vehBasicInfoPo = new VehBasicInfoPo();
                 vehBasicInfoPo.setVin(vin);
             }
             handleVehicleInfo(itemJson, vehBasicInfoPo, "MANUFACTURER", "manufacturerCode", "工厂数据", batchNum, vin);
@@ -53,9 +53,9 @@ public class ProduceDataParserV1_0 extends BaseParser implements ImportDataParse
             handleVehicleInfo(itemJson, vehBasicInfoPo, "BASE_MODEL", "baseModelCode", "基础车型数据", batchNum, vin);
             handleVehicleInfo(itemJson, vehBasicInfoPo, "BUILD_CONFIG", "buildConfigCode", "生产配置数据", batchNum, vin);
             if (ObjUtil.isNull(vehBasicInfoPo.getId())) {
-                vehBasicInfoDao.insertPo(vehBasicInfoPo);
+                vehBasicInfoMapper.insertPo(vehBasicInfoPo);
             } else {
-                vehBasicInfoDao.updatePo(vehBasicInfoPo);
+                vehBasicInfoMapper.updatePo(vehBasicInfoPo);
             }
             // 发布事件
             vehiclePublish.produce(vin);
