@@ -5,8 +5,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.VehicleImportDataVo;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleImportDataAppService;
-import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.VehicleImportDataAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehImportDataPo;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
 import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
 import net.hwyz.iov.cloud.framework.common.bean.ApiResponse;
@@ -71,8 +69,7 @@ public class MptVehicleImportDataController extends BaseController {
     @GetMapping(value = "/{vehicleImportDataId}")
     public ApiResponse<VehicleImportDataVo> getInfo(@PathVariable Long vehicleImportDataId) {
         log.info("管理后台用户[{}]根据车辆导入数据ID[{}]获取车辆导入数据", SecurityUtils.getUsername(), vehicleImportDataId);
-        VehImportDataPo vehImportDataPo = vehicleImportDataAppService.getVehicleImportDataById(vehicleImportDataId);
-        return ApiResponse.ok(VehicleImportDataAssembler.INSTANCE.fromPo(vehImportDataPo));
+        return ApiResponse.ok(vehicleImportDataAppService.getVehicleImportDataById(vehicleImportDataId));
     }
 
     /**
@@ -89,11 +86,9 @@ public class MptVehicleImportDataController extends BaseController {
         if (!vehicleImportDataAppService.checkBatchNumUnique(vehicleImportData.getId(), vehicleImportData.getBatchNum())) {
             return ApiResponse.fail("新增车辆导入数据'" + vehicleImportData.getBatchNum() + "'失败，批次号已存在");
         }
-        VehImportDataPo vehImportDataPo = VehicleImportDataAssembler.INSTANCE.toPo(vehicleImportData);
-        vehImportDataPo.setCreateBy(SecurityUtils.getUserId().toString());
-        ApiResponse<Void> result = vehicleImportDataAppService.createVehicleImportData(vehImportDataPo) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
+        ApiResponse<Void> result = vehicleImportDataAppService.createVehicleImportData(vehicleImportData, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
         try {
-            vehicleImportDataAppService.parseVehicleImportData(vehImportDataPo.getBatchNum());
+            vehicleImportDataAppService.parseVehicleImportData(vehicleImportData.getBatchNum());
         } catch (Exception e) {
             return ApiResponse.fail("车辆导入数据'" + vehicleImportData.getBatchNum() + "'解析异常");
         }
@@ -114,11 +109,9 @@ public class MptVehicleImportDataController extends BaseController {
         if (!vehicleImportDataAppService.checkBatchNumUnique(vehicleImportData.getId(), vehicleImportData.getBatchNum())) {
             return ApiResponse.fail("修改保存车辆导入数据'" + vehicleImportData.getBatchNum() + "'失败，批次号已存在");
         }
-        VehImportDataPo vehImportDataPo = VehicleImportDataAssembler.INSTANCE.toPo(vehicleImportData);
-        vehImportDataPo.setModifyBy(SecurityUtils.getUserId().toString());
-        ApiResponse<Void> result = vehicleImportDataAppService.modifyVehicleImportData(vehImportDataPo) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
+        ApiResponse<Void> result = vehicleImportDataAppService.modifyVehicleImportData(vehicleImportData, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
         try {
-            vehicleImportDataAppService.parseVehicleImportData(vehImportDataPo.getBatchNum());
+            vehicleImportDataAppService.parseVehicleImportData(vehicleImportData.getBatchNum());
         } catch (Exception e) {
             return ApiResponse.fail("车辆导入数据'" + vehicleImportData.getBatchNum() + "'解析异常");
         }

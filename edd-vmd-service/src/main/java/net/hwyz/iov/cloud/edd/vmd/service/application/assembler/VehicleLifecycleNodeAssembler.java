@@ -1,13 +1,12 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.assembler;
 
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleLifecycle;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleLifecycleNode;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehLifecyclePo;
 import org.mapstruct.Mapper;
-import org.mapstruct.Mappings;
 import org.mapstruct.factory.Mappers;
 
 /**
- * 车辆生命周期数据对象转换类
+ * 车辆生命周期节点转换类
  *
  * @author hwyz_leo
  */
@@ -17,21 +16,19 @@ public interface VehicleLifecycleNodeAssembler {
     VehicleLifecycleNodeAssembler INSTANCE = Mappers.getMapper(VehicleLifecycleNodeAssembler.class);
 
     /**
-     * 数据对象转领域对象
+     * 生命周期实体转节点实体
      *
-     * @param vehLifecyclePo 数据对象
-     * @return 领域对象
+     * @param vehicleLifecycle 生命周期实体
+     * @return 节点实体
      */
-    @Mappings({})
-    VehicleLifecycleNode fromPo(VehLifecyclePo vehLifecyclePo);
+    VehicleLifecycleNode toNode(VehicleLifecycle vehicleLifecycle);
 
     /**
-     * 领域对象转数据对象
+     * 节点实体转生命周期实体
      *
-     * @param vehicleLifecycleNode 领域对象
-     * @return 数据对象
+     * @param vehicleLifecycleNode 节点实体
+     * @return 生命周期实体
      */
-    @Mappings({})
-    VehLifecyclePo toPo(VehicleLifecycleNode vehicleLifecycleNode);
+    VehicleLifecycle fromNode(VehicleLifecycleNode vehicleLifecycleNode);
 
 }

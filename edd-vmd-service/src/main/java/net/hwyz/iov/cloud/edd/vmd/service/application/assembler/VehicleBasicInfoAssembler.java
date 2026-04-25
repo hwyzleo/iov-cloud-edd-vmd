@@ -1,13 +1,13 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.assembler;
 
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.aggregate.Vehicle;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehBasicInfoPo;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleBasicInfo;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mappings;
 import org.mapstruct.factory.Mappers;
 
 /**
- * 车辆基础信息数据对象转换类
+ * 车辆基础信息领域对象转换类
  *
  * @author hwyz_leo
  */
@@ -17,21 +17,21 @@ public interface VehicleBasicInfoAssembler {
     VehicleBasicInfoAssembler INSTANCE = Mappers.getMapper(VehicleBasicInfoAssembler.class);
 
     /**
-     * 数据对象转领域对象
+     * 基础信息实体转聚合根
      *
-     * @param vehBasicInfoPo 数据对象
-     * @return 领域对象
+     * @param vehicleBasicInfo 基础信息实体
+     * @return 聚合根
      */
     @Mappings({})
-    Vehicle toPo(VehBasicInfoPo vehBasicInfoPo);
+    Vehicle toAggregate(VehicleBasicInfo vehicleBasicInfo);
 
     /**
-     * 领域对象转数据对象
+     * 聚合根转基础信息实体
      *
-     * @param vehiclePo 领域对象
-     * @return 数据对象
+     * @param vehicle 聚合根
+     * @return 基础信息实体
      */
     @Mappings({})
-    VehBasicInfoPo fromPo(Vehicle vehiclePo);
+    VehicleBasicInfo fromAggregate(Vehicle vehicle);
 
 }

@@ -37,8 +37,8 @@ public class QrcodeAppService {
      * @return 二维码状态
      */
     public QrcodeResponse generateActiveQrcode(String vin, String sn) {
-        Vehicle vehiclePo = vehicleRepository.getByVin(vin);
-        if (vehiclePo.isActive()) {
+        Vehicle vehicle = vehicleRepository.getByVin(vin);
+        if (vehicle.isActive()) {
             throw new VehicleHasActivatedException(vin);
         }
         return generateQrcode(QrcodeType.VEHICLE_ACTIVE, vin, sn);
@@ -65,12 +65,12 @@ public class QrcodeAppService {
      * @return 二维码状态
      */
     private QrcodeResponse generateQrcode(QrcodeType type, String vin, String sn) {
-        Qrcode qrcodePo = qrcodeFactory.buildQrcode(type, vin, sn);
-        qrcodeRepository.save(qrcodePo);
+        Qrcode qrcode = qrcodeFactory.buildQrcode(type, vin, sn);
+        qrcodeRepository.save(qrcode);
         return QrcodeResponse.builder()
-                .qrcode(qrcodePo.getQrcode())
-                .type(qrcodePo.getType())
-                .state(qrcodePo.getQrcodeState())
+                .qrcode(qrcode.getQrcode())
+                .type(qrcode.getType())
+                .state(qrcode.getQrcodeState())
                 .build();
     }
 
@@ -83,16 +83,16 @@ public class QrcodeAppService {
      * @return 二维码状态
      */
     private QrcodeResponse getQrcodeState(String qrcode, String vin, String sn) {
-        Qrcode qrcodePo = qrcodeRepository.getByQrcode(qrcode).orElseThrow(() -> new QrcodeNotExistException(qrcode));
-        if (!qrcodePo.getSn().equals(sn)) {
-            log.warn("车辆[{}]获取二维码状态时，传入的SN[{}]与原SN[{}]不一致", vin, sn, qrcodePo.getSn());
+        Qrcode qrcodeDomain = qrcodeRepository.getByQrcode(qrcode).orElseThrow(() -> new QrcodeNotExistException(qrcode));
+        if (!qrcodeDomain.getSn().equals(sn)) {
+            log.warn("车辆[{}]获取二维码状态时，传入的SN[{}]与原SN[{}]不一致", vin, sn, qrcodeDomain.getSn());
         }
-        qrcodePo.polling();
-        qrcodeRepository.save(qrcodePo);
+        qrcodeDomain.polling();
+        qrcodeRepository.save(qrcodeDomain);
         return QrcodeResponse.builder()
-                .qrcode(qrcodePo.getQrcode())
-                .type(qrcodePo.getType())
-                .state(qrcodePo.getQrcodeState())
+                .qrcode(qrcodeDomain.getQrcode())
+                .type(qrcodeDomain.getType())
+                .state(qrcodeDomain.getQrcodeState())
                 .build();
     }
 
@@ -104,15 +104,15 @@ public class QrcodeAppService {
      * @return 二维码状态
      */
     public QrcodeResponse validateQrcode(String qrcode, String accountId) {
-        Qrcode qrcodePo = qrcodeRepository.getByQrcode(qrcode).orElseThrow(() -> new QrcodeNotExistException(qrcode));
-        qrcodePo.polling();
-        qrcodePo.validate(qrcode);
-        qrcodeRepository.save(qrcodePo);
-        qrcodePublish.validate(qrcodePo.getType(), qrcodePo.getVin(), accountId);
+        Qrcode qrcodeDomain = qrcodeRepository.getByQrcode(qrcode).orElseThrow(() -> new QrcodeNotExistException(qrcode));
+        qrcodeDomain.polling();
+        qrcodeDomain.validate(qrcode);
+        qrcodeRepository.save(qrcodeDomain);
+        qrcodePublish.validate(qrcodeDomain.getType(), qrcodeDomain.getVin(), accountId);
         return QrcodeResponse.builder()
-                .qrcode(qrcodePo.getQrcode())
-                .type(qrcodePo.getType())
-                .state(qrcodePo.getQrcodeState())
+                .qrcode(qrcodeDomain.getQrcode())
+                .type(qrcodeDomain.getType())
+                .state(qrcodeDomain.getQrcodeState())
                 .build();
     }
 
@@ -124,15 +124,15 @@ public class QrcodeAppService {
      * @return 二维码状态
      */
     public QrcodeResponse confirmQrcode(String qrcode, String accountId) {
-        Qrcode qrcodePo = qrcodeRepository.getByQrcode(qrcode).orElseThrow(() -> new QrcodeNotExistException(qrcode));
-        qrcodePo.polling();
-        qrcodePo.confirm(qrcode);
-        qrcodeRepository.save(qrcodePo);
-        qrcodePublish.confirm(qrcodePo.getType(), qrcodePo.getVin(), accountId);
+        Qrcode qrcodeDomain = qrcodeRepository.getByQrcode(qrcode).orElseThrow(() -> new QrcodeNotExistException(qrcode));
+        qrcodeDomain.polling();
+        qrcodeDomain.confirm(qrcode);
+        qrcodeRepository.save(qrcodeDomain);
+        qrcodePublish.confirm(qrcodeDomain.getType(), qrcodeDomain.getVin(), accountId);
         return QrcodeResponse.builder()
-                .qrcode(qrcodePo.getQrcode())
-                .type(qrcodePo.getType())
-                .state(qrcodePo.getQrcodeState())
+                .qrcode(qrcodeDomain.getQrcode())
+                .type(qrcodeDomain.getType())
+                .state(qrcodeDomain.getQrcodeState())
                 .build();
     }
 }

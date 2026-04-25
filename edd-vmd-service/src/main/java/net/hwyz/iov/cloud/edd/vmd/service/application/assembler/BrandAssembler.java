@@ -1,15 +1,14 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.assembler;
 
 import net.hwyz.iov.cloud.edd.vmd.api.vo.BrandVo;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehBrandPo;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Brand;
 import org.mapstruct.Mapper;
-import org.mapstruct.Mappings;
 import org.mapstruct.factory.Mappers;
 
 import java.util.List;
 
 /**
- * 管理后台车辆品牌转换类
+ * 管理后台品牌转换类
  *
  * @author hwyz_leo
  */
@@ -19,29 +18,27 @@ public interface BrandAssembler {
     BrandAssembler INSTANCE = Mappers.getMapper(BrandAssembler.class);
 
     /**
-     * 数据对象转数据传输对象
+     * 领域对象转数据传输对象
      *
-     * @param vehBrandPo 数据对象
+     * @param brand 领域对象
      * @return 数据传输对象
      */
-    @Mappings({})
-    BrandVo fromPo(VehBrandPo vehBrandPo);
+    BrandVo fromDomain(Brand brand);
 
     /**
-     * 数据传输对象转数据对象
+     * 数据传输对象转领域对象
      *
      * @param brandVo 数据传输对象
-     * @return 数据对象
+     * @return 领域对象
      */
-    @Mappings({})
-    VehBrandPo toPo(BrandVo brandVo);
+    Brand toDomain(BrandVo brandVo);
 
     /**
-     * 数据对象列表转数据传输对象列表
+     * 领域对象列表转数据传输对象列表
      *
-     * @param vehBrandPoList 数据对象列表
+     * @param brandList 领域对象列表
      * @return 数据传输对象列表
      */
-    List<BrandVo> fromPoList(List<VehBrandPo> vehBrandPoList);
+    List<BrandVo> fromDomainList(List<Brand> brandList);
 
 }

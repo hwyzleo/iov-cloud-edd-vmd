@@ -5,8 +5,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.SeriesVo;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.SeriesAppService;
-import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.SeriesAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehSeriesPo;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
 import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
 import net.hwyz.iov.cloud.framework.common.bean.ApiResponse;
@@ -85,8 +83,7 @@ public class MptSeriesController extends BaseController {
     @GetMapping(value = "/{seriesId}")
     public ApiResponse<SeriesVo> getInfo(@PathVariable Long seriesId) {
         log.info("管理后台用户[{}]根据车系ID[{}]获取车系信息", SecurityUtils.getUsername(), seriesId);
-        VehSeriesPo seriesPo = seriesAppService.getSeriesById(seriesId);
-        return ApiResponse.ok(SeriesAssembler.INSTANCE.fromPo(seriesPo));
+        return ApiResponse.ok(seriesAppService.getSeriesById(seriesId));
     }
 
     /**
@@ -103,9 +100,7 @@ public class MptSeriesController extends BaseController {
         if (!seriesAppService.checkCodeUnique(series.getId(), series.getCode())) {
             return ApiResponse.fail("新增车系'" + series.getCode() + "'失败，车系代码已存在");
         }
-        VehSeriesPo seriesPo = SeriesAssembler.INSTANCE.toPo(series);
-        seriesPo.setCreateBy(SecurityUtils.getUserId().toString());
-        return seriesAppService.createSeries(seriesPo) > 0 ? ApiResponse.ok() : ApiResponse.fail("新增失败");
+        return seriesAppService.createSeries(series, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("新增失败");
     }
 
     /**
@@ -122,9 +117,7 @@ public class MptSeriesController extends BaseController {
         if (!seriesAppService.checkCodeUnique(series.getId(), series.getCode())) {
             return ApiResponse.fail("修改保存车系'" + series.getCode() + "'失败，车系代码已存在");
         }
-        VehSeriesPo seriesPo = SeriesAssembler.INSTANCE.toPo(series);
-        seriesPo.setModifyBy(SecurityUtils.getUserId().toString());
-        return seriesAppService.modifySeries(seriesPo) > 0 ? ApiResponse.ok() : ApiResponse.fail("修改失败");
+        return seriesAppService.modifySeries(series, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("修改失败");
     }
 
     /**

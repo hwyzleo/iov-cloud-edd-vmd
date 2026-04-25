@@ -8,16 +8,14 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.VehicleAssembler
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.VehicleVoAssembler;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.VehicleDto;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.aggregate.Vehicle;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleBasicInfo;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleDetail;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehiclePresetOwner;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehicleRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.VehicleHasBindOrderException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.VehiclePresetOwnerNotMatchException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.VehicleWithoutPresetOwnerException;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehBasicInfoMapper;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehDetailInfoMapper;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehPresetOwnerMapper;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehBasicInfoPo;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehDetailInfoPo;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehPresetOwnerPo;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
 import net.hwyz.iov.cloud.framework.common.util.ParamHelper;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import net.hwyz.iov.cloud.tsp.account.api.contract.Account;
@@ -39,11 +37,9 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class VehicleAppService {
 
-    private final VehBasicInfoMapper vehBasicInfoMapper;
-    private final VehDetailInfoMapper vehDetailInfoMapper;
+    private final VehBasicInfoRepository vehBasicInfoRepository;
     private final ExAccountService exAccountService;
     private final VehicleRepository vehicleRepository;
-    private final VehPresetOwnerMapper vehPresetOwnerMapper;
     private final VehicleLifecycleAppService vehicleLifecycleAppService;
 
     /**
@@ -65,8 +61,8 @@ public class VehicleAppService {
         map.put("endTime", endTime);
         map.put("isEol", isEol);
         map.put("isOrder", isOrder);
-        List<VehBasicInfoPo> vehBasicInfoPoList = vehBasicInfoMapper.selectPoByMap(map);
-        return PageUtil.convert(vehBasicInfoPoList, VehicleVoAssembler.INSTANCE::fromPo);
+        List<VehicleBasicInfo> vehicleBasicInfoList = vehBasicInfoRepository.selectByMap(map);
+        return PageUtil.convert(vehicleBasicInfoList, VehicleVoAssembler.INSTANCE::fromDomain);
     }
 
     /**
@@ -80,18 +76,18 @@ public class VehicleAppService {
         if (ObjUtil.isNull(vehicleId)) {
             vehicleId = -1L;
         }
-        VehBasicInfoPo vehBasicInfoPo = vehBasicInfoMapper.selectPoByVin(vin);
-        return !ObjUtil.isNotNull(vehBasicInfoPo) || vehBasicInfoPo.getId().longValue() == vehicleId.longValue();
+        VehicleBasicInfo vehicleBasicInfo = vehBasicInfoRepository.selectByVin(vin);
+        return !ObjUtil.isNotNull(vehicleBasicInfo) || vehicleBasicInfo.getId().longValue() == vehicleId.longValue();
     }
 
     /**
      * 根据主键ID获取车辆信息
      *
      * @param id 主键ID
-     * @return 车辆 PO
+     * @return 车辆基础信息
      */
-    public VehBasicInfoPo getVehicleById(Long id) {
-        return vehBasicInfoMapper.selectPoById(id);
+    public VehicleBasicInfo getVehicleById(Long id) {
+        return vehBasicInfoRepository.selectById(id);
     }
 
     /**
@@ -109,30 +105,30 @@ public class VehicleAppService {
      * 根据车架号获取车辆详细信息
      *
      * @param vin 车架号
-     * @return 车辆详细信息 PO 列表
+     * @return 车辆详细信息领域对象列表
      */
-    public List<VehDetailInfoPo> getVehicleDetailByVin(String vin) {
-        return vehDetailInfoMapper.selectPoByVin(vin);
+    public List<VehicleDetail> getVehicleDetailByVin(String vin) {
+        return vehBasicInfoRepository.selectDetailByVin(vin);
     }
 
     /**
      * 新增车辆
      *
-     * @param vehBasicInfo 车辆 PO
+     * @param vehicleBasicInfo 车辆基础信息
      * @return 结果
      */
-    public int createVehicle(VehBasicInfoPo vehBasicInfo) {
-        return vehBasicInfoMapper.insertPo(vehBasicInfo);
+    public int createVehicle(VehicleBasicInfo vehicleBasicInfo) {
+        return vehBasicInfoRepository.insert(vehicleBasicInfo);
     }
 
     /**
      * 修改车辆
      *
-     * @param vehBasicInfo 车辆 PO
+     * @param vehicleBasicInfo 车辆基础信息
      * @return 结果
      */
-    public int modifyVehicle(VehBasicInfoPo vehBasicInfo) {
-        return vehBasicInfoMapper.updatePo(vehBasicInfo);
+    public int modifyVehicle(VehicleBasicInfo vehicleBasicInfo) {
+        return vehBasicInfoRepository.update(vehicleBasicInfo);
     }
 
     /**
@@ -143,12 +139,12 @@ public class VehicleAppService {
      */
     public int deleteVehicleByIds(Long[] ids) {
         for (Long id : ids) {
-            VehBasicInfoPo vehiclePo = getVehicleById(id);
-            if (ObjUtil.isNotNull(vehiclePo)) {
-                vehicleLifecycleAppService.deleteVehicleLifecycleByVin(vehiclePo.getVin());
+            VehicleBasicInfo vehicleBasicInfo = getVehicleById(id);
+            if (ObjUtil.isNotNull(vehicleBasicInfo)) {
+                vehicleLifecycleAppService.deleteVehicleLifecycleByVin(vehicleBasicInfo.getVin());
             }
         }
-        return vehBasicInfoMapper.batchPhysicalDeletePo(ids);
+        return vehBasicInfoRepository.batchPhysicalDelete(ids);
     }
 
     /**
@@ -175,16 +171,16 @@ public class VehicleAppService {
      * @param accountId 账号ID
      */
     public void checkVehiclePresetOwner(String vin, String accountId) {
-        List<VehPresetOwnerPo> vehPresetOwnerPoList = vehPresetOwnerMapper.selectPoByExample(VehPresetOwnerPo.builder().vin(vin).build());
-        if (vehPresetOwnerPoList.isEmpty()) {
+        List<VehiclePresetOwner> vehiclePresetOwnerList = vehBasicInfoRepository.selectPresetOwnerByExample(VehiclePresetOwner.builder().vin(vin).build());
+        if (vehiclePresetOwnerList.isEmpty()) {
             throw new VehicleWithoutPresetOwnerException(vin);
         }
-        VehPresetOwnerPo vehPresetOwnerPo = vehPresetOwnerPoList.get(0);
+        VehiclePresetOwner vehiclePresetOwner = vehiclePresetOwnerList.get(0);
         Account account = exAccountService.getAccountInfo(accountId);
-        if (!vehPresetOwnerPo.getMobile().equals(account.getMobile()) ||
-                !vehPresetOwnerPo.getCountryRegionCode().equals(account.getCountryRegionCode())) {
+        if (!vehiclePresetOwner.getMobile().equals(account.getMobile()) ||
+                !vehiclePresetOwner.getCountryRegionCode().equals(account.getCountryRegionCode())) {
             throw new VehiclePresetOwnerNotMatchException(vin, account.getCountryRegionCode(), account.getMobile(),
-                    vehPresetOwnerPo.getCountryRegionCode(), vehPresetOwnerPo.getMobile());
+                    vehiclePresetOwner.getCountryRegionCode(), vehiclePresetOwner.getMobile());
         }
     }
 }

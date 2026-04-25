@@ -1,9 +1,8 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.assembler;
 
 import net.hwyz.iov.cloud.edd.vmd.api.vo.DeviceExService;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.DevicePo;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Device;
 import org.mapstruct.Mapper;
-import org.mapstruct.Mappings;
 import org.mapstruct.factory.Mappers;
 
 import java.util.List;
@@ -19,29 +18,27 @@ public interface DeviceExServiceAssembler {
     DeviceExServiceAssembler INSTANCE = Mappers.getMapper(DeviceExServiceAssembler.class);
 
     /**
-     * 数据对象转数据传输对象
+     * 领域对象转对外服务对象
      *
-     * @param devicePo 数据对象
-     * @return 数据传输对象
+     * @param device 领域对象
+     * @return 对外服务对象
      */
-    @Mappings({})
-    DeviceExService fromPo(DevicePo devicePo);
+    DeviceExService fromDomain(Device device);
 
     /**
-     * 数据传输对象转数据对象
+     * 对外服务对象转领域对象
      *
-     * @param deviceExService 数据传输对象
-     * @return 数据对象
+     * @param deviceExService 对外服务对象
+     * @return 领域对象
      */
-    @Mappings({})
-    DevicePo toPo(DeviceExService deviceExService);
+    Device toDomain(DeviceExService deviceExService);
 
     /**
-     * 数据对象列表转数据传输对象列表
+     * 领域对象列表转对外服务对象列表
      *
-     * @param devicePoList 数据对象列表
-     * @return 数据传输对象列表
+     * @param deviceList 领域对象列表
+     * @return 对外服务对象列表
      */
-    List<DeviceExService> fromPoList(List<DevicePo> devicePoList);
+    List<DeviceExService> fromDomainList(List<Device> deviceList);
 
 }

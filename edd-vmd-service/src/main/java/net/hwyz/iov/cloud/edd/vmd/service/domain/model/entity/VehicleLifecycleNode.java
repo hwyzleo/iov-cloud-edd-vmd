@@ -1,6 +1,7 @@
 package net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity;
 
 import lombok.Getter;
+import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.framework.common.domain.BaseDo;
@@ -15,6 +16,7 @@ import java.util.Date;
  */
 @Slf4j
 @Getter
+@Setter
 @SuperBuilder
 public class VehicleLifecycleNode extends BaseDo<String> {
 
@@ -22,6 +24,31 @@ public class VehicleLifecycleNode extends BaseDo<String> {
      * 车架号
      */
     private String vin;
+
+    /**
+     * 备注
+     */
+    private String description;
+
+    /**
+     * 创建者
+     */
+    private String createBy;
+
+    /**
+     * 创建时间
+     */
+    private Date createTime;
+
+    /**
+     * 修改者
+     */
+    private String modifyBy;
+
+    /**
+     * 修改时间
+     */
+    private Date modifyTime;
     /**
      * 生命周期节点
      */

@@ -5,9 +5,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.ManufacturerVo;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.ManufacturerAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehBasicInfoMapper;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehManufacturerMapper;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehManufacturerPo;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Manufacturer;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehManufacturerRepository;
 import net.hwyz.iov.cloud.framework.common.util.ParamHelper;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Service;
@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 车辆工厂应用服务类
+ * 生产厂商应用服务类
  *
  * @author hwyz_leo
  */
@@ -27,17 +27,17 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ManufacturerAppService {
 
-    private final VehBasicInfoMapper vehBasicInfoMapper;
-    private final VehManufacturerMapper vehManufacturerMapper;
+    private final VehManufacturerRepository vehManufacturerRepository;
+    private final VehBasicInfoRepository vehBasicInfoRepository;
 
     /**
-     * 查询车辆工厂信息
+     * 查询生产厂商信息
      *
-     * @param code      车辆工厂代码
-     * @param name      车辆工厂名称
+     * @param code      工厂代码
+     * @param name      工厂名称
      * @param beginTime 开始时间
-     * @param endTime   结束时间
-     * @return 车辆平台列表
+     * @param endTime    结束时间
+     * @return 生产厂商列表
      */
     public List<ManufacturerVo> search(String code, String name, Date beginTime, Date endTime) {
         Map<String, Object> map = new HashMap<>();
@@ -45,86 +45,92 @@ public class ManufacturerAppService {
         map.put("name", ParamHelper.fuzzyQueryParam(name));
         map.put("beginTime", beginTime);
         map.put("endTime", endTime);
-        List<VehManufacturerPo> vehManufacturerPoList = vehManufacturerMapper.selectPoByMap(map);
-        return PageUtil.convert(vehManufacturerPoList, ManufacturerAssembler.INSTANCE::fromPo);
+        List<Manufacturer> manufacturerList = vehManufacturerRepository.selectByMap(map);
+        return PageUtil.convert(manufacturerList, ManufacturerAssembler.INSTANCE::fromDomain);
     }
 
     /**
-     * 检查车辆工厂代码是否唯一
+     * 检查工厂代码是否唯一
      *
-     * @param manufacturerId 车辆工厂ID
-     * @param code           车辆工厂代码
+     * @param manufacturerId 工厂ID
+     * @param code           工厂代码
      * @return 结果
      */
     public Boolean checkCodeUnique(Long manufacturerId, String code) {
         if (ObjUtil.isNull(manufacturerId)) {
             manufacturerId = -1L;
         }
-        VehManufacturerPo manufacturerPo = getManufacturerByCode(code);
-        return !ObjUtil.isNotNull(manufacturerPo) || manufacturerPo.getId().longValue() == manufacturerId.longValue();
+        Manufacturer manufacturer = getManufacturerByCode(code);
+        return !ObjUtil.isNotNull(manufacturer) || manufacturer.getId().longValue() == manufacturerId.longValue();
     }
 
     /**
-     * 检查车辆工厂下是否存在车辆
+     * 检查工厂下是否存在车辆
      *
-     * @param manufacturerId 车辆工厂ID
+     * @param manufacturerId 工厂ID
      * @return 结果
      */
     public Boolean checkManufacturerVehicleExist(Long manufacturerId) {
-        VehManufacturerPo manufacturerPo = getManufacturerById(manufacturerId);
+        Manufacturer manufacturer = vehManufacturerRepository.selectById(manufacturerId);
         Map<String, Object> map = new HashMap<>();
-        map.put("manufacturerCode", manufacturerPo.getCode());
-        return vehBasicInfoMapper.countPoByMap(map) > 0;
+        map.put("manufacturerCode", manufacturer.getCode());
+        return vehBasicInfoRepository.countByMap(map) > 0;
     }
 
     /**
-     * 根据主键ID获取车辆工厂信息
+     * 根据主键ID获取生产厂商信息
      *
      * @param id 主键ID
-     * @return 车辆工厂信息
+     * @return 生产厂商信息
      */
-    public VehManufacturerPo getManufacturerById(Long id) {
-        return vehManufacturerMapper.selectPoById(id);
+    public ManufacturerVo getManufacturerById(Long id) {
+        return ManufacturerAssembler.INSTANCE.fromDomain(vehManufacturerRepository.selectById(id));
     }
 
     /**
-     * 根据车辆平台代码获取车辆平台信息
+     * 根据工厂代码获取生产厂商信息
      *
-     * @param code 车辆平台代码
-     * @return 车辆平台信息
+     * @param code 工厂代码
+     * @return 生产厂商领域对象
      */
-    public VehManufacturerPo getManufacturerByCode(String code) {
-        return vehManufacturerMapper.selectPoByCode(code);
+    public Manufacturer getManufacturerByCode(String code) {
+        return vehManufacturerRepository.selectByCode(code);
     }
 
     /**
-     * 新增车辆工厂
+     * 新增生产厂商
      *
-     * @param manufacturer 车辆工厂信息
+     * @param manufacturerVo 生产厂商信息
+     * @param userId         操作用户ID
      * @return 结果
      */
-    public int createManufacturer(VehManufacturerPo manufacturer) {
-        return vehManufacturerMapper.insertPo(manufacturer);
+    public int createManufacturer(ManufacturerVo manufacturerVo, String userId) {
+        Manufacturer manufacturer = ManufacturerAssembler.INSTANCE.toDomain(manufacturerVo);
+        manufacturer.setCreateBy(userId);
+        return vehManufacturerRepository.insert(manufacturer);
     }
 
     /**
-     * 修改车辆工厂
+     * 修改生产厂商
      *
-     * @param manufacturer 车辆工厂信息
+     * @param manufacturerVo 生产厂商信息
+     * @param userId         操作用户ID
      * @return 结果
      */
-    public int modifyManufacturer(VehManufacturerPo manufacturer) {
-        return vehManufacturerMapper.updatePo(manufacturer);
+    public int modifyManufacturer(ManufacturerVo manufacturerVo, String userId) {
+        Manufacturer manufacturer = ManufacturerAssembler.INSTANCE.toDomain(manufacturerVo);
+        manufacturer.setModifyBy(userId);
+        return vehManufacturerRepository.update(manufacturer);
     }
 
     /**
-     * 批量删除车辆平台
+     * 批量删除生产厂商
      *
-     * @param ids 车辆平台ID数组
+     * @param ids 生产厂商ID数组
      * @return 结果
      */
-    public int deletePlatformByIds(Long[] ids) {
-        return vehManufacturerMapper.batchPhysicalDeletePo(ids);
+    public int deleteManufacturerByIds(Long[] ids) {
+        return vehManufacturerRepository.batchPhysicalDelete(ids);
     }
 
 }

@@ -22,6 +22,7 @@ public interface VehicleConverter {
      * @param vehBasicInfoPo PO
      * @return 领域对象
      */
+    @Mapping(target = "state", ignore = true)
     Vehicle toDomain(VehBasicInfoPo vehBasicInfoPo);
 
     /**
@@ -31,14 +32,7 @@ public interface VehicleConverter {
      * @return PO
      */
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "manufacturerCode", ignore = true)
-    @Mapping(target = "brandCode", ignore = true)
-    @Mapping(target = "platformCode", ignore = true)
-    @Mapping(target = "seriesCode", ignore = true)
-    @Mapping(target = "modelCode", ignore = true)
-    @Mapping(target = "baseModelCode", ignore = true)
-    @Mapping(target = "buildConfigCode", ignore = true)
-    @Mapping(target = "pdiTime", ignore = true)
-    @Mapping(target = "vehicleBaseVersion", ignore = true)
+    @Mapping(target = "rowVersion", ignore = true)
+    @Mapping(target = "rowValid", ignore = true)
     VehBasicInfoPo fromDomain(Vehicle vehicle);
 }

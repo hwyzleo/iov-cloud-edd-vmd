@@ -7,12 +7,6 @@ import net.hwyz.iov.cloud.edd.vmd.api.vo.ConfigItemMappingVo;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.ConfigItemOptionVo;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.ConfigItemVo;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.ConfigItemAppService;
-import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.ConfigItemAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.ConfigItemMappingAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.ConfigItemOptionAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.ConfigItemPo;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.ConfigItemMappingPo;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.ConfigItemOptionPo;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
 import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
 import net.hwyz.iov.cloud.framework.common.bean.ApiResponse;
@@ -65,9 +59,9 @@ public class MptConfigItemController extends BaseController {
     @GetMapping(value = "/{configItemCode}/option/list")
     public ApiResponse listOption(@PathVariable String configItemCode, ConfigItemOptionVo configItemOption) {
         log.info("管理后台用户[{}]查询配置项[{}]枚举值信息", SecurityUtils.getUsername(), configItemCode);
-        List<ConfigItemOptionPo> configItemOptionPoList = configItemAppService.searchOption(configItemCode, configItemOption.getCode(),
+        List<ConfigItemOptionVo> configItemOptionVoList = configItemAppService.searchOption(configItemCode, configItemOption.getCode(),
                 configItemOption.getName(), getBeginTime(configItemOption), getEndTime(configItemOption));
-        return ApiResponse.ok(ConfigItemOptionAssembler.INSTANCE.fromPoList(configItemOptionPoList));
+        return ApiResponse.ok(configItemOptionVoList);
     }
 
     /**
@@ -81,9 +75,9 @@ public class MptConfigItemController extends BaseController {
     @GetMapping(value = "/{configItemCode}/mapping/list")
     public ApiResponse listMapping(@PathVariable String configItemCode, ConfigItemMappingVo configItemMapping) {
         log.info("管理后台用户[{}]查询配置项[{}]映射信息", SecurityUtils.getUsername(), configItemCode);
-        List<ConfigItemMappingPo> configItemMappingPoList = configItemAppService.searchMapping(configItemCode,
+        List<ConfigItemMappingVo> configItemMappingVoList = configItemAppService.searchMapping(configItemCode,
                 configItemMapping.getSourceSystem(), getBeginTime(configItemMapping), getEndTime(configItemMapping));
-        return ApiResponse.ok(ConfigItemMappingAssembler.INSTANCE.fromPoList(configItemMappingPoList));
+        return ApiResponse.ok(configItemMappingVoList);
     }
 
     /**
@@ -109,8 +103,7 @@ public class MptConfigItemController extends BaseController {
     @GetMapping(value = "/{configItemId}")
     public ApiResponse getInfo(@PathVariable Long configItemId) {
         log.info("管理后台用户[{}]根据配置项ID[{}]获取配置项信息", SecurityUtils.getUsername(), configItemId);
-        ConfigItemPo configItemPo = configItemAppService.getConfigItemById(configItemId);
-        return ApiResponse.ok(ConfigItemAssembler.INSTANCE.fromPo(configItemPo));
+        return ApiResponse.ok(configItemAppService.getConfigItemById(configItemId));
     }
 
     /**
@@ -124,8 +117,7 @@ public class MptConfigItemController extends BaseController {
     @GetMapping(value = "/{configItemCode}/option/{configItemOptionId}")
     public ApiResponse getOptionInfo(@PathVariable String configItemCode, @PathVariable Long configItemOptionId) {
         log.info("管理后台用户[{}]根据配置项[{}]枚举值ID[{}]获取配置项枚举值信息", SecurityUtils.getUsername(), configItemCode, configItemOptionId);
-        ConfigItemOptionPo configItemOptionPo = configItemAppService.getConfigItemOptionById(configItemCode, configItemOptionId);
-        return ApiResponse.ok(ConfigItemOptionAssembler.INSTANCE.fromPo(configItemOptionPo));
+        return ApiResponse.ok(configItemAppService.getConfigItemOptionById(configItemCode, configItemOptionId));
     }
 
     /**
@@ -139,8 +131,7 @@ public class MptConfigItemController extends BaseController {
     @GetMapping(value = "/{configItemCode}/mapping/{configItemMappingId}")
     public ApiResponse getMappingInfo(@PathVariable String configItemCode, @PathVariable Long configItemMappingId) {
         log.info("管理后台用户[{}]根据配置项[{}]映射ID[{}]获取配置项映射信息", SecurityUtils.getUsername(), configItemCode, configItemMappingId);
-        ConfigItemMappingPo configItemMappingPo = configItemAppService.getConfigItemMappingById(configItemCode, configItemMappingId);
-        return ApiResponse.ok(ConfigItemMappingAssembler.INSTANCE.fromPo(configItemMappingPo));
+        return ApiResponse.ok(configItemAppService.getConfigItemMappingById(configItemCode, configItemMappingId));
     }
 
     /**
@@ -157,9 +148,7 @@ public class MptConfigItemController extends BaseController {
         if (!configItemAppService.checkCodeUnique(configItem.getId(), configItem.getCode())) {
             return ApiResponse.fail("新增配置项'" + configItem.getCode() + "'失败，配置项代码已存在");
         }
-        ConfigItemPo configItemPo = ConfigItemAssembler.INSTANCE.toPo(configItem);
-        configItemPo.setCreateBy(SecurityUtils.getUserId().toString());
-        return configItemAppService.createConfigItem(configItemPo) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
+        return configItemAppService.createConfigItem(configItem, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
     }
 
     /**
@@ -177,9 +166,7 @@ public class MptConfigItemController extends BaseController {
         if (!configItemAppService.checkOptionCodeUnique(configItemOption.getId(), configItemCode, configItemOption.getCode())) {
             return ApiResponse.fail("新增配置项枚举值'" + configItemOption.getCode() + "'失败，配置项枚举值代码已存在");
         }
-        ConfigItemOptionPo configItemOptionPo = ConfigItemOptionAssembler.INSTANCE.toPo(configItemOption);
-        configItemOptionPo.setCreateBy(SecurityUtils.getUserId().toString());
-        return configItemAppService.createConfigItemOption(configItemCode, configItemOptionPo) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
+        return configItemAppService.createConfigItemOption(configItemCode, configItemOption, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
     }
 
     /**
@@ -199,9 +186,7 @@ public class MptConfigItemController extends BaseController {
                 configItemMapping.getSourceCode(), configItemMapping.getSourceValue())) {
             return ApiResponse.fail("新增配置项映射'" + configItemMapping.getSourceSystem() + "'失败，配置项映射已存在");
         }
-        ConfigItemMappingPo configItemMappingPo = ConfigItemMappingAssembler.INSTANCE.toPo(configItemMapping);
-        configItemMappingPo.setCreateBy(SecurityUtils.getUserId().toString());
-        return configItemAppService.createConfigItemMapping(configItemCode, configItemMappingPo) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
+        return configItemAppService.createConfigItemMapping(configItemCode, configItemMapping, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
     }
 
     /**
@@ -218,9 +203,7 @@ public class MptConfigItemController extends BaseController {
         if (!configItemAppService.checkCodeUnique(configItem.getId(), configItem.getCode())) {
             return ApiResponse.fail("修改保存配置项'" + configItem.getCode() + "'失败，配置项代码已存在");
         }
-        ConfigItemPo configItemPo = ConfigItemAssembler.INSTANCE.toPo(configItem);
-        configItemPo.setModifyBy(SecurityUtils.getUserId().toString());
-        return configItemAppService.modifyConfigItem(configItemPo) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
+        return configItemAppService.modifyConfigItem(configItem, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
     }
 
     /**
@@ -238,9 +221,7 @@ public class MptConfigItemController extends BaseController {
         if (!configItemAppService.checkOptionCodeUnique(configItemOption.getId(), configItemCode, configItemOption.getCode())) {
             return ApiResponse.fail("修改保存配置项枚举值'" + configItemOption.getCode() + "'失败，配置项枚举值代码已存在");
         }
-        ConfigItemOptionPo configItemOptionPo = ConfigItemOptionAssembler.INSTANCE.toPo(configItemOption);
-        configItemOptionPo.setModifyBy(SecurityUtils.getUserId().toString());
-        return configItemAppService.modifyConfigItemOption(configItemCode, configItemOptionPo) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
+        return configItemAppService.modifyConfigItemOption(configItemCode, configItemOption, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
     }
 
     /**
@@ -260,9 +241,7 @@ public class MptConfigItemController extends BaseController {
                 configItemMapping.getSourceCode(), configItemMapping.getSourceValue())) {
             return ApiResponse.fail("修改保存配置项映射'" + configItemMapping.getSourceSystem() + "'失败，配置项映射代码已存在");
         }
-        ConfigItemMappingPo configItemMappingPo = ConfigItemMappingAssembler.INSTANCE.toPo(configItemMapping);
-        configItemMappingPo.setModifyBy(SecurityUtils.getUserId().toString());
-        return configItemAppService.modifyConfigItemMapping(configItemCode, configItemMappingPo) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
+        return configItemAppService.modifyConfigItemMapping(configItemCode, configItemMapping, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
     }
 
     /**

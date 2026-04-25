@@ -5,8 +5,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.VehiclePartVo;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehiclePartAppService;
-import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.VehiclePartAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehiclePartPo;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
 import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
 import net.hwyz.iov.cloud.framework.common.bean.ApiResponse;
@@ -71,8 +69,7 @@ public class MptVehiclePartController extends BaseController {
     @GetMapping(value = "/{vehiclePartId}")
     public ApiResponse getInfo(@PathVariable Long vehiclePartId) {
         log.info("管理后台用户[{}]根据车辆零件ID[{}]获取车辆零件", SecurityUtils.getUsername(), vehiclePartId);
-        VehiclePartPo vehiclePartPo = vehiclePartAppService.getVehiclePartById(vehiclePartId);
-        return ApiResponse.ok(VehiclePartAssembler.INSTANCE.fromPo(vehiclePartPo));
+        return ApiResponse.ok(vehiclePartAppService.getVehiclePartById(vehiclePartId));
     }
 
     /**
@@ -89,9 +86,7 @@ public class MptVehiclePartController extends BaseController {
         if (!vehiclePartAppService.checkPnAndSnUnique(vehiclePart.getId(), vehiclePart.getPn(), vehiclePart.getSn())) {
             return ApiResponse.fail("新增车辆零件'" + vehiclePart.getPn() + "'失败，车辆零件已存在");
         }
-        VehiclePartPo vehiclePartPo = VehiclePartAssembler.INSTANCE.toPo(vehiclePart);
-        vehiclePartPo.setCreateBy(SecurityUtils.getUserId().toString());
-        return vehiclePartAppService.createVehiclePart(vehiclePartPo) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
+        return vehiclePartAppService.createVehiclePart(vehiclePart, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
     }
 
     /**
@@ -108,9 +103,7 @@ public class MptVehiclePartController extends BaseController {
         if (!vehiclePartAppService.checkPnAndSnUnique(vehiclePart.getId(), vehiclePart.getPn(), vehiclePart.getSn())) {
             return ApiResponse.fail("修改保存车辆零件'" + vehiclePart.getPn() + "'失败，车辆零件已存在");
         }
-        VehiclePartPo vehiclePartPo = VehiclePartAssembler.INSTANCE.toPo(vehiclePart);
-        vehiclePartPo.setModifyBy(SecurityUtils.getUserId().toString());
-        return vehiclePartAppService.modifyVehiclePart(vehiclePartPo) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
+        return vehiclePartAppService.modifyVehiclePart(vehiclePart, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
     }
 
     /**

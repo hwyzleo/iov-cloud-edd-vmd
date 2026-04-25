@@ -7,12 +7,8 @@ import net.hwyz.iov.cloud.edd.vmd.api.vo.BaseModelFeatureCodeVo;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.BaseModelVo;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.BaseModelAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.FeatureFamilyAppService;
-import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.BaseModelFeatureCodeAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.BaseModelAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehBaseModelPo;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehBaseModelFeatureCodePo;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehFeatureCodePo;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehFeatureFamilyPo;
+import net.hwyz.iov.cloud.edd.vmd.api.vo.FeatureCodeVo;
+import net.hwyz.iov.cloud.edd.vmd.api.vo.FeatureFamilyVo;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
 import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
 import net.hwyz.iov.cloud.framework.common.bean.ApiResponse;
@@ -69,14 +65,14 @@ public class MptBaseModelController extends BaseController {
         List<BaseModelFeatureCodeVo> baseModelFeatureCodeVoList = baseModelAppService.searchFeatureCode(baseModelCode,
                 baseModelFeatureCode.getFamilyCode(), getBeginTime(baseModelFeatureCode), getEndTime(baseModelFeatureCode));
         baseModelFeatureCodeVoList.forEach(mpt -> {
-            VehFeatureFamilyPo featureFamily = featureFamilyAppService.getFeatureFamilyByCode(mpt.getFamilyCode());
+            FeatureFamilyVo featureFamily = featureFamilyAppService.getFeatureFamilyByCode(mpt.getFamilyCode());
             if (featureFamily != null) {
                 mpt.setFamilyName(featureFamily.getName());
             }
             mpt.setFeatureName(new String[mpt.getFeatureCode().length]);
             int i = 0;
             for (String code : mpt.getFeatureCode()) {
-                VehFeatureCodePo featureCode = featureFamilyAppService.getFeatureCodeByCode(code);
+                FeatureCodeVo featureCode = featureFamilyAppService.getFeatureCodeByCode(code);
                 if (featureCode != null) {
                     mpt.getFeatureName()[i] = featureCode.getName();
                 }
@@ -130,8 +126,7 @@ public class MptBaseModelController extends BaseController {
     @GetMapping(value = "/{baseModelId}")
     public ApiResponse<BaseModelVo> getInfo(@PathVariable Long baseModelId) {
         log.info("管理后台用户[{}]根据基础车型ID[{}]获取基础车型信息", SecurityUtils.getUsername(), baseModelId);
-        VehBaseModelPo baseModelPo = baseModelAppService.getBaseModelById(baseModelId);
-        return ApiResponse.ok(BaseModelAssembler.INSTANCE.fromPo(baseModelPo));
+        return ApiResponse.ok(baseModelAppService.getBaseModelById(baseModelId));
     }
 
     /**
@@ -162,9 +157,7 @@ public class MptBaseModelController extends BaseController {
         if (!baseModelAppService.checkCodeUnique(baseModel.getId(), baseModel.getCode())) {
             return ApiResponse.fail("新增基础车型'" + baseModel.getCode() + "'失败，基础车型代码已存在");
         }
-        VehBaseModelPo baseModelPo = BaseModelAssembler.INSTANCE.toPo(baseModel);
-        baseModelPo.setCreateBy(SecurityUtils.getUserId().toString());
-        return baseModelAppService.createBasicModel(baseModelPo) > 0 ? ApiResponse.ok() : ApiResponse.fail("新增失败");
+        return baseModelAppService.createBasicModel(baseModel, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("新增失败");
     }
 
     /**
@@ -182,9 +175,7 @@ public class MptBaseModelController extends BaseController {
         if (!baseModelAppService.checkFeatureCodeUnique(baseModelFeatureCode.getId(), baseModelCode, baseModelFeatureCode.getFamilyCode())) {
             return ApiResponse.fail("新增基础车型特征值'" + baseModelFeatureCode.getFamilyCode() + "'失败，基础车型特征值已存在");
         }
-        VehBaseModelFeatureCodePo baseModelFeatureCodePo = BaseModelFeatureCodeAssembler.INSTANCE.toPo(baseModelFeatureCode);
-        baseModelFeatureCodePo.setCreateBy(SecurityUtils.getUserId().toString());
-        return baseModelAppService.createBasicModelFeatureCode(baseModelFeatureCodePo) > 0 ? ApiResponse.ok() : ApiResponse.fail("新增失败");
+        return baseModelAppService.createBasicModelFeatureCode(baseModelFeatureCode, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("新增失败");
     }
 
     /**
@@ -201,9 +192,7 @@ public class MptBaseModelController extends BaseController {
         if (!baseModelAppService.checkCodeUnique(baseModel.getId(), baseModel.getCode())) {
             return ApiResponse.fail("修改保存基础车型'" + baseModel.getCode() + "'失败，基础车型代码已存在");
         }
-        VehBaseModelPo baseModelPo = BaseModelAssembler.INSTANCE.toPo(baseModel);
-        baseModelPo.setModifyBy(SecurityUtils.getUserId().toString());
-        return baseModelAppService.modifyBasicModel(baseModelPo) > 0 ? ApiResponse.ok() : ApiResponse.fail("修改失败");
+        return baseModelAppService.modifyBasicModel(baseModel, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("修改失败");
     }
 
     /**
@@ -221,9 +210,7 @@ public class MptBaseModelController extends BaseController {
         if (!baseModelAppService.checkFeatureCodeUnique(baseModelFeatureCode.getId(), baseModelCode, baseModelFeatureCode.getFamilyCode())) {
             return ApiResponse.fail("修改保存基础车型特征值'" + baseModelFeatureCode.getFamilyCode() + "'失败，基础车型特征值已存在");
         }
-        VehBaseModelFeatureCodePo baseModelFeatureCodePo = BaseModelFeatureCodeAssembler.INSTANCE.toPo(baseModelFeatureCode);
-        baseModelFeatureCodePo.setModifyBy(SecurityUtils.getUserId().toString());
-        return baseModelAppService.modifyBaseModelFeatureCode(baseModelFeatureCodePo) > 0 ? ApiResponse.ok() : ApiResponse.fail("修改失败");
+        return baseModelAppService.modifyBaseModelFeatureCode(baseModelFeatureCode, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("修改失败");
     }
 
     /**

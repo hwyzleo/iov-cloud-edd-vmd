@@ -6,10 +6,6 @@ import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.VehicleConfigItemVo;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.VehicleConfigVo;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleConfigAppService;
-import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.VehicleConfigItemAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.VehicleConfigAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehicleConfigPo;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehicleConfigItemPo;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
 import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
 import net.hwyz.iov.cloud.framework.common.bean.ApiResponse;
@@ -45,8 +41,8 @@ public class MptVehicleConfigController extends BaseController {
     public ApiResponse<PageResult<VehicleConfigVo>> list(VehicleConfigVo vehicleConfig) {
         log.info("管理后台用户[{}]分页查询车辆配置", SecurityUtils.getUsername());
         startPage();
-        List<VehicleConfigVo> vehicleConfigVoList = vehicleConfigAppService.search(vehicleConfig.getVin(), getBeginTime(vehicleConfig),
-                getEndTime(vehicleConfig));
+        List<VehicleConfigVo> vehicleConfigVoList = vehicleConfigAppService.search(vehicleConfig.getVin(), vehicleConfig.getVersion(),
+                vehicleConfig.getState());
         return ApiResponse.ok(getPageResult(vehicleConfigVoList));
     }
 
@@ -62,8 +58,7 @@ public class MptVehicleConfigController extends BaseController {
     public ApiResponse<PageResult<VehicleConfigItemVo>> listConfigItem(@PathVariable String vin, VehicleConfigItemVo vehicleConfigItem) {
         log.info("管理后台用户[{}]分页查询车辆[{}]配置项", SecurityUtils.getUsername(), vin);
         startPage();
-        List<VehicleConfigItemVo> vehicleConfigItemVoList = vehicleConfigAppService.searchConfigItem(vin,
-                getBeginTime(vehicleConfigItem), getEndTime(vehicleConfigItem));
+        List<VehicleConfigItemVo> vehicleConfigItemVoList = vehicleConfigAppService.searchItem(vin, vehicleConfigItem.getVersion());
         return ApiResponse.ok(getPageResult(vehicleConfigItemVoList));
     }
 
@@ -88,10 +83,9 @@ public class MptVehicleConfigController extends BaseController {
      */
     @RequiresPermissions("iov:configCenter:vehicleConfig:query")
     @GetMapping(value = "/{vehicleConfigId}")
-    public ApiResponse getInfo(@PathVariable Long vehicleConfigId) {
+    public ApiResponse<VehicleConfigVo> getInfo(@PathVariable Long vehicleConfigId) {
         log.info("管理后台用户[{}]根据车辆配置ID[{}]获取车辆配置", SecurityUtils.getUsername(), vehicleConfigId);
-        VehicleConfigPo vehicleConfigPo = vehicleConfigAppService.getVehicleConfigById(vehicleConfigId);
-        return ApiResponse.ok(VehicleConfigAssembler.INSTANCE.fromPo(vehicleConfigPo));
+        return ApiResponse.ok(vehicleConfigAppService.getVehicleConfigById(vehicleConfigId));
     }
 
     /**
@@ -103,9 +97,8 @@ public class MptVehicleConfigController extends BaseController {
      */
     @RequiresPermissions("iov:configCenter:vehicleConfig:query")
     @GetMapping(value = "/{vin}/configItem/{vehicleConfigItemId}")
-    public ApiResponse getConfigItemInfo(@PathVariable String vin, @PathVariable Long vehicleConfigItemId) {
+    public ApiResponse<VehicleConfigItemVo> getConfigItemInfo(@PathVariable String vin, @PathVariable Long vehicleConfigItemId) {
         log.info("管理后台用户[{}]根据车辆[{}]配置项ID[{}]获取车辆配置项", SecurityUtils.getUsername(), vin, vehicleConfigItemId);
-        VehicleConfigItemPo vehicleConfigItemPo = vehicleConfigAppService.getVehicleConfigItemById(vin, vehicleConfigItemId);
-        return ApiResponse.ok(VehicleConfigItemAssembler.INSTANCE.fromPo(vehicleConfigItemPo));
+        return ApiResponse.ok(vehicleConfigAppService.getVehicleConfigItemById(vehicleConfigItemId));
     }
 }

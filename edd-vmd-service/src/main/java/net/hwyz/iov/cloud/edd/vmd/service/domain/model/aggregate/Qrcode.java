@@ -3,6 +3,7 @@ package net.hwyz.iov.cloud.edd.vmd.service.domain.model.aggregate;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.digest.MD5;
 import lombok.Getter;
+import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.enums.QrcodeState;
@@ -22,6 +23,7 @@ import java.util.Date;
  */
 @Slf4j
 @Getter
+@Setter
 @SuperBuilder
 public class Qrcode extends BaseDo<String> implements DomainObj<Qrcode> {
 
@@ -29,6 +31,26 @@ public class Qrcode extends BaseDo<String> implements DomainObj<Qrcode> {
      * 车架号
      */
     private String vin;
+
+    /**
+     * 备注
+     */
+    private String description;
+
+    /**
+     * 创建者
+     */
+    private String createBy;
+
+    /**
+     * 修改者
+     */
+    private String modifyBy;
+
+    /**
+     * 修改时间
+     */
+    private Date modifyTime;
     /**
      * 车机序列号
      */

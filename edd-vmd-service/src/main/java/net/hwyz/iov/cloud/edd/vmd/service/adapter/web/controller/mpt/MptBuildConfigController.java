@@ -5,8 +5,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.BuildConfigVo;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.BuildConfigAppService;
-import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.BuildConfigAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehBuildConfigPo;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
 import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
 import net.hwyz.iov.cloud.framework.common.bean.ApiResponse;
@@ -71,8 +69,7 @@ public class MptBuildConfigController extends BaseController {
     @GetMapping(value = "/{buildConfigId}")
     public ApiResponse<BuildConfigVo> getInfo(@PathVariable Long buildConfigId) {
         log.info("管理后台用户[{}]根据生产配置ID[{}]获取生产配置信息", SecurityUtils.getUsername(), buildConfigId);
-        VehBuildConfigPo buildConfigPo = buildConfigAppService.getBuildConfigById(buildConfigId);
-        return ApiResponse.ok(BuildConfigAssembler.INSTANCE.fromPo(buildConfigPo));
+        return ApiResponse.ok(buildConfigAppService.getBuildConfigById(buildConfigId));
     }
 
     /**
@@ -89,9 +86,7 @@ public class MptBuildConfigController extends BaseController {
         if (!buildConfigAppService.checkCodeUnique(buildConfig.getId(), buildConfig.getCode())) {
             return ApiResponse.fail("新增生产配置'" + buildConfig.getCode() + "'失败，生产配置代码已存在");
         }
-        VehBuildConfigPo buildConfigPo = BuildConfigAssembler.INSTANCE.toPo(buildConfig);
-        buildConfigPo.setCreateBy(SecurityUtils.getUserId().toString());
-        return buildConfigAppService.createBuildConfig(buildConfigPo) > 0 ? ApiResponse.ok() : ApiResponse.fail("新增失败");
+        return buildConfigAppService.createBuildConfig(buildConfig, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("新增失败");
     }
 
     /**
@@ -108,9 +103,7 @@ public class MptBuildConfigController extends BaseController {
         if (!buildConfigAppService.checkCodeUnique(buildConfig.getId(), buildConfig.getCode())) {
             return ApiResponse.fail("修改保存生产配置'" + buildConfig.getCode() + "'失败，生产配置代码已存在");
         }
-        VehBuildConfigPo buildConfigPo = BuildConfigAssembler.INSTANCE.toPo(buildConfig);
-        buildConfigPo.setModifyBy(SecurityUtils.getUserId().toString());
-        return buildConfigAppService.modifyBuildConfig(buildConfigPo) > 0 ? ApiResponse.ok() : ApiResponse.fail("修改失败");
+        return buildConfigAppService.modifyBuildConfig(buildConfig, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("修改失败");
     }
 
     /**

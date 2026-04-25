@@ -6,12 +6,12 @@ import cn.hutool.json.JSONUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParser;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehiclePart;
 import net.hwyz.iov.cloud.framework.common.enums.DeviceItem;
 import net.hwyz.iov.cloud.framework.common.util.StrUtil;
 import net.hwyz.iov.cloud.tsp.tbox.api.contract.TboxExService;
 import net.hwyz.iov.cloud.tsp.tbox.api.contract.request.BatchImportTboxRequest;
 import net.hwyz.iov.cloud.tsp.tbox.api.feign.service.ExTboxInfoService;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehiclePartPo;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -43,7 +43,7 @@ public class TboxDataParserV1_0 extends BaseParser implements ImportDataParser {
         BatchImportTboxRequest request = new BatchImportTboxRequest();
         request.setBatchNum(batchNum);
         request.setSupplierCode(supplier);
-        List<VehiclePartPo> vehiclePartList = new ArrayList<>();
+        List<VehiclePart> vehiclePartList = new ArrayList<>();
         List<TboxExService> tboxList = new ArrayList<>();
         for (Object item : items) {
             JSONObject itemJson = JSONUtil.parseObj(item);
@@ -53,7 +53,7 @@ public class TboxDataParserV1_0 extends BaseParser implements ImportDataParser {
             String iccid2 = itemJson.getStr("ICCID2");
             String imei = itemJson.getStr("IMEI");
             String hsm = itemJson.getStr("HSM");
-            if (StrUtil.isBlank(pn) || StrUtil.isBlank(sn) || StrUtil.isBlank(iccid1)) {
+            if (StrUtil.isBlank(pn) || StrUtil.isBlank(sn) || StrUtil.isAllBlank(iccid1, iccid2)) {
                 tboxInvalidCount++;
                 continue;
             }
@@ -62,7 +62,7 @@ public class TboxDataParserV1_0 extends BaseParser implements ImportDataParser {
             extra.put("ICCID1", iccid1);
             extra.put("ICCID2", iccid2);
             extra.put("HSM", hsm);
-            vehiclePartList.add(VehiclePartPo.builder()
+            vehiclePartList.add(VehiclePart.builder()
                     .pn(pn)
                     .deviceCode(DeviceItem.TBOX.name())
                     .deviceItem(DeviceItem.TBOX.name())

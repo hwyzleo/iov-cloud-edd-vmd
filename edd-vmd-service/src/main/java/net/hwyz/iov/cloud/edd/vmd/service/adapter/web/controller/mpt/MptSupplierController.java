@@ -5,8 +5,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.SupplierVo;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.SupplierAppService;
-import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.SupplierAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.SupplierPo;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
 import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
 import net.hwyz.iov.cloud.framework.common.bean.ApiResponse;
@@ -71,8 +69,7 @@ public class MptSupplierController extends BaseController {
     @GetMapping(value = "/{supplierId}")
     public ApiResponse getInfo(@PathVariable Long supplierId) {
         log.info("管理后台用户[{}]根据供应商ID[{}]获取供应商信息", SecurityUtils.getUsername(), supplierId);
-        SupplierPo supplierPo = supplierAppService.getSupplierById(supplierId);
-        return ApiResponse.ok(SupplierAssembler.INSTANCE.fromPo(supplierPo));
+        return ApiResponse.ok(supplierAppService.getSupplierById(supplierId));
     }
 
     /**
@@ -89,9 +86,7 @@ public class MptSupplierController extends BaseController {
         if (!supplierAppService.checkCodeUnique(supplier.getId(), supplier.getCode())) {
             return ApiResponse.fail("新增供应商'" + supplier.getCode() + "'失败，供应商代码已存在");
         }
-        SupplierPo supplierPo = SupplierAssembler.INSTANCE.toPo(supplier);
-        supplierPo.setCreateBy(SecurityUtils.getUserId().toString());
-        return supplierAppService.createSupplier(supplierPo) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
+        return supplierAppService.createSupplier(supplier, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
     }
 
     /**
@@ -108,9 +103,7 @@ public class MptSupplierController extends BaseController {
         if (!supplierAppService.checkCodeUnique(supplier.getId(), supplier.getCode())) {
             return ApiResponse.fail("修改保存供应商'" + supplier.getCode() + "'失败，供应商代码已存在");
         }
-        SupplierPo supplierPo = SupplierAssembler.INSTANCE.toPo(supplier);
-        supplierPo.setModifyBy(SecurityUtils.getUserId().toString());
-        return supplierAppService.modifySupplier(supplierPo) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
+        return supplierAppService.modifySupplier(supplier, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
     }
 
     /**

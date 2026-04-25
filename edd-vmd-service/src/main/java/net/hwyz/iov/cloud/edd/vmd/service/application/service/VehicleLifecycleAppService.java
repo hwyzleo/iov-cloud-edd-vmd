@@ -2,13 +2,21 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.hwyz.iov.cloud.edd.vmd.api.vo.VehicleLifecycleVo;
+import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.VehicleLifecycleAssembler;
+import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.VehicleLifecycleNodeAssembler;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleLifecycle;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleLifecycleNode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.VehicleLifecycleNodeEnum;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehLifecycleMapper;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehLifecyclePo;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehLifecycleRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehicleLifecycleNodeRepository;
+import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Service;
 
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 车辆生命周期应用服务类
@@ -20,110 +28,65 @@ import java.util.List;
 @RequiredArgsConstructor
 public class VehicleLifecycleAppService {
 
-    private final VehLifecycleMapper vehLifecycleMapper;
+    private final VehLifecycleRepository vehLifecycleRepository;
+    private final VehicleLifecycleNodeRepository vehicleLifecycleNodeRepository;
 
     /**
-     * 查询车辆生命周期
+     * 查询车辆生命周期信息
      *
      * @param vin 车架号
      * @return 车辆生命周期列表
      */
-    public List<VehLifecyclePo> listLifecycle(String vin) {
-        return vehLifecycleMapper.selectPoByExample(VehLifecyclePo.builder().vin(vin).build());
+    public List<VehicleLifecycleVo> search(String vin) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("vin", vin);
+        List<VehicleLifecycle> vehicleLifecycleList = vehLifecycleRepository.selectByMap(map);
+        return PageUtil.convert(vehicleLifecycleList, VehicleLifecycleAssembler.INSTANCE::fromDomain);
     }
 
     /**
-     * 查询车辆生命周期
+     * 获取车辆生命周期信息
      *
      * @param vin  车架号
      * @param node 生命周期节点
-     * @return 车辆生命周期节点
+     * @return 车辆生命周期信息
      */
-    public VehLifecyclePo getLifecycle(String vin, VehicleLifecycleNodeEnum node) {
-        List<VehLifecyclePo> vehLifecyclePoList = vehLifecycleMapper.selectPoByExample(VehLifecyclePo.builder().vin(vin).node(node.name()).build());
-        return vehLifecyclePoList.isEmpty() ? null : vehLifecyclePoList.get(0);
+    public VehicleLifecycle getLifecycle(String vin, VehicleLifecycleNodeEnum node) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("vin", vin);
+        map.put("node", node.name());
+        List<VehicleLifecycle> list = vehLifecycleRepository.selectByMap(map);
+        return list.isEmpty() ? null : list.get(0);
     }
 
     /**
-     * 新增车辆生命周期
-     *
-     * @param vin  车架号
-     * @param node 生命周期节点
-     */
-    public void createVehicleLifecycle(String vin, VehicleLifecycleNodeEnum node) {
-        createVehicleLifecycle(vin, node, new Date());
-    }
-
-    /**
-     * 新增车辆生命周期
-     *
-     * @param vin       车架号
-     * @param node      生命周期节点
-     * @param reachTime 达到时间
-     */
-    public void createVehicleLifecycle(String vin, VehicleLifecycleNodeEnum node, Date reachTime) {
-        log.info("新增车辆[{}]生命周期节点[{}][{}]", vin, node, reachTime);
-        createVehicleLifecycle(VehLifecyclePo.builder().vin(vin).node(node.name()).reachTime(reachTime).sort(99).build());
-    }
-
-    /**
-     * 新增车辆生命周期
-     *
-     * @param vehLifecyclePo 车辆生命周期
-     * @return 结果
-     */
-    public int createVehicleLifecycle(VehLifecyclePo vehLifecyclePo) {
-        return vehLifecycleMapper.insertPo(vehLifecyclePo);
-    }
-
-
-    /**
-     * 修改车辆生命周期
-     *
-     * @param vehLifecyclePo 车辆生命周期
-     * @return 结果
-     */
-    public int modifyVehicleLifecycle(VehLifecyclePo vehLifecyclePo) {
-        return vehLifecycleMapper.updatePo(vehLifecyclePo);
-    }
-
-    /**
-     * 批量删除车辆生命周期
-     *
-     * @param vin 车架号
-     */
-    public void deleteVehicleLifecycleByVin(String vin) {
-        vehLifecycleMapper.batchPhysicalDeletePoByVin(vin);
-    }
-
-    /**
-     * 批量删除车辆生命周期
-     *
-     * @param ids 车辆生命周期ID数组
-     * @return 结果
-     */
-    public int deleteVehicleLifecycleByIds(Long[] ids) {
-        return vehLifecycleMapper.batchPhysicalDeletePo(ids);
-    }
-
-    /**
-     * 记录生产车辆节点
+     * 记录车辆生产节点
      *
      * @param vin 车架号
      */
     public void recordProduceNode(String vin) {
-        log.info("记录车辆[{}]生产节点", vin);
-        createVehicleLifecycle(vin, VehicleLifecycleNodeEnum.PRODUCE);
+        VehicleLifecycleNode node = VehicleLifecycleNode.builder()
+                .vin(vin)
+                .node(VehicleLifecycleNodeEnum.PRODUCE)
+                .reachTime(new Date())
+                .build();
+        node.init();
+        vehicleLifecycleNodeRepository.save(node);
     }
 
     /**
-     * 记录生成车辆密钥节点
+     * 记录车辆生成密钥节点
      *
      * @param vin 车架号
      */
     public void recordGenerateVehicleSkNode(String vin) {
-        log.info("记录车辆[{}]生成车辆密钥节点", vin);
-        createVehicleLifecycle(vin, VehicleLifecycleNodeEnum.IMMO_SK);
+        VehicleLifecycleNode node = VehicleLifecycleNode.builder()
+                .vin(vin)
+                .node(VehicleLifecycleNodeEnum.IMMO_SK)
+                .reachTime(new Date())
+                .build();
+        node.init();
+        vehicleLifecycleNodeRepository.save(node);
     }
 
     /**
@@ -133,41 +96,71 @@ public class VehicleLifecycleAppService {
      * @param eolTime 下线时间
      */
     public void recordEolNode(String vin, Date eolTime) {
-        log.info("记录车辆[{}]下线节点", vin);
-        createVehicleLifecycle(vin, VehicleLifecycleNodeEnum.EOL, eolTime);
+        VehicleLifecycleNode node = VehicleLifecycleNode.builder()
+                .vin(vin)
+                .node(VehicleLifecycleNodeEnum.EOL)
+                .reachTime(eolTime)
+                .build();
+        node.init();
+        vehicleLifecycleNodeRepository.save(node);
     }
 
     /**
-     * 记录车辆打印合格证节点
-     *
-     * @param vin      车架号
-     * @param certTime 打印合格证时间
-     */
-    public void recordCertificateNode(String vin, Date certTime) {
-        log.info("记录车辆[{}]打印合格证节点", vin);
-        createVehicleLifecycle(vin, VehicleLifecycleNodeEnum.CERTIFICATE, certTime);
-    }
-
-    /**
-     * 绑定订单
+     * 记录绑定订单节点
      *
      * @param vin      车架号
      * @param orderNum 订单编号
      */
     public void recordBindOrderNode(String vin, String orderNum) {
-        log.info("记录车辆[{}]绑定订单[{}]节点", vin, orderNum);
-        createVehicleLifecycle(vin, VehicleLifecycleNodeEnum.ORDER_BIND);
+        VehicleLifecycleNode node = VehicleLifecycleNode.builder()
+                .vin(vin)
+                .node(VehicleLifecycleNodeEnum.ORDER_BIND)
+                .reachTime(new Date())
+                .build();
+        node.init();
+        vehicleLifecycleNodeRepository.save(node);
+    }
+
+    /**
+     * 记录合格证打印节点
+     *
+     * @param vin      车架号
+     * @param certDate 打印日期
+     */
+    public void recordCertificateNode(String vin, Date certDate) {
+        VehicleLifecycleNode node = VehicleLifecycleNode.builder()
+                .vin(vin)
+                .node(VehicleLifecycleNodeEnum.CERTIFICATE)
+                .reachTime(certDate)
+                .build();
+        node.init();
+        vehicleLifecycleNodeRepository.save(node);
     }
 
     /**
      * 记录车辆激活节点
      *
      * @param vin       车架号
-     * @param accountId 账户ID
+     * @param accountId 账号ID
      */
     public void recordVehicleActiveNode(String vin, String accountId) {
-        log.info("记录用户[{}]激活车辆[{}]节点", accountId, vin);
-        createVehicleLifecycle(vin, VehicleLifecycleNodeEnum.VEHICLE_ACTIVE);
+        VehicleLifecycleNode node = VehicleLifecycleNode.builder()
+                .vin(vin)
+                .node(VehicleLifecycleNodeEnum.VEHICLE_ACTIVE)
+                .reachTime(new Date())
+                .build();
+        node.init();
+        vehicleLifecycleNodeRepository.save(node);
+    }
+
+    /**
+     * 根据车架号物理删除车辆生命周期
+     *
+     * @param vin 车架号
+     * @return 影响行数
+     */
+    public int deleteVehicleLifecycleByVin(String vin) {
+        return vehLifecycleRepository.physicalDeleteByVin(vin);
     }
 
 }

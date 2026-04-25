@@ -5,8 +5,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.PartVo;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartAppService;
-import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.PartAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.PartPo;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
 import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
 import net.hwyz.iov.cloud.framework.common.bean.ApiResponse;
@@ -71,8 +69,7 @@ public class MptPartController extends BaseController {
     @GetMapping(value = "/{partId}")
     public ApiResponse getInfo(@PathVariable Long partId) {
         log.info("管理后台用户[{}]根据零件信息ID[{}]获取零件信息", SecurityUtils.getUsername(), partId);
-        PartPo partPo = partAppService.getPartById(partId);
-        return ApiResponse.ok(PartAssembler.INSTANCE.fromPo(partPo));
+        return ApiResponse.ok(partAppService.getPartById(partId));
     }
 
     /**
@@ -89,9 +86,7 @@ public class MptPartController extends BaseController {
         if (!partAppService.checkPnUnique(part.getId(), part.getPn())) {
             return ApiResponse.fail("新增零件信息'" + part.getPn() + "'失败，零件号已存在");
         }
-        PartPo partPo = PartAssembler.INSTANCE.toPo(part);
-        partPo.setCreateBy(SecurityUtils.getUserId().toString());
-        return partAppService.createPart(partPo) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
+        return partAppService.createPart(part, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
     }
 
     /**
@@ -108,9 +103,7 @@ public class MptPartController extends BaseController {
         if (!partAppService.checkPnUnique(part.getId(), part.getPn())) {
             return ApiResponse.fail("修改保存零件信息'" + part.getPn() + "'失败，零件号已存在");
         }
-        PartPo partPo = PartAssembler.INSTANCE.toPo(part);
-        partPo.setModifyBy(SecurityUtils.getUserId().toString());
-        return partAppService.modifyPart(partPo) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
+        return partAppService.modifyPart(part, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
     }
 
     /**

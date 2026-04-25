@@ -5,11 +5,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.ModelVo;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.ModelAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehBaseModelMapper;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehBasicInfoMapper;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehBuildConfigMapper;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehModelMapper;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehModelPo;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Model;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBaseModelRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBuildConfigRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehModelRepository;
 import net.hwyz.iov.cloud.framework.common.util.ParamHelper;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Service;
@@ -29,10 +29,10 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ModelAppService {
 
-    private final VehModelMapper vehModelMapper;
-    private final VehBasicInfoMapper vehBasicInfoMapper;
-    private final VehBaseModelMapper vehBasicModelMapper;
-    private final VehBuildConfigMapper vehBuildConfigMapper;
+    private final VehModelRepository vehModelRepository;
+    private final VehBaseModelRepository vehBaseModelRepository;
+    private final VehBuildConfigRepository vehBuildConfigRepository;
+    private final VehBasicInfoRepository vehBasicInfoRepository;
 
     /**
      * 查询车型信息
@@ -53,8 +53,8 @@ public class ModelAppService {
         map.put("name", ParamHelper.fuzzyQueryParam(name));
         map.put("beginTime", beginTime);
         map.put("endTime", endTime);
-        List<VehModelPo> vehModelPoList = vehModelMapper.selectPoByMap(map);
-        return PageUtil.convert(vehModelPoList, ModelAssembler.INSTANCE::fromPo);
+        List<Model> modelList = vehModelRepository.selectByMap(map);
+        return PageUtil.convert(modelList, ModelAssembler.INSTANCE::fromDomain);
     }
 
     /**
@@ -68,8 +68,8 @@ public class ModelAppService {
         if (ObjUtil.isNull(modelId)) {
             modelId = -1L;
         }
-        VehModelPo modelPo = getModelByCode(code);
-        return !ObjUtil.isNotNull(modelPo) || modelPo.getId().longValue() == modelId.longValue();
+        Model model = getModelByCode(code);
+        return !ObjUtil.isNotNull(model) || model.getId().longValue() == modelId.longValue();
     }
 
     /**
@@ -79,10 +79,10 @@ public class ModelAppService {
      * @return 结果
      */
     public Boolean checkModelBasicModelExist(Long modelId) {
-        VehModelPo modelPo = getModelById(modelId);
+        Model model = vehModelRepository.selectById(modelId);
         Map<String, Object> map = new HashMap<>();
-        map.put("modelCode", modelPo.getCode());
-        return vehBasicModelMapper.countPoByMap(map) > 0;
+        map.put("modelCode", model.getCode());
+        return vehBaseModelRepository.countByMap(map) > 0;
     }
 
     /**
@@ -92,10 +92,10 @@ public class ModelAppService {
      * @return 结果
      */
     public Boolean checkModelModelConfigExist(Long modelId) {
-        VehModelPo modelPo = getModelById(modelId);
+        Model model = vehModelRepository.selectById(modelId);
         Map<String, Object> map = new HashMap<>();
-        map.put("modelCode", modelPo.getCode());
-        return vehBuildConfigMapper.countPoByMap(map) > 0;
+        map.put("modelCode", model.getCode());
+        return vehBuildConfigRepository.countByMap(map) > 0;
     }
 
     /**
@@ -105,10 +105,10 @@ public class ModelAppService {
      * @return 结果
      */
     public Boolean checkModelVehicleExist(Long modelId) {
-        VehModelPo modelPo = getModelById(modelId);
+        Model model = vehModelRepository.selectById(modelId);
         Map<String, Object> map = new HashMap<>();
-        map.put("modelCode", modelPo.getCode());
-        return vehBasicInfoMapper.countPoByMap(map) > 0;
+        map.put("modelCode", model.getCode());
+        return vehBasicInfoRepository.countByMap(map) > 0;
     }
 
     /**
@@ -117,38 +117,44 @@ public class ModelAppService {
      * @param id 主键ID
      * @return 车型信息
      */
-    public VehModelPo getModelById(Long id) {
-        return vehModelMapper.selectPoById(id);
+    public ModelVo getModelById(Long id) {
+        return ModelAssembler.INSTANCE.fromDomain(vehModelRepository.selectById(id));
     }
 
     /**
      * 根据车型代码获取车型信息
      *
      * @param code 车型代码
-     * @return 车型信息
+     * @return 车型领域对象
      */
-    public VehModelPo getModelByCode(String code) {
-        return vehModelMapper.selectPoByCode(code);
+    public Model getModelByCode(String code) {
+        return vehModelRepository.selectByCode(code);
     }
 
     /**
      * 新增车型
      *
-     * @param model 车型信息
+     * @param modelVo 车型信息
+     * @param userId  操作用户ID
      * @return 结果
      */
-    public int createModel(VehModelPo model) {
-        return vehModelMapper.insertPo(model);
+    public int createModel(ModelVo modelVo, String userId) {
+        Model model = ModelAssembler.INSTANCE.toDomain(modelVo);
+        model.setCreateBy(userId);
+        return vehModelRepository.insert(model);
     }
 
     /**
      * 修改车型
      *
-     * @param model 车型信息
+     * @param modelVo 车型信息
+     * @param userId  操作用户ID
      * @return 结果
      */
-    public int modifyModel(VehModelPo model) {
-        return vehModelMapper.updatePo(model);
+    public int modifyModel(ModelVo modelVo, String userId) {
+        Model model = ModelAssembler.INSTANCE.toDomain(modelVo);
+        model.setModifyBy(userId);
+        return vehModelRepository.update(model);
     }
 
     /**
@@ -158,7 +164,7 @@ public class ModelAppService {
      * @return 结果
      */
     public int deleteModelByIds(Long[] ids) {
-        return vehModelMapper.batchPhysicalDeletePo(ids);
+        return vehModelRepository.batchPhysicalDelete(ids);
     }
 
 }

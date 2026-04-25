@@ -5,8 +5,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.PlatformVo;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.PlatformAppService;
-import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.PlatformAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehPlatformPo;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
 import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
 import net.hwyz.iov.cloud.framework.common.bean.ApiResponse;
@@ -84,8 +82,7 @@ public class MptPlatformController extends BaseController {
     @GetMapping(value = "/{platformId}")
     public ApiResponse<PlatformVo> getInfo(@PathVariable Long platformId) {
         log.info("管理后台用户[{}]根据车辆平台ID[{}]获取车辆平台信息", SecurityUtils.getUsername(), platformId);
-        VehPlatformPo platformPo = platformAppService.getPlatformById(platformId);
-        return ApiResponse.ok(PlatformAssembler.INSTANCE.fromPo(platformPo));
+        return ApiResponse.ok(platformAppService.getPlatformById(platformId));
     }
 
     /**
@@ -102,9 +99,7 @@ public class MptPlatformController extends BaseController {
         if (!platformAppService.checkCodeUnique(platform.getId(), platform.getCode())) {
             return ApiResponse.fail("新增车辆平台'" + platform.getCode() + "'失败，车辆平台代码已存在");
         }
-        VehPlatformPo platformPo = PlatformAssembler.INSTANCE.toPo(platform);
-        platformPo.setCreateBy(SecurityUtils.getUserId().toString());
-        return platformAppService.createPlatform(platformPo) > 0 ? ApiResponse.ok() : ApiResponse.fail("新增失败");
+        return platformAppService.createPlatform(platform, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("新增失败");
     }
 
     /**
@@ -121,9 +116,7 @@ public class MptPlatformController extends BaseController {
         if (!platformAppService.checkCodeUnique(platform.getId(), platform.getCode())) {
             return ApiResponse.fail("修改保存车辆平台'" + platform.getCode() + "'失败，车辆平台代码已存在");
         }
-        VehPlatformPo platformPo = PlatformAssembler.INSTANCE.toPo(platform);
-        platformPo.setModifyBy(SecurityUtils.getUserId().toString());
-        return platformAppService.modifyPlatform(platformPo) > 0 ? ApiResponse.ok() : ApiResponse.fail("修改失败");
+        return platformAppService.modifyPlatform(platform, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("修改失败");
     }
 
     /**

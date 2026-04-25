@@ -2,15 +2,14 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.assembler;
 
 import net.hwyz.iov.cloud.edd.vmd.api.vo.VehicleVo;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.VehicleDto;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehBasicInfoPo;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleBasicInfo;
 import org.mapstruct.Mapper;
-import org.mapstruct.Mappings;
 import org.mapstruct.factory.Mappers;
 
 import java.util.List;
 
 /**
- * 管理后台车辆转换类
+ * 管理后台车辆 VO 转换类
  *
  * @author hwyz_leo
  */
@@ -20,36 +19,34 @@ public interface VehicleVoAssembler {
     VehicleVoAssembler INSTANCE = Mappers.getMapper(VehicleVoAssembler.class);
 
     /**
-     * 数据对象转VO
+     * 领域对象转数据传输对象
      *
-     * @param vehBasicInfoPo 数据对象
-     * @return VO
+     * @param vehicleBasicInfo 领域对象
+     * @return 数据传输对象
      */
-    @Mappings({})
-    VehicleVo fromPo(VehBasicInfoPo vehBasicInfoPo);
+    VehicleVo fromDomain(VehicleBasicInfo vehicleBasicInfo);
 
     /**
-     * VO转数据对象
+     * 数据传输对象转领域对象
      *
-     * @param vehicleVo VO
-     * @return 数据对象
+     * @param vehicleVo 数据传输对象
+     * @return 领域对象
      */
-    @Mappings({})
-    VehBasicInfoPo toPo(VehicleVo vehicleVo);
+    VehicleBasicInfo toDomain(VehicleVo vehicleVo);
 
     /**
-     * 数据对象列表转VO列表
+     * 领域对象列表转数据传输对象列表
      *
-     * @param vehBasicInfoPoList 数据对象列表
-     * @return VO列表
+     * @param vehicleBasicInfoList 领域对象列表
+     * @return 数据传输对象列表
      */
-    List<VehicleVo> fromPoList(List<VehBasicInfoPo> vehBasicInfoPoList);
+    List<VehicleVo> fromDomainList(List<VehicleBasicInfo> vehicleBasicInfoList);
 
     /**
-     * DTO转VO
+     * DTO 转数据传输对象
      *
      * @param vehicleDto DTO
-     * @return VO
+     * @return 数据传输对象
      */
     VehicleVo fromDto(VehicleDto vehicleDto);
 

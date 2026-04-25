@@ -1,6 +1,7 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.vid.impl;
 
 import cn.hutool.core.date.DateTime;
+import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
@@ -13,15 +14,17 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleLifecycleAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehiclePartAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParser;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Device;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleBasicInfo;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleDetail;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehiclePart;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.VehicleLifecycleNodeEnum;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
 import net.hwyz.iov.cloud.framework.common.enums.DeviceItem;
-import cn.hutool.core.date.DateUtil;
 import net.hwyz.iov.cloud.framework.common.util.StrUtil;
 import net.hwyz.iov.cloud.ota.pota.api.contract.VehiclePartExService;
 import net.hwyz.iov.cloud.ota.pota.api.contract.request.SaveVehiclePartsRequest;
 import net.hwyz.iov.cloud.ota.pota.api.feign.service.ExVehiclePartService;
-import net.hwyz.iov.cloud.otd.wms.api.contract.PreInboundOrderExService;
-import net.hwyz.iov.cloud.otd.wms.api.contract.enums.WarehouseLevel;
-//import net.hwyz.iov.cloud.otd.wms.api.feign.service.ExPreInboundOrderService;
 import net.hwyz.iov.cloud.tsp.ccp.api.contract.VehicleCcpExService;
 import net.hwyz.iov.cloud.tsp.ccp.api.feign.service.ExVehicleCcpService;
 import net.hwyz.iov.cloud.tsp.idcm.api.contract.VehicleIdcmExService;
@@ -30,23 +33,15 @@ import net.hwyz.iov.cloud.tsp.mno.api.contract.VehicleNetworkExService;
 import net.hwyz.iov.cloud.tsp.mno.api.feign.service.ExVehicleNetworkService;
 import net.hwyz.iov.cloud.tsp.tbox.api.contract.VehicleTboxExService;
 import net.hwyz.iov.cloud.tsp.tbox.api.feign.service.ExVehicleTboxService;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.VehicleLifecycleNodeEnum;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehBasicInfoMapper;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehDetailInfoMapper;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.DevicePo;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehBasicInfoPo;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehDetailInfoPo;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehiclePartPo;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * 车辆生产数据解析器V1.0
+ * 车辆下线数据解析器V1.0
  *
  * @author hwyz_leo
  */
@@ -56,9 +51,8 @@ import java.util.stream.Collectors;
 public class EolDataParserV1_0 extends BaseParser implements ImportDataParser {
 
     private final VehiclePublish vehiclePublish;
-    private final VehBasicInfoMapper vehBasicInfoMapper;
+    private final VehBasicInfoRepository vehBasicInfoRepository;
     private final DeviceAppService deviceAppService;
-    private final VehDetailInfoMapper vehDetailInfoMapper;
     private final VehicleAppService vehicleAppService;
     private final ExVehicleCcpService exVehicleCcpService;
     private final ExVehiclePartService exVehiclePartService;
@@ -66,7 +60,6 @@ public class EolDataParserV1_0 extends BaseParser implements ImportDataParser {
     private final ExVehicleIdcmService exVehicleIdcmService;
     private final VehiclePartAppService vehiclePartAppService;
     private final ExVehicleNetworkService exVehicleNetworkService;
-//    private final ExPreInboundOrderService exPreInboundOrderService;
     private final VehicleLifecycleAppService vehicleLifecycleAppService;
 
     @Override
@@ -81,20 +74,22 @@ public class EolDataParserV1_0 extends BaseParser implements ImportDataParser {
                 vehicleInvalidCount++;
                 continue;
             }
-            VehBasicInfoPo vehBasicInfoPo = vehBasicInfoMapper.selectPoByVin(vin);
-            Map<String, VehDetailInfoPo> vehicleDetailMap = vehDetailInfoMapper.selectPoByVin(vin).stream().collect(Collectors.toMap(VehDetailInfoPo::getType, v -> v));
-            if (ObjUtil.isNull(vehBasicInfoPo)) {
-                vehBasicInfoPo = new VehBasicInfoPo();
-                vehBasicInfoPo.setVin(vin);
+            VehicleBasicInfo vehicleBasicInfo = vehBasicInfoRepository.selectByVin(vin);
+            Map<String, VehicleDetail> vehicleDetailMap = vehBasicInfoRepository.selectDetailByVin(vin).stream()
+                    .collect(Collectors.toMap(VehicleDetail::getType, v -> v));
+            if (ObjUtil.isNull(vehicleBasicInfo)) {
+                vehicleBasicInfo = VehicleBasicInfo.builder()
+                        .vin(vin)
+                        .build();
             }
-            handleVehicleInfo(itemJson, vehBasicInfoPo, "MANUFACTURER", "manufacturerCode", "工厂数据", batchNum, vin);
-            handleVehicleInfo(itemJson, vehBasicInfoPo, "BRAND", "brandCode", "品牌数据", batchNum, vin);
-            handleVehicleInfo(itemJson, vehBasicInfoPo, "PLATFORM", "platformCode", "平台数据", batchNum, vin);
-            handleVehicleInfo(itemJson, vehBasicInfoPo, "SERIES", "seriesCode", "车系数据", batchNum, vin);
-            handleVehicleInfo(itemJson, vehBasicInfoPo, "MODEL", "modelCode", "车型数据", batchNum, vin);
-            handleVehicleInfo(itemJson, vehBasicInfoPo, "BASE_MODEL", "baseModelCode", "基础车型数据", batchNum, vin);
-            handleVehicleInfo(itemJson, vehBasicInfoPo, "BUILD_CONFIG", "buildConfigCode", "生产配置数据", batchNum, vin);
-            handleVehicleInfo(itemJson, vehBasicInfoPo, "VEHICLE_BASE_VERSION", "vehicleBaseVersion", "车辆基线版本", batchNum, vin);
+            handleVehicleInfo(itemJson, vehicleBasicInfo, "MANUFACTURER", "manufacturerCode", "工厂数据", batchNum, vin);
+            handleVehicleInfo(itemJson, vehicleBasicInfo, "BRAND", "brandCode", "品牌数据", batchNum, vin);
+            handleVehicleInfo(itemJson, vehicleBasicInfo, "PLATFORM", "platformCode", "平台数据", batchNum, vin);
+            handleVehicleInfo(itemJson, vehicleBasicInfo, "SERIES", "seriesCode", "车系数据", batchNum, vin);
+            handleVehicleInfo(itemJson, vehicleBasicInfo, "MODEL", "modelCode", "车型数据", batchNum, vin);
+            handleVehicleInfo(itemJson, vehicleBasicInfo, "BASE_MODEL", "baseModelCode", "基础车型数据", batchNum, vin);
+            handleVehicleInfo(itemJson, vehicleBasicInfo, "BUILD_CONFIG", "buildConfigCode", "生产配置数据", batchNum, vin);
+            handleVehicleInfo(itemJson, vehicleBasicInfo, "VEHICLE_BASE_VERSION", "vehicleBaseVersion", "车辆基线版本", batchNum, vin);
             String eolDateStr = itemJson.getStr("EOL_DATE");
             DateTime eolDate;
             boolean firstEol = false;
@@ -103,11 +98,11 @@ public class EolDataParserV1_0 extends BaseParser implements ImportDataParser {
             } else {
                 eolDate = new DateTime();
             }
-            if (ObjUtil.isNull(vehBasicInfoPo.getEolTime())) {
-                vehBasicInfoPo.setEolTime(eolDate);
+            if (ObjUtil.isNull(vehicleBasicInfo.getEolTime())) {
+                vehicleBasicInfo.setEolTime(eolDate);
                 firstEol = true;
-            } else if (eolDate.isBefore(vehBasicInfoPo.getEolTime()) || eolDate.isAfter(vehBasicInfoPo.getEolTime())) {
-                log.warn("车辆导入数据批次号[{}]下线日期数据[{}]与原数据[{}]不一致", batchNum, eolDateStr, DateUtil.formatDate(vehBasicInfoPo.getEolTime()));
+            } else if (eolDate.isBefore(vehicleBasicInfo.getEolTime()) || eolDate.isAfter(vehicleBasicInfo.getEolTime())) {
+                log.warn("车辆导入数据批次号[{}]下线日期数据[{}]与原数据[{}]不一致", batchNum, eolDateStr, DateUtil.formatDate(vehicleBasicInfo.getEolTime()));
             }
             handleVehicleDetail(itemJson, vehicleDetailMap, "PRODUCTION_ORDER", "生产订单", batchNum, vin);
             handleVehicleDetail(itemJson, vehicleDetailMap, "MATNR", "整车物料编码", batchNum, vin);
@@ -137,16 +132,16 @@ public class EolDataParserV1_0 extends BaseParser implements ImportDataParser {
             handleVehicleDetail(itemJson, vehicleDetailMap, "POWER_BATTERY_PACK_NO", "动力电池包编码", batchNum, vin);
             handleVehicleDetail(itemJson, vehicleDetailMap, "POWER_BATTERY_TYPE", "动力电池类型", batchNum, vin);
             handleVehicleDetail(itemJson, vehicleDetailMap, "POWER_BATTERY_FACTORY", "动力电池厂商", batchNum, vin);
-            if (ObjUtil.isNull(vehBasicInfoPo.getId())) {
-                vehBasicInfoMapper.insertPo(vehBasicInfoPo);
+            if (ObjUtil.isNull(vehicleBasicInfo.getId())) {
+                vehBasicInfoRepository.insert(vehicleBasicInfo);
                 // 如果车辆是新生成，则补发车辆生产事件
                 vehiclePublish.produce(vin);
             } else {
-                vehBasicInfoMapper.updatePo(vehBasicInfoPo);
+                vehBasicInfoRepository.update(vehicleBasicInfo);
             }
-            List<VehDetailInfoPo> needInsertDetailList = vehicleDetailMap.values().stream().filter(po -> po.getId() == null).toList();
+            List<VehicleDetail> needInsertDetailList = vehicleDetailMap.values().stream().filter(doObj -> doObj.getId() == null).toList();
             if (!needInsertDetailList.isEmpty()) {
-                vehDetailInfoMapper.batchInsertPo(needInsertDetailList);
+                vehBasicInfoRepository.batchInsertDetail(needInsertDetailList);
             }
             if (firstEol) {
                 vehiclePublish.eol(vin, eolDate);
@@ -177,7 +172,7 @@ public class EolDataParserV1_0 extends BaseParser implements ImportDataParser {
                 }
                 String pn = partJson.getStr("PART_NO");
                 String sn = partJson.getStr("PART_SN");
-                DevicePo device = deviceAppService.getDeviceByCode(deviceCode);
+                Device device = deviceAppService.getDeviceByCode(deviceCode);
                 String supplierCode = partJson.getStr("SUPPLIER_CODE");
                 String configWord = partJson.getStr("CONFIG_WORD");
                 String hardwareVersion = partJson.getStr("HARDWARE_VERSION");
@@ -191,7 +186,7 @@ public class EolDataParserV1_0 extends BaseParser implements ImportDataParser {
                         .sn(sn)
                         .pn(pn)
                         .deviceCode(deviceCode)
-                        .deviceItem(device.getDeviceItem())
+                        .deviceItem(device != null ? device.getDeviceItem() : null)
                         .supplierCode(supplierCode)
                         .batchNum(batchNum)
                         .configWord(configWord)
@@ -201,12 +196,12 @@ public class EolDataParserV1_0 extends BaseParser implements ImportDataParser {
                         .softwarePn(softwarePn)
                         .build());
                 try {
-                    vehiclePartAppService.bindVehiclePart(VehiclePartPo.builder()
+                    vehiclePartAppService.bindVehiclePart(VehiclePart.builder()
                             .pn(pn)
                             .sn(sn)
                             .vin(vin)
                             .deviceCode(deviceCode)
-                            .deviceItem(device.getDeviceItem())
+                            .deviceItem(device != null ? device.getDeviceItem() : null)
                             .supplierCode(supplierCode)
                             .batchNum(batchNum)
                             .configWord(configWord)
@@ -219,7 +214,7 @@ public class EolDataParserV1_0 extends BaseParser implements ImportDataParser {
                 } catch (Exception e) {
                     log.warn("车辆导入数据批次号[{}]车架号[{}]零部件[{}]绑定异常", batchNum, vin, deviceCode, e);
                 }
-                if (DeviceItem.TBOX.name().equalsIgnoreCase(device.getDeviceItem())) {
+                if (device != null && DeviceItem.TBOX.name().equalsIgnoreCase(device.getDeviceItem())) {
                     String iccid1 = partJson.getStr("ICCID1");
                     String iccid2 = partJson.getStr("ICCID2");
                     if (StrUtil.isNotBlank(iccid1)) {
@@ -231,23 +226,15 @@ public class EolDataParserV1_0 extends BaseParser implements ImportDataParser {
                     }
                     exVehicleTboxService.bind(VehicleTboxExService.builder().vin(vin).sn(sn).build());
                 }
-                if (DeviceItem.CCP.name().equalsIgnoreCase(device.getDeviceItem())) {
+                if (device != null && DeviceItem.CCP.name().equalsIgnoreCase(device.getDeviceItem())) {
                     exVehicleCcpService.bind(VehicleCcpExService.builder().vin(vin).sn(sn).build());
                 }
-                if (DeviceItem.IDCM.name().equalsIgnoreCase(device.getDeviceItem())) {
+                if (device != null && DeviceItem.IDCM.name().equalsIgnoreCase(device.getDeviceItem())) {
                     exVehicleIdcmService.bind(VehicleIdcmExService.builder().vin(vin).sn(sn).build());
                 }
             }
             request.setVehiclePartList(vehiclePartList);
             exVehiclePartService.saveVehicleParts(vin, request);
-            // 预期下线后1天内到达前置库，2小时内入库
-//            exPreInboundOrderService.createOrder(PreInboundOrderExService.builder()
-//                    .vin(vin)
-//                    .buildConfigCode(itemJson.getStr("BUILD_CONFIG"))
-//                    .warehouseLevel(WarehouseLevel.PDC.name())
-//                    .estimatedArrivalTime(new Date(System.currentTimeMillis() + 24 * 60 * 60 * 1000))
-//                    .estimatedInboundTime(new Date(System.currentTimeMillis() + 24 * 60 * 60 * 1000 + 2 * 60 * 60 * 1000))
-//                    .build());
         }
         if (vehicleInvalidCount > 0) {
             log.warn("车辆生产导入数据批次号[{}]存在无效车辆数据[{}]", batchNum, vehicleInvalidCount);

@@ -5,8 +5,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.DeviceVo;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.DeviceAppService;
-import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.DeviceAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.DevicePo;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
 import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
 import net.hwyz.iov.cloud.framework.common.bean.ApiResponse;
@@ -77,7 +75,7 @@ public class MptDeviceController extends BaseController {
     public ApiResponse listAllDevice() {
         log.info("管理后台用户[{}]获取所有设备", SecurityUtils.getUsername());
         List<Map<String, Object>> list = new ArrayList<>();
-        for (DevicePo device : deviceAppService.listAll()) {
+        for (DeviceVo device : deviceAppService.listAll()) {
             list.add(Map.of("code", device.getCode(), "label", device.getName()));
         }
         return ApiResponse.ok(list);
@@ -106,8 +104,7 @@ public class MptDeviceController extends BaseController {
     @GetMapping(value = "/{deviceId}")
     public ApiResponse getInfo(@PathVariable Long deviceId) {
         log.info("管理后台用户[{}]根据设备信息ID[{}]获取设备信息", SecurityUtils.getUsername(), deviceId);
-        DevicePo devicePo = deviceAppService.getDeviceById(deviceId);
-        return ApiResponse.ok(DeviceAssembler.INSTANCE.fromPo(devicePo));
+        return ApiResponse.ok(deviceAppService.getDeviceById(deviceId));
     }
 
     /**
@@ -124,9 +121,7 @@ public class MptDeviceController extends BaseController {
         if (!deviceAppService.checkCodeUnique(device.getId(), device.getCode())) {
             return ApiResponse.fail("新增设备信息'" + device.getCode() + "'失败，设备信息代码已存在");
         }
-        DevicePo devicePo = DeviceAssembler.INSTANCE.toPo(device);
-        devicePo.setCreateBy(SecurityUtils.getUserId().toString());
-        return deviceAppService.createDevice(devicePo) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
+        return deviceAppService.createDevice(device, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
     }
 
     /**
@@ -143,9 +138,7 @@ public class MptDeviceController extends BaseController {
         if (!deviceAppService.checkCodeUnique(device.getId(), device.getCode())) {
             return ApiResponse.fail("修改保存设备信息'" + device.getCode() + "'失败，设备信息代码已存在");
         }
-        DevicePo devicePo = DeviceAssembler.INSTANCE.toPo(device);
-        devicePo.setModifyBy(SecurityUtils.getUserId().toString());
-        return deviceAppService.modifyDevice(devicePo) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
+        return deviceAppService.modifyDevice(device, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
     }
 
     /**

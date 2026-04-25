@@ -1,9 +1,8 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.assembler;
 
 import net.hwyz.iov.cloud.edd.vmd.api.vo.VehicleConfigItemVo;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehicleConfigItemPo;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleConfigItem;
 import org.mapstruct.Mapper;
-import org.mapstruct.Mappings;
 import org.mapstruct.factory.Mappers;
 
 import java.util.List;
@@ -19,29 +18,27 @@ public interface VehicleConfigItemAssembler {
     VehicleConfigItemAssembler INSTANCE = Mappers.getMapper(VehicleConfigItemAssembler.class);
 
     /**
-     * 数据对象转数据传输对象
+     * 领域对象转数据传输对象
      *
-     * @param vehicleConfigItemPo 数据对象
+     * @param vehicleConfigItem 领域对象
      * @return 数据传输对象
      */
-    @Mappings({})
-    VehicleConfigItemVo fromPo(VehicleConfigItemPo vehicleConfigItemPo);
+    VehicleConfigItemVo fromDomain(VehicleConfigItem vehicleConfigItem);
 
     /**
-     * 数据传输对象转数据对象
+     * 数据传输对象转领域对象
      *
      * @param vehicleConfigItemVo 数据传输对象
-     * @return 数据对象
+     * @return 领域对象
      */
-    @Mappings({})
-    VehicleConfigItemPo toPo(VehicleConfigItemVo vehicleConfigItemVo);
+    VehicleConfigItem toDomain(VehicleConfigItemVo vehicleConfigItemVo);
 
     /**
-     * 数据对象列表转数据传输对象列表
+     * 领域对象列表转数据传输对象列表
      *
-     * @param vehicleConfigItemPoList 数据对象列表
+     * @param vehicleConfigItemList 领域对象列表
      * @return 数据传输对象列表
      */
-    List<VehicleConfigItemVo> fromPoList(List<VehicleConfigItemPo> vehicleConfigItemPoList);
+    List<VehicleConfigItemVo> fromDomainList(List<VehicleConfigItem> vehicleConfigItemList);
 
 }

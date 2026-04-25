@@ -4,9 +4,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.ManufacturerVo;
-import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.ManufacturerAssembler;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.ManufacturerAppService;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehManufacturerPo;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
 import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
 import net.hwyz.iov.cloud.framework.common.bean.ApiResponse;
@@ -71,8 +69,7 @@ public class MptManufacturerController extends BaseController {
     @GetMapping(value = "/{manufacturerId}")
     public ApiResponse<ManufacturerVo> getInfo(@PathVariable Long manufacturerId) {
         log.info("管理后台用户[{}]根据车辆工厂ID[{}]获取车辆工厂信息", SecurityUtils.getUsername(), manufacturerId);
-        VehManufacturerPo manufacturerPo = manufacturerAppService.getManufacturerById(manufacturerId);
-        return ApiResponse.ok(ManufacturerAssembler.INSTANCE.fromPo(manufacturerPo));
+        return ApiResponse.ok(manufacturerAppService.getManufacturerById(manufacturerId));
     }
 
     /**
@@ -89,9 +86,7 @@ public class MptManufacturerController extends BaseController {
         if (!manufacturerAppService.checkCodeUnique(manufacturer.getId(), manufacturer.getCode())) {
             return ApiResponse.fail("新增车辆工厂'" + manufacturer.getCode() + "'失败，车辆工厂代码已存在");
         }
-        VehManufacturerPo manufacturerPo = ManufacturerAssembler.INSTANCE.toPo(manufacturer);
-        manufacturerPo.setCreateBy(SecurityUtils.getUserId().toString());
-        return manufacturerAppService.createManufacturer(manufacturerPo) > 0 ? ApiResponse.ok() : ApiResponse.fail("新增失败");
+        return manufacturerAppService.createManufacturer(manufacturer, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("新增失败");
     }
 
     /**
@@ -108,9 +103,7 @@ public class MptManufacturerController extends BaseController {
         if (!manufacturerAppService.checkCodeUnique(manufacturer.getId(), manufacturer.getCode())) {
             return ApiResponse.fail("修改保存车辆工厂'" + manufacturer.getCode() + "'失败，车辆工厂代码已存在");
         }
-        VehManufacturerPo manufacturerPo = ManufacturerAssembler.INSTANCE.toPo(manufacturer);
-        manufacturerPo.setModifyBy(SecurityUtils.getUserId().toString());
-        return manufacturerAppService.modifyManufacturer(manufacturerPo) > 0 ? ApiResponse.ok() : ApiResponse.fail("修改失败");
+        return manufacturerAppService.modifyManufacturer(manufacturer, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("修改失败");
     }
 
     /**
@@ -129,7 +122,7 @@ public class MptManufacturerController extends BaseController {
                 return ApiResponse.fail("删除车辆工厂'" + manufacturerId + "'失败，该车辆工厂下存在车辆");
             }
         }
-        return manufacturerAppService.deletePlatformByIds(manufacturerIds) > 0 ? ApiResponse.ok() : ApiResponse.fail("删除失败");
+        return manufacturerAppService.deleteManufacturerByIds(manufacturerIds) > 0 ? ApiResponse.ok() : ApiResponse.fail("删除失败");
     }
 
 }

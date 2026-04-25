@@ -5,8 +5,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.BrandVo;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.BrandAppService;
-import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.BrandAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehBrandPo;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
 import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
 import net.hwyz.iov.cloud.framework.common.bean.ApiResponse;
@@ -71,8 +69,7 @@ public class MptBrandController extends BaseController {
     @GetMapping(value = "/{brandId}")
     public ApiResponse<BrandVo> getInfo(@PathVariable Long brandId) {
         log.info("管理后台用户[{}]根据车辆品牌ID[{}]获取车辆品牌信息", SecurityUtils.getUsername(), brandId);
-        VehBrandPo brandPo = brandAppService.getBrandById(brandId);
-        return ApiResponse.ok(BrandAssembler.INSTANCE.fromPo(brandPo));
+        return ApiResponse.ok(brandAppService.getBrandById(brandId));
     }
 
     /**
@@ -89,9 +86,7 @@ public class MptBrandController extends BaseController {
         if (!brandAppService.checkCodeUnique(brand.getId(), brand.getCode())) {
             return ApiResponse.fail("新增车辆品牌'" + brand.getCode() + "'失败，车辆品牌代码已存在");
         }
-        VehBrandPo brandPo = BrandAssembler.INSTANCE.toPo(brand);
-        brandPo.setCreateBy(SecurityUtils.getUserId().toString());
-        return brandAppService.createBrand(brandPo) > 0 ? ApiResponse.ok() : ApiResponse.fail("新增失败");
+        return brandAppService.createBrand(brand, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("新增失败");
     }
 
     /**
@@ -108,9 +103,7 @@ public class MptBrandController extends BaseController {
         if (!brandAppService.checkCodeUnique(brand.getId(), brand.getCode())) {
             return ApiResponse.fail("修改保存车辆品牌'" + brand.getCode() + "'失败，车辆品牌代码已存在");
         }
-        VehBrandPo brandPo = BrandAssembler.INSTANCE.toPo(brand);
-        brandPo.setModifyBy(SecurityUtils.getUserId().toString());
-        return brandAppService.modifyBrand(brandPo) > 0 ? ApiResponse.ok() : ApiResponse.fail("修改失败");
+        return brandAppService.modifyBrand(brand, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("修改失败");
     }
 
     /**
@@ -125,6 +118,9 @@ public class MptBrandController extends BaseController {
     public ApiResponse<Void> remove(@PathVariable Long[] brandIds) {
         log.info("管理后台用户[{}]删除车辆品牌信息[{}]", SecurityUtils.getUsername(), brandIds);
         for (Long brandId : brandIds) {
+            if (brandAppService.checkBrandSeriesExist(brandId)) {
+                return ApiResponse.fail("删除车辆品牌'" + brandId + "'失败，该车辆品牌下存在车系");
+            }
             if (brandAppService.checkBrandVehicleExist(brandId)) {
                 return ApiResponse.fail("删除车辆品牌'" + brandId + "'失败，该车辆品牌下存在车辆");
             }

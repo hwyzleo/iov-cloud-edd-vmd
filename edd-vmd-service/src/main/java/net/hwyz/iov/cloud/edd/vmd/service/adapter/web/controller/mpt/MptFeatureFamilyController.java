@@ -6,10 +6,6 @@ import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.FeatureCodeVo;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.FeatureFamilyVo;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.FeatureFamilyAppService;
-import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.FeatureCodeAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.FeatureFamilyAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehFeatureCodePo;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehFeatureFamilyPo;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
 import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
 import net.hwyz.iov.cloud.framework.common.bean.ApiResponse;
@@ -63,9 +59,8 @@ public class MptFeatureFamilyController extends BaseController {
     public ApiResponse<PageResult<FeatureCodeVo>> listFeatureCode(@PathVariable Long featureFamilyId, FeatureCodeVo featureCode) {
         log.info("管理后台用户[{}]分页查询车辆特征族[{}]下特征值信息", SecurityUtils.getUsername(), featureFamilyId);
         startPage();
-        List<VehFeatureCodePo> featureCodePoList = featureFamilyAppService.searchFeatureCode(featureFamilyId, null,
+        List<FeatureCodeVo> featureCodeVoList = featureFamilyAppService.searchFeatureCode(featureFamilyId, null,
                 featureCode.getName(), featureCode.getName(), getBeginTime(featureCode), getEndTime(featureCode));
-        List<FeatureCodeVo> featureCodeVoList = FeatureCodeAssembler.INSTANCE.fromPoList(featureCodePoList);
         return ApiResponse.ok(getPageResult(featureCodeVoList));
     }
 
@@ -92,8 +87,8 @@ public class MptFeatureFamilyController extends BaseController {
     @GetMapping(value = "/listAllFeatureCode")
     public ApiResponse<List<FeatureCodeVo>> listAllFeatureCode(@RequestParam String familyCode) {
         log.info("管理后台用户[{}]获取车辆特征族[{}]下特征值列表", SecurityUtils.getUsername(), familyCode);
-        List<VehFeatureCodePo> featureCodePoList = featureFamilyAppService.searchFeatureCode(null, familyCode, null, null, null, null);
-        return ApiResponse.ok(FeatureCodeAssembler.INSTANCE.fromPoList(featureCodePoList));
+        List<FeatureCodeVo> featureCodeVoList = featureFamilyAppService.searchFeatureCode(null, familyCode, null, null, null, null);
+        return ApiResponse.ok(featureCodeVoList);
     }
 
     /**
@@ -119,8 +114,7 @@ public class MptFeatureFamilyController extends BaseController {
     @GetMapping(value = "/{featureFamilyId}")
     public ApiResponse<FeatureFamilyVo> getInfo(@PathVariable Long featureFamilyId) {
         log.info("管理后台用户[{}]根据车辆特征族ID[{}]获取车辆特征族信息", SecurityUtils.getUsername(), featureFamilyId);
-        VehFeatureFamilyPo featureFamilyPo = featureFamilyAppService.getFeatureFamilyById(featureFamilyId);
-        return ApiResponse.ok(FeatureFamilyAssembler.INSTANCE.fromPo(featureFamilyPo));
+        return ApiResponse.ok(featureFamilyAppService.getFeatureFamilyById(featureFamilyId));
     }
 
     /**
@@ -134,8 +128,7 @@ public class MptFeatureFamilyController extends BaseController {
     @GetMapping(value = "/{featureFamilyId}/featureCode/{featureCodeId}")
     public ApiResponse<FeatureCodeVo> getFeatureCodeInfo(@PathVariable Long featureFamilyId, @PathVariable Long featureCodeId) {
         log.info("管理后台用户[{}]根据车辆特征值ID[{}]获取车辆特征值信息", SecurityUtils.getUsername(), featureCodeId);
-        VehFeatureCodePo featureCodePo = featureFamilyAppService.getFeatureCodeById(featureFamilyId, featureCodeId);
-        return ApiResponse.ok(FeatureCodeAssembler.INSTANCE.fromPo(featureCodePo));
+        return ApiResponse.ok(featureFamilyAppService.getFeatureCodeById(featureFamilyId, featureCodeId));
     }
 
     /**
@@ -152,9 +145,7 @@ public class MptFeatureFamilyController extends BaseController {
         if (!featureFamilyAppService.checkFamilyCodeUnique(featureFamily.getId(), featureFamily.getCode())) {
             return ApiResponse.fail("新增车辆特征族'" + featureFamily.getCode() + "'失败，车辆特征族代码已存在");
         }
-        VehFeatureFamilyPo featureFamilyPo = FeatureFamilyAssembler.INSTANCE.toPo(featureFamily);
-        featureFamilyPo.setCreateBy(SecurityUtils.getUserId().toString());
-        return featureFamilyAppService.createFeatureFamily(featureFamilyPo) > 0 ? ApiResponse.ok() : ApiResponse.fail("新增失败");
+        return featureFamilyAppService.createFeatureFamily(featureFamily, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("新增失败");
     }
 
     /**
@@ -172,9 +163,7 @@ public class MptFeatureFamilyController extends BaseController {
         if (!featureFamilyAppService.checkFeatureCodeUnique(featureCode.getId(), featureCode.getCode())) {
             return ApiResponse.fail("新增车辆特征值'" + featureCode.getCode() + "'失败，车辆特征值代码已存在");
         }
-        VehFeatureCodePo featureCodePo = FeatureCodeAssembler.INSTANCE.toPo(featureCode);
-        featureCodePo.setCreateBy(SecurityUtils.getUserId().toString());
-        return featureFamilyAppService.createFeatureCode(featureFamilyId, featureCodePo) > 0 ? ApiResponse.ok() : ApiResponse.fail("新增失败");
+        return featureFamilyAppService.createFeatureCode(featureFamilyId, featureCode, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("新增失败");
     }
 
     /**
@@ -191,9 +180,7 @@ public class MptFeatureFamilyController extends BaseController {
         if (!featureFamilyAppService.checkFamilyCodeUnique(featureFamily.getId(), featureFamily.getCode())) {
             return ApiResponse.fail("修改保存车辆特征族'" + featureFamily.getCode() + "'失败，车辆特征族代码已存在");
         }
-        VehFeatureFamilyPo featureFamilyPo = FeatureFamilyAssembler.INSTANCE.toPo(featureFamily);
-        featureFamilyPo.setModifyBy(SecurityUtils.getUserId().toString());
-        return featureFamilyAppService.modifyFeatureFamily(featureFamilyPo) > 0 ? ApiResponse.ok() : ApiResponse.fail("修改失败");
+        return featureFamilyAppService.modifyFeatureFamily(featureFamily, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("修改失败");
     }
 
     /**
@@ -211,9 +198,7 @@ public class MptFeatureFamilyController extends BaseController {
         if (!featureFamilyAppService.checkFeatureCodeUnique(featureCode.getId(), featureCode.getCode())) {
             return ApiResponse.fail("修改保存车辆特征值'" + featureCode.getCode() + "'失败，车辆特征值代码已存在");
         }
-        VehFeatureCodePo featureCodePo = FeatureCodeAssembler.INSTANCE.toPo(featureCode);
-        featureCodePo.setModifyBy(SecurityUtils.getUserId().toString());
-        return featureFamilyAppService.modifyFeatureCode(featureFamilyId, featureCodePo) > 0 ? ApiResponse.ok() : ApiResponse.fail("修改失败");
+        return featureFamilyAppService.modifyFeatureCode(featureFamilyId, featureCode, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("修改失败");
     }
 
     /**

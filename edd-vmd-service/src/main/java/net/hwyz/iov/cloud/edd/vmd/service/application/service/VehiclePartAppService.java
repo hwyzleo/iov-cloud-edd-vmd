@@ -5,18 +5,15 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.VehiclePartVo;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.VehiclePartAssembler;
-import net.hwyz.iov.cloud.framework.common.util.StrUtil;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.VehiclePartState;
-import net.hwyz.iov.cloud.edd.vmd.service.common.exception.PartNotAllowBindException;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehiclePartMapper;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehiclePartHistoryMapper;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehiclePartHistoryPo;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehiclePartPo;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehiclePart;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehiclePartRepository;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 /**
  * 车辆零件应用服务类
@@ -28,153 +25,110 @@ import java.util.*;
 @RequiredArgsConstructor
 public class VehiclePartAppService {
 
-    private final VehiclePartMapper vehiclePartMapper;
-    private final VehiclePartHistoryMapper vehiclePartHistoryMapper;
+    private final VehiclePartRepository vehiclePartRepository;
 
     /**
-     * 查询车辆零件
+     * 查询车辆零件信息
      *
      * @param vin       车架号
      * @param pn        零件号
      * @param beginTime 开始时间
-     * @param endTime   结束时间
+     * @param endTime    结束时间
      * @return 车辆零件列表
      */
     public List<VehiclePartVo> search(String vin, String pn, Date beginTime, Date endTime) {
         Map<String, Object> map = new HashMap<>();
         map.put("vin", vin);
-        map.put("pn", StringUtils.isBlank(pn) ? null : pn.trim() + "%");
+        map.put("pn", pn);
         map.put("beginTime", beginTime);
         map.put("endTime", endTime);
-        List<VehiclePartPo> vehiclePartPoList = vehiclePartMapper.selectPoByMap(map);
-        return PageUtil.convert(vehiclePartPoList, VehiclePartAssembler.INSTANCE::fromPo);
+        List<VehiclePart> vehiclePartList = vehiclePartRepository.selectByMap(map);
+        return PageUtil.convert(vehiclePartList, VehiclePartAssembler.INSTANCE::fromDomain);
     }
 
     /**
-     * 检查零件号与序列号是否唯一
+     * 查询车辆零件信息
      *
-     * @param vehiclePartId 车辆零件ID
-     * @param pn            零件号
-     * @param sn            序列号
-     * @return 结果
+     * @param vin       车架号
+     * @param pn        零件号
+     * @param sn        序列号
+     * @param partState 零件状态
+     * @param beginTime 开始时间
+     * @param endTime    结束时间
+     * @return 车辆零件列表
      */
-    public Boolean checkPnAndSnUnique(Long vehiclePartId, String pn, String sn) {
-        if (ObjUtil.isNull(vehiclePartId)) {
-            vehiclePartId = -1L;
-        }
-        VehiclePartPo vehiclePartPo = getVehiclePartByPnAndSn(pn, sn);
-        return !ObjUtil.isNotNull(vehiclePartPo) || vehiclePartPo.getId().longValue() == vehiclePartId.longValue();
+    public List<VehiclePartVo> search(String vin, String pn, String sn, Integer partState, Date beginTime, Date endTime) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("vin", vin);
+        map.put("pn", pn);
+        map.put("sn", sn);
+        map.put("partState", partState);
+        map.put("beginTime", beginTime);
+        map.put("endTime", endTime);
+        List<VehiclePart> vehiclePartList = vehiclePartRepository.selectByMap(map);
+        return PageUtil.convert(vehiclePartList, VehiclePartAssembler.INSTANCE::fromDomain);
     }
 
     /**
-     * 根据主键ID获取车辆零件
+     * 检查零件号和序列号是否唯一
      *
      * @param id 主键ID
-     * @return 车辆零件
-     */
-    public VehiclePartPo getVehiclePartById(Long id) {
-        return vehiclePartMapper.selectPoById(id);
-    }
-
-    /**
-     * 根据零件号与序列号获取车辆零件
-     *
      * @param pn 零件号
      * @param sn 序列号
-     * @return 车辆零件
+     * @return 结果
      */
-    public VehiclePartPo getVehiclePartByPnAndSn(String pn, String sn) {
-        return vehiclePartMapper.selectPoByPnAndSn(pn, sn);
-    }
-
-    /**
-     * 新增车辆零件
-     *
-     * @param vehiclePart 车辆零件
-     * @return 影响行数
-     */
-    public int createVehiclePart(VehiclePartPo vehiclePart) {
-        if (StrUtil.isNotBlank(vehiclePart.getSn()) && StrUtil.isBlank(vehiclePart.getVin())) {
-            VehiclePartPo vehiclePartTmp = vehiclePartMapper.selectPoByPnAndSn(vehiclePart.getPn(), vehiclePart.getSn());
-            if (vehiclePartTmp == null) {
-                vehiclePart.setPartState(VehiclePartState.UNBOUND.value);
-                vehiclePartHistoryMapper.insertPo(VehiclePartAssembler.INSTANCE.toHistory(vehiclePart));
-                return vehiclePartMapper.insertPo(vehiclePart);
-            } else {
-                log.warn("车辆零件[{}]已存在[pn={},sn={}]", vehiclePartTmp.getDeviceCode(), vehiclePart.getPn(), vehiclePart.getSn());
-            }
+    public Boolean checkPnAndSnUnique(Long id, String pn, String sn) {
+        if (ObjUtil.isNull(id)) {
+            id = -1L;
         }
-        return 0;
+        VehiclePart vehiclePart = vehiclePartRepository.selectByPnAndSn(pn, sn);
+        return !ObjUtil.isNotNull(vehiclePart) || vehiclePart.getId().longValue() == id.longValue();
     }
 
     /**
-     * 新增车辆零件
+     * 根据主键ID获取车辆零件信息
+     *
+     * @param id 主键ID
+     * @return 车辆零件信息
+     */
+    public VehiclePartVo getVehiclePartById(Long id) {
+        return VehiclePartAssembler.INSTANCE.fromDomain(vehiclePartRepository.selectById(id));
+    }
+
+    /**
+     * 创建车辆零件
      *
      * @param vehiclePartList 车辆零件列表
-     * @return 影响行数
+     * @return 结果
      */
-    public int createVehiclePart(List<VehiclePartPo> vehiclePartList) {
-        List<VehiclePartPo> newVehiclePartList = new ArrayList<>();
-        for (VehiclePartPo vehiclePart : vehiclePartList) {
-            if (StrUtil.isNotBlank(vehiclePart.getSn()) && StrUtil.isBlank(vehiclePart.getVin())) {
-                VehiclePartPo vehiclePartTmp = vehiclePartMapper.selectPoByPnAndSn(vehiclePart.getPn(), vehiclePart.getSn());
-                if (vehiclePartTmp == null) {
-                    vehiclePart.setPartState(VehiclePartState.UNBOUND.value);
-                    newVehiclePartList.add(vehiclePart);
-                } else {
-                    log.warn("车辆零件[{}]已存在[pn={},sn={}]", vehiclePartTmp.getDeviceCode(), vehiclePart.getPn(), vehiclePart.getSn());
-                }
-            }
-        }
-        if (!newVehiclePartList.isEmpty()) {
-            List<VehiclePartHistoryPo> historyList = VehiclePartAssembler.INSTANCE.toHistoryList(newVehiclePartList);
-            vehiclePartHistoryMapper.batchInsertPo(historyList);
-            return vehiclePartMapper.batchInsertPo(newVehiclePartList);
-        }
-        return 0;
+    public int createVehiclePart(List<VehiclePart> vehiclePartList) {
+        return vehiclePartRepository.batchInsert(vehiclePartList);
+    }
+
+    /**
+     * 新增车辆零件
+     *
+     * @param vehiclePartVo 车辆零件信息
+     * @param userId        操作用户ID
+     * @return 结果
+     */
+    public int createVehiclePart(VehiclePartVo vehiclePartVo, String userId) {
+        VehiclePart vehiclePart = VehiclePartAssembler.INSTANCE.toDomain(vehiclePartVo);
+        vehiclePart.setCreateBy(userId);
+        return vehiclePartRepository.insert(vehiclePart);
     }
 
     /**
      * 修改车辆零件
      *
-     * @param vehiclePart 车辆零件
+     * @param vehiclePartVo 车辆零件信息
+     * @param userId        操作用户ID
      * @return 结果
      */
-    public int modifyVehiclePart(VehiclePartPo vehiclePart) {
-        return vehiclePartMapper.updatePo(vehiclePart);
-    }
-
-    /**
-     * 绑定车辆零件
-     *
-     * @param vehiclePart 车辆零件
-     */
-    public void bindVehiclePart(VehiclePartPo vehiclePart) {
-        VehiclePartPo vehiclePartOrigin = vehiclePartMapper.selectPoByPnAndSn(vehiclePart.getPn(), vehiclePart.getSn());
-        if (vehiclePartOrigin == null) {
-            vehiclePart.setPartState(VehiclePartState.UNBOUND.value);
-            vehiclePartHistoryMapper.insertPo(VehiclePartAssembler.INSTANCE.toHistory(vehiclePart));
-            vehiclePartMapper.insertPo(vehiclePart);
-            vehiclePartOrigin = vehiclePart;
-        }
-        if (vehiclePartOrigin.getPartState() != VehiclePartState.UNBOUND.value) {
-            throw new PartNotAllowBindException(vehiclePart.getPn(), vehiclePart.getSn(), vehiclePart.getPartState());
-        }
-        vehiclePartOrigin.setVin(vehiclePart.getVin());
-        vehiclePartOrigin.setSupplierCode(vehiclePart.getSupplierCode());
-        vehiclePartOrigin.setConfigWord(vehiclePart.getConfigWord());
-        vehiclePartOrigin.setHardwareVer(vehiclePart.getHardwareVer());
-        vehiclePartOrigin.setSoftwareVer(vehiclePart.getSoftwareVer());
-        vehiclePartOrigin.setHardwarePn(vehiclePart.getHardwarePn());
-        vehiclePartOrigin.setSoftwarePn(vehiclePart.getSoftwarePn());
-        vehiclePartOrigin.setBindTime(new Date());
-        vehiclePartOrigin.setBindBy(vehiclePart.getBindBy());
-        vehiclePartOrigin.setBindOrg(vehiclePartOrigin.getBindOrg());
-        vehiclePartOrigin.setPartState(VehiclePartState.IN_USE.value);
-        vehiclePartMapper.updatePo(vehiclePartOrigin);
-        VehiclePartHistoryPo history = VehiclePartAssembler.INSTANCE.toHistory(vehiclePartOrigin);
-        history.setId(null);
-        vehiclePartHistoryMapper.insertPo(history);
+    public int modifyVehiclePart(VehiclePartVo vehiclePartVo, String userId) {
+        VehiclePart vehiclePart = VehiclePartAssembler.INSTANCE.toDomain(vehiclePartVo);
+        vehiclePart.setModifyBy(userId);
+        return vehiclePartRepository.update(vehiclePart);
     }
 
     /**
@@ -184,7 +138,18 @@ public class VehiclePartAppService {
      * @return 结果
      */
     public int deleteVehiclePartByIds(Long[] ids) {
-        return vehiclePartMapper.batchPhysicalDeletePo(ids);
+        return vehiclePartRepository.batchPhysicalDelete(ids);
+    }
+
+    /**
+     * 绑定车辆零件
+     *
+     * @param vehiclePart 车辆零件
+     */
+    public void bindVehiclePart(VehiclePart vehiclePart) {
+        vehiclePart.setPartState(1); // 1-在用
+        vehiclePart.setBindTime(new Date());
+        vehiclePartRepository.insert(vehiclePart);
     }
 
 }

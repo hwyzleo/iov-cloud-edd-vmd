@@ -1,7 +1,7 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.assembler;
 
 import net.hwyz.iov.cloud.edd.vmd.api.vo.VehicleExService;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehBasicInfoPo;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleBasicInfo;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mappings;
 import org.mapstruct.factory.Mappers;
@@ -19,29 +19,29 @@ public interface VmdVehicleExServiceAssembler {
     VmdVehicleExServiceAssembler INSTANCE = Mappers.getMapper(VmdVehicleExServiceAssembler.class);
 
     /**
-     * 数据对象转数据传输对象
+     * 领域对象转对外服务对象
      *
-     * @param vehBasicInfoPo 数据对象
-     * @return 数据传输对象
+     * @param vehicleBasicInfo 领域对象
+     * @return 对外服务对象
      */
     @Mappings({})
-    VehicleExService fromPo(VehBasicInfoPo vehBasicInfoPo);
+    VehicleExService fromDomain(VehicleBasicInfo vehicleBasicInfo);
 
     /**
-     * 数据传输对象转数据对象
+     * 对外服务对象转领域对象
      *
-     * @param vehicleExServicePo 数据传输对象
-     * @return 数据对象
+     * @param vehicleExService 对外服务对象
+     * @return 领域对象
      */
     @Mappings({})
-    VehBasicInfoPo toPo(VehicleExService vehicleExServicePo);
+    VehicleBasicInfo toDomain(VehicleExService vehicleExService);
 
     /**
-     * 数据对象列表转数据传输对象列表
+     * 领域对象列表转对外服务对象列表
      *
-     * @param vehBasicInfoPoList 数据对象列表
-     * @return 数据传输对象列表
+     * @param vehicleBasicInfoList 领域对象列表
+     * @return 对外服务对象列表
      */
-    List<VehicleExService> fromPoList(List<VehBasicInfoPo> vehBasicInfoPoList);
+    List<VehicleExService> fromDomainList(List<VehicleBasicInfo> vehicleBasicInfoList);
 
 }

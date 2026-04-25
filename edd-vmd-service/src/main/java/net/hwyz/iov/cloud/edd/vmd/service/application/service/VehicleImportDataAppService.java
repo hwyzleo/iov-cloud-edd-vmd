@@ -8,10 +8,8 @@ import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.VehicleImportDataVo;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.VehicleImportDataAssembler;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParser;
-import net.hwyz.iov.cloud.framework.common.util.StrUtil;
-import net.hwyz.iov.cloud.edd.vmd.service.common.exception.VehicleImportDataException;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehImportDataMapper;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehImportDataPo;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleImportData;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehImportDataRepository;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
@@ -31,11 +29,11 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class VehicleImportDataAppService {
 
-    private final ApplicationContext ctx;
-    private final VehImportDataMapper vehImportDataMapper;
+    private final ApplicationContext applicationContext;
+    private final VehImportDataRepository vehImportDataRepository;
 
     /**
-     * 查询车辆导入数据
+     * 查询车辆导入数据信息
      *
      * @param batchNum  批次号
      * @param type      数据类型
@@ -51,64 +49,83 @@ public class VehicleImportDataAppService {
         map.put("version", version);
         map.put("beginTime", beginTime);
         map.put("endTime", endTime);
-        List<VehImportDataPo> vehImportDataPoList = vehImportDataMapper.selectPoByMap(map);
-        return PageUtil.convert(vehImportDataPoList, VehicleImportDataAssembler.INSTANCE::fromPo);
+        List<VehicleImportData> vehicleImportDataList = vehImportDataRepository.selectByMap(map);
+        return PageUtil.convert(vehicleImportDataList, VehicleImportDataAssembler.INSTANCE::fromDomain);
     }
 
     /**
      * 检查批次号是否唯一
      *
-     * @param vehicleImportDataId 车辆导入数据ID
-     * @param batchNum            批次号
+     * @param id       主键ID
+     * @param batchNum 批次号
      * @return 结果
      */
-    public Boolean checkBatchNumUnique(Long vehicleImportDataId, String batchNum) {
-        if (ObjUtil.isNull(vehicleImportDataId)) {
-            vehicleImportDataId = -1L;
+    public Boolean checkBatchNumUnique(Long id, String batchNum) {
+        if (ObjUtil.isNull(id)) {
+            id = -1L;
         }
-        VehImportDataPo vehImportDataPo = getVehicleImportDataByBatchNum(batchNum);
-        return !ObjUtil.isNotNull(vehImportDataPo) || vehImportDataPo.getId().longValue() == vehicleImportDataId.longValue();
+        VehicleImportData vehicleImportData = vehImportDataRepository.selectByBatchNum(batchNum);
+        return !ObjUtil.isNotNull(vehicleImportData) || vehicleImportData.getId().longValue() == id.longValue();
     }
 
     /**
-     * 根据主键ID获取车辆导入数据
-     *
-     * @param id 主键ID
-     * @return 车辆导入数据
-     */
-    public VehImportDataPo getVehicleImportDataById(Long id) {
-        return vehImportDataMapper.selectPoById(id);
-    }
-
-    /**
-     * 根据批次号获取车辆导入数据
+     * 解析车辆导入数据
      *
      * @param batchNum 批次号
-     * @return 车辆导入数据
      */
-    public VehImportDataPo getVehicleImportDataByBatchNum(String batchNum) {
-        return vehImportDataMapper.selectPoByBatchNum(batchNum);
+    public void parseVehicleImportData(String batchNum) {
+        VehicleImportData vehicleImportData = vehImportDataRepository.selectByBatchNum(batchNum);
+        if (ObjUtil.isNull(vehicleImportData)) {
+            log.warn("批次号[{}]对应的导入数据不存在", batchNum);
+            return;
+        }
+        String parserBeanName = vehicleImportData.getType().toLowerCase() + "DataParserV" + vehicleImportData.getVersion();
+        ImportDataParser importDataParser = applicationContext.getBean(parserBeanName, ImportDataParser.class);
+        if (ObjUtil.isNull(importDataParser)) {
+            log.error("未找到对应的解析器[{}]", parserBeanName);
+            return;
+        }
+        JSONObject dataJson = JSONUtil.parseObj(vehicleImportData.getData());
+        importDataParser.parse(batchNum, dataJson);
+        vehicleImportData.setHandle(true);
+        vehImportDataRepository.update(vehicleImportData);
+    }
+
+    /**
+     * 根据主键ID获取车辆导入数据信息
+     *
+     * @param id 主键ID
+     * @return 车辆导入数据信息
+     */
+    public VehicleImportDataVo getVehicleImportDataById(Long id) {
+        return VehicleImportDataAssembler.INSTANCE.fromDomain(vehImportDataRepository.selectById(id));
     }
 
     /**
      * 新增车辆导入数据
      *
-     * @param vehicleImportData 车辆导入数据
+     * @param vehicleImportDataVo 车辆导入数据信息
+     * @param userId              操作用户ID
      * @return 结果
      */
-    public int createVehicleImportData(VehImportDataPo vehicleImportData) {
+    public int createVehicleImportData(VehicleImportDataVo vehicleImportDataVo, String userId) {
+        VehicleImportData vehicleImportData = VehicleImportDataAssembler.INSTANCE.toDomain(vehicleImportDataVo);
+        vehicleImportData.setCreateBy(userId);
         vehicleImportData.setHandle(false);
-        return vehImportDataMapper.insertPo(vehicleImportData);
+        return vehImportDataRepository.insert(vehicleImportData);
     }
 
     /**
      * 修改车辆导入数据
      *
-     * @param vehicleImportData 车辆导入数据
+     * @param vehicleImportDataVo 车辆导入数据信息
+     * @param userId              操作用户ID
      * @return 结果
      */
-    public int modifyVehicleImportData(VehImportDataPo vehicleImportData) {
-        return vehImportDataMapper.updatePo(vehicleImportData);
+    public int modifyVehicleImportData(VehicleImportDataVo vehicleImportDataVo, String userId) {
+        VehicleImportData vehicleImportData = VehicleImportDataAssembler.INSTANCE.toDomain(vehicleImportDataVo);
+        vehicleImportData.setModifyBy(userId);
+        return vehImportDataRepository.update(vehicleImportData);
     }
 
     /**
@@ -118,62 +135,7 @@ public class VehicleImportDataAppService {
      * @return 结果
      */
     public int deleteVehicleImportDataByIds(Long[] ids) {
-        return vehImportDataMapper.batchPhysicalDeletePo(ids);
-    }
-
-    /**
-     * 解析车辆导入数据
-     *
-     * @param batchNum 批次号
-     */
-    public void parseVehicleImportData(String batchNum) {
-        VehImportDataPo vehImportDataPo = vehImportDataMapper.selectPoByBatchNum(batchNum);
-        if (ObjUtil.isNull(vehImportDataPo)) {
-            throw new VehicleImportDataException(batchNum, "车辆导入数据批次号不存在");
-        }
-        if (vehImportDataPo.getHandle()) {
-            throw new VehicleImportDataException(batchNum, "车辆导入数据批次号已处理");
-        }
-        String dataStr = vehImportDataPo.getData();
-        if (StrUtil.isBlank(dataStr)) {
-            throw new VehicleImportDataException(batchNum, "车辆导入数据数据为空");
-        }
-        String type = vehImportDataPo.getType();
-        if (StrUtil.isBlank(type)) {
-            throw new VehicleImportDataException(batchNum, "车辆导入数据数据类型为空");
-        }
-        String version = vehImportDataPo.getVersion();
-        if (StrUtil.isBlank(version)) {
-            throw new VehicleImportDataException(batchNum, "车辆导入数据版本为空");
-        }
-        JSONObject dataJson = JSONUtil.parseObj(dataStr);
-        vehImportDataPo.setHandle(true);
-        vehImportDataPo.setDescription("");
-        try {
-            ImportDataParser parser = getParser(type, version);
-            if (ObjUtil.isNull(parser)) {
-                throw new VehicleImportDataException(batchNum, "没找到数据类型[" + type + "]版本[" + version + "]对应的解析器");
-            }
-            parser.parse(batchNum, dataJson);
-        } catch (Exception e) {
-            vehImportDataPo.setHandle(false);
-            vehImportDataPo.setDescription("车辆导入数据批次号[" + batchNum + "]处理失败:" + e.getMessage());
-            vehImportDataMapper.updatePo(vehImportDataPo);
-            log.warn("车辆导入数据批次号[" + batchNum + "]处理失败:" + e.getMessage(), e);
-            throw new VehicleImportDataException(batchNum, e.getMessage());
-        }
-        vehImportDataMapper.updatePo(vehImportDataPo);
-    }
-
-    /**
-     * 获取解析器
-     *
-     * @param dataType    数据类型
-     * @param dataVersion 数据版本
-     * @return 数据解析器
-     */
-    private ImportDataParser getParser(String dataType, String dataVersion) {
-        return ctx.getBean(dataType.toLowerCase() + "DataParserV" + dataVersion, ImportDataParser.class);
+        return vehImportDataRepository.batchPhysicalDelete(ids);
     }
 
 }

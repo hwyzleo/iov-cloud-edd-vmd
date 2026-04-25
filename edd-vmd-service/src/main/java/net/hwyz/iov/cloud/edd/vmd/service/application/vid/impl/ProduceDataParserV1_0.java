@@ -7,11 +7,10 @@ import cn.hutool.json.JSONUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.publish.VehiclePublish;
-import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParser;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleBasicInfo;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
 import net.hwyz.iov.cloud.framework.common.util.StrUtil;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehBasicInfoMapper;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehBasicInfoPo;
 import org.springframework.stereotype.Component;
 
 /**
@@ -25,8 +24,7 @@ import org.springframework.stereotype.Component;
 public class ProduceDataParserV1_0 extends BaseParser implements ImportDataParser {
 
     private final VehiclePublish vehiclePublish;
-    private final VehBasicInfoMapper vehBasicInfoMapper;
-    private final VehicleAppService vehicleAppService;
+    private final VehBasicInfoRepository vehBasicInfoRepository;
 
     @Override
     public void parse(String batchNum, JSONObject dataJson) {
@@ -40,22 +38,23 @@ public class ProduceDataParserV1_0 extends BaseParser implements ImportDataParse
                 vehicleInvalidCount++;
                 continue;
             }
-            VehBasicInfoPo vehBasicInfoPo = vehBasicInfoMapper.selectPoByVin(vin);
-            if (ObjUtil.isNull(vehBasicInfoPo)) {
-                vehBasicInfoPo = new VehBasicInfoPo();
-                vehBasicInfoPo.setVin(vin);
+            VehicleBasicInfo vehicleBasicInfo = vehBasicInfoRepository.selectByVin(vin);
+            if (ObjUtil.isNull(vehicleBasicInfo)) {
+                vehicleBasicInfo = VehicleBasicInfo.builder()
+                        .vin(vin)
+                        .build();
             }
-            handleVehicleInfo(itemJson, vehBasicInfoPo, "MANUFACTURER", "manufacturerCode", "工厂数据", batchNum, vin);
-            handleVehicleInfo(itemJson, vehBasicInfoPo, "BRAND", "brandCode", "品牌数据", batchNum, vin);
-            handleVehicleInfo(itemJson, vehBasicInfoPo, "PLATFORM", "platformCode", "平台数据", batchNum, vin);
-            handleVehicleInfo(itemJson, vehBasicInfoPo, "SERIES", "seriesCode", "车系数据", batchNum, vin);
-            handleVehicleInfo(itemJson, vehBasicInfoPo, "MODEL", "modelCode", "车型数据", batchNum, vin);
-            handleVehicleInfo(itemJson, vehBasicInfoPo, "BASE_MODEL", "baseModelCode", "基础车型数据", batchNum, vin);
-            handleVehicleInfo(itemJson, vehBasicInfoPo, "BUILD_CONFIG", "buildConfigCode", "生产配置数据", batchNum, vin);
-            if (ObjUtil.isNull(vehBasicInfoPo.getId())) {
-                vehBasicInfoMapper.insertPo(vehBasicInfoPo);
+            handleVehicleInfo(itemJson, vehicleBasicInfo, "MANUFACTURER", "manufacturerCode", "工厂数据", batchNum, vin);
+            handleVehicleInfo(itemJson, vehicleBasicInfo, "BRAND", "brandCode", "品牌数据", batchNum, vin);
+            handleVehicleInfo(itemJson, vehicleBasicInfo, "PLATFORM", "platformCode", "平台数据", batchNum, vin);
+            handleVehicleInfo(itemJson, vehicleBasicInfo, "SERIES", "seriesCode", "车系数据", batchNum, vin);
+            handleVehicleInfo(itemJson, vehicleBasicInfo, "MODEL", "modelCode", "车型数据", batchNum, vin);
+            handleVehicleInfo(itemJson, vehicleBasicInfo, "BASE_MODEL", "baseModelCode", "基础车型数据", batchNum, vin);
+            handleVehicleInfo(itemJson, vehicleBasicInfo, "BUILD_CONFIG", "buildConfigCode", "生产配置数据", batchNum, vin);
+            if (ObjUtil.isNull(vehicleBasicInfo.getId())) {
+                vehBasicInfoRepository.insert(vehicleBasicInfo);
             } else {
-                vehBasicInfoMapper.updatePo(vehBasicInfoPo);
+                vehBasicInfoRepository.update(vehicleBasicInfo);
             }
             // 发布事件
             vehiclePublish.produce(vin);

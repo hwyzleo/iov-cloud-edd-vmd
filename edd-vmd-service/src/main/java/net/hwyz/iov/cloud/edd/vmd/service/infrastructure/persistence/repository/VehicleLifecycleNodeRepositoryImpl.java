@@ -2,11 +2,11 @@ package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.repository
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.VehicleLifecycleNodeAssembler;
-import net.hwyz.iov.cloud.framework.common.domain.AbstractRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleLifecycleNode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehicleLifecycleNodeRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter.VehicleLifecycleNodeConverter;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehLifecycleMapper;
+import net.hwyz.iov.cloud.framework.common.domain.AbstractRepository;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -31,8 +31,8 @@ public class VehicleLifecycleNodeRepositoryImpl extends AbstractRepository<Strin
     @Override
     public boolean save(VehicleLifecycleNode vehicleLifecycleNode) {
         switch (vehicleLifecycleNode.getState()) {
-            case NEW -> vehLifecycleMapper.insertPo(VehicleLifecycleNodeAssembler.INSTANCE.toPo(vehicleLifecycleNode));
-            case CHANGED -> vehLifecycleMapper.updatePo(VehicleLifecycleNodeAssembler.INSTANCE.toPo(vehicleLifecycleNode));
+            case NEW -> vehLifecycleMapper.insertPo(VehicleLifecycleNodeConverter.INSTANCE.fromDomain(vehicleLifecycleNode));
+            case CHANGED -> vehLifecycleMapper.updatePo(VehicleLifecycleNodeConverter.INSTANCE.fromDomain(vehicleLifecycleNode));
             default -> {
                 return false;
             }

@@ -5,8 +5,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.SupplierVo;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.SupplierAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.SupplierMapper;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.SupplierPo;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Supplier;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.SupplierRepository;
 import net.hwyz.iov.cloud.framework.common.util.ParamHelper;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Service;
@@ -26,7 +26,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class SupplierAppService {
 
-    private final SupplierMapper supplierMapper;
+    private final SupplierRepository supplierRepository;
 
     /**
      * 查询供应商信息
@@ -34,8 +34,8 @@ public class SupplierAppService {
      * @param code      供应商代码
      * @param name      供应商名称
      * @param beginTime 开始时间
-     * @param endTime   结束时间
-     * @return 车辆平台列表
+     * @param endTime    结束时间
+     * @return 供应商列表
      */
     public List<SupplierVo> search(String code, String name, Date beginTime, Date endTime) {
         Map<String, Object> map = new HashMap<>();
@@ -43,23 +43,23 @@ public class SupplierAppService {
         map.put("name", ParamHelper.fuzzyQueryParam(name));
         map.put("beginTime", beginTime);
         map.put("endTime", endTime);
-        List<SupplierPo> supplierPoList = supplierMapper.selectPoByMap(map);
-        return PageUtil.convert(supplierPoList, SupplierAssembler.INSTANCE::fromPo);
+        List<Supplier> supplierList = supplierRepository.selectByMap(map);
+        return PageUtil.convert(supplierList, SupplierAssembler.INSTANCE::fromDomain);
     }
 
     /**
-     * 检查车辆工厂代码是否唯一
+     * 检查供应商代码是否唯一
      *
-     * @param manufacturerId 车辆工厂ID
-     * @param code           车辆工厂代码
+     * @param manufacturerId 供应商ID
+     * @param code           供应商代码
      * @return 结果
      */
     public Boolean checkCodeUnique(Long manufacturerId, String code) {
         if (ObjUtil.isNull(manufacturerId)) {
             manufacturerId = -1L;
         }
-        SupplierPo supplierPo = getManufacturerByCode(code);
-        return !ObjUtil.isNotNull(supplierPo) || supplierPo.getId().longValue() == manufacturerId.longValue();
+        Supplier supplier = getManufacturerByCode(code);
+        return !ObjUtil.isNotNull(supplier) || supplier.getId().longValue() == manufacturerId.longValue();
     }
 
     /**
@@ -68,38 +68,44 @@ public class SupplierAppService {
      * @param id 主键ID
      * @return 供应商信息
      */
-    public SupplierPo getSupplierById(Long id) {
-        return supplierMapper.selectPoById(id);
+    public SupplierVo getSupplierById(Long id) {
+        return SupplierAssembler.INSTANCE.fromDomain(supplierRepository.selectById(id));
     }
 
     /**
      * 根据供应商代码获取供应商信息
      *
      * @param code 供应商代码
-     * @return 供应商信息
+     * @return 供应商领域对象
      */
-    public SupplierPo getManufacturerByCode(String code) {
-        return supplierMapper.selectPoByCode(code);
+    public Supplier getManufacturerByCode(String code) {
+        return supplierRepository.selectByCode(code);
     }
 
     /**
      * 新增供应商
      *
-     * @param supplier 供应商信息
+     * @param supplierVo 供应商信息
+     * @param userId     操作用户ID
      * @return 结果
      */
-    public int createSupplier(SupplierPo supplier) {
-        return supplierMapper.insertPo(supplier);
+    public int createSupplier(SupplierVo supplierVo, String userId) {
+        Supplier supplier = SupplierAssembler.INSTANCE.toDomain(supplierVo);
+        supplier.setCreateBy(userId);
+        return supplierRepository.insert(supplier);
     }
 
     /**
      * 修改供应商
      *
-     * @param supplier 供应商信息
+     * @param supplierVo 供应商信息
+     * @param userId     操作用户ID
      * @return 结果
      */
-    public int modifySupplier(SupplierPo supplier) {
-        return supplierMapper.updatePo(supplier);
+    public int modifySupplier(SupplierVo supplierVo, String userId) {
+        Supplier supplier = SupplierAssembler.INSTANCE.toDomain(supplierVo);
+        supplier.setModifyBy(userId);
+        return supplierRepository.update(supplier);
     }
 
     /**
@@ -109,7 +115,7 @@ public class SupplierAppService {
      * @return 结果
      */
     public int deleteSupplierByIds(Long[] ids) {
-        return supplierMapper.batchPhysicalDeletePo(ids);
+        return supplierRepository.batchPhysicalDelete(ids);
     }
 
 }

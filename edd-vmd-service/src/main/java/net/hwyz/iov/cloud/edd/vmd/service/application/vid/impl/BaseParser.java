@@ -5,9 +5,9 @@ import cn.hutool.core.util.ObjUtil;
 import cn.hutool.json.JSONObject;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehiclePartAppService;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleDetail;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehiclePart;
 import net.hwyz.iov.cloud.framework.common.util.StrUtil;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehDetailInfoPo;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehiclePartPo;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import java.util.List;
@@ -65,20 +65,20 @@ public class BaseParser {
      * 处理车辆信息数据
      *
      * @param itemJson      车辆JSON数据
-     * @param vehicleInfoPo 车辆信息对象
+     * @param vehicleInfoDo 车辆信息对象
      * @param jsonKey       解析JSON KEY
      * @param propertyName  对象属性名
      * @param keyDesc       KEY描述
      * @param batchNum      批次号
      * @param vin           车架号
      */
-    protected void handleVehicleInfo(JSONObject itemJson, Object vehicleInfoPo, String jsonKey, String propertyName,
+    protected void handleVehicleInfo(JSONObject itemJson, Object vehicleInfoDo, String jsonKey, String propertyName,
                                      String keyDesc, String batchNum, String vin) {
         String keyValue = itemJson.getStr(jsonKey);
         if (StrUtil.isNotBlank(keyValue)) {
-            Object fieldValue = BeanUtil.getFieldValue(vehicleInfoPo, propertyName);
+            Object fieldValue = BeanUtil.getFieldValue(vehicleInfoDo, propertyName);
             if (ObjUtil.isNull(fieldValue) || StrUtil.isBlank(fieldValue.toString())) {
-                BeanUtil.setFieldValue(vehicleInfoPo, propertyName, keyValue.trim().toUpperCase());
+                BeanUtil.setFieldValue(vehicleInfoDo, propertyName, keyValue.trim().toUpperCase());
             } else if (!keyValue.trim().equalsIgnoreCase(fieldValue.toString())) {
                 log.warn("车辆导入数据批次号[{}]车辆[{}]{}[{}]与原数据[{}]不一致", batchNum, vin, keyDesc, keyValue.trim(),
                         fieldValue);
@@ -98,13 +98,13 @@ public class BaseParser {
      * @param batchNum         批次号
      * @param vin              车架号
      */
-    protected void handleVehicleDetail(JSONObject itemJson, Map<String, VehDetailInfoPo> vehicleDetailMap, String jsonKey,
+    protected void handleVehicleDetail(JSONObject itemJson, Map<String, VehicleDetail> vehicleDetailMap, String jsonKey,
                                        String keyDesc, String batchNum, String vin) {
         String keyValue = itemJson.getStr(jsonKey);
         if (StrUtil.isNotBlank(keyValue)) {
-            VehDetailInfoPo vehicleDetail = vehicleDetailMap.get(jsonKey);
+            VehicleDetail vehicleDetail = vehicleDetailMap.get(jsonKey);
             if (vehicleDetail == null) {
-                vehicleDetailMap.put(jsonKey, VehDetailInfoPo.builder()
+                vehicleDetailMap.put(jsonKey, VehicleDetail.builder()
                         .vin(vin)
                         .type(jsonKey)
                         .val(keyValue)
@@ -124,7 +124,7 @@ public class BaseParser {
      * @param vehiclePartList 车辆零件列表
      * @return 创建结果
      */
-    protected int createVehiclePart(List<VehiclePartPo> vehiclePartList) {
+    protected int createVehiclePart(List<VehiclePart> vehiclePartList) {
         return vehiclePartAppService.createVehiclePart(vehiclePartList);
     }
 

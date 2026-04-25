@@ -5,9 +5,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.DeviceVo;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.DeviceAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.DeviceMapper;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Device;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.DeviceRepository;
 import net.hwyz.iov.cloud.framework.common.util.ParamHelper;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.DevicePo;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Service;
 
@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 设备信息应用服务类
+ * 设备应用服务类
  *
  * @author hwyz_leo
  */
@@ -26,17 +26,17 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class DeviceAppService {
 
-    private final DeviceMapper deviceMapper;
+    private final DeviceRepository deviceRepository;
 
     /**
      * 查询设备信息
      *
-     * @param code       车载域代码
-     * @param name       车载域名称
+     * @param code       设备编码
+     * @param name       设备名称
      * @param funcDomain 功能域
      * @param beginTime  开始时间
      * @param endTime    结束时间
-     * @return 查询车载列表
+     * @return 设备列表
      */
     public List<DeviceVo> search(String code, String name, String funcDomain, Date beginTime, Date endTime) {
         Map<String, Object> map = new HashMap<>();
@@ -45,41 +45,33 @@ public class DeviceAppService {
         map.put("funcDomain", funcDomain);
         map.put("beginTime", beginTime);
         map.put("endTime", endTime);
-        List<DevicePo> devicePoList = deviceMapper.selectPoByMap(map);
-        return PageUtil.convert(devicePoList, DeviceAssembler.INSTANCE::fromPo);
+        List<Device> deviceList = deviceRepository.selectByMap(map);
+        return PageUtil.convert(deviceList, DeviceAssembler.INSTANCE::fromDomain);
     }
 
     /**
-     * 获取所有设备信息
+     * 获取所有设备
      *
-     * @return 设备信息
+     * @return 设备列表
      */
-    public List<DevicePo> listAll() {
-        return deviceMapper.selectAllPo();
+    public List<DeviceVo> listAll() {
+        List<Device> deviceList = deviceRepository.selectByMap(new HashMap<>());
+        return DeviceAssembler.INSTANCE.fromDomainList(deviceList);
     }
 
     /**
-     * 获取所有FOTA升级设备
+     * 检查设备编码是否唯一
      *
-     * @return 设备信息
-     */
-    public List<DevicePo> listAllFota() {
-        return deviceMapper.selectAllFotaPo();
-    }
-
-    /**
-     * 检查设备信息代码是否唯一
-     *
-     * @param deviceId 设备信息ID
-     * @param code     设备信息代码
+     * @param deviceId 设备ID
+     * @param code     设备编码
      * @return 结果
      */
     public Boolean checkCodeUnique(Long deviceId, String code) {
         if (ObjUtil.isNull(deviceId)) {
             deviceId = -1L;
         }
-        DevicePo devicePo = getDeviceByCode(code);
-        return !ObjUtil.isNotNull(devicePo) || devicePo.getId().longValue() == deviceId.longValue();
+        Device device = deviceRepository.selectByCode(code);
+        return !ObjUtil.isNotNull(device) || device.getId().longValue() == deviceId.longValue();
     }
 
     /**
@@ -88,48 +80,54 @@ public class DeviceAppService {
      * @param id 主键ID
      * @return 设备信息
      */
-    public DevicePo getDeviceById(Long id) {
-        return deviceMapper.selectPoById(id);
+    public DeviceVo getDeviceById(Long id) {
+        return DeviceAssembler.INSTANCE.fromDomain(deviceRepository.selectById(id));
     }
 
     /**
-     * 根据设备信息代码获取设备信息
+     * 根据设备编码获取设备信息
      *
-     * @param code 设备信息代码
-     * @return 设备信息
+     * @param code 设备编码
+     * @return 设备领域对象
      */
-    public DevicePo getDeviceByCode(String code) {
-        return deviceMapper.selectPoByCode(code);
+    public Device getDeviceByCode(String code) {
+        return deviceRepository.selectByCode(code);
     }
 
     /**
-     * 新增设备信息
+     * 新增设备
      *
-     * @param device 设备信息
+     * @param deviceVo 设备信息
+     * @param userId   操作用户ID
      * @return 结果
      */
-    public int createDevice(DevicePo device) {
-        return deviceMapper.insertPo(device);
+    public int createDevice(DeviceVo deviceVo, String userId) {
+        Device device = DeviceAssembler.INSTANCE.toDomain(deviceVo);
+        device.setCreateBy(userId);
+        return deviceRepository.insert(device);
     }
 
     /**
-     * 修改设备信息
+     * 修改设备
      *
-     * @param device 设备信息
+     * @param deviceVo 设备信息
+     * @param userId   操作用户ID
      * @return 结果
      */
-    public int modifyDevice(DevicePo device) {
-        return deviceMapper.updatePo(device);
+    public int modifyDevice(DeviceVo deviceVo, String userId) {
+        Device device = DeviceAssembler.INSTANCE.toDomain(deviceVo);
+        device.setModifyBy(userId);
+        return deviceRepository.update(device);
     }
 
     /**
-     * 批量删除设备信息
+     * 批量删除设备
      *
-     * @param ids 设备信息ID数组
+     * @param ids 设备ID数组
      * @return 结果
      */
     public int deleteDeviceByIds(Long[] ids) {
-        return deviceMapper.batchPhysicalDeletePo(ids);
+        return deviceRepository.batchPhysicalDelete(ids);
     }
 
 }

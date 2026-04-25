@@ -5,10 +5,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.BrandVo;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.BrandAssembler;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Brand;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBrandRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehSeriesRepository;
 import net.hwyz.iov.cloud.framework.common.util.ParamHelper;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehBasicInfoMapper;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehBrandMapper;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehBrandPo;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Service;
 
@@ -18,7 +19,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 车辆品牌应用服务类
+ * 品牌应用服务类
  *
  * @author hwyz_leo
  */
@@ -27,17 +28,18 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class BrandAppService {
 
-    private final VehBrandMapper vehBrandMapper;
-    private final VehBasicInfoMapper vehBasicInfoMapper;
+    private final VehBrandRepository vehBrandRepository;
+    private final VehSeriesRepository vehSeriesRepository;
+    private final VehBasicInfoRepository vehBasicInfoRepository;
 
     /**
-     * 查询车辆品牌信息
+     * 查询品牌信息
      *
-     * @param code      车辆品牌代码
-     * @param name      车辆品牌名称
+     * @param code      品牌代码
+     * @param name      品牌名称
      * @param beginTime 开始时间
-     * @param endTime   结束时间
-     * @return 车辆平台列表
+     * @param endTime    结束时间
+     * @return 品牌列表
      */
     public List<BrandVo> search(String code, String name, Date beginTime, Date endTime) {
         Map<String, Object> map = new HashMap<>();
@@ -45,86 +47,105 @@ public class BrandAppService {
         map.put("name", ParamHelper.fuzzyQueryParam(name));
         map.put("beginTime", beginTime);
         map.put("endTime", endTime);
-        List<VehBrandPo> vehBrandPoList = vehBrandMapper.selectPoByMap(map);
-        return PageUtil.convert(vehBrandPoList, BrandAssembler.INSTANCE::fromPo);
+        List<Brand> brandList = vehBrandRepository.selectByMap(map);
+        return PageUtil.convert(brandList, BrandAssembler.INSTANCE::fromDomain);
     }
 
     /**
-     * 检查车辆品牌代码是否唯一
+     * 检查品牌代码是否唯一
      *
-     * @param brandId 车辆品牌ID
-     * @param code    车辆品牌代码
+     * @param brandId 品牌ID
+     * @param code    品牌代码
      * @return 结果
      */
     public Boolean checkCodeUnique(Long brandId, String code) {
         if (ObjUtil.isNull(brandId)) {
             brandId = -1L;
         }
-        VehBrandPo brandPo = getBrandByCode(code);
-        return !ObjUtil.isNotNull(brandPo) || brandPo.getId().longValue() == brandId.longValue();
+        Brand brand = getBrandByCode(code);
+        return !ObjUtil.isNotNull(brand) || brand.getId().longValue() == brandId.longValue();
     }
 
     /**
-     * 检查车辆品牌下是否存在车辆
+     * 检查品牌下是否存在车系
      *
-     * @param brandId 车辆品牌ID
+     * @param brandId 品牌ID
+     * @return 结果
+     */
+    public Boolean checkBrandSeriesExist(Long brandId) {
+        Brand brand = vehBrandRepository.selectById(brandId);
+        Map<String, Object> map = new HashMap<>();
+        map.put("brandCode", brand.getCode());
+        return vehSeriesRepository.countByMap(map) > 0;
+    }
+
+    /**
+     * 检查品牌下是否存在车辆
+     *
+     * @param brandId 品牌ID
      * @return 结果
      */
     public Boolean checkBrandVehicleExist(Long brandId) {
-        VehBrandPo brandPo = getBrandById(brandId);
+        Brand brand = vehBrandRepository.selectById(brandId);
         Map<String, Object> map = new HashMap<>();
-        map.put("brandCode", brandPo.getCode());
-        return vehBasicInfoMapper.countPoByMap(map) > 0;
+        map.put("brandCode", brand.getCode());
+        return vehBasicInfoRepository.countByMap(map) > 0;
     }
 
     /**
-     * 根据主键ID获取车辆品牌信息
+     * 根据主键ID获取品牌信息
      *
      * @param id 主键ID
-     * @return 车辆品牌信息
+     * @return 品牌信息
      */
-    public VehBrandPo getBrandById(Long id) {
-        return vehBrandMapper.selectPoById(id);
+    public BrandVo getBrandById(Long id) {
+        return BrandAssembler.INSTANCE.fromDomain(vehBrandRepository.selectById(id));
     }
 
     /**
-     * 根据车辆品牌代码获取车辆品牌信息
+     * 根据品牌代码获取品牌信息
      *
-     * @param code 车辆品牌代码
-     * @return 车辆品牌信息
+     * @param code 品牌代码
+     * @return 品牌领域对象
      */
-    public VehBrandPo getBrandByCode(String code) {
-        return vehBrandMapper.selectPoByCode(code);
+    public Brand getBrandByCode(String code) {
+        return vehBrandRepository.selectByCode(code);
     }
 
     /**
-     * 新增车辆品牌
+     * 新增品牌
      *
-     * @param brand 车辆品牌信息
+     * @param brandVo 品牌信息
+     * @param userId  操作用户ID
      * @return 结果
      */
-    public int createBrand(VehBrandPo brand) {
-        return vehBrandMapper.insertPo(brand);
+    public int createBrand(BrandVo brandVo, String userId) {
+        Brand brand = BrandAssembler.INSTANCE.toDomain(brandVo);
+        brand.setCreateBy(userId);
+        return vehBrandRepository.insert(brand);
     }
 
     /**
-     * 修改车辆品牌
+     * 修改品牌
      *
-     * @param brand 车辆品牌信息
+     * @param brandVo 品牌信息
+     * @param userId  操作用户ID
      * @return 结果
      */
-    public int modifyBrand(VehBrandPo brand) {
-        return vehBrandMapper.updatePo(brand);
+    public int modifyBrand(BrandVo brandVo, String userId) {
+        Brand brand = BrandAssembler.INSTANCE.toDomain(brandVo);
+        brand.setModifyBy(userId);
+        return vehBrandRepository.update(brand);
     }
 
     /**
-     * 批量删除车辆品牌
+     * 批量删除品牌
      *
-     * @param ids 车辆品牌ID数组
+     * @param ids 品牌ID数组
      * @return 结果
      */
     public int deleteBrandByIds(Long[] ids) {
-        return vehBrandMapper.batchPhysicalDeletePo(ids);
+        return vehBrandRepository.batchPhysicalDelete(ids);
     }
 
 }

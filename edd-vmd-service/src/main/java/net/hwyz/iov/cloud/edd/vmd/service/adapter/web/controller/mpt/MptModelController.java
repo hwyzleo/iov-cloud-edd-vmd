@@ -5,8 +5,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.ModelVo;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.ModelAppService;
-import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.ModelAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehModelPo;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
 import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
 import net.hwyz.iov.cloud.framework.common.bean.ApiResponse;
@@ -84,8 +82,7 @@ public class MptModelController extends BaseController {
     @GetMapping(value = "/{modelId}")
     public ApiResponse<ModelVo> getInfo(@PathVariable Long modelId) {
         log.info("管理后台用户[{}]根据车型ID[{}]获取车型信息", SecurityUtils.getUsername(), modelId);
-        VehModelPo modelPo = modelAppService.getModelById(modelId);
-        return ApiResponse.ok(ModelAssembler.INSTANCE.fromPo(modelPo));
+        return ApiResponse.ok(modelAppService.getModelById(modelId));
     }
 
     /**
@@ -102,9 +99,7 @@ public class MptModelController extends BaseController {
         if (!modelAppService.checkCodeUnique(model.getId(), model.getCode())) {
             return ApiResponse.fail("新增车型'" + model.getCode() + "'失败，车型代码已存在");
         }
-        VehModelPo modelPo = ModelAssembler.INSTANCE.toPo(model);
-        modelPo.setCreateBy(SecurityUtils.getUserId().toString());
-        return modelAppService.createModel(modelPo) > 0 ? ApiResponse.ok() : ApiResponse.fail("新增失败");
+        return modelAppService.createModel(model, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("新增失败");
     }
 
     /**
@@ -121,9 +116,7 @@ public class MptModelController extends BaseController {
         if (!modelAppService.checkCodeUnique(model.getId(), model.getCode())) {
             return ApiResponse.fail("修改保存车型'" + model.getCode() + "'失败，车型代码已存在");
         }
-        VehModelPo modelPo = ModelAssembler.INSTANCE.toPo(model);
-        modelPo.setModifyBy(SecurityUtils.getUserId().toString());
-        return modelAppService.modifyModel(modelPo) > 0 ? ApiResponse.ok() : ApiResponse.fail("修改失败");
+        return modelAppService.modifyModel(model, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("修改失败");
     }
 
     /**
