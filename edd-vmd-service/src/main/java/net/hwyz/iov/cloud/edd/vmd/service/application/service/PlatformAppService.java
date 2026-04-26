@@ -171,7 +171,6 @@ public class PlatformAppService {
      */
     public int createPlatform(PlatformVo platformVo, String userId) {
         Platform platform = PlatformAssembler.INSTANCE.toDomain(platformVo);
-        platform.setCreateBy(userId);
         return vehPlatformRepository.insert(platform);
     }
 
@@ -184,7 +183,6 @@ public class PlatformAppService {
      */
     public int modifyPlatform(PlatformVo platformVo, String userId) {
         Platform platform = PlatformAssembler.INSTANCE.toDomain(platformVo);
-        platform.setModifyBy(userId);
         return vehPlatformRepository.update(platform);
     }
 

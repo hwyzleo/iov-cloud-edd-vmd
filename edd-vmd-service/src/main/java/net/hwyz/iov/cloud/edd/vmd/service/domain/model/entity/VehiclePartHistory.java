@@ -4,10 +4,10 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.framework.common.domain.BaseDo;
+
 import net.hwyz.iov.cloud.framework.common.domain.DomainObj;
 
-import java.util.Date;
+import java.time.Instant;
 
 /**
  * 车辆零件历史领域对象
@@ -18,37 +18,12 @@ import java.util.Date;
 @Getter
 @Setter
 @SuperBuilder
-public class VehiclePartHistory extends BaseDo<Long> implements DomainObj<VehiclePartHistory> {
+public class VehiclePartHistory implements DomainObj<VehiclePartHistory> {
 
     /**
      * 主键
      */
     private Long id;
-
-    /**
-     * 备注
-     */
-    private String description;
-
-    /**
-     * 创建者
-     */
-    private String createBy;
-
-    /**
-     * 创建时间
-     */
-    private Date createTime;
-
-    /**
-     * 修改者
-     */
-    private String modifyBy;
-
-    /**
-     * 修改时间
-     */
-    private Date modifyTime;
 
     /**
      * 零件编号
@@ -118,7 +93,7 @@ public class VehiclePartHistory extends BaseDo<Long> implements DomainObj<Vehicl
     /**
      * 绑定时间
      */
-    private Date bindTime;
+    private Instant bindTime;
 
     /**
      * 绑定类型
@@ -138,7 +113,7 @@ public class VehiclePartHistory extends BaseDo<Long> implements DomainObj<Vehicl
     /**
      * 解绑时间
      */
-    private Date unbindTime;
+    private Instant unbindTime;
 
     /**
      * 解绑理由

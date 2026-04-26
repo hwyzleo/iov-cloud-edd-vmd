@@ -24,7 +24,6 @@ public interface BrandConverter {
      * @param vehBrandPo PO
      * @return 领域对象
      */
-    @Mapping(target = "state", ignore = true)
     Brand toDomain(VehBrandPo vehBrandPo);
 
     /**
@@ -41,7 +40,5 @@ public interface BrandConverter {
      * @param brand 领域对象
      * @return PO
      */
-    @Mapping(target = "rowVersion", ignore = true)
-    @Mapping(target = "rowValid", ignore = true)
     VehBrandPo fromDomain(Brand brand);
 }

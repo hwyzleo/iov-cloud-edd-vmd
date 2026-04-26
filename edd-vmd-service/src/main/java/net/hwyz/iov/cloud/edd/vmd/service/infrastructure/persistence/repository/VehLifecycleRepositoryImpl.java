@@ -34,6 +34,11 @@ public class VehLifecycleRepositoryImpl implements VehLifecycleRepository {
     }
 
     @Override
+    public List<VehicleLifecycle> selectByVin(String vin) {
+        return VehicleLifecycleConverter.INSTANCE.toDomainList(vehLifecycleMapper.selectPoByMap(Map.of("vin", vin)));
+    }
+
+    @Override
     public int insert(VehicleLifecycle vehicleLifecycle) {
         return vehLifecycleMapper.insertPo(VehicleLifecycleConverter.INSTANCE.fromDomain(vehicleLifecycle));
     }

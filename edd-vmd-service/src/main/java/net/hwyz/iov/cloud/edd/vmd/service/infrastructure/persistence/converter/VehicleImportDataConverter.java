@@ -24,7 +24,6 @@ public interface VehicleImportDataConverter {
      * @param vehImportDataPo PO
      * @return 领域对象
      */
-    @Mapping(target = "state", ignore = true)
     VehicleImportData toDomain(VehImportDataPo vehImportDataPo);
 
     /**
@@ -41,7 +40,5 @@ public interface VehicleImportDataConverter {
      * @param vehicleImportData 领域对象
      * @return PO
      */
-    @Mapping(target = "rowVersion", ignore = true)
-    @Mapping(target = "rowValid", ignore = true)
     VehImportDataPo fromDomain(VehicleImportData vehicleImportData);
 }

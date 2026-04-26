@@ -24,7 +24,6 @@ public interface PartConverter {
      * @param partPo PO
      * @return 领域对象
      */
-    @Mapping(target = "state", ignore = true)
     Part toDomain(PartPo partPo);
 
     /**
@@ -41,7 +40,5 @@ public interface PartConverter {
      * @param part 领域对象
      * @return PO
      */
-    @Mapping(target = "rowVersion", ignore = true)
-    @Mapping(target = "rowValid", ignore = true)
     PartPo fromDomain(Part part);
 }

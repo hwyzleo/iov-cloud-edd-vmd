@@ -24,7 +24,6 @@ public interface BuildConfigConverter {
      * @param vehBuildConfigPo PO
      * @return 领域对象
      */
-    @Mapping(target = "state", ignore = true)
     BuildConfig toDomain(VehBuildConfigPo vehBuildConfigPo);
 
     /**
@@ -41,7 +40,5 @@ public interface BuildConfigConverter {
      * @param buildConfig 领域对象
      * @return PO
      */
-    @Mapping(target = "rowVersion", ignore = true)
-    @Mapping(target = "rowValid", ignore = true)
     VehBuildConfigPo fromDomain(BuildConfig buildConfig);
 }

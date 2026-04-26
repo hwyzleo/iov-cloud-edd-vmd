@@ -24,36 +24,27 @@ public interface VehicleInfoConverter {
 
     // ==================== 车辆基础信息 ====================
 
-    @Mapping(target = "state", ignore = true)
     VehicleBasicInfo toBasicDomain(VehBasicInfoPo po);
 
     List<VehicleBasicInfo> toBasicDomainList(List<VehBasicInfoPo> poList);
 
-    @Mapping(target = "rowVersion", ignore = true)
-    @Mapping(target = "rowValid", ignore = true)
     VehBasicInfoPo fromBasicDomain(VehicleBasicInfo domain);
 
     // ==================== 车辆详细信息 ====================
 
-    @Mapping(target = "state", ignore = true)
     VehicleDetail toDetailDomain(VehDetailInfoPo po);
 
     List<VehicleDetail> toDetailDomainList(List<VehDetailInfoPo> poList);
 
-    @Mapping(target = "rowVersion", ignore = true)
-    @Mapping(target = "rowValid", ignore = true)
     VehDetailInfoPo fromDetailDomain(VehicleDetail domain);
 
     List<VehDetailInfoPo> fromDetailDomainList(List<VehicleDetail> domainList);
 
     // ==================== 车辆预设车主 ====================
 
-    @Mapping(target = "state", ignore = true)
     VehiclePresetOwner toPresetOwnerDomain(VehPresetOwnerPo po);
 
     List<VehiclePresetOwner> toPresetOwnerDomainList(List<VehPresetOwnerPo> poList);
 
-    @Mapping(target = "rowVersion", ignore = true)
-    @Mapping(target = "rowValid", ignore = true)
     VehPresetOwnerPo fromPresetOwnerDomain(VehiclePresetOwner domain);
 }

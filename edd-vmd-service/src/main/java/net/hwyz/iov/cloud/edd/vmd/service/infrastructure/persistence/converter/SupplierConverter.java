@@ -24,7 +24,6 @@ public interface SupplierConverter {
      * @param supplierPo PO
      * @return 领域对象
      */
-    @Mapping(target = "state", ignore = true)
     Supplier toDomain(SupplierPo supplierPo);
 
     /**
@@ -41,7 +40,5 @@ public interface SupplierConverter {
      * @param supplier 领域对象
      * @return PO
      */
-    @Mapping(target = "rowVersion", ignore = true)
-    @Mapping(target = "rowValid", ignore = true)
     SupplierPo fromDomain(Supplier supplier);
 }

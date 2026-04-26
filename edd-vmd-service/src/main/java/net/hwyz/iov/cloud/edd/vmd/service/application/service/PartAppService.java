@@ -87,7 +87,6 @@ public class PartAppService {
      */
     public int createPart(PartVo partVo, String userId) {
         Part part = PartAssembler.INSTANCE.toDomain(partVo);
-        part.setCreateBy(userId);
         return partRepository.insert(part);
     }
 
@@ -100,7 +99,6 @@ public class PartAppService {
      */
     public int modifyPart(PartVo partVo, String userId) {
         Part part = PartAssembler.INSTANCE.toDomain(partVo);
-        part.setModifyBy(userId);
         return partRepository.update(part);
     }
 

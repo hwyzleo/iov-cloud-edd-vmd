@@ -106,7 +106,6 @@ public class ManufacturerAppService {
      */
     public int createManufacturer(ManufacturerVo manufacturerVo, String userId) {
         Manufacturer manufacturer = ManufacturerAssembler.INSTANCE.toDomain(manufacturerVo);
-        manufacturer.setCreateBy(userId);
         return vehManufacturerRepository.insert(manufacturer);
     }
 
@@ -119,7 +118,6 @@ public class ManufacturerAppService {
      */
     public int modifyManufacturer(ManufacturerVo manufacturerVo, String userId) {
         Manufacturer manufacturer = ManufacturerAssembler.INSTANCE.toDomain(manufacturerVo);
-        manufacturer.setModifyBy(userId);
         return vehManufacturerRepository.update(manufacturer);
     }
 

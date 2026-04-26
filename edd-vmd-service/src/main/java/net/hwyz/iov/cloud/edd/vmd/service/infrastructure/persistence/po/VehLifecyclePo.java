@@ -11,7 +11,7 @@ import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import net.hwyz.iov.cloud.framework.mysql.po.BasePo;
 
-import java.util.Date;
+import java.time.Instant;
 
 /**
  * <p>
@@ -53,7 +53,7 @@ public class VehLifecyclePo extends BasePo {
      * 触达时间
      */
     @TableField("reach_time")
-    private Date reachTime;
+    private Instant reachTime;
 
     /**
      * 排序

@@ -13,7 +13,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.cache.CacheService;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
-import java.util.Date;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
@@ -47,7 +47,7 @@ public class CacheServiceImpl implements CacheService {
         JSONObject jsonObject = JSONUtil.parseObj(vehiclePoJson);
         return Optional.ofNullable(Vehicle.builder()
                 .vin(jsonObject.getStr("vin"))
-                .eolTime(jsonObject.getDate("eolTime"))
+                .eolTime(jsonObject.get("eolTime", Instant.class))
                 .orderNum(jsonObject.getStr("orderNum"))
                 .build());
     }
@@ -71,7 +71,6 @@ public class CacheServiceImpl implements CacheService {
                 .qrcode(jsonObject.getStr("qrcode"))
                 .type(QrcodeType.valOf(jsonObject.getStr("type")))
                 .qrcodeState(QrcodeState.valOf(jsonObject.getStr("qrcodeState")))
-                .createTime(new Date(jsonObject.getLong("createTime")))
                 .build());
     }
 

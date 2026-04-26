@@ -7,7 +7,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.VehicleProduce
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
-import java.util.Date;
+import java.time.Instant;
 
 /**
  * 车辆事件发布类
@@ -37,7 +37,7 @@ public class VehiclePublish {
      * @param vin     车架号
      * @param eolTime 下线时间
      */
-    public void eol(String vin, Date eolTime) {
+    public void eol(String vin, Instant eolTime) {
         log.info("发布车辆[{}]下线事件", vin);
         ctx.publishEvent(new VehicleEolEvent(vin, eolTime));
     }

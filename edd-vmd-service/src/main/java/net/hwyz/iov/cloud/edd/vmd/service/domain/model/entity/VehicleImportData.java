@@ -4,10 +4,10 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.framework.common.domain.BaseDo;
+
 import net.hwyz.iov.cloud.framework.common.domain.DomainObj;
 
-import java.util.Date;
+import java.time.Instant;
 
 /**
  * 车辆导入数据领域对象
@@ -18,37 +18,12 @@ import java.util.Date;
 @Getter
 @Setter
 @SuperBuilder
-public class VehicleImportData extends BaseDo<Long> implements DomainObj<VehicleImportData> {
+public class VehicleImportData implements DomainObj<VehicleImportData> {
 
     /**
      * 主键
      */
     private Long id;
-
-    /**
-     * 备注
-     */
-    private String description;
-
-    /**
-     * 创建者
-     */
-    private String createBy;
-
-    /**
-     * 创建时间
-     */
-    private Date createTime;
-
-    /**
-     * 修改者
-     */
-    private String modifyBy;
-
-    /**
-     * 修改时间
-     */
-    private Date modifyTime;
 
     /**
      * 批次号

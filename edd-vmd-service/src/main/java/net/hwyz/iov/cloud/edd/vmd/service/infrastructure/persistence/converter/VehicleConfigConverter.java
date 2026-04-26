@@ -22,25 +22,19 @@ public interface VehicleConfigConverter {
 
     // ==================== 车辆配置 ====================
 
-    @Mapping(target = "state", ignore = true)
     @Mapping(target = "configState", source = "state")
     VehicleConfig toDomain(VehicleConfigPo po);
 
     List<VehicleConfig> toDomainList(List<VehicleConfigPo> poList);
 
     @Mapping(target = "state", source = "configState")
-    @Mapping(target = "rowVersion", ignore = true)
-    @Mapping(target = "rowValid", ignore = true)
     VehicleConfigPo fromDomain(VehicleConfig domain);
 
     // ==================== 车辆配置项 ====================
 
-    @Mapping(target = "state", ignore = true)
     VehicleConfigItem toItemDomain(VehicleConfigItemPo po);
 
     List<VehicleConfigItem> toItemDomainList(List<VehicleConfigItemPo> poList);
 
-    @Mapping(target = "rowVersion", ignore = true)
-    @Mapping(target = "rowValid", ignore = true)
     VehicleConfigItemPo fromItemDomain(VehicleConfigItem domain);
 }

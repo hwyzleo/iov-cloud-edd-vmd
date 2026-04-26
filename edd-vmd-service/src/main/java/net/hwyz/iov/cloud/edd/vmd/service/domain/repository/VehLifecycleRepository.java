@@ -29,6 +29,14 @@ public interface VehLifecycleRepository {
     VehicleLifecycle selectById(Long id);
 
     /**
+     * 根据车架号查询车辆生命周期列表
+     *
+     * @param vin 车架号
+     * @return 车辆生命周期列表
+     */
+    List<VehicleLifecycle> selectByVin(String vin);
+
+    /**
      * 新增车辆生命周期
      *
      * @param vehicleLifecycle 车辆生命周期

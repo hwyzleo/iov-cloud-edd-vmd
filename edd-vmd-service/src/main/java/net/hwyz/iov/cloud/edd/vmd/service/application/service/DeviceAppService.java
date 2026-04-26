@@ -103,7 +103,6 @@ public class DeviceAppService {
      */
     public int createDevice(DeviceVo deviceVo, String userId) {
         Device device = DeviceAssembler.INSTANCE.toDomain(deviceVo);
-        device.setCreateBy(userId);
         return deviceRepository.insert(device);
     }
 
@@ -116,7 +115,6 @@ public class DeviceAppService {
      */
     public int modifyDevice(DeviceVo deviceVo, String userId) {
         Device device = DeviceAssembler.INSTANCE.toDomain(deviceVo);
-        device.setModifyBy(userId);
         return deviceRepository.update(device);
     }
 

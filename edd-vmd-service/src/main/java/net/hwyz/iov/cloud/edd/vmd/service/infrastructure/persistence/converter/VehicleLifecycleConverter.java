@@ -24,7 +24,6 @@ public interface VehicleLifecycleConverter {
      * @param vehLifecyclePo PO
      * @return 领域对象
      */
-    @Mapping(target = "state", ignore = true)
     VehicleLifecycle toDomain(VehLifecyclePo vehLifecyclePo);
 
     /**
@@ -41,7 +40,5 @@ public interface VehicleLifecycleConverter {
      * @param vehicleLifecycle 领域对象
      * @return PO
      */
-    @Mapping(target = "rowVersion", ignore = true)
-    @Mapping(target = "rowValid", ignore = true)
     VehLifecyclePo fromDomain(VehicleLifecycle vehicleLifecycle);
 }

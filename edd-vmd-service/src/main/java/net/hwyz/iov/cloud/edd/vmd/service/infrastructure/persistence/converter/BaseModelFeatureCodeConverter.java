@@ -24,7 +24,6 @@ public interface BaseModelFeatureCodeConverter {
      * @param po PO
      * @return 领域对象
      */
-    @Mapping(target = "state", ignore = true)
     @Mapping(target = "familyName", ignore = true)
     @Mapping(target = "featureName", ignore = true)
     BaseModelFeatureCode toDomain(VehBaseModelFeatureCodePo po);
@@ -43,7 +42,5 @@ public interface BaseModelFeatureCodeConverter {
      * @param domain 领域对象
      * @return PO
      */
-    @Mapping(target = "rowVersion", ignore = true)
-    @Mapping(target = "rowValid", ignore = true)
     VehBaseModelFeatureCodePo fromDomain(BaseModelFeatureCode domain);
 }

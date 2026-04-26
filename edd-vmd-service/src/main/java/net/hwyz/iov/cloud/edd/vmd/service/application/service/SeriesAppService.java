@@ -153,7 +153,6 @@ public class SeriesAppService {
      */
     public int createSeries(SeriesVo seriesVo, String userId) {
         Series series = SeriesAssembler.INSTANCE.toDomain(seriesVo);
-        series.setCreateBy(userId);
         return vehSeriesRepository.insert(series);
     }
 
@@ -166,7 +165,6 @@ public class SeriesAppService {
      */
     public int modifySeries(SeriesVo seriesVo, String userId) {
         Series series = SeriesAssembler.INSTANCE.toDomain(seriesVo);
-        series.setModifyBy(userId);
         return vehSeriesRepository.update(series);
     }
 

@@ -24,7 +24,6 @@ public interface ManufacturerConverter {
      * @param vehManufacturerPo PO
      * @return 领域对象
      */
-    @Mapping(target = "state", ignore = true)
     Manufacturer toDomain(VehManufacturerPo vehManufacturerPo);
 
     /**
@@ -41,7 +40,5 @@ public interface ManufacturerConverter {
      * @param manufacturer 领域对象
      * @return PO
      */
-    @Mapping(target = "rowVersion", ignore = true)
-    @Mapping(target = "rowValid", ignore = true)
     VehManufacturerPo fromDomain(Manufacturer manufacturer);
 }

@@ -22,7 +22,6 @@ public interface VehicleConverter {
      * @param vehBasicInfoPo PO
      * @return 领域对象
      */
-    @Mapping(target = "state", ignore = true)
     Vehicle toDomain(VehBasicInfoPo vehBasicInfoPo);
 
     /**
@@ -31,8 +30,5 @@ public interface VehicleConverter {
      * @param vehicle 领域对象
      * @return PO
      */
-    @Mapping(target = "id", ignore = true)
-    @Mapping(target = "rowVersion", ignore = true)
-    @Mapping(target = "rowValid", ignore = true)
     VehBasicInfoPo fromDomain(Vehicle vehicle);
 }

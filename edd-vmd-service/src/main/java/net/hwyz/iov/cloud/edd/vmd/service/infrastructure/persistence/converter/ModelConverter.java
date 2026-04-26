@@ -24,7 +24,6 @@ public interface ModelConverter {
      * @param vehModelPo PO
      * @return 领域对象
      */
-    @Mapping(target = "state", ignore = true)
     Model toDomain(VehModelPo vehModelPo);
 
     /**
@@ -41,7 +40,5 @@ public interface ModelConverter {
      * @param model 领域对象
      * @return PO
      */
-    @Mapping(target = "rowVersion", ignore = true)
-    @Mapping(target = "rowValid", ignore = true)
     VehModelPo fromDomain(Model model);
 }

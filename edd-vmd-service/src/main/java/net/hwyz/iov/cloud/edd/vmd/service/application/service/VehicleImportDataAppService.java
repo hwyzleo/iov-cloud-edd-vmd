@@ -110,7 +110,6 @@ public class VehicleImportDataAppService {
      */
     public int createVehicleImportData(VehicleImportDataVo vehicleImportDataVo, String userId) {
         VehicleImportData vehicleImportData = VehicleImportDataAssembler.INSTANCE.toDomain(vehicleImportDataVo);
-        vehicleImportData.setCreateBy(userId);
         vehicleImportData.setHandle(false);
         return vehImportDataRepository.insert(vehicleImportData);
     }
@@ -124,7 +123,6 @@ public class VehicleImportDataAppService {
      */
     public int modifyVehicleImportData(VehicleImportDataVo vehicleImportDataVo, String userId) {
         VehicleImportData vehicleImportData = VehicleImportDataAssembler.INSTANCE.toDomain(vehicleImportDataVo);
-        vehicleImportData.setModifyBy(userId);
         return vehImportDataRepository.update(vehicleImportData);
     }
 

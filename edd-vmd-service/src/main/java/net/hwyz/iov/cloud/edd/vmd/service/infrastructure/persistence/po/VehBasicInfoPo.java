@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.io.Serializable;
-import java.util.Date;
+import java.time.Instant;
 
 import lombok.experimental.SuperBuilder;
 import lombok.*;
@@ -87,13 +87,13 @@ public class VehBasicInfoPo extends BasePo {
      * 车辆下线时间
      */
     @TableField("eol_time")
-    private Date eolTime;
+    private Instant eolTime;
 
     /**
      * 最后一次PDI时间
      */
     @TableField("pdi_time")
-    private Date pdiTime;
+    private Instant pdiTime;
 
     /**
      * 订单号

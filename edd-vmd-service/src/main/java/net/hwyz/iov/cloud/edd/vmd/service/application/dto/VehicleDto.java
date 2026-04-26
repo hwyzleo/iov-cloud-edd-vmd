@@ -5,7 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.Date;
+import java.time.Instant;
 
 /**
  * 车辆数据传输对象
@@ -26,7 +26,7 @@ public class VehicleDto {
     private String modelCode;
     private String baseModelCode;
     private String buildConfigCode;
-    private Date eolTime;
+    private Instant eolTime;
     private String orderNum;
 
 }

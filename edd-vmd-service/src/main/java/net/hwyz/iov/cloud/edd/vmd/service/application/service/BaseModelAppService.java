@@ -132,7 +132,6 @@ public class BaseModelAppService {
      */
     public int createBasicModel(BaseModelVo baseModelVo, String userId) {
         BaseModel baseModel = BaseModelAssembler.INSTANCE.toDomain(baseModelVo);
-        baseModel.setCreateBy(userId);
         return vehBaseModelRepository.insert(baseModel);
     }
 
@@ -145,7 +144,6 @@ public class BaseModelAppService {
      */
     public int modifyBasicModel(BaseModelVo baseModelVo, String userId) {
         BaseModel baseModel = BaseModelAssembler.INSTANCE.toDomain(baseModelVo);
-        baseModel.setModifyBy(userId);
         return vehBaseModelRepository.update(baseModel);
     }
 
@@ -174,8 +172,6 @@ public class BaseModelAppService {
         BaseModelFeatureCode example = BaseModelFeatureCode.builder()
                 .baseModelCode(baseModelCode)
                 .familyCode(familyCode)
-                .createTime(beginTime)
-                .modifyTime(endTime)
                 .build();
         List<BaseModelFeatureCode> list = vehBaseModelRepository.selectFeatureCodeByExample(example);
         return PageUtil.convert(list, BaseModelFeatureCodeAssembler.INSTANCE::fromDomain);
@@ -220,7 +216,6 @@ public class BaseModelAppService {
      */
     public int createBasicModelFeatureCode(BaseModelFeatureCodeVo featureCodeVo, String userId) {
         BaseModelFeatureCode featureCode = BaseModelFeatureCodeAssembler.INSTANCE.toDomain(featureCodeVo);
-        featureCode.setCreateBy(userId);
         return vehBaseModelRepository.batchInsertFeatureCode(List.of(featureCode));
     }
 
@@ -233,7 +228,6 @@ public class BaseModelAppService {
      */
     public int modifyBaseModelFeatureCode(BaseModelFeatureCodeVo featureCodeVo, String userId) {
         BaseModelFeatureCode featureCode = BaseModelFeatureCodeAssembler.INSTANCE.toDomain(featureCodeVo);
-        featureCode.setModifyBy(userId);
         return vehBaseModelRepository.updateFeatureCode(featureCode);
     }
 

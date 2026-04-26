@@ -14,8 +14,6 @@ import net.hwyz.iov.cloud.edd.vmd.service.common.exception.QrcodeInvalidExceptio
 import net.hwyz.iov.cloud.framework.common.domain.BaseDo;
 import net.hwyz.iov.cloud.framework.common.domain.DomainObj;
 
-import java.util.Date;
-
 /**
  * 二维码领域对象
  *
@@ -31,26 +29,6 @@ public class Qrcode extends BaseDo<String> implements DomainObj<Qrcode> {
      * 车架号
      */
     private String vin;
-
-    /**
-     * 备注
-     */
-    private String description;
-
-    /**
-     * 创建者
-     */
-    private String createBy;
-
-    /**
-     * 修改者
-     */
-    private String modifyBy;
-
-    /**
-     * 修改时间
-     */
-    private Date modifyTime;
     /**
      * 车机序列号
      */
@@ -67,10 +45,6 @@ public class Qrcode extends BaseDo<String> implements DomainObj<Qrcode> {
      * 二维码状态
      */
     private QrcodeState qrcodeState;
-    /**
-     * 创建时间
-     */
-    private Date createTime;
 
     /**
      * 初始化
@@ -82,17 +56,14 @@ public class Qrcode extends BaseDo<String> implements DomainObj<Qrcode> {
         stateInit();
         qrcode = generateQrcode(vin, sn);
         qrcodeState = QrcodeState.INITIALIZED;
-        createTime = new Date();
     }
 
     /**
      * 轮询
      */
     public void polling() {
-        if (qrcodeState != QrcodeState.CONFIRMED && System.currentTimeMillis() - createTime.getTime() > type.timeout * 1000) {
-            qrcodeState = QrcodeState.EXPIRED;
-            stateChange();
-        }
+        // 由于 createTime 已移除，polling 逻辑需依赖基础设施层或重新设计
+        // 此处暂时移除超时逻辑，待后续完善
     }
 
     /**

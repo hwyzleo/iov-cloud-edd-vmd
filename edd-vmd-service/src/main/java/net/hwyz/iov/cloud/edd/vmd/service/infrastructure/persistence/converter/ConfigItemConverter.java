@@ -24,34 +24,25 @@ public interface ConfigItemConverter {
 
     // ==================== 配置项 ====================
 
-    @Mapping(target = "state", ignore = true)
     ConfigItem toDomain(ConfigItemPo po);
 
     List<ConfigItem> toDomainList(List<ConfigItemPo> poList);
 
-    @Mapping(target = "rowVersion", ignore = true)
-    @Mapping(target = "rowValid", ignore = true)
     ConfigItemPo fromDomain(ConfigItem domain);
 
     // ==================== 配置项枚举值 ====================
 
-    @Mapping(target = "state", ignore = true)
     ConfigItemOption toOptionDomain(ConfigItemOptionPo po);
 
     List<ConfigItemOption> toOptionDomainList(List<ConfigItemOptionPo> poList);
 
-    @Mapping(target = "rowVersion", ignore = true)
-    @Mapping(target = "rowValid", ignore = true)
     ConfigItemOptionPo fromOptionDomain(ConfigItemOption domain);
 
     // ==================== 配置项映射 ====================
 
-    @Mapping(target = "state", ignore = true)
     ConfigItemMapping toMappingDomain(ConfigItemMappingPo po);
 
     List<ConfigItemMapping> toMappingDomainList(List<ConfigItemMappingPo> poList);
 
-    @Mapping(target = "rowVersion", ignore = true)
-    @Mapping(target = "rowValid", ignore = true)
     ConfigItemMappingPo fromMappingDomain(ConfigItemMapping domain);
 }

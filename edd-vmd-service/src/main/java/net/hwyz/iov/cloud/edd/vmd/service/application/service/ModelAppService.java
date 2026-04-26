@@ -140,7 +140,6 @@ public class ModelAppService {
      */
     public int createModel(ModelVo modelVo, String userId) {
         Model model = ModelAssembler.INSTANCE.toDomain(modelVo);
-        model.setCreateBy(userId);
         return vehModelRepository.insert(model);
     }
 
@@ -153,7 +152,6 @@ public class ModelAppService {
      */
     public int modifyModel(ModelVo modelVo, String userId) {
         Model model = ModelAssembler.INSTANCE.toDomain(modelVo);
-        model.setModifyBy(userId);
         return vehModelRepository.update(model);
     }
 

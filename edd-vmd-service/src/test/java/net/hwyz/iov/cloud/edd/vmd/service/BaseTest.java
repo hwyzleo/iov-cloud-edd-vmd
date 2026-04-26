@@ -1,4 +1,4 @@
-package net.hwyz.iov.cloud.tsp.vmd.service;
+package net.hwyz.iov.cloud.edd.vmd.service;
 
 import cn.hutool.json.JSONUtil;
 import net.hwyz.iov.cloud.framework.common.constant.CustomHeaders;

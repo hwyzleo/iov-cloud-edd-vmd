@@ -24,7 +24,6 @@ public interface SeriesConverter {
      * @param vehSeriesPo PO
      * @return 领域对象
      */
-    @Mapping(target = "state", ignore = true)
     Series toDomain(VehSeriesPo vehSeriesPo);
 
     /**
@@ -41,7 +40,5 @@ public interface SeriesConverter {
      * @param series 领域对象
      * @return PO
      */
-    @Mapping(target = "rowVersion", ignore = true)
-    @Mapping(target = "rowValid", ignore = true)
     VehSeriesPo fromDomain(Series series);
 }

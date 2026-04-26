@@ -22,23 +22,17 @@ public interface FeatureConverter {
 
     // ==================== 特征族 ====================
 
-    @Mapping(target = "state", ignore = true)
     FeatureFamily toFamilyDomain(VehFeatureFamilyPo po);
 
     List<FeatureFamily> toFamilyDomainList(List<VehFeatureFamilyPo> poList);
 
-    @Mapping(target = "rowVersion", ignore = true)
-    @Mapping(target = "rowValid", ignore = true)
     VehFeatureFamilyPo fromFamilyDomain(FeatureFamily domain);
 
     // ==================== 特征值 ====================
 
-    @Mapping(target = "state", ignore = true)
     FeatureCode toCodeDomain(VehFeatureCodePo po);
 
     List<FeatureCode> toCodeDomainList(List<VehFeatureCodePo> poList);
 
-    @Mapping(target = "rowVersion", ignore = true)
-    @Mapping(target = "rowValid", ignore = true)
     VehFeatureCodePo fromCodeDomain(FeatureCode domain);
 }

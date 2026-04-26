@@ -113,7 +113,6 @@ public class FeatureFamilyAppService {
      */
     public int createFeatureFamily(FeatureFamilyVo featureFamily, String userId) {
         FeatureFamily featureFamilyDomain = FeatureFamilyAssembler.INSTANCE.toDomain(featureFamily);
-        featureFamilyDomain.setCreateBy(userId);
         return vehFeatureFamilyRepository.insert(featureFamilyDomain);
     }
 
@@ -126,7 +125,6 @@ public class FeatureFamilyAppService {
      */
     public int modifyFeatureFamily(FeatureFamilyVo featureFamily, String userId) {
         FeatureFamily featureFamilyDomain = FeatureFamilyAssembler.INSTANCE.toDomain(featureFamily);
-        featureFamilyDomain.setModifyBy(userId);
         return vehFeatureFamilyRepository.update(featureFamilyDomain);
     }
 
@@ -198,7 +196,6 @@ public class FeatureFamilyAppService {
     public int createFeatureCode(Long familyId, FeatureCodeVo featureCode, String userId) {
         FeatureCode featureCodeDomain = FeatureCodeAssembler.INSTANCE.toDomain(featureCode);
         featureCodeDomain.setFamilyCode(vehFeatureFamilyRepository.selectById(familyId).getCode());
-        featureCodeDomain.setCreateBy(userId);
         return vehFeatureFamilyRepository.insertFeatureCode(featureCodeDomain);
     }
 
@@ -212,7 +209,6 @@ public class FeatureFamilyAppService {
      */
     public int modifyFeatureCode(Long featureFamilyId, FeatureCodeVo featureCode, String userId) {
         FeatureCode featureCodeDomain = FeatureCodeAssembler.INSTANCE.toDomain(featureCode);
-        featureCodeDomain.setModifyBy(userId);
         return vehFeatureFamilyRepository.updateFeatureCode(featureCodeDomain);
     }
 

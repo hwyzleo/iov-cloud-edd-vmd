@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.io.Serializable;
-import java.util.Date;
+import java.time.Instant;
 import net.hwyz.iov.cloud.framework.mysql.po.BasePo;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -116,7 +116,7 @@ public class VehiclePartHistoryPo extends BasePo {
      * 绑定时间
      */
     @TableField("bind_time")
-    private Date bindTime;
+    private Instant bindTime;
 
     /**
      * 绑定类型
@@ -140,7 +140,7 @@ public class VehiclePartHistoryPo extends BasePo {
      * 解绑时间
      */
     @TableField("unbind_time")
-    private Date unbindTime;
+    private Instant unbindTime;
 
     /**
      * 解绑理由

@@ -121,7 +121,6 @@ public class BrandAppService {
      */
     public int createBrand(BrandVo brandVo, String userId) {
         Brand brand = BrandAssembler.INSTANCE.toDomain(brandVo);
-        brand.setCreateBy(userId);
         return vehBrandRepository.insert(brand);
     }
 
@@ -134,7 +133,6 @@ public class BrandAppService {
      */
     public int modifyBrand(BrandVo brandVo, String userId) {
         Brand brand = BrandAssembler.INSTANCE.toDomain(brandVo);
-        brand.setModifyBy(userId);
         return vehBrandRepository.update(brand);
     }
 

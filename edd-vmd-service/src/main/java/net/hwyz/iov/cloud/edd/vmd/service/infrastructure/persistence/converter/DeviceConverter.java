@@ -24,8 +24,6 @@ public interface DeviceConverter {
      * @param devicePo PO
      * @return 领域对象
      */
-    @Mapping(source = "funcPomain", target = "funcDomain")
-    @Mapping(target = "state", ignore = true)
     Device toDomain(DevicePo devicePo);
 
     /**
@@ -42,8 +40,5 @@ public interface DeviceConverter {
      * @param device 领域对象
      * @return PO
      */
-    @Mapping(source = "funcDomain", target = "funcPomain")
-    @Mapping(target = "rowVersion", ignore = true)
-    @Mapping(target = "rowValid", ignore = true)
     DevicePo fromDomain(Device device);
 }

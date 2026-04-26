@@ -112,7 +112,6 @@ public class BuildConfigAppService {
      */
     public int createBuildConfig(BuildConfigVo buildConfigVo, String userId) {
         BuildConfig buildConfig = BuildConfigAssembler.INSTANCE.toDomain(buildConfigVo);
-        buildConfig.setCreateBy(userId);
         return vehBuildConfigRepository.insert(buildConfig);
     }
 
@@ -125,7 +124,6 @@ public class BuildConfigAppService {
      */
     public int modifyBuildConfig(BuildConfigVo buildConfigVo, String userId) {
         BuildConfig buildConfig = BuildConfigAssembler.INSTANCE.toDomain(buildConfigVo);
-        buildConfig.setModifyBy(userId);
         return vehBuildConfigRepository.update(buildConfig);
     }
 

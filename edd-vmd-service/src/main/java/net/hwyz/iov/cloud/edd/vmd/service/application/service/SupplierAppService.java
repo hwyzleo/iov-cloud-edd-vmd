@@ -91,7 +91,6 @@ public class SupplierAppService {
      */
     public int createSupplier(SupplierVo supplierVo, String userId) {
         Supplier supplier = SupplierAssembler.INSTANCE.toDomain(supplierVo);
-        supplier.setCreateBy(userId);
         return supplierRepository.insert(supplier);
     }
 
@@ -104,7 +103,6 @@ public class SupplierAppService {
      */
     public int modifySupplier(SupplierVo supplierVo, String userId) {
         Supplier supplier = SupplierAssembler.INSTANCE.toDomain(supplierVo);
-        supplier.setModifyBy(userId);
         return supplierRepository.update(supplier);
     }
 

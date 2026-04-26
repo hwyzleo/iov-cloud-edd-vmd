@@ -4,10 +4,13 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.framework.common.domain.BaseDo;
+
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.VehicleLifecycleNodeEnum;
 
-import java.util.Date;
+import net.hwyz.iov.cloud.framework.common.domain.BaseDo;
+import net.hwyz.iov.cloud.framework.common.domain.DomainObj;
+
+import java.time.Instant;
 
 /**
  * 车辆生命周期节点领域对象
@@ -18,37 +21,12 @@ import java.util.Date;
 @Getter
 @Setter
 @SuperBuilder
-public class VehicleLifecycleNode extends BaseDo<String> {
+public class VehicleLifecycleNode extends BaseDo<String> implements DomainObj<VehicleLifecycleNode> {
 
     /**
      * 车架号
      */
     private String vin;
-
-    /**
-     * 备注
-     */
-    private String description;
-
-    /**
-     * 创建者
-     */
-    private String createBy;
-
-    /**
-     * 创建时间
-     */
-    private Date createTime;
-
-    /**
-     * 修改者
-     */
-    private String modifyBy;
-
-    /**
-     * 修改时间
-     */
-    private Date modifyTime;
     /**
      * 生命周期节点
      */
@@ -56,7 +34,7 @@ public class VehicleLifecycleNode extends BaseDo<String> {
     /**
      * 触达时间
      */
-    private Date reachTime;
+    private Instant reachTime;
     /**
      * 排序
      */

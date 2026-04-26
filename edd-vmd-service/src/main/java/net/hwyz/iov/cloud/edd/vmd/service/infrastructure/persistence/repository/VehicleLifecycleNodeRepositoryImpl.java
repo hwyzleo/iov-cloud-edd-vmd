@@ -9,6 +9,8 @@ import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehL
 import net.hwyz.iov.cloud.framework.common.domain.AbstractRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -22,6 +24,13 @@ import java.util.Optional;
 public class VehicleLifecycleNodeRepositoryImpl extends AbstractRepository<String, VehicleLifecycleNode> implements VehicleLifecycleNodeRepository {
 
     private final VehLifecycleMapper vehLifecycleMapper;
+
+    @Override
+    public List<VehicleLifecycleNode> selectByVin(String vin) {
+        return vehLifecycleMapper.selectPoByMap(Map.of("vin", vin)).stream()
+                .map(VehicleLifecycleNodeConverter.INSTANCE::toDomain)
+                .toList();
+    }
 
     @Override
     public Optional<VehicleLifecycleNode> getById(String s) {

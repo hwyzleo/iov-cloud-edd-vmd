@@ -24,7 +24,6 @@ public interface PlatformConverter {
      * @param vehPlatformPo PO
      * @return 领域对象
      */
-    @Mapping(target = "state", ignore = true)
     Platform toDomain(VehPlatformPo vehPlatformPo);
 
     /**
@@ -41,7 +40,5 @@ public interface PlatformConverter {
      * @param platform 领域对象
      * @return PO
      */
-    @Mapping(target = "rowVersion", ignore = true)
-    @Mapping(target = "rowValid", ignore = true)
     VehPlatformPo fromDomain(Platform platform);
 }

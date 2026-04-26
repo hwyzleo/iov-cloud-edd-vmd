@@ -89,7 +89,6 @@ public class ConfigItemAppService {
      */
     public int createConfigItem(ConfigItemVo configItemVo, String userId) {
         ConfigItem configItem = ConfigItemAssembler.INSTANCE.toDomain(configItemVo);
-        configItem.setCreateBy(userId);
         return configItemRepository.insert(configItem);
     }
 
@@ -102,7 +101,6 @@ public class ConfigItemAppService {
      */
     public int modifyConfigItem(ConfigItemVo configItemVo, String userId) {
         ConfigItem configItem = ConfigItemAssembler.INSTANCE.toDomain(configItemVo);
-        configItem.setModifyBy(userId);
         return configItemRepository.update(configItem);
     }
 
@@ -177,7 +175,6 @@ public class ConfigItemAppService {
     public int createConfigItemOption(String configItemCode, ConfigItemOptionVo configItemOptionVo, String userId) {
         ConfigItemOption configItemOption = ConfigItemOptionAssembler.INSTANCE.toDomain(configItemOptionVo);
         configItemOption.setConfigItemCode(configItemCode);
-        configItemOption.setCreateBy(userId);
         return configItemRepository.insertOption(configItemOption);
     }
 
@@ -192,7 +189,6 @@ public class ConfigItemAppService {
     public int modifyConfigItemOption(String configItemCode, ConfigItemOptionVo configItemOptionVo, String userId) {
         ConfigItemOption configItemOption = ConfigItemOptionAssembler.INSTANCE.toDomain(configItemOptionVo);
         configItemOption.setConfigItemCode(configItemCode);
-        configItemOption.setModifyBy(userId);
         return configItemRepository.updateOption(configItemOption);
     }
 
@@ -268,7 +264,6 @@ public class ConfigItemAppService {
     public int createConfigItemMapping(String configItemCode, ConfigItemMappingVo configItemMappingVo, String userId) {
         ConfigItemMapping configItemMapping = ConfigItemMappingAssembler.INSTANCE.toDomain(configItemMappingVo);
         configItemMapping.setConfigItemCode(configItemCode);
-        configItemMapping.setCreateBy(userId);
         return configItemRepository.insertMapping(configItemMapping);
     }
 
@@ -283,7 +278,6 @@ public class ConfigItemAppService {
     public int modifyConfigItemMapping(String configItemCode, ConfigItemMappingVo configItemMappingVo, String userId) {
         ConfigItemMapping configItemMapping = ConfigItemMappingAssembler.INSTANCE.toDomain(configItemMappingVo);
         configItemMapping.setConfigItemCode(configItemCode);
-        configItemMapping.setModifyBy(userId);
         return configItemRepository.updateMapping(configItemMapping);
     }
 

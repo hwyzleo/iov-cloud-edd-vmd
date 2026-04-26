@@ -35,6 +35,7 @@ import net.hwyz.iov.cloud.tsp.tbox.api.contract.VehicleTboxExService;
 import net.hwyz.iov.cloud.tsp.tbox.api.feign.service.ExVehicleTboxService;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -91,18 +92,16 @@ public class EolDataParserV1_0 extends BaseParser implements ImportDataParser {
             handleVehicleInfo(itemJson, vehicleBasicInfo, "BUILD_CONFIG", "buildConfigCode", "生产配置数据", batchNum, vin);
             handleVehicleInfo(itemJson, vehicleBasicInfo, "VEHICLE_BASE_VERSION", "vehicleBaseVersion", "车辆基线版本", batchNum, vin);
             String eolDateStr = itemJson.getStr("EOL_DATE");
-            DateTime eolDate;
+            Instant eolDate;
             boolean firstEol = false;
             if (StrUtil.isNotBlank(eolDateStr)) {
-                eolDate = DateUtil.parse(eolDateStr, "yyyyMMdd");
+                eolDate = DateUtil.parse(eolDateStr, "yyyyMMdd").toInstant();
             } else {
-                eolDate = new DateTime();
+                eolDate = Instant.now();
             }
             if (ObjUtil.isNull(vehicleBasicInfo.getEolTime())) {
                 vehicleBasicInfo.setEolTime(eolDate);
                 firstEol = true;
-            } else if (eolDate.isBefore(vehicleBasicInfo.getEolTime()) || eolDate.isAfter(vehicleBasicInfo.getEolTime())) {
-                log.warn("车辆导入数据批次号[{}]下线日期数据[{}]与原数据[{}]不一致", batchNum, eolDateStr, DateUtil.formatDate(vehicleBasicInfo.getEolTime()));
             }
             handleVehicleDetail(itemJson, vehicleDetailMap, "PRODUCTION_ORDER", "生产订单", batchNum, vin);
             handleVehicleDetail(itemJson, vehicleDetailMap, "MATNR", "整车物料编码", batchNum, vin);
@@ -147,7 +146,7 @@ public class EolDataParserV1_0 extends BaseParser implements ImportDataParser {
                 vehiclePublish.eol(vin, eolDate);
             }
             String certDateStr = itemJson.getStr("CERT_DATE");
-            if (StrUtil.isNotBlank(certDateStr) && ObjUtil.isNull(vehicleLifecycleAppService.getLifecycle(vin, VehicleLifecycleNodeEnum.CERTIFICATE))) {
+            if (StrUtil.isNotBlank(certDateStr)) {
                 DateTime certDate = DateUtil.parse(certDateStr, "yyyyMMdd");
                 if (ObjUtil.isNotNull(certDate)) {
                     vehicleLifecycleAppService.recordCertificateNode(vin, certDate);

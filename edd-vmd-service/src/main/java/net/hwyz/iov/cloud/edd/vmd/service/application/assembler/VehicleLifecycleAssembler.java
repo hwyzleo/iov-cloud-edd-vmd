@@ -2,6 +2,7 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.assembler;
 
 import net.hwyz.iov.cloud.edd.vmd.api.vo.VehicleLifecycleVo;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleLifecycle;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleLifecycleNode;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 
@@ -16,6 +17,20 @@ import java.util.List;
 public interface VehicleLifecycleAssembler {
 
     VehicleLifecycleAssembler INSTANCE = Mappers.getMapper(VehicleLifecycleAssembler.class);
+
+    /**
+     * 将节点列表转换为领域对象
+     *
+     * @param vin   车架号
+     * @param nodes 节点列表
+     * @return 领域对象
+     */
+    default VehicleLifecycle fromNodes(String vin, List<VehicleLifecycleNode> nodes) {
+        VehicleLifecycle vehicleLifecycle = VehicleLifecycle.builder()
+                .vin(vin)
+                .build();
+        return vehicleLifecycle;
+    }
 
     /**
      * 领域对象转数据传输对象

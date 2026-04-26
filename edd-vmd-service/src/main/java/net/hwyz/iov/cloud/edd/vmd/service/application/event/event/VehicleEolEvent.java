@@ -2,7 +2,7 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.event.event;
 
 import lombok.Getter;
 
-import java.util.Date;
+import java.time.Instant;
 
 /**
  * 车辆下线事件
@@ -19,9 +19,9 @@ public class VehicleEolEvent extends BaseEvent {
     /**
      * 下线时间
      */
-    private final Date eolTime;
+    private final Instant eolTime;
 
-    public VehicleEolEvent(String vin, Date eolTime) {
+    public VehicleEolEvent(String vin, Instant eolTime) {
         super(vin);
         this.vin = vin;
         this.eolTime = eolTime;

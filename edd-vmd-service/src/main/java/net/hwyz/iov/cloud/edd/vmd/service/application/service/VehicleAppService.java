@@ -161,7 +161,7 @@ public class VehicleAppService {
         }
         vehicle.bindOrder(orderNum);
         vehicleRepository.save(vehicle);
-        vehicleLifecycleAppService.recordBindOrderNode(vin, orderNum);
+        vehicleLifecycleAppService.recordBindOrderNode(vin);
     }
 
     /**

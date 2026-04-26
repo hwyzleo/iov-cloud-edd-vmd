@@ -10,6 +10,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehiclePartRepositor
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -114,7 +115,6 @@ public class VehiclePartAppService {
      */
     public int createVehiclePart(VehiclePartVo vehiclePartVo, String userId) {
         VehiclePart vehiclePart = VehiclePartAssembler.INSTANCE.toDomain(vehiclePartVo);
-        vehiclePart.setCreateBy(userId);
         return vehiclePartRepository.insert(vehiclePart);
     }
 
@@ -127,7 +127,6 @@ public class VehiclePartAppService {
      */
     public int modifyVehiclePart(VehiclePartVo vehiclePartVo, String userId) {
         VehiclePart vehiclePart = VehiclePartAssembler.INSTANCE.toDomain(vehiclePartVo);
-        vehiclePart.setModifyBy(userId);
         return vehiclePartRepository.update(vehiclePart);
     }
 
@@ -148,7 +147,7 @@ public class VehiclePartAppService {
      */
     public void bindVehiclePart(VehiclePart vehiclePart) {
         vehiclePart.setPartState(1); // 1-在用
-        vehiclePart.setBindTime(new Date());
+        vehiclePart.setBindTime(Instant.now());
         vehiclePartRepository.insert(vehiclePart);
     }
 

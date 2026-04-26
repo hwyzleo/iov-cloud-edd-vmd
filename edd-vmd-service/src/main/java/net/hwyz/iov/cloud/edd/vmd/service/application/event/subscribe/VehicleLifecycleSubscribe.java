@@ -12,6 +12,8 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleLifecycleAp
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
 
+import java.util.Date;
+
 /**
  * 车辆生命周期事件订阅类
  *
@@ -45,7 +47,7 @@ public class VehicleLifecycleSubscribe {
     @EventListener
     public void onQrcodeConfirmEvent(QrcodeConfirmEvent event) {
         if (event.getType() == QrcodeType.VEHICLE_ACTIVE) {
-            vehicleLifecycleAppService.recordVehicleActiveNode(event.getVin(), event.getAccountId());
+            vehicleLifecycleAppService.recordVehicleActiveNode(event.getVin());
         }
     }
 
@@ -66,7 +68,7 @@ public class VehicleLifecycleSubscribe {
      */
     @EventListener
     public void onVehicleEolEvent(VehicleEolEvent event) {
-        vehicleLifecycleAppService.recordEolNode(event.getVin(), event.getEolTime());
+        vehicleLifecycleAppService.recordEolNode(event.getVin(), Date.from(event.getEolTime()));
     }
 
 }
