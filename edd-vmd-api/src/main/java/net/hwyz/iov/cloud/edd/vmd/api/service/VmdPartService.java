@@ -2,7 +2,7 @@ package net.hwyz.iov.cloud.edd.vmd.api.service;
 
 import net.hwyz.iov.cloud.framework.common.constant.ServiceNameConstants;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.PartExService;
-import net.hwyz.iov.cloud.edd.vmd.api.fallback.ExPartServiceFallbackFactory;
+import net.hwyz.iov.cloud.edd.vmd.api.fallback.VmdPartServiceFallbackFactory;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -15,8 +15,8 @@ import java.util.List;
  *
  * @author hwyz_leo
  */
-@FeignClient(contextId = "exPartService", value = ServiceNameConstants.EDD_VMD, path = "/api/service/part/v1", fallbackFactory = ExPartServiceFallbackFactory.class)
-public interface ExPartService {
+@FeignClient(contextId = "exPartService", value = ServiceNameConstants.EDD_VMD, path = "/api/service/part/v1", fallbackFactory = VmdPartServiceFallbackFactory.class)
+public interface VmdPartService {
 
     /**
      * 根据零件号查询零件信息

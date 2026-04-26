@@ -1,7 +1,7 @@
 package net.hwyz.iov.cloud.edd.vmd.api.fallback;
 
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.edd.vmd.api.service.ExVehicleModelConfigService;
+import net.hwyz.iov.cloud.edd.vmd.api.service.VmdVehicleModelConfigService;
 import org.springframework.cloud.openfeign.FallbackFactory;
 import org.springframework.stereotype.Component;
 
@@ -12,11 +12,11 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
-public class ExVehicleModelConfigServiceFallbackFactory implements FallbackFactory<ExVehicleModelConfigService> {
+public class VmdVehicleModelConfigServiceFallbackFactory implements FallbackFactory<VmdVehicleModelConfigService> {
 
     @Override
-    public ExVehicleModelConfigService create(Throwable throwable) {
-        return new ExVehicleModelConfigService() {
+    public VmdVehicleModelConfigService create(Throwable throwable) {
+        return new VmdVehicleModelConfigService() {
             @Override
             public String getVehicleBuildConfigCode(String baseModelCode, String exteriorCode, String interiorCode,
                                                     String wheelCode, String tireCode, String spareTireCode,

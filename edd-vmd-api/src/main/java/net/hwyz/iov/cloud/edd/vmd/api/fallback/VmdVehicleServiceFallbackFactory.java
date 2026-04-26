@@ -3,7 +3,7 @@ package net.hwyz.iov.cloud.edd.vmd.api.fallback;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.VehicleExService;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.VehicleOrderExService;
-import net.hwyz.iov.cloud.edd.vmd.api.service.ExVehicleService;
+import net.hwyz.iov.cloud.edd.vmd.api.service.VmdVehicleService;
 import org.springframework.cloud.openfeign.FallbackFactory;
 import org.springframework.stereotype.Component;
 
@@ -14,11 +14,11 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
-public class ExVehicleServiceFallbackFactory implements FallbackFactory<ExVehicleService> {
+public class VmdVehicleServiceFallbackFactory implements FallbackFactory<VmdVehicleService> {
 
     @Override
-    public ExVehicleService create(Throwable throwable) {
-        return new ExVehicleService() {
+    public VmdVehicleService create(Throwable throwable) {
+        return new VmdVehicleService() {
             @Override
             public void bindOrder(String vin, VehicleOrderExService vehicleOrder) {
                 log.error("车辆服务车辆[{}]绑定订单[{}]调用失败", vin, vehicleOrder.getOrderNum(), throwable);

@@ -79,6 +79,30 @@ public class PartAppService {
     }
 
     /**
+     * 根据零件号获取零件信息
+     *
+     * @param pn 零件号
+     * @return 零件领域对象
+     */
+    public Part getPartByPn(String pn) {
+        return partRepository.selectByPn(pn);
+    }
+
+    /**
+     * 获取所有FOTA升级零件信息
+     *
+     * @param software 是否是软件零件
+     * @return 零件列表
+     */
+    public List<Part> listAllFota(Boolean software) {
+        Map<String, Object> map = new HashMap<>();
+        if (software != null) {
+            map.put("naturePart", software ? 1 : 0);
+        }
+        return partRepository.selectByMap(map);
+    }
+
+    /**
      * 新增零件
      *
      * @param partVo 零件信息

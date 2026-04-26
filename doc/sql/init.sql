@@ -656,6 +656,6 @@ CREATE TABLE `db_vmd`.`tb_vehicle_config_item`
     `row_version`       INT                   DEFAULT 1 COMMENT '记录版本',
     `row_valid`         TINYINT               DEFAULT 1 COMMENT '记录是否有效',
     PRIMARY KEY (`id`) USING BTREE,
-    UNIQUE KEY (`vin`)
+    UNIQUE KEY (`vin`, `version`, `config_item_code`)
 ) ENGINE = InnoDB
   DEFAULT CHARSET = utf8mb4 COMMENT '车辆配置项表';

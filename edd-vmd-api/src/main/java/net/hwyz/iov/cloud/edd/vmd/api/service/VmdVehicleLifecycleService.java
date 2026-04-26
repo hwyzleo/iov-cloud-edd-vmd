@@ -1,7 +1,7 @@
 package net.hwyz.iov.cloud.edd.vmd.api.service;
 
 import net.hwyz.iov.cloud.framework.common.constant.ServiceNameConstants;
-import net.hwyz.iov.cloud.edd.vmd.api.fallback.ExVehicleLifecycleServiceFallbackFactory;
+import net.hwyz.iov.cloud.edd.vmd.api.fallback.VmdVehicleLifecycleServiceFallbackFactory;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -11,8 +11,8 @@ import org.springframework.web.bind.annotation.PostMapping;
  *
  * @author hwyz_leo
  */
-@FeignClient(contextId = "exVehicleLifecycleService", value = ServiceNameConstants.EDD_VMD, path = "/api/service/vehicleLifecycle/v1", fallbackFactory = ExVehicleLifecycleServiceFallbackFactory.class)
-public interface ExVehicleLifecycleService {
+@FeignClient(contextId = "exVehicleLifecycleService", value = ServiceNameConstants.EDD_VMD, path = "/api/service/vehicleLifecycle/v1", fallbackFactory = VmdVehicleLifecycleServiceFallbackFactory.class)
+public interface VmdVehicleLifecycleService {
 
     /**
      * 记录第一次申请车联终端证书节点

@@ -1,7 +1,7 @@
 package net.hwyz.iov.cloud.edd.vmd.api.service;
 
 import net.hwyz.iov.cloud.framework.common.constant.ServiceNameConstants;
-import net.hwyz.iov.cloud.edd.vmd.api.fallback.ExVehicleModelConfigServiceFallbackFactory;
+import net.hwyz.iov.cloud.edd.vmd.api.fallback.VmdVehicleModelConfigServiceFallbackFactory;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -11,8 +11,8 @@ import org.springframework.web.bind.annotation.RequestParam;
  *
  * @author hwyz_leo
  */
-@FeignClient(contextId = "exVehicleModelConfigService", value = ServiceNameConstants.EDD_VMD, path = "/api/service/vehicleModelConfig/v1", fallbackFactory = ExVehicleModelConfigServiceFallbackFactory.class)
-public interface ExVehicleModelConfigService {
+@FeignClient(contextId = "exVehicleModelConfigService", value = ServiceNameConstants.EDD_VMD, path = "/api/service/vehicleModelConfig/v1", fallbackFactory = VmdVehicleModelConfigServiceFallbackFactory.class)
+public interface VmdVehicleModelConfigService {
 
     /**
      * 根据车型配置类型得到匹配的生产配置代码

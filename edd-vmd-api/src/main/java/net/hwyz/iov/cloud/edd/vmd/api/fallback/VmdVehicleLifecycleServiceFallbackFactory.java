@@ -1,7 +1,7 @@
 package net.hwyz.iov.cloud.edd.vmd.api.fallback;
 
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.edd.vmd.api.service.ExVehicleLifecycleService;
+import net.hwyz.iov.cloud.edd.vmd.api.service.VmdVehicleLifecycleService;
 import org.springframework.cloud.openfeign.FallbackFactory;
 import org.springframework.stereotype.Component;
 
@@ -12,11 +12,11 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @Component
-public class ExVehicleLifecycleServiceFallbackFactory implements FallbackFactory<ExVehicleLifecycleService> {
+public class VmdVehicleLifecycleServiceFallbackFactory implements FallbackFactory<VmdVehicleLifecycleService> {
 
     @Override
-    public ExVehicleLifecycleService create(Throwable throwable) {
-        return new ExVehicleLifecycleService() {
+    public VmdVehicleLifecycleService create(Throwable throwable) {
+        return new VmdVehicleLifecycleService() {
             @Override
             public void recordFirstApplyTboxCertNode(String vin) {
                 log.error("车辆生命周期服务记录车辆[{}]第一次申请车联终端证书节点调用失败", vin, throwable);

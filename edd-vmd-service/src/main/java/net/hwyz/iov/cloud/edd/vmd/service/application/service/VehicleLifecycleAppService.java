@@ -140,6 +140,126 @@ public class VehicleLifecycleAppService {
     }
 
     /**
+     * 记录第一次申请车联终端证书节点
+     *
+     * @param vin 车架号
+     */
+    public void recordFirstApplyTboxCertNode(String vin) {
+        VehicleLifecycleNode node = VehicleLifecycleNode.builder()
+                .vin(vin)
+                .node(VehicleLifecycleNodeEnum.TBOX_CERT)
+                .reachTime(Instant.now())
+                .build();
+        node.init();
+        vehicleLifecycleNodeRepository.save(node);
+    }
+
+    /**
+     * 记录第一次申请车联终端通讯密钥节点
+     *
+     * @param vin 车架号
+     */
+    public void recordFirstApplyTboxCommSkNode(String vin) {
+        VehicleLifecycleNode node = VehicleLifecycleNode.builder()
+                .vin(vin)
+                .node(VehicleLifecycleNodeEnum.TBOX_COMM_SK)
+                .reachTime(Instant.now())
+                .build();
+        node.init();
+        vehicleLifecycleNodeRepository.save(node);
+    }
+
+    /**
+     * 记录第一次申请中央计算平台证书节点
+     *
+     * @param vin 车架号
+     */
+    public void recordFirstApplyCcpCertNode(String vin) {
+        VehicleLifecycleNode node = VehicleLifecycleNode.builder()
+                .vin(vin)
+                .node(VehicleLifecycleNodeEnum.CCP_CERT)
+                .reachTime(Instant.now())
+                .build();
+        node.init();
+        vehicleLifecycleNodeRepository.save(node);
+    }
+
+    /**
+     * 记录第一次申请中央计算平台通讯密钥节点
+     *
+     * @param vin 车架号
+     */
+    public void recordFirstApplyCcpCommSkNode(String vin) {
+        VehicleLifecycleNode node = VehicleLifecycleNode.builder()
+                .vin(vin)
+                .node(VehicleLifecycleNodeEnum.CCP_COMM_SK)
+                .reachTime(Instant.now())
+                .build();
+        node.init();
+        vehicleLifecycleNodeRepository.save(node);
+    }
+
+    /**
+     * 记录第一次申请信息娱乐模块平台证书节点
+     *
+     * @param vin 车架号
+     */
+    public void recordFirstApplyIdcmCertNode(String vin) {
+        VehicleLifecycleNode node = VehicleLifecycleNode.builder()
+                .vin(vin)
+                .node(VehicleLifecycleNodeEnum.IDCM_CERT)
+                .reachTime(Instant.now())
+                .build();
+        node.init();
+        vehicleLifecycleNodeRepository.save(node);
+    }
+
+    /**
+     * 记录第一次申请信息娱乐模块平台通讯密钥节点
+     *
+     * @param vin 车架号
+     */
+    public void recordFirstApplyIdcmCommSkNode(String vin) {
+        VehicleLifecycleNode node = VehicleLifecycleNode.builder()
+                .vin(vin)
+                .node(VehicleLifecycleNodeEnum.IDCM_COMM_SK)
+                .reachTime(Instant.now())
+                .build();
+        node.init();
+        vehicleLifecycleNodeRepository.save(node);
+    }
+
+    /**
+     * 记录第一次申请智驾模块平台证书节点
+     *
+     * @param vin 车架号
+     */
+    public void recordFirstApplyAdcmCertNode(String vin) {
+        VehicleLifecycleNode node = VehicleLifecycleNode.builder()
+                .vin(vin)
+                .node(VehicleLifecycleNodeEnum.ADCM_CERT)
+                .reachTime(Instant.now())
+                .build();
+        node.init();
+        vehicleLifecycleNodeRepository.save(node);
+    }
+
+    /**
+     * 记录第一次申请智驾模块平台通讯密钥节点
+     *
+     * @param vin 车架号
+     */
+    public void recordFirstApplyAdcmCommSkNode(String vin) {
+        VehicleLifecycleNode node = VehicleLifecycleNode.builder()
+                .vin(vin)
+                .node(VehicleLifecycleNodeEnum.ADCM_COMM_SK)
+                .reachTime(Instant.now())
+                .build();
+        node.init();
+        vehicleLifecycleNodeRepository.save(node);
+    }
+
+    /**
      * 根据车架号删除车辆生命周期信息
      *
      * @param vin 车架号

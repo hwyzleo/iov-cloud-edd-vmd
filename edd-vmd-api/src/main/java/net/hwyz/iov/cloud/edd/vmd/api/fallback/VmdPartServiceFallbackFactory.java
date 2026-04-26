@@ -2,7 +2,7 @@ package net.hwyz.iov.cloud.edd.vmd.api.fallback;
 
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.PartExService;
-import net.hwyz.iov.cloud.edd.vmd.api.service.ExPartService;
+import net.hwyz.iov.cloud.edd.vmd.api.service.VmdPartService;
 import org.springframework.cloud.openfeign.FallbackFactory;
 import org.springframework.stereotype.Component;
 
@@ -15,11 +15,11 @@ import java.util.List;
  */
 @Slf4j
 @Component
-public class ExPartServiceFallbackFactory implements FallbackFactory<ExPartService> {
+public class VmdPartServiceFallbackFactory implements FallbackFactory<VmdPartService> {
 
     @Override
-    public ExPartService create(Throwable throwable) {
-        return new ExPartService() {
+    public VmdPartService create(Throwable throwable) {
+        return new VmdPartService() {
             @Override
             public PartExService getByPn(String pn) {
                 log.error("零件服务根据零件号[{}]查询零件信息调用失败", pn, throwable);

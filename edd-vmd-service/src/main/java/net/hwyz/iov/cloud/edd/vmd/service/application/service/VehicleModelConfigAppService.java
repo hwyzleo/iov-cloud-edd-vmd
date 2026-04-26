@@ -55,4 +55,22 @@ public class VehicleModelConfigAppService {
         return buildConfigList.get(0).getCode();
     }
 
+    /**
+     * 根据车型配置类型得到匹配的生产配置代码
+     *
+     * @param baseModelCode 基础车型代码
+     * @param exteriorCode  外饰代码
+     * @param interiorCode  内饰代码
+     * @param wheelCode     轮毂代码
+     * @param tireCode      轮胎代码
+     * @param spareTireCode 备胎代码
+     * @param adasCode      智驾代码
+     * @param seatCode      座椅代码
+     * @return 生产配置代码
+     */
+    public String getVehicleBuildConfigCode(String baseModelCode, String exteriorCode, String interiorCode, String wheelCode,
+                                            String tireCode, String spareTireCode, String adasCode, String seatCode) {
+        return getBuildConfigCodeByType(baseModelCode, exteriorCode, interiorCode, wheelCode, tireCode, spareTireCode, adasCode, seatCode);
+    }
+
 }

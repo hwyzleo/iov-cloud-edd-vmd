@@ -85,13 +85,24 @@ public class DeviceAppService {
     }
 
     /**
-     * 根据设备编码获取设备信息
+     * 根据设备代码获取设备信息
      *
      * @param code 设备编码
      * @return 设备领域对象
      */
     public Device getDeviceByCode(String code) {
         return deviceRepository.selectByCode(code);
+    }
+
+    /**
+     * 获取所有升级设备信息
+     *
+     * @return 设备信息列表
+     */
+    public List<Device> listAllFota() {
+        Map<String, Object> map = new HashMap<>();
+        map.put("otaSupport", "OTA");
+        return deviceRepository.selectByMap(map);
     }
 
     /**

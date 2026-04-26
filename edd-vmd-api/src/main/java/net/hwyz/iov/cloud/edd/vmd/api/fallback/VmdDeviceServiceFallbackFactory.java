@@ -2,7 +2,7 @@ package net.hwyz.iov.cloud.edd.vmd.api.fallback;
 
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.DeviceExService;
-import net.hwyz.iov.cloud.edd.vmd.api.service.ExDeviceService;
+import net.hwyz.iov.cloud.edd.vmd.api.service.VmdDeviceService;
 import org.springframework.cloud.openfeign.FallbackFactory;
 import org.springframework.stereotype.Component;
 
@@ -15,11 +15,11 @@ import java.util.List;
  */
 @Slf4j
 @Component
-public class ExDeviceServiceFallbackFactory implements FallbackFactory<ExDeviceService> {
+public class VmdDeviceServiceFallbackFactory implements FallbackFactory<VmdDeviceService> {
 
     @Override
-    public ExDeviceService create(Throwable throwable) {
-        return new ExDeviceService() {
+    public VmdDeviceService create(Throwable throwable) {
+        return new VmdDeviceService() {
             @Override
             public DeviceExService getByCode(String code) {
                 log.error("设备服务根据设备代码[{}]查询设备信息调用失败", code, throwable);

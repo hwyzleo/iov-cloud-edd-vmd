@@ -112,6 +112,16 @@ public class VehicleAppService {
     }
 
     /**
+     * 根据车架号获取车辆基础信息
+     *
+     * @param vin 车架号
+     * @return 车辆基础信息
+     */
+    public VehicleBasicInfo getVehicleBasicInfoByVin(String vin) {
+        return vehBasicInfoRepository.selectByVin(vin);
+    }
+
+    /**
      * 新增车辆
      *
      * @param vehicleBasicInfo 车辆基础信息
