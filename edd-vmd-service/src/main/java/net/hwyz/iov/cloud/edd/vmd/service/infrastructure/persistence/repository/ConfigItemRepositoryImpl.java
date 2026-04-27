@@ -10,6 +10,10 @@ import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter.C
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.ConfigItemMapper;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.ConfigItemMappingMapper;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.ConfigItemOptionMapper;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.ConfigItemMappingPo;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.ConfigItemOptionPo;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.ConfigItemPo;
+import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -33,7 +37,8 @@ public class ConfigItemRepositoryImpl implements ConfigItemRepository {
 
     @Override
     public List<ConfigItem> selectByMap(Map<String, Object> map) {
-        return ConfigItemConverter.INSTANCE.toDomainList(configItemMapper.selectPoByMap(map));
+        List<ConfigItemPo> poList = configItemMapper.selectPoByMap(map);
+        return PageUtil.convert(poList, ConfigItemConverter.INSTANCE::toDomain);
     }
 
     @Override
@@ -65,7 +70,8 @@ public class ConfigItemRepositoryImpl implements ConfigItemRepository {
 
     @Override
     public List<ConfigItemOption> selectOptionByMap(Map<String, Object> map) {
-        return ConfigItemConverter.INSTANCE.toOptionDomainList(configItemOptionMapper.selectPoByMap(map));
+        List<ConfigItemOptionPo> poList = configItemOptionMapper.selectPoByMap(map);
+        return PageUtil.convert(poList, ConfigItemConverter.INSTANCE::toOptionDomain);
     }
 
     @Override
@@ -97,7 +103,8 @@ public class ConfigItemRepositoryImpl implements ConfigItemRepository {
 
     @Override
     public List<ConfigItemMapping> selectMappingByMap(Map<String, Object> map) {
-        return ConfigItemConverter.INSTANCE.toMappingDomainList(configItemMappingMapper.selectPoByMap(map));
+        List<ConfigItemMappingPo> poList = configItemMappingMapper.selectPoByMap(map);
+        return PageUtil.convert(poList, ConfigItemConverter.INSTANCE::toMappingDomain);
     }
 
     @Override

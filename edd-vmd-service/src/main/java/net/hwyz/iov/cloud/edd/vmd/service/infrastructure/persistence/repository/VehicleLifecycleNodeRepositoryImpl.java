@@ -6,7 +6,9 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleLifecycleNo
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehicleLifecycleNodeRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter.VehicleLifecycleNodeConverter;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehLifecycleMapper;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehLifecyclePo;
 import net.hwyz.iov.cloud.framework.common.domain.AbstractRepository;
+import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -27,9 +29,8 @@ public class VehicleLifecycleNodeRepositoryImpl extends AbstractRepository<Strin
 
     @Override
     public List<VehicleLifecycleNode> selectByVin(String vin) {
-        return vehLifecycleMapper.selectPoByMap(Map.of("vin", vin)).stream()
-                .map(VehicleLifecycleNodeConverter.INSTANCE::toDomain)
-                .toList();
+        List<VehLifecyclePo> poList = vehLifecycleMapper.selectPoByMap(Map.of("vin", vin));
+        return PageUtil.convert(poList, VehicleLifecycleNodeConverter.INSTANCE::toDomain);
     }
 
     @Override

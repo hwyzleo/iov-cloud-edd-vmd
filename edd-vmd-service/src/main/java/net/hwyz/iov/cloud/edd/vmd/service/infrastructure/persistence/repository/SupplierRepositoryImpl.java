@@ -6,6 +6,8 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Supplier;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.SupplierRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter.SupplierConverter;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.SupplierMapper;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.SupplierPo;
+import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -25,7 +27,8 @@ public class SupplierRepositoryImpl implements SupplierRepository {
 
     @Override
     public List<Supplier> selectByMap(Map<String, Object> map) {
-        return SupplierConverter.INSTANCE.toDomainList(supplierMapper.selectPoByMap(map));
+        List<SupplierPo> poList = supplierMapper.selectPoByMap(map);
+        return PageUtil.convert(poList, SupplierConverter.INSTANCE::toDomain);
     }
 
     @Override

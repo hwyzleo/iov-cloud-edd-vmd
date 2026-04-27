@@ -8,6 +8,9 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehFeatureFamilyRepo
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter.FeatureConverter;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehFeatureCodeMapper;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehFeatureFamilyMapper;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehFeatureCodePo;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehFeatureFamilyPo;
+import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Repository;
 
 import java.util.HashMap;
@@ -31,7 +34,8 @@ public class VehFeatureFamilyRepositoryImpl implements VehFeatureFamilyRepositor
 
     @Override
     public List<FeatureFamily> selectByMap(Map<String, Object> map) {
-        return FeatureConverter.INSTANCE.toFamilyDomainList(vehFeatureFamilyMapper.selectPoByMap(map));
+        List<VehFeatureFamilyPo> poList = vehFeatureFamilyMapper.selectPoByMap(map);
+        return PageUtil.convert(poList, FeatureConverter.INSTANCE::toFamilyDomain);
     }
 
     @Override
@@ -65,7 +69,8 @@ public class VehFeatureFamilyRepositoryImpl implements VehFeatureFamilyRepositor
     public List<FeatureCode> selectFeatureCodeByFamilyCode(String familyCode) {
         Map<String, Object> map = new HashMap<>();
         map.put("familyCode", familyCode);
-        return FeatureConverter.INSTANCE.toCodeDomainList(vehFeatureCodeMapper.selectPoByMap(map));
+        List<VehFeatureCodePo> poList = vehFeatureCodeMapper.selectPoByMap(map);
+        return PageUtil.convert(poList, FeatureConverter.INSTANCE::toCodeDomain);
     }
 
     @Override

@@ -6,6 +6,8 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleImportData;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehImportDataRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter.VehicleImportDataConverter;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehImportDataMapper;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehImportDataPo;
+import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -25,7 +27,8 @@ public class VehImportDataRepositoryImpl implements VehImportDataRepository {
 
     @Override
     public List<VehicleImportData> selectByMap(Map<String, Object> map) {
-        return VehicleImportDataConverter.INSTANCE.toDomainList(vehImportDataMapper.selectPoByMap(map));
+        List<VehImportDataPo> poList = vehImportDataMapper.selectPoByMap(map);
+        return PageUtil.convert(poList, VehicleImportDataConverter.INSTANCE::toDomain);
     }
 
     @Override

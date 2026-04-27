@@ -41,7 +41,7 @@ public class MptSeriesController extends BaseController {
      * @param series 车系信息
      * @return 车系信息列表
      */
-    @RequiresPermissions("completeVehicle:product:series:list")
+//    @RequiresPermissions("completeVehicle:product:series:list")
     @GetMapping(value = "/list")
     public ApiResponse<PageResult<SeriesResponse>> list(SeriesRequest series) {
         log.info("管理后台用户[{}]分页查询车系信息", SecurityUtils.getUsername());

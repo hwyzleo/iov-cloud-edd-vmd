@@ -6,6 +6,8 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleLifecycle;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehLifecycleRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter.VehicleLifecycleConverter;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehLifecycleMapper;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehLifecyclePo;
+import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -25,7 +27,8 @@ public class VehLifecycleRepositoryImpl implements VehLifecycleRepository {
 
     @Override
     public List<VehicleLifecycle> selectByMap(Map<String, Object> map) {
-        return VehicleLifecycleConverter.INSTANCE.toDomainList(vehLifecycleMapper.selectPoByMap(map));
+        List<VehLifecyclePo> poList = vehLifecycleMapper.selectPoByMap(map);
+        return PageUtil.convert(poList, VehicleLifecycleConverter.INSTANCE::toDomain);
     }
 
     @Override
@@ -35,7 +38,8 @@ public class VehLifecycleRepositoryImpl implements VehLifecycleRepository {
 
     @Override
     public List<VehicleLifecycle> selectByVin(String vin) {
-        return VehicleLifecycleConverter.INSTANCE.toDomainList(vehLifecycleMapper.selectPoByMap(Map.of("vin", vin)));
+        List<VehLifecyclePo> poList = vehLifecycleMapper.selectPoByMap(Map.of("vin", vin));
+        return PageUtil.convert(poList, VehicleLifecycleConverter.INSTANCE::toDomain);
     }
 
     @Override

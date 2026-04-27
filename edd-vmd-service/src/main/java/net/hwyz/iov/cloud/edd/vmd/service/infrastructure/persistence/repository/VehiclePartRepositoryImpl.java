@@ -8,6 +8,8 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehiclePartRepositor
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter.VehiclePartConverter;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehiclePartHistoryMapper;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehiclePartMapper;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehiclePartPo;
+import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -28,7 +30,8 @@ public class VehiclePartRepositoryImpl implements VehiclePartRepository {
 
     @Override
     public List<VehiclePart> selectByMap(Map<String, Object> map) {
-        return VehiclePartConverter.INSTANCE.toDomainList(vehiclePartMapper.selectPoByMap(map));
+        List<VehiclePartPo> poList = vehiclePartMapper.selectPoByMap(map);
+        return PageUtil.convert(poList, VehiclePartConverter.INSTANCE::toDomain);
     }
 
     @Override

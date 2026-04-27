@@ -10,6 +10,8 @@ import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter.B
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehBaseModelFeatureCodeMapper;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehBaseModelMapper;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehBaseModelFeatureCodePo;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehBaseModelPo;
+import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -31,7 +33,8 @@ public class VehBaseModelRepositoryImpl implements VehBaseModelRepository {
 
     @Override
     public List<BaseModel> selectByMap(Map<String, Object> map) {
-        return BaseModelConverter.INSTANCE.toDomainList(vehBaseModelMapper.selectPoByMap(map));
+        List<VehBaseModelPo> poList = vehBaseModelMapper.selectPoByMap(map);
+        return PageUtil.convert(poList, BaseModelConverter.INSTANCE::toDomain);
     }
 
     @Override
@@ -66,7 +69,8 @@ public class VehBaseModelRepositoryImpl implements VehBaseModelRepository {
 
     @Override
     public List<BaseModelFeatureCode> selectFeatureCodeByExample(BaseModelFeatureCode example) {
-        return BaseModelFeatureCodeConverter.INSTANCE.toDomainList(vehBaseModelFeatureCodeMapper.selectPoByExample(BaseModelFeatureCodeConverter.INSTANCE.fromDomain(example)));
+        List<VehBaseModelFeatureCodePo> poList = vehBaseModelFeatureCodeMapper.selectPoByExample(BaseModelFeatureCodeConverter.INSTANCE.fromDomain(example));
+        return PageUtil.convert(poList, BaseModelFeatureCodeConverter.INSTANCE::toDomain);
     }
 
     @Override

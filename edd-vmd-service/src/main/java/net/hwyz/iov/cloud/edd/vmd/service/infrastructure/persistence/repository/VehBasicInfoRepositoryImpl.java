@@ -10,6 +10,10 @@ import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter.V
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehBasicInfoMapper;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehDetailInfoMapper;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehPresetOwnerMapper;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehBasicInfoPo;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehDetailInfoPo;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehPresetOwnerPo;
+import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -31,7 +35,8 @@ public class VehBasicInfoRepositoryImpl implements VehBasicInfoRepository {
 
     @Override
     public List<VehicleBasicInfo> selectByMap(Map<String, Object> map) {
-        return VehicleInfoConverter.INSTANCE.toBasicDomainList(vehBasicInfoMapper.selectPoByMap(map));
+        List<VehBasicInfoPo> poList = vehBasicInfoMapper.selectPoByMap(map);
+        return PageUtil.convert(poList, VehicleInfoConverter.INSTANCE::toBasicDomain);
     }
 
     @Override
@@ -66,12 +71,14 @@ public class VehBasicInfoRepositoryImpl implements VehBasicInfoRepository {
 
     @Override
     public List<VehicleDetail> selectDetailByVin(String vin) {
-        return VehicleInfoConverter.INSTANCE.toDetailDomainList(vehDetailInfoMapper.selectPoByVin(vin));
+        List<VehDetailInfoPo> poList = vehDetailInfoMapper.selectPoByVin(vin);
+        return PageUtil.convert(poList, VehicleInfoConverter.INSTANCE::toDetailDomain);
     }
 
     @Override
     public List<VehiclePresetOwner> selectPresetOwnerByExample(VehiclePresetOwner example) {
-        return VehicleInfoConverter.INSTANCE.toPresetOwnerDomainList(vehPresetOwnerMapper.selectPoByExample(VehicleInfoConverter.INSTANCE.fromPresetOwnerDomain(example)));
+        List<VehPresetOwnerPo> poList = vehPresetOwnerMapper.selectPoByExample(VehicleInfoConverter.INSTANCE.fromPresetOwnerDomain(example));
+        return PageUtil.convert(poList, VehicleInfoConverter.INSTANCE::toPresetOwnerDomain);
     }
 
     @Override

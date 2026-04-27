@@ -6,6 +6,8 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Part;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter.PartConverter;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.PartMapper;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.PartPo;
+import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -25,7 +27,8 @@ public class PartRepositoryImpl implements PartRepository {
 
     @Override
     public List<Part> selectByMap(Map<String, Object> map) {
-        return PartConverter.INSTANCE.toDomainList(partMapper.selectPoByMap(map));
+        List<PartPo> poList = partMapper.selectPoByMap(map);
+        return PageUtil.convert(poList, PartConverter.INSTANCE::toDomain);
     }
 
     @Override

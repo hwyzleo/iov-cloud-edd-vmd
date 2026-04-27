@@ -6,6 +6,8 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Device;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.DeviceRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter.DeviceConverter;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.DeviceMapper;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.DevicePo;
+import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -25,7 +27,8 @@ public class DeviceRepositoryImpl implements DeviceRepository {
 
     @Override
     public List<Device> selectByMap(Map<String, Object> map) {
-        return DeviceConverter.INSTANCE.toDomainList(deviceMapper.selectPoByMap(map));
+        List<DevicePo> poList = deviceMapper.selectPoByMap(map);
+        return PageUtil.convert(poList, DeviceConverter.INSTANCE::toDomain);
     }
 
     @Override

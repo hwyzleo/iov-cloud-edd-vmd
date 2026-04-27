@@ -6,6 +6,8 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Platform;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehPlatformRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter.PlatformConverter;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehPlatformMapper;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehPlatformPo;
+import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -25,7 +27,8 @@ public class VehPlatformRepositoryImpl implements VehPlatformRepository {
 
     @Override
     public List<Platform> selectByMap(Map<String, Object> map) {
-        return PlatformConverter.INSTANCE.toDomainList(vehPlatformMapper.selectPoByMap(map));
+        List<VehPlatformPo> poList = vehPlatformMapper.selectPoByMap(map);
+        return PageUtil.convert(poList, PlatformConverter.INSTANCE::toDomain);
     }
 
     @Override

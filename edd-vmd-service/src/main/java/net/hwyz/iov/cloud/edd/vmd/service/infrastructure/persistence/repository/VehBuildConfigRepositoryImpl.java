@@ -6,6 +6,8 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.BuildConfig;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBuildConfigRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter.BuildConfigConverter;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehBuildConfigMapper;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehBuildConfigPo;
+import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -25,7 +27,8 @@ public class VehBuildConfigRepositoryImpl implements VehBuildConfigRepository {
 
     @Override
     public List<BuildConfig> selectByMap(Map<String, Object> map) {
-        return BuildConfigConverter.INSTANCE.toDomainList(vehBuildConfigMapper.selectPoByMap(map));
+        List<VehBuildConfigPo> poList = vehBuildConfigMapper.selectPoByMap(map);
+        return PageUtil.convert(poList, BuildConfigConverter.INSTANCE::toDomain);
     }
 
     @Override
@@ -60,7 +63,8 @@ public class VehBuildConfigRepositoryImpl implements VehBuildConfigRepository {
 
     @Override
     public List<BuildConfig> selectByExample(BuildConfig example) {
-        return BuildConfigConverter.INSTANCE.toDomainList(vehBuildConfigMapper.selectPoByExample(BuildConfigConverter.INSTANCE.fromDomain(example)));
+        List<VehBuildConfigPo> poList = vehBuildConfigMapper.selectPoByExample(BuildConfigConverter.INSTANCE.fromDomain(example));
+        return PageUtil.convert(poList, BuildConfigConverter.INSTANCE::toDomain);
     }
 
 }

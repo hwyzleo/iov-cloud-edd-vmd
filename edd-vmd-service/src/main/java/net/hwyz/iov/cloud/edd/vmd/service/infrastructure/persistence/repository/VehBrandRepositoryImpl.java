@@ -6,6 +6,8 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Brand;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBrandRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter.BrandConverter;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehBrandMapper;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehBrandPo;
+import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -25,7 +27,8 @@ public class VehBrandRepositoryImpl implements VehBrandRepository {
 
     @Override
     public List<Brand> selectByMap(Map<String, Object> map) {
-        return BrandConverter.INSTANCE.toDomainList(vehBrandMapper.selectPoByMap(map));
+        List<VehBrandPo> poList = vehBrandMapper.selectPoByMap(map);
+        return PageUtil.convert(poList, BrandConverter.INSTANCE::toDomain);
     }
 
     @Override

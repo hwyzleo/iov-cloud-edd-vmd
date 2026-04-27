@@ -8,6 +8,9 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehicleConfigReposit
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter.VehicleConfigConverter;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehicleConfigItemMapper;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehicleConfigMapper;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehicleConfigItemPo;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehicleConfigPo;
+import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -28,7 +31,8 @@ public class VehicleConfigRepositoryImpl implements VehicleConfigRepository {
 
     @Override
     public List<VehicleConfig> selectByMap(Map<String, Object> map) {
-        return VehicleConfigConverter.INSTANCE.toDomainList(vehicleConfigMapper.selectPoByMap(map));
+        List<VehicleConfigPo> poList = vehicleConfigMapper.selectPoByMap(map);
+        return PageUtil.convert(poList, VehicleConfigConverter.INSTANCE::toDomain);
     }
 
     @Override
@@ -53,7 +57,8 @@ public class VehicleConfigRepositoryImpl implements VehicleConfigRepository {
 
     @Override
     public List<VehicleConfigItem> selectConfigItemByMap(Map<String, Object> map) {
-        return VehicleConfigConverter.INSTANCE.toItemDomainList(vehicleConfigItemMapper.selectPoByMap(map));
+        List<VehicleConfigItemPo> poList = vehicleConfigItemMapper.selectPoByMap(map);
+        return PageUtil.convert(poList, VehicleConfigConverter.INSTANCE::toItemDomain);
     }
 
     @Override
