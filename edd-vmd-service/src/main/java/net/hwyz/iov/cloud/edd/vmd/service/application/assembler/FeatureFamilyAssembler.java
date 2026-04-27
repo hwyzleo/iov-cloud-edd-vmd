@@ -1,9 +1,10 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.assembler;
 
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.FeatureFamilyDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.FeatureFamilyDto;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.FeatureFamily;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.FeatureFamilyCmd;
 
 import java.util.List;
 
@@ -32,6 +33,14 @@ public interface FeatureFamilyAssembler {
      * @return 领域对象
      */
     FeatureFamily toDomain(FeatureFamilyDto featureFamilyDto);
+    /**
+     * 命令转领域对象
+     *
+     * @param cmd 命令
+     * @return 领域对象
+     */
+    FeatureFamily toDomain(FeatureFamilyCmd cmd);
+
 
     /**
      * 领域对象列表转 DTO 列表

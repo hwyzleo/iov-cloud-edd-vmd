@@ -5,16 +5,18 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.FeatureCodeAssembler;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.FeatureFamilyAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.FeatureCodeDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.FeatureCodeQuery;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.FeatureFamilyDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.FeatureFamilyQuery;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.FeatureCodeDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.FeatureCodeQuery;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.FeatureFamilyDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.FeatureFamilyQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.FeatureCode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.FeatureFamily;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehFeatureFamilyRepository;
 import net.hwyz.iov.cloud.framework.common.util.ParamHelper;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Service;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.FeatureFamilyCmd;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.FeatureCodeCmd;
 
 import java.util.HashMap;
 import java.util.List;
@@ -108,8 +110,8 @@ public class FeatureFamilyAppService {
      * @param userId        操作用户ID
      * @return 结果
      */
-    public int createFeatureFamily(FeatureFamilyDto featureFamilyDto, String userId) {
-        FeatureFamily featureFamilyDomain = FeatureFamilyAssembler.INSTANCE.toDomain(featureFamilyDto);
+    public int createFeatureFamily(FeatureFamilyCmd featureFamilyCmd, String userId) {
+        FeatureFamily featureFamilyDomain = FeatureFamilyAssembler.INSTANCE.toDomain(featureFamilyCmd);
         return vehFeatureFamilyRepository.insert(featureFamilyDomain);
     }
 
@@ -120,8 +122,8 @@ public class FeatureFamilyAppService {
      * @param userId        操作用户ID
      * @return 结果
      */
-    public int modifyFeatureFamily(FeatureFamilyDto featureFamilyDto, String userId) {
-        FeatureFamily featureFamilyDomain = FeatureFamilyAssembler.INSTANCE.toDomain(featureFamilyDto);
+    public int modifyFeatureFamily(FeatureFamilyCmd featureFamilyCmd, String userId) {
+        FeatureFamily featureFamilyDomain = FeatureFamilyAssembler.INSTANCE.toDomain(featureFamilyCmd);
         return vehFeatureFamilyRepository.update(featureFamilyDomain);
     }
 
@@ -185,8 +187,8 @@ public class FeatureFamilyAppService {
      * @param userId      操作用户ID
      * @return 结果
      */
-    public int createFeatureCode(Long familyId, FeatureCodeDto featureCodeDto, String userId) {
-        FeatureCode featureCodeDomain = FeatureCodeAssembler.INSTANCE.toDomain(featureCodeDto);
+    public int createFeatureCode(Long familyId, FeatureCodeCmd featureCodeCmd, String userId) {
+        FeatureCode featureCodeDomain = FeatureCodeAssembler.INSTANCE.toDomain(featureCodeCmd);
         featureCodeDomain.setFamilyCode(vehFeatureFamilyRepository.selectById(familyId).getCode());
         return vehFeatureFamilyRepository.insertFeatureCode(featureCodeDomain);
     }
@@ -199,8 +201,8 @@ public class FeatureFamilyAppService {
      * @param userId          操作用户ID
      * @return 结果
      */
-    public int modifyFeatureCode(Long featureFamilyId, FeatureCodeDto featureCodeDto, String userId) {
-        FeatureCode featureCodeDomain = FeatureCodeAssembler.INSTANCE.toDomain(featureCodeDto);
+    public int modifyFeatureCode(Long featureFamilyId, FeatureCodeCmd featureCodeCmd, String userId) {
+        FeatureCode featureCodeDomain = FeatureCodeAssembler.INSTANCE.toDomain(featureCodeCmd);
         return vehFeatureFamilyRepository.updateFeatureCode(featureCodeDomain);
     }
 

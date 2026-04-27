@@ -2,7 +2,7 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 
 import lombok.RequiredArgsConstructor;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.VehicleLifecycleAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.VehicleLifecycleDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.VehicleLifecycleDto;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleLifecycle;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleLifecycleNode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.VehicleLifecycleNodeEnum;

@@ -1,9 +1,11 @@
 package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler;
 
-import net.hwyz.iov.cloud.edd.vmd.api.vo.PartVo;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.PartDto;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.PartRequest;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.PartResponse;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.PartDto;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.PartCmd;
 
 import java.util.List;
 
@@ -23,7 +25,7 @@ public interface MptPartAssembler {
      * @param partDto DTO
      * @return VO
      */
-    PartVo fromDto(PartDto partDto);
+    PartResponse fromDto(PartDto partDto);
 
     /**
      * VO 转 DTO
@@ -31,7 +33,15 @@ public interface MptPartAssembler {
      * @param partVo VO
      * @return DTO
      */
-    PartDto toDto(PartVo partVo);
+    PartDto toDto(PartRequest partVo);
+    /**
+     * VO 转命令
+     *
+     * @param vo VO
+     * @return 命令
+     */
+    PartCmd toCmd(PartRequest vo);
+
 
     /**
      * DTO 列表转 VO 列表
@@ -39,6 +49,6 @@ public interface MptPartAssembler {
      * @param partDtoList DTO 列表
      * @return VO 列表
      */
-    List<PartVo> fromDtoList(List<PartDto> partDtoList);
+    List<PartResponse> fromDtoList(List<PartDto> partDtoList);
 
 }

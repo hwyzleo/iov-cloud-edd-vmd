@@ -3,13 +3,15 @@ package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.controller.mpt;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.edd.vmd.api.vo.FeatureCodeVo;
-import net.hwyz.iov.cloud.edd.vmd.api.vo.FeatureFamilyVo;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.FeatureCodeRequest;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.FeatureCodeResponse;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.FeatureFamilyRequest;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.FeatureFamilyResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.MptFeatureAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.FeatureCodeDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.FeatureCodeQuery;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.FeatureFamilyDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.FeatureFamilyQuery;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.FeatureCodeDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.FeatureCodeQuery;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.FeatureFamilyDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.FeatureFamilyQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.FeatureFamilyAppService;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
 import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
@@ -46,7 +48,7 @@ public class MptFeatureFamilyController extends BaseController {
      */
     @RequiresPermissions("completeVehicle:product:feature:list")
     @GetMapping(value = "/list")
-    public ApiResponse<PageResult<FeatureFamilyVo>> list(FeatureFamilyVo featureFamily) {
+    public ApiResponse<PageResult<FeatureFamilyResponse>> list(FeatureFamilyRequest featureFamily) {
         log.info("管理后台用户[{}]分页查询特征族信息", SecurityUtils.getUsername());
         startPage();
         FeatureFamilyQuery query = FeatureFamilyQuery.builder()
@@ -67,7 +69,7 @@ public class MptFeatureFamilyController extends BaseController {
      */
     @RequiresPermissions("completeVehicle:product:feature:list")
     @GetMapping(value = "/listAll")
-    public ApiResponse<List<FeatureFamilyVo>> listAll() {
+    public ApiResponse<List<FeatureFamilyResponse>> listAll() {
         log.info("管理后台用户[{}]获取所有特征族", SecurityUtils.getUsername());
         FeatureFamilyQuery query = FeatureFamilyQuery.builder().build();
         List<FeatureFamilyDto> dtoList = featureFamilyAppService.search(query);
@@ -83,7 +85,7 @@ public class MptFeatureFamilyController extends BaseController {
     @Log(title = "特征族管理", businessType = BusinessType.EXPORT)
     @RequiresPermissions("completeVehicle:product:feature:export")
     @PostMapping("/export")
-    public void export(HttpServletResponse response, FeatureFamilyVo featureFamily) {
+    public void export(HttpServletResponse response, FeatureFamilyRequest featureFamily) {
         log.info("管理后台用户[{}]导出特征族信息", SecurityUtils.getUsername());
     }
 
@@ -95,7 +97,7 @@ public class MptFeatureFamilyController extends BaseController {
      */
     @RequiresPermissions("completeVehicle:product:feature:query")
     @GetMapping(value = "/{featureFamilyId}")
-    public ApiResponse<FeatureFamilyVo> getInfo(@PathVariable Long featureFamilyId) {
+    public ApiResponse<FeatureFamilyResponse> getInfo(@PathVariable Long featureFamilyId) {
         log.info("管理后台用户[{}]根据特征族ID[{}]获取特征族信息", SecurityUtils.getUsername(), featureFamilyId);
         return ApiResponse.ok(MptFeatureAssembler.INSTANCE.fromFamilyDto(featureFamilyAppService.getFeatureFamilyById(featureFamilyId)));
     }
@@ -109,12 +111,12 @@ public class MptFeatureFamilyController extends BaseController {
     @Log(title = "特征族管理", businessType = BusinessType.INSERT)
     @RequiresPermissions("completeVehicle:product:feature:add")
     @PostMapping
-    public ApiResponse<Void> add(@Validated @RequestBody FeatureFamilyVo featureFamily) {
+    public ApiResponse<Void> add(@Validated @RequestBody FeatureFamilyRequest featureFamily) {
         log.info("管理后台用户[{}]新增特征族信息[{}]", SecurityUtils.getUsername(), featureFamily.getCode());
         if (!featureFamilyAppService.checkFamilyCodeUnique(featureFamily.getId(), featureFamily.getCode())) {
             return ApiResponse.fail("新增特征族'" + featureFamily.getCode() + "'失败，特征族代码已存在");
         }
-        featureFamilyAppService.createFeatureFamily(MptFeatureAssembler.INSTANCE.toFamilyDto(featureFamily), SecurityUtils.getUserId().toString());
+        featureFamilyAppService.createFeatureFamily(MptFeatureAssembler.INSTANCE.toFamilyCmd(featureFamily), SecurityUtils.getUserId().toString());
         return ApiResponse.ok();
     }
 
@@ -127,12 +129,12 @@ public class MptFeatureFamilyController extends BaseController {
     @Log(title = "特征族管理", businessType = BusinessType.UPDATE)
     @RequiresPermissions("completeVehicle:product:feature:edit")
     @PutMapping
-    public ApiResponse<Void> edit(@Validated @RequestBody FeatureFamilyVo featureFamily) {
+    public ApiResponse<Void> edit(@Validated @RequestBody FeatureFamilyRequest featureFamily) {
         log.info("管理后台用户[{}]修改保存特征族信息[{}]", SecurityUtils.getUsername(), featureFamily.getCode());
         if (!featureFamilyAppService.checkFamilyCodeUnique(featureFamily.getId(), featureFamily.getCode())) {
             return ApiResponse.fail("修改保存特征族'" + featureFamily.getCode() + "'失败，特征族代码已存在");
         }
-        featureFamilyAppService.modifyFeatureFamily(MptFeatureAssembler.INSTANCE.toFamilyDto(featureFamily), SecurityUtils.getUserId().toString());
+        featureFamilyAppService.modifyFeatureFamily(MptFeatureAssembler.INSTANCE.toFamilyCmd(featureFamily), SecurityUtils.getUserId().toString());
         return ApiResponse.ok();
     }
 
@@ -161,7 +163,7 @@ public class MptFeatureFamilyController extends BaseController {
      */
     @RequiresPermissions("completeVehicle:product:feature:list")
     @GetMapping(value = "/{featureFamilyId}/featureCode/list")
-    public ApiResponse<PageResult<FeatureCodeVo>> listFeatureCode(@PathVariable Long featureFamilyId, FeatureCodeVo featureCode) {
+    public ApiResponse<PageResult<FeatureCodeResponse>> listFeatureCode(@PathVariable Long featureFamilyId, FeatureCodeRequest featureCode) {
         log.info("管理后台用户[{}]查询特征族[{}]下特征值", SecurityUtils.getUsername(), featureFamilyId);
         startPage();
         FeatureCodeQuery query = FeatureCodeQuery.builder()
@@ -185,7 +187,7 @@ public class MptFeatureFamilyController extends BaseController {
      */
     @RequiresPermissions("completeVehicle:product:feature:query")
     @GetMapping(value = "/{featureFamilyId}/featureCode/{featureCodeId}")
-    public ApiResponse<FeatureCodeVo> getFeatureCodeInfo(@PathVariable Long featureFamilyId, @PathVariable Long featureCodeId) {
+    public ApiResponse<FeatureCodeResponse> getFeatureCodeInfo(@PathVariable Long featureFamilyId, @PathVariable Long featureCodeId) {
         log.info("管理后台用户[{}]根据特征值ID[{}]获取特征值信息", SecurityUtils.getUsername(), featureCodeId);
         return ApiResponse.ok(MptFeatureAssembler.INSTANCE.fromCodeDto(featureFamilyAppService.getFeatureCodeById(featureFamilyId, featureCodeId)));
     }
@@ -200,12 +202,12 @@ public class MptFeatureFamilyController extends BaseController {
     @Log(title = "特征值管理", businessType = BusinessType.INSERT)
     @RequiresPermissions("completeVehicle:product:feature:add")
     @PostMapping("/{featureFamilyId}/featureCode")
-    public ApiResponse<Void> addFeatureCode(@PathVariable Long featureFamilyId, @Validated @RequestBody FeatureCodeVo featureCode) {
+    public ApiResponse<Void> addFeatureCode(@PathVariable Long featureFamilyId, @Validated @RequestBody FeatureCodeRequest featureCode) {
         log.info("管理后台用户[{}]新增特征族[{}]下特征值信息[{}]", SecurityUtils.getUsername(), featureFamilyId, featureCode.getCode());
         if (!featureFamilyAppService.checkFeatureCodeUnique(featureCode.getId(), featureCode.getCode())) {
             return ApiResponse.fail("新增特征值'" + featureCode.getCode() + "'失败，特征值代码已存在");
         }
-        featureFamilyAppService.createFeatureCode(featureFamilyId, MptFeatureAssembler.INSTANCE.toCodeDto(featureCode), SecurityUtils.getUserId().toString());
+        featureFamilyAppService.createFeatureCode(featureFamilyId, MptFeatureAssembler.INSTANCE.toCodeCmd(featureCode), SecurityUtils.getUserId().toString());
         return ApiResponse.ok();
     }
 
@@ -219,12 +221,12 @@ public class MptFeatureFamilyController extends BaseController {
     @Log(title = "特征值管理", businessType = BusinessType.UPDATE)
     @RequiresPermissions("completeVehicle:product:feature:edit")
     @PutMapping("/{featureFamilyId}/featureCode")
-    public ApiResponse<Void> editFeatureCode(@PathVariable Long featureFamilyId, @Validated @RequestBody FeatureCodeVo featureCode) {
+    public ApiResponse<Void> editFeatureCode(@PathVariable Long featureFamilyId, @Validated @RequestBody FeatureCodeRequest featureCode) {
         log.info("管理后台用户[{}]修改保存特征族[{}]下特征值信息[{}]", SecurityUtils.getUsername(), featureFamilyId, featureCode.getCode());
         if (!featureFamilyAppService.checkFeatureCodeUnique(featureCode.getId(), featureCode.getCode())) {
             return ApiResponse.fail("修改保存特征值'" + featureCode.getCode() + "'失败，特征值代码已存在");
         }
-        featureFamilyAppService.modifyFeatureCode(featureFamilyId, MptFeatureAssembler.INSTANCE.toCodeDto(featureCode), SecurityUtils.getUserId().toString());
+        featureFamilyAppService.modifyFeatureCode(featureFamilyId, MptFeatureAssembler.INSTANCE.toCodeCmd(featureCode), SecurityUtils.getUserId().toString());
         return ApiResponse.ok();
     }
 

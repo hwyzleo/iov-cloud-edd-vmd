@@ -1,9 +1,10 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.assembler;
 
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.FeatureCodeDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.FeatureCodeDto;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.FeatureCode;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.FeatureCodeCmd;
 
 import java.util.List;
 
@@ -32,6 +33,14 @@ public interface FeatureCodeAssembler {
      * @return 领域对象
      */
     FeatureCode toDomain(FeatureCodeDto featureCodeDto);
+    /**
+     * 命令转领域对象
+     *
+     * @param cmd 命令
+     * @return 领域对象
+     */
+    FeatureCode toDomain(FeatureCodeCmd cmd);
+
 
     /**
      * 领域对象列表转 DTO 列表

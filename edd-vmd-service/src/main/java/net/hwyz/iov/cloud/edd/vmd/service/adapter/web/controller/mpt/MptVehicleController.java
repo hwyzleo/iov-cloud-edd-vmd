@@ -3,10 +3,11 @@ package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.controller.mpt;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.edd.vmd.api.vo.VehicleVo;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.VehicleRequest;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.VehicleResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.MptVehicleAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.VehicleDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.VehicleQuery;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.VehicleDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.VehicleQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleLifecycleAppService;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
@@ -42,7 +43,7 @@ public class MptVehicleController extends BaseController {
      */
     @RequiresPermissions("completeVehicle:vehicle:info:list")
     @GetMapping(value = "/list")
-    public ApiResponse<PageResult<VehicleVo>> list(VehicleVo vehicle) {
+    public ApiResponse<PageResult<VehicleResponse>> list(VehicleRequest vehicle) {
         log.info("管理后台用户[{}]分页查询车辆信息", SecurityUtils.getUsername());
         startPage();
         VehicleQuery query = VehicleQuery.builder()
@@ -63,7 +64,7 @@ public class MptVehicleController extends BaseController {
      */
     @RequiresPermissions("completeVehicle:vehicle:info:query")
     @GetMapping(value = "/vin/{vin}")
-    public ApiResponse<VehicleVo> getInfoByVin(@PathVariable String vin) {
+    public ApiResponse<VehicleResponse> getInfoByVin(@PathVariable String vin) {
         log.info("管理后台用户[{}]根据车架号[{}]获取车辆信息", SecurityUtils.getUsername(), vin);
         VehicleDto vehicleDto = vehicleAppService.getVehicleByVin(vin);
         return ApiResponse.ok(MptVehicleAssembler.INSTANCE.fromDto(vehicleDto));
@@ -78,7 +79,7 @@ public class MptVehicleController extends BaseController {
     @Log(title = "车辆管理", businessType = BusinessType.EXPORT)
     @RequiresPermissions("completeVehicle:vehicle:info:export")
     @PostMapping("/export")
-    public void export(HttpServletResponse response, VehicleVo vehicle) {
+    public void export(HttpServletResponse response, VehicleRequest vehicle) {
         log.info("管理后台用户[{}]导出车辆信息", SecurityUtils.getUsername());
     }
 

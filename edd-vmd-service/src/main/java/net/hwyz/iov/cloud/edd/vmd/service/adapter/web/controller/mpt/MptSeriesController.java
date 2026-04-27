@@ -3,10 +3,11 @@ package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.controller.mpt;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.edd.vmd.api.vo.SeriesVo;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.SeriesRequest;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.SeriesResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.MptSeriesAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.SeriesDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.SeriesQuery;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.SeriesDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.SeriesQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.SeriesAppService;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
 import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
@@ -41,7 +42,7 @@ public class MptSeriesController extends BaseController {
      */
     @RequiresPermissions("completeVehicle:product:series:list")
     @GetMapping(value = "/list")
-    public ApiResponse<PageResult<SeriesVo>> list(SeriesVo series) {
+    public ApiResponse<PageResult<SeriesResponse>> list(SeriesRequest series) {
         log.info("管理后台用户[{}]分页查询车系信息", SecurityUtils.getUsername());
         startPage();
         SeriesQuery query = SeriesQuery.builder()
@@ -63,7 +64,7 @@ public class MptSeriesController extends BaseController {
      */
     @RequiresPermissions("completeVehicle:product:series:list")
     @GetMapping(value = "/listByPlatformCode")
-    public ApiResponse<List<SeriesVo>> listByPlatformCode(@RequestParam String platformCode) {
+    public ApiResponse<List<SeriesResponse>> listByPlatformCode(@RequestParam String platformCode) {
         log.info("管理后台用户[{}]获取指定车辆平台[{}]下的所有车系", SecurityUtils.getUsername(), platformCode);
         SeriesQuery query = SeriesQuery.builder()
                 .platformCode(platformCode)
@@ -81,7 +82,7 @@ public class MptSeriesController extends BaseController {
     @Log(title = "车系管理", businessType = BusinessType.EXPORT)
     @RequiresPermissions("completeVehicle:product:series:export")
     @PostMapping("/export")
-    public void export(HttpServletResponse response, SeriesVo series) {
+    public void export(HttpServletResponse response, SeriesRequest series) {
         log.info("管理后台用户[{}]导出车系信息", SecurityUtils.getUsername());
     }
 
@@ -93,7 +94,7 @@ public class MptSeriesController extends BaseController {
      */
     @RequiresPermissions("completeVehicle:product:series:query")
     @GetMapping(value = "/{seriesId}")
-    public ApiResponse<SeriesVo> getInfo(@PathVariable Long seriesId) {
+    public ApiResponse<SeriesResponse> getInfo(@PathVariable Long seriesId) {
         log.info("管理后台用户[{}]根据车系ID[{}]获取车系信息", SecurityUtils.getUsername(), seriesId);
         return ApiResponse.ok(MptSeriesAssembler.INSTANCE.fromDto(seriesAppService.getSeriesById(seriesId)));
     }
@@ -107,12 +108,12 @@ public class MptSeriesController extends BaseController {
     @Log(title = "车系管理", businessType = BusinessType.INSERT)
     @RequiresPermissions("completeVehicle:product:series:add")
     @PostMapping
-    public ApiResponse<Void> add(@Validated @RequestBody SeriesVo series) {
+    public ApiResponse<Void> add(@Validated @RequestBody SeriesRequest series) {
         log.info("管理后台用户[{}]新增车系信息[{}]", SecurityUtils.getUsername(), series.getCode());
         if (!seriesAppService.checkCodeUnique(series.getId(), series.getCode())) {
             return ApiResponse.fail("新增车系'" + series.getCode() + "'失败，车系代码已存在");
         }
-        seriesAppService.createSeries(MptSeriesAssembler.INSTANCE.toDto(series), SecurityUtils.getUserId().toString());
+        seriesAppService.createSeries(MptSeriesAssembler.INSTANCE.toCmd(series), SecurityUtils.getUserId().toString());
         return ApiResponse.ok();
     }
 
@@ -125,12 +126,12 @@ public class MptSeriesController extends BaseController {
     @Log(title = "车系管理", businessType = BusinessType.UPDATE)
     @RequiresPermissions("completeVehicle:product:series:edit")
     @PutMapping
-    public ApiResponse<Void> edit(@Validated @RequestBody SeriesVo series) {
+    public ApiResponse<Void> edit(@Validated @RequestBody SeriesRequest series) {
         log.info("管理后台用户[{}]修改保存车系信息[{}]", SecurityUtils.getUsername(), series.getCode());
         if (!seriesAppService.checkCodeUnique(series.getId(), series.getCode())) {
             return ApiResponse.fail("修改保存车系'" + series.getCode() + "'失败，车系代码已存在");
         }
-        seriesAppService.modifySeries(MptSeriesAssembler.INSTANCE.toDto(series), SecurityUtils.getUserId().toString());
+        seriesAppService.modifySeries(MptSeriesAssembler.INSTANCE.toCmd(series), SecurityUtils.getUserId().toString());
         return ApiResponse.ok();
     }
 

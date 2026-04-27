@@ -1,9 +1,10 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.assembler;
 
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.VehiclePartDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.VehiclePartDto;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehiclePart;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.VehiclePartCmd;
 
 import java.util.List;
 
@@ -32,6 +33,14 @@ public interface VehiclePartAssembler {
      * @return 领域对象
      */
     VehiclePart toDomain(VehiclePartDto vehiclePartDto);
+    /**
+     * 命令转领域对象
+     *
+     * @param cmd 命令
+     * @return 领域对象
+     */
+    VehiclePart toDomain(VehiclePartCmd cmd);
+
 
     /**
      * 领域对象列表转 DTO 列表

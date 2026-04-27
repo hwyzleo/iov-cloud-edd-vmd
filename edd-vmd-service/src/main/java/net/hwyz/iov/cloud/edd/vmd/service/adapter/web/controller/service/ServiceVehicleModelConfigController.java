@@ -37,13 +37,13 @@ public class ServiceVehicleModelConfigController extends BaseController {
      * @return 生产配置代码
      */
     @GetMapping("/buildConfigCode")
-    public ApiResponse<String> getVehicleBuildConfigCode(@RequestParam String baseModelCode, @RequestParam String exteriorCode,
-                                                       @RequestParam String interiorCode, @RequestParam String wheelCode,
-                                                       @RequestParam String tireCode, @RequestParam String spareTireCode,
-                                                       @RequestParam String adasCode, @RequestParam String seatCode) {
+    public String getVehicleBuildConfigCode(@RequestParam String baseModelCode, @RequestParam String exteriorCode,
+                                         @RequestParam String interiorCode, @RequestParam String wheelCode,
+                                         @RequestParam String tireCode, @RequestParam String spareTireCode,
+                                         @RequestParam String adasCode, @RequestParam String seatCode) {
         log.info("内部服务请求根据车型配置类型得到匹配的生产配置代码");
-        return ApiResponse.ok(vehicleModelConfigAppService.getVehicleBuildConfigCode(baseModelCode, exteriorCode, interiorCode,
-                wheelCode, tireCode, spareTireCode, adasCode, seatCode));
+        return vehicleModelConfigAppService.getVehicleBuildConfigCode(baseModelCode, exteriorCode, interiorCode,
+                wheelCode, tireCode, spareTireCode, adasCode, seatCode);
     }
 
 }

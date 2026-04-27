@@ -1,7 +1,7 @@
 package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler;
 
 import net.hwyz.iov.cloud.edd.vmd.api.vo.response.QrcodeResponse;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.QrcodeDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.QrcodeDto;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 

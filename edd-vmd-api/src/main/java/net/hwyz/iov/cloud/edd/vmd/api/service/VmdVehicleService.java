@@ -1,8 +1,8 @@
 package net.hwyz.iov.cloud.edd.vmd.api.service;
 
 import net.hwyz.iov.cloud.framework.common.constant.ServiceNameConstants;
-import net.hwyz.iov.cloud.edd.vmd.api.vo.VehicleExService;
-import net.hwyz.iov.cloud.edd.vmd.api.vo.VehicleOrderExService;
+import net.hwyz.iov.cloud.edd.vmd.api.vo.response.VehicleExResponse;
+import net.hwyz.iov.cloud.edd.vmd.api.vo.request.VehicleOrderExRequest;
 import net.hwyz.iov.cloud.edd.vmd.api.fallback.VmdVehicleServiceFallbackFactory;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.validation.annotation.Validated;
@@ -26,7 +26,7 @@ public interface VmdVehicleService {
      * @param vehicleOrder 车辆订单
      */
     @PostMapping("/{vin}/action/bindOrder")
-    void bindOrder(@PathVariable String vin, @RequestBody @Validated VehicleOrderExService vehicleOrder);
+    void bindOrder(@PathVariable String vin, @RequestBody @Validated VehicleOrderExRequest vehicleOrder);
 
     /**
      * 根据车架号查询车辆信息
@@ -35,6 +35,6 @@ public interface VmdVehicleService {
      * @return 车辆信息
      */
     @GetMapping("/{vin}")
-    VehicleExService getByVin(@PathVariable String vin);
+    VehicleExResponse getByVin(@PathVariable String vin);
 
 }

@@ -4,8 +4,9 @@ import cn.hutool.core.util.ObjUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.BrandAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.BrandDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.BrandQuery;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.BrandCmd;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.BrandQuery;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.BrandDto;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Brand;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBrandRepository;
@@ -112,24 +113,24 @@ public class BrandAppService {
     /**
      * 新增品牌
      *
-     * @param brandDto 品牌信息 DTO
+     * @param brandCmd 品牌信息命令
      * @param userId  操作用户ID
      * @return 结果
      */
-    public int createBrand(BrandDto brandDto, String userId) {
-        Brand brand = BrandAssembler.INSTANCE.toDomain(brandDto);
+    public int createBrand(BrandCmd brandCmd, String userId) {
+        Brand brand = BrandAssembler.INSTANCE.toDomain(brandCmd);
         return vehBrandRepository.insert(brand);
     }
 
     /**
      * 修改品牌
      *
-     * @param brandDto 品牌信息 DTO
+     * @param brandCmd 品牌信息命令
      * @param userId  操作用户ID
      * @return 结果
      */
-    public int modifyBrand(BrandDto brandDto, String userId) {
-        Brand brand = BrandAssembler.INSTANCE.toDomain(brandDto);
+    public int modifyBrand(BrandCmd brandCmd, String userId) {
+        Brand brand = BrandAssembler.INSTANCE.toDomain(brandCmd);
         return vehBrandRepository.update(brand);
     }
 

@@ -1,6 +1,6 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.assembler;
 
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.QrcodeDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.QrcodeDto;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.aggregate.Qrcode;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;

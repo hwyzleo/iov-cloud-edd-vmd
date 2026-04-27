@@ -1,7 +1,9 @@
 package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler;
 
-import net.hwyz.iov.cloud.edd.vmd.api.vo.ModelVo;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.ModelDto;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.ModelRequest;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.ModelResponse;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.ModelCmd;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ModelDto;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 
@@ -23,7 +25,7 @@ public interface MptModelAssembler {
      * @param modelDto DTO
      * @return VO
      */
-    ModelVo fromDto(ModelDto modelDto);
+    ModelResponse fromDto(ModelDto modelDto);
 
     /**
      * VO 转 DTO
@@ -31,7 +33,15 @@ public interface MptModelAssembler {
      * @param modelVo VO
      * @return DTO
      */
-    ModelDto toDto(ModelVo modelVo);
+    ModelDto toDto(ModelRequest modelVo);
+
+    /**
+     * VO 转 CMD
+     *
+     * @param modelVo VO
+     * @return CMD
+     */
+    ModelCmd toCmd(ModelRequest modelVo);
 
     /**
      * DTO 列表转 VO 列表
@@ -39,6 +49,6 @@ public interface MptModelAssembler {
      * @param modelDtoList DTO 列表
      * @return VO 列表
      */
-    List<ModelVo> fromDtoList(List<ModelDto> modelDtoList);
+    List<ModelResponse> fromDtoList(List<ModelDto> modelDtoList);
 
 }

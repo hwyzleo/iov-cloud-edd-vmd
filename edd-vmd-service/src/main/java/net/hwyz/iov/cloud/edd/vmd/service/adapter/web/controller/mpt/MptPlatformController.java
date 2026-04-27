@@ -3,10 +3,11 @@ package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.controller.mpt;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.edd.vmd.api.vo.PlatformVo;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.PlatformRequest;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.PlatformResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.MptPlatformAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.PlatformDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.PlatformQuery;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.PlatformDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.PlatformQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.PlatformAppService;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
 import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
@@ -41,7 +42,7 @@ public class MptPlatformController extends BaseController {
      */
     @RequiresPermissions("completeVehicle:product:platform:list")
     @GetMapping(value = "/list")
-    public ApiResponse<PageResult<PlatformVo>> list(PlatformVo platform) {
+    public ApiResponse<PageResult<PlatformResponse>> list(PlatformRequest platform) {
         log.info("管理后台用户[{}]分页查询车辆平台信息", SecurityUtils.getUsername());
         startPage();
         PlatformQuery query = PlatformQuery.builder()
@@ -63,7 +64,7 @@ public class MptPlatformController extends BaseController {
     @Log(title = "车辆平台管理", businessType = BusinessType.EXPORT)
     @RequiresPermissions("completeVehicle:product:platform:export")
     @PostMapping("/export")
-    public void export(HttpServletResponse response, PlatformVo platform) {
+    public void export(HttpServletResponse response, PlatformRequest platform) {
         log.info("管理后台用户[{}]导出车辆平台信息", SecurityUtils.getUsername());
     }
 
@@ -75,7 +76,7 @@ public class MptPlatformController extends BaseController {
      */
     @RequiresPermissions("completeVehicle:product:platform:query")
     @GetMapping(value = "/{platformId}")
-    public ApiResponse<PlatformVo> getInfo(@PathVariable Long platformId) {
+    public ApiResponse<PlatformResponse> getInfo(@PathVariable Long platformId) {
         log.info("管理后台用户[{}]根据车辆平台ID[{}]获取车辆平台信息", SecurityUtils.getUsername(), platformId);
         return ApiResponse.ok(MptPlatformAssembler.INSTANCE.fromDto(platformAppService.getPlatformById(platformId)));
     }
@@ -89,12 +90,12 @@ public class MptPlatformController extends BaseController {
     @Log(title = "车辆平台管理", businessType = BusinessType.INSERT)
     @RequiresPermissions("completeVehicle:product:platform:add")
     @PostMapping
-    public ApiResponse<Void> add(@Validated @RequestBody PlatformVo platform) {
+    public ApiResponse<Void> add(@Validated @RequestBody PlatformRequest platform) {
         log.info("管理后台用户[{}]新增车辆平台信息[{}]", SecurityUtils.getUsername(), platform.getCode());
         if (!platformAppService.checkCodeUnique(platform.getId(), platform.getCode())) {
             return ApiResponse.fail("新增车辆平台'" + platform.getCode() + "'失败，车辆平台代码已存在");
         }
-        platformAppService.createPlatform(MptPlatformAssembler.INSTANCE.toDto(platform), SecurityUtils.getUserId().toString());
+        platformAppService.createPlatform(MptPlatformAssembler.INSTANCE.toCmd(platform), SecurityUtils.getUserId().toString());
         return ApiResponse.ok();
     }
 
@@ -107,12 +108,12 @@ public class MptPlatformController extends BaseController {
     @Log(title = "车辆平台管理", businessType = BusinessType.UPDATE)
     @RequiresPermissions("completeVehicle:product:platform:edit")
     @PutMapping
-    public ApiResponse<Void> edit(@Validated @RequestBody PlatformVo platform) {
+    public ApiResponse<Void> edit(@Validated @RequestBody PlatformRequest platform) {
         log.info("管理后台用户[{}]修改保存车辆平台信息[{}]", SecurityUtils.getUsername(), platform.getCode());
         if (!platformAppService.checkCodeUnique(platform.getId(), platform.getCode())) {
             return ApiResponse.fail("修改保存车辆平台'" + platform.getCode() + "'失败，车辆平台代码已存在");
         }
-        platformAppService.modifyPlatform(MptPlatformAssembler.INSTANCE.toDto(platform), SecurityUtils.getUserId().toString());
+        platformAppService.modifyPlatform(MptPlatformAssembler.INSTANCE.toCmd(platform), SecurityUtils.getUserId().toString());
         return ApiResponse.ok();
     }
 

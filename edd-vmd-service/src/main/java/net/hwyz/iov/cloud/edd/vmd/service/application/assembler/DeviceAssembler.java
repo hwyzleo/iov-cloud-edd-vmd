@@ -1,10 +1,11 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.assembler;
 
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.DeviceDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.DeviceDto;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Device;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.factory.Mappers;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.DeviceCmd;
 
 import java.util.List;
 
@@ -39,6 +40,17 @@ public interface DeviceAssembler {
     @Mapping(target = "commProtocol", expression = "java(deviceDto.getCommProtocol() == null ? null : String.join(\",\", deviceDto.getCommProtocol()))")
     @Mapping(target = "flashProtocol", expression = "java(deviceDto.getFlashProtocol() == null ? null : String.join(\",\", deviceDto.getFlashProtocol()))")
     Device toDomain(DeviceDto deviceDto);
+    /**
+     * 命令转领域对象
+     *
+     * @param cmd 命令
+     * @return 领域对象
+     */
+    @Mapping(target = "nodeType", expression = "java(cmd.getNodeType() == null ? null : String.join(\",\", cmd.getNodeType()))")
+    @Mapping(target = "commProtocol", expression = "java(cmd.getCommProtocol() == null ? null : String.join(\",\", cmd.getCommProtocol()))")
+    @Mapping(target = "flashProtocol", expression = "java(cmd.getFlashProtocol() == null ? null : String.join(\",\", cmd.getFlashProtocol()))")
+    Device toDomain(DeviceCmd cmd);
+
 
     /**
      * 领域对象列表转 DTO 列表

@@ -1,6 +1,7 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.assembler;
 
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.ManufacturerDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.ManufacturerCmd;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ManufacturerDto;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Manufacturer;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
@@ -32,6 +33,14 @@ public interface ManufacturerAssembler {
      * @return 领域对象
      */
     Manufacturer toDomain(ManufacturerDto manufacturerDto);
+
+    /**
+     * CMD 转领域对象
+     *
+     * @param manufacturerCmd CMD
+     * @return 领域对象
+     */
+    Manufacturer toDomain(ManufacturerCmd manufacturerCmd);
 
     /**
      * 领域对象列表转 DTO 列表

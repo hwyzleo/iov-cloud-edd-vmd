@@ -4,8 +4,8 @@ import cn.hutool.core.util.ObjUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.ModelAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.ModelDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.ModelQuery;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ModelDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.ModelQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Model;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBaseModelRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
@@ -13,6 +13,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehModelRepository;
 import net.hwyz.iov.cloud.framework.common.util.ParamHelper;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Service;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.ModelCmd;
 
 import java.util.HashMap;
 import java.util.List;
@@ -118,8 +119,8 @@ public class ModelAppService {
      * @param userId   操作用户ID
      * @return 结果
      */
-    public int createModel(ModelDto modelDto, String userId) {
-        Model model = ModelAssembler.INSTANCE.toDomain(modelDto);
+    public int createModel(ModelCmd modelCmd, String userId) {
+        Model model = ModelAssembler.INSTANCE.toDomain(modelCmd);
         return vehModelRepository.insert(model);
     }
 
@@ -130,8 +131,8 @@ public class ModelAppService {
      * @param userId   操作用户ID
      * @return 结果
      */
-    public int modifyModel(ModelDto modelDto, String userId) {
-        Model model = ModelAssembler.INSTANCE.toDomain(modelDto);
+    public int modifyModel(ModelCmd modelCmd, String userId) {
+        Model model = ModelAssembler.INSTANCE.toDomain(modelCmd);
         return vehModelRepository.update(model);
     }
 

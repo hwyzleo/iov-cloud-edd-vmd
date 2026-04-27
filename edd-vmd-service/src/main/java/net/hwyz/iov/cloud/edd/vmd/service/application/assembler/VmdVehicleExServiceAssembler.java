@@ -1,6 +1,6 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.assembler;
 
-import net.hwyz.iov.cloud.edd.vmd.api.vo.VehicleExService;
+import net.hwyz.iov.cloud.edd.vmd.api.vo.response.VehicleExResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleBasicInfo;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mappings;
@@ -25,7 +25,7 @@ public interface VmdVehicleExServiceAssembler {
      * @return 对外服务对象
      */
     @Mappings({})
-    VehicleExService fromDomain(VehicleBasicInfo vehicleBasicInfo);
+    VehicleExResponse fromDomain(VehicleBasicInfo vehicleBasicInfo);
 
     /**
      * 对外服务对象转领域对象
@@ -34,7 +34,7 @@ public interface VmdVehicleExServiceAssembler {
      * @return 领域对象
      */
     @Mappings({})
-    VehicleBasicInfo toDomain(VehicleExService vehicleExService);
+    VehicleBasicInfo toDomain(VehicleExResponse vehicleExService);
 
     /**
      * 领域对象列表转对外服务对象列表
@@ -42,6 +42,6 @@ public interface VmdVehicleExServiceAssembler {
      * @param vehicleBasicInfoList 领域对象列表
      * @return 对外服务对象列表
      */
-    List<VehicleExService> fromDomainList(List<VehicleBasicInfo> vehicleBasicInfoList);
+    List<VehicleExResponse> fromDomainList(List<VehicleBasicInfo> vehicleBasicInfoList);
 
 }

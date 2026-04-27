@@ -1,16 +1,11 @@
 package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
-import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.util.Date;
 
 /**
- * 车辆信息响应对象
+ * 管理后台车辆
  *
  * @author hwyz_leo
  */
@@ -18,37 +13,62 @@ import java.util.Date;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+
 public class VehicleResponse {
 
-    @JsonProperty("vin")
+    /**
+     * 主键
+     */
+    private Long id;
+
+    /**
+     * 车架号
+     */
     private String vin;
 
-    @JsonProperty("manufacturer_code")
+    /**
+     * 工厂代码
+     */
     private String manufacturerCode;
 
-    @JsonProperty("brand_code")
+    /**
+     * 品牌代码
+     */
     private String brandCode;
 
-    @JsonProperty("platform_code")
+    /**
+     * 平台代码
+     */
     private String platformCode;
 
-    @JsonProperty("series_code")
+    /**
+     * 车系代码
+     */
     private String seriesCode;
 
-    @JsonProperty("model_code")
+    /**
+     * 车型代码
+     */
     private String modelCode;
 
-    @JsonProperty("base_model_code")
+    /**
+     * 基础车型代码
+     */
     private String baseModelCode;
 
-    @JsonProperty("build_config_code")
+    /**
+     * 生产配置代码
+     */
     private String buildConfigCode;
 
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "GMT+8")
-    @JsonProperty("eol_time")
+    /**
+     * 车辆下线时间
+     */
     private Date eolTime;
 
-    @JsonProperty("order_num")
-    private String orderNum;
+    /**
+     * 创建时间
+     */
+    private Date createTime;
 
 }

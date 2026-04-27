@@ -1,13 +1,19 @@
 package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler;
 
-import net.hwyz.iov.cloud.edd.vmd.api.vo.ConfigItemMappingVo;
-import net.hwyz.iov.cloud.edd.vmd.api.vo.ConfigItemOptionVo;
-import net.hwyz.iov.cloud.edd.vmd.api.vo.ConfigItemVo;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.ConfigItemDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.ConfigItemMappingDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.ConfigItemOptionDto;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.ConfigItemMappingRequest;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.ConfigItemMappingResponse;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.ConfigItemOptionRequest;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.ConfigItemOptionResponse;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.ConfigItemRequest;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.ConfigItemResponse;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ConfigItemDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ConfigItemMappingDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ConfigItemOptionDto;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.ConfigItemCmd;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.ConfigItemOptionCmd;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.ConfigItemMappingCmd;
 
 import java.util.List;
 
@@ -27,7 +33,7 @@ public interface MptConfigItemAssembler {
      * @param configItemDto 配置项 DTO
      * @return 配置项 VO
      */
-    ConfigItemVo fromItemDto(ConfigItemDto configItemDto);
+    ConfigItemResponse fromItemDto(ConfigItemDto configItemDto);
 
     /**
      * 配置项 VO 转 DTO
@@ -35,7 +41,9 @@ public interface MptConfigItemAssembler {
      * @param configItemVo 配置项 VO
      * @return 配置项 DTO
      */
-    ConfigItemDto toItemDto(ConfigItemVo configItemVo);
+    ConfigItemDto toItemDto(ConfigItemRequest configItemVo);
+    ConfigItemCmd toItemCmd(ConfigItemRequest vo);
+
 
     /**
      * 配置项 DTO 列表转 VO 列表
@@ -43,7 +51,7 @@ public interface MptConfigItemAssembler {
      * @param configItemDtoList 配置项 DTO 列表
      * @return 配置项 VO 列表
      */
-    List<ConfigItemVo> fromItemDtoList(List<ConfigItemDto> configItemDtoList);
+    List<ConfigItemResponse> fromItemDtoList(List<ConfigItemDto> configItemDtoList);
 
     /**
      * 枚举值 DTO 转 VO
@@ -51,7 +59,7 @@ public interface MptConfigItemAssembler {
      * @param configItemOptionDto 枚举值 DTO
      * @return 枚举值 VO
      */
-    ConfigItemOptionVo fromOptionDto(ConfigItemOptionDto configItemOptionDto);
+    ConfigItemOptionResponse fromOptionDto(ConfigItemOptionDto configItemOptionDto);
 
     /**
      * 枚举值 VO 转 DTO
@@ -59,7 +67,9 @@ public interface MptConfigItemAssembler {
      * @param configItemOptionVo 枚举值 VO
      * @return 枚举值 DTO
      */
-    ConfigItemOptionDto toOptionDto(ConfigItemOptionVo configItemOptionVo);
+    ConfigItemOptionDto toOptionDto(ConfigItemOptionRequest configItemOptionVo);
+    ConfigItemOptionCmd toOptionCmd(ConfigItemOptionRequest vo);
+
 
     /**
      * 枚举值 DTO 列表转 VO 列表
@@ -67,7 +77,7 @@ public interface MptConfigItemAssembler {
      * @param configItemOptionDtoList 枚举值 DTO 列表
      * @return 枚举值 VO 列表
      */
-    List<ConfigItemOptionVo> fromOptionDtoList(List<ConfigItemOptionDto> configItemOptionDtoList);
+    List<ConfigItemOptionResponse> fromOptionDtoList(List<ConfigItemOptionDto> configItemOptionDtoList);
 
     /**
      * 映射 DTO 转 VO
@@ -75,7 +85,7 @@ public interface MptConfigItemAssembler {
      * @param configItemMappingDto 映射 DTO
      * @return 映射 VO
      */
-    ConfigItemMappingVo fromMappingDto(ConfigItemMappingDto configItemMappingDto);
+    ConfigItemMappingResponse fromMappingDto(ConfigItemMappingDto configItemMappingDto);
 
     /**
      * 映射 VO 转 DTO
@@ -83,7 +93,9 @@ public interface MptConfigItemAssembler {
      * @param configItemMappingVo 映射 VO
      * @return 映射 DTO
      */
-    ConfigItemMappingDto toMappingDto(ConfigItemMappingVo configItemMappingVo);
+    ConfigItemMappingDto toMappingDto(ConfigItemMappingRequest configItemMappingVo);
+    ConfigItemMappingCmd toMappingCmd(ConfigItemMappingRequest vo);
+
 
     /**
      * 映射 DTO 列表转 VO 列表
@@ -91,6 +103,6 @@ public interface MptConfigItemAssembler {
      * @param configItemMappingDtoList 映射 DTO 列表
      * @return 映射 VO 列表
      */
-    List<ConfigItemMappingVo> fromMappingDtoList(List<ConfigItemMappingDto> configItemMappingDtoList);
+    List<ConfigItemMappingResponse> fromMappingDtoList(List<ConfigItemMappingDto> configItemMappingDtoList);
 
 }

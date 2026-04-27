@@ -3,10 +3,11 @@ package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.controller.mpt;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.edd.vmd.api.vo.PartVo;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.PartRequest;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.PartResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.MptPartAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.PartDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.PartQuery;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.PartDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.PartQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartAppService;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
 import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
@@ -41,7 +42,7 @@ public class MptPartController extends BaseController {
      */
     @RequiresPermissions("completeVehicle:vehicle:part:list")
     @GetMapping(value = "/list")
-    public ApiResponse<PageResult<PartVo>> list(PartVo part) {
+    public ApiResponse<PageResult<PartResponse>> list(PartRequest part) {
         log.info("管理后台用户[{}]分页查询零件信息", SecurityUtils.getUsername());
         startPage();
         PartQuery query = PartQuery.builder()
@@ -66,7 +67,7 @@ public class MptPartController extends BaseController {
     @Log(title = "零件信息管理", businessType = BusinessType.EXPORT)
     @RequiresPermissions("completeVehicle:vehicle:part:export")
     @PostMapping("/export")
-    public void export(HttpServletResponse response, PartVo part) {
+    public void export(HttpServletResponse response, PartRequest part) {
         log.info("管理后台用户[{}]导出零件信息", SecurityUtils.getUsername());
     }
 
@@ -78,7 +79,7 @@ public class MptPartController extends BaseController {
      */
     @RequiresPermissions("completeVehicle:vehicle:part:query")
     @GetMapping(value = "/{partId}")
-    public ApiResponse<PartVo> getInfo(@PathVariable Long partId) {
+    public ApiResponse<PartResponse> getInfo(@PathVariable Long partId) {
         log.info("管理后台用户[{}]根据零件信息ID[{}]获取零件信息", SecurityUtils.getUsername(), partId);
         return ApiResponse.ok(MptPartAssembler.INSTANCE.fromDto(partAppService.getPartById(partId)));
     }
@@ -92,12 +93,12 @@ public class MptPartController extends BaseController {
     @Log(title = "零件信息管理", businessType = BusinessType.INSERT)
     @RequiresPermissions("completeVehicle:vehicle:part:add")
     @PostMapping
-    public ApiResponse<Void> add(@Validated @RequestBody PartVo part) {
+    public ApiResponse<Void> add(@Validated @RequestBody PartRequest part) {
         log.info("管理后台用户[{}]新增零件信息[{}]", SecurityUtils.getUsername(), part.getPn());
         if (!partAppService.checkPnUnique(part.getId(), part.getPn())) {
             return ApiResponse.fail("新增零件信息'" + part.getPn() + "'失败，零件号已存在");
         }
-        partAppService.createPart(MptPartAssembler.INSTANCE.toDto(part), SecurityUtils.getUserId().toString());
+        partAppService.createPart(MptPartAssembler.INSTANCE.toCmd(part), SecurityUtils.getUserId().toString());
         return ApiResponse.ok();
     }
 
@@ -110,12 +111,12 @@ public class MptPartController extends BaseController {
     @Log(title = "零件信息管理", businessType = BusinessType.UPDATE)
     @RequiresPermissions("completeVehicle:vehicle:part:edit")
     @PutMapping
-    public ApiResponse<Void> edit(@Validated @RequestBody PartVo part) {
+    public ApiResponse<Void> edit(@Validated @RequestBody PartRequest part) {
         log.info("管理后台用户[{}]修改保存零件信息[{}]", SecurityUtils.getUsername(), part.getPn());
         if (!partAppService.checkPnUnique(part.getId(), part.getPn())) {
             return ApiResponse.fail("修改保存零件信息'" + part.getPn() + "'失败，零件号已存在");
         }
-        partAppService.modifyPart(MptPartAssembler.INSTANCE.toDto(part), SecurityUtils.getUserId().toString());
+        partAppService.modifyPart(MptPartAssembler.INSTANCE.toCmd(part), SecurityUtils.getUserId().toString());
         return ApiResponse.ok();
     }
 

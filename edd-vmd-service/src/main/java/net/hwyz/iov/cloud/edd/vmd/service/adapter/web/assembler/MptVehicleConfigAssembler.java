@@ -1,11 +1,15 @@
 package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler;
 
-import net.hwyz.iov.cloud.edd.vmd.api.vo.VehicleConfigItemVo;
-import net.hwyz.iov.cloud.edd.vmd.api.vo.VehicleConfigVo;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.VehicleConfigDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.VehicleConfigItemDto;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.VehicleConfigItemRequest;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.VehicleConfigItemResponse;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.VehicleConfigRequest;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.VehicleConfigResponse;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.VehicleConfigDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.VehicleConfigItemDto;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.VehicleConfigCmd;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.VehicleConfigItemCmd;
 
 import java.util.List;
 
@@ -25,7 +29,7 @@ public interface MptVehicleConfigAssembler {
      * @param vehicleConfigDto 配置 DTO
      * @return 配置 VO
      */
-    VehicleConfigVo fromConfigDto(VehicleConfigDto vehicleConfigDto);
+    VehicleConfigResponse fromConfigDto(VehicleConfigDto vehicleConfigDto);
 
     /**
      * 配置 VO 转 DTO
@@ -33,7 +37,9 @@ public interface MptVehicleConfigAssembler {
      * @param vehicleConfigVo 配置 VO
      * @return 配置 DTO
      */
-    VehicleConfigDto toConfigDto(VehicleConfigVo vehicleConfigVo);
+    VehicleConfigDto toConfigDto(VehicleConfigRequest vehicleConfigVo);
+    VehicleConfigCmd toConfigCmd(VehicleConfigRequest vo);
+
 
     /**
      * 配置 DTO 列表转 VO 列表
@@ -41,7 +47,7 @@ public interface MptVehicleConfigAssembler {
      * @param vehicleConfigDtoList 配置 DTO 列表
      * @return 配置 VO 列表
      */
-    List<VehicleConfigVo> fromConfigDtoList(List<VehicleConfigDto> vehicleConfigDtoList);
+    List<VehicleConfigResponse> fromConfigDtoList(List<VehicleConfigDto> vehicleConfigDtoList);
 
     /**
      * 配置项 DTO 转 VO
@@ -49,7 +55,7 @@ public interface MptVehicleConfigAssembler {
      * @param vehicleConfigItemDto 配置项 DTO
      * @return 配置项 VO
      */
-    VehicleConfigItemVo fromItemDto(VehicleConfigItemDto vehicleConfigItemDto);
+    VehicleConfigItemResponse fromItemDto(VehicleConfigItemDto vehicleConfigItemDto);
 
     /**
      * 配置项 VO 转 DTO
@@ -57,7 +63,9 @@ public interface MptVehicleConfigAssembler {
      * @param vehicleConfigItemVo 配置项 VO
      * @return 配置项 DTO
      */
-    VehicleConfigItemDto toItemDto(VehicleConfigItemVo vehicleConfigItemVo);
+    VehicleConfigItemDto toItemDto(VehicleConfigItemRequest vehicleConfigItemVo);
+    VehicleConfigItemCmd toItemCmd(VehicleConfigItemRequest vo);
+
 
     /**
      * 配置项 DTO 列表转 VO 列表
@@ -65,6 +73,6 @@ public interface MptVehicleConfigAssembler {
      * @param vehicleConfigItemDtoList 配置项 DTO 列表
      * @return 配置项 VO 列表
      */
-    List<VehicleConfigItemVo> fromItemDtoList(List<VehicleConfigItemDto> vehicleConfigItemDtoList);
+    List<VehicleConfigItemResponse> fromItemDtoList(List<VehicleConfigItemDto> vehicleConfigItemDtoList);
 
 }

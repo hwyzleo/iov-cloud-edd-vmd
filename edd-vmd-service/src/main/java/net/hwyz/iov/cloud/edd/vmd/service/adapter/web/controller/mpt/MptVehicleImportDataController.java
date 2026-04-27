@@ -3,10 +3,12 @@ package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.controller.mpt;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.edd.vmd.api.vo.VehicleImportDataVo;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.VehicleImportDataRequest;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.VehicleImportDataResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.MptVehicleImportDataAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.VehicleImportDataDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.VehicleImportDataQuery;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.VehicleImportDataCmd;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.VehicleImportDataDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.VehicleImportDataQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleImportDataAppService;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
 import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
@@ -41,7 +43,7 @@ public class MptVehicleImportDataController extends BaseController {
      */
     @RequiresPermissions("completeVehicle:vehicle:importData:list")
     @GetMapping(value = "/list")
-    public ApiResponse<PageResult<VehicleImportDataVo>> list(VehicleImportDataVo vehicleImportData) {
+    public ApiResponse<PageResult<VehicleImportDataResponse>> list(VehicleImportDataRequest vehicleImportData) {
         log.info("管理后台用户[{}]分页查询车辆导入数据", SecurityUtils.getUsername());
         startPage();
         VehicleImportDataQuery query = VehicleImportDataQuery.builder()
@@ -64,7 +66,7 @@ public class MptVehicleImportDataController extends BaseController {
     @Log(title = "车辆导入数据管理", businessType = BusinessType.EXPORT)
     @RequiresPermissions("completeVehicle:vehicle:importData:export")
     @PostMapping("/export")
-    public void export(HttpServletResponse response, VehicleImportDataVo vehicleImportData) {
+    public void export(HttpServletResponse response, VehicleImportDataRequest vehicleImportData) {
         log.info("管理后台用户[{}]导出车辆导入数据", SecurityUtils.getUsername());
     }
 
@@ -76,7 +78,7 @@ public class MptVehicleImportDataController extends BaseController {
      */
     @RequiresPermissions("completeVehicle:vehicle:importData:query")
     @GetMapping(value = "/{vehicleImportDataId}")
-    public ApiResponse<VehicleImportDataVo> getInfo(@PathVariable Long vehicleImportDataId) {
+    public ApiResponse<VehicleImportDataResponse> getInfo(@PathVariable Long vehicleImportDataId) {
         log.info("管理后台用户[{}]根据车辆导入数据ID[{}]获取车辆导入数据", SecurityUtils.getUsername(), vehicleImportDataId);
         return ApiResponse.ok(MptVehicleImportDataAssembler.INSTANCE.fromDto(vehicleImportDataAppService.getVehicleImportDataById(vehicleImportDataId)));
     }
@@ -90,13 +92,13 @@ public class MptVehicleImportDataController extends BaseController {
     @Log(title = "车辆导入数据管理", businessType = BusinessType.INSERT)
     @RequiresPermissions("completeVehicle:vehicle:importData:add")
     @PostMapping
-    public ApiResponse<Void> add(@Validated @RequestBody VehicleImportDataVo vehicleImportData) {
+    public ApiResponse<Void> add(@Validated @RequestBody VehicleImportDataRequest vehicleImportData) {
         log.info("管理后台用户[{}]新增车辆导入数据[{}]", SecurityUtils.getUsername(), vehicleImportData.getBatchNum());
         if (!vehicleImportDataAppService.checkBatchNumUnique(vehicleImportData.getId(), vehicleImportData.getBatchNum())) {
             return ApiResponse.fail("新增车辆导入数据'" + vehicleImportData.getBatchNum() + "'失败，批次号已存在");
         }
-        VehicleImportDataDto dto = MptVehicleImportDataAssembler.INSTANCE.toDto(vehicleImportData);
-        if (vehicleImportDataAppService.createVehicleImportData(dto, SecurityUtils.getUserId().toString()) <= 0) {
+        VehicleImportDataCmd cmd = MptVehicleImportDataAssembler.INSTANCE.toCmd(vehicleImportData);
+        if (vehicleImportDataAppService.createVehicleImportData(cmd, SecurityUtils.getUserId().toString()) <= 0) {
             return ApiResponse.fail("操作失败");
         }
         try {
@@ -117,13 +119,13 @@ public class MptVehicleImportDataController extends BaseController {
     @Log(title = "车辆导入数据管理", businessType = BusinessType.UPDATE)
     @RequiresPermissions("completeVehicle:vehicle:importData:edit")
     @PutMapping
-    public ApiResponse<Void> edit(@Validated @RequestBody VehicleImportDataVo vehicleImportData) {
+    public ApiResponse<Void> edit(@Validated @RequestBody VehicleImportDataRequest vehicleImportData) {
         log.info("管理后台用户[{}]修改保存车辆导入数据[{}]", SecurityUtils.getUsername(), vehicleImportData.getBatchNum());
         if (!vehicleImportDataAppService.checkBatchNumUnique(vehicleImportData.getId(), vehicleImportData.getBatchNum())) {
             return ApiResponse.fail("修改保存车辆导入数据'" + vehicleImportData.getBatchNum() + "'失败，批次号已存在");
         }
-        VehicleImportDataDto dto = MptVehicleImportDataAssembler.INSTANCE.toDto(vehicleImportData);
-        if (vehicleImportDataAppService.modifyVehicleImportData(dto, SecurityUtils.getUserId().toString()) <= 0) {
+        VehicleImportDataCmd cmd = MptVehicleImportDataAssembler.INSTANCE.toCmd(vehicleImportData);
+        if (vehicleImportDataAppService.modifyVehicleImportData(cmd, SecurityUtils.getUserId().toString()) <= 0) {
             return ApiResponse.fail("操作失败");
         }
         try {

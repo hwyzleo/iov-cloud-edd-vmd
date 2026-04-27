@@ -1,8 +1,8 @@
 package net.hwyz.iov.cloud.edd.vmd.api.fallback;
 
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.edd.vmd.api.vo.VehicleExService;
-import net.hwyz.iov.cloud.edd.vmd.api.vo.VehicleOrderExService;
+import net.hwyz.iov.cloud.edd.vmd.api.vo.response.VehicleExResponse;
+import net.hwyz.iov.cloud.edd.vmd.api.vo.request.VehicleOrderExRequest;
 import net.hwyz.iov.cloud.edd.vmd.api.service.VmdVehicleService;
 import org.springframework.cloud.openfeign.FallbackFactory;
 import org.springframework.stereotype.Component;
@@ -20,12 +20,12 @@ public class VmdVehicleServiceFallbackFactory implements FallbackFactory<VmdVehi
     public VmdVehicleService create(Throwable throwable) {
         return new VmdVehicleService() {
             @Override
-            public void bindOrder(String vin, VehicleOrderExService vehicleOrder) {
+            public void bindOrder(String vin, VehicleOrderExRequest vehicleOrder) {
                 log.error("车辆服务车辆[{}]绑定订单[{}]调用失败", vin, vehicleOrder.getOrderNum(), throwable);
             }
 
             @Override
-            public VehicleExService getByVin(String vin) {
+            public VehicleExResponse getByVin(String vin) {
                 log.error("车辆服务根据车架号[{}]查询车辆信息调用失败", vin, throwable);
                 return null;
             }

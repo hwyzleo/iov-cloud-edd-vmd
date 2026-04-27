@@ -1,7 +1,7 @@
 package net.hwyz.iov.cloud.edd.vmd.api.service;
 
 import net.hwyz.iov.cloud.framework.common.constant.ServiceNameConstants;
-import net.hwyz.iov.cloud.edd.vmd.api.vo.PartExService;
+import net.hwyz.iov.cloud.edd.vmd.api.vo.response.PartExResponse;
 import net.hwyz.iov.cloud.edd.vmd.api.fallback.VmdPartServiceFallbackFactory;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,7 +25,7 @@ public interface VmdPartService {
      * @return 零件信息
      */
     @GetMapping("/{pn}")
-    PartExService getByPn(@PathVariable String pn);
+    PartExResponse getByPn(@PathVariable String pn);
 
     /**
      * 获取所有FOTA升级零件信息
@@ -34,6 +34,6 @@ public interface VmdPartService {
      * @return 零件信息
      */
     @GetMapping("/listAllFota")
-    List<PartExService> listAllFota(@RequestParam(required = false) Boolean software);
+    List<PartExResponse> listAllFota(@RequestParam(required = false) Boolean software);
 
 }

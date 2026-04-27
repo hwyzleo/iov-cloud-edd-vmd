@@ -3,10 +3,11 @@ package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.controller.mpt;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.edd.vmd.api.vo.ModelVo;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.ModelRequest;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.ModelResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.MptModelAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.ModelDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.ModelQuery;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ModelDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.ModelQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.ModelAppService;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
 import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
@@ -41,7 +42,7 @@ public class MptModelController extends BaseController {
      */
     @RequiresPermissions("completeVehicle:product:model:list")
     @GetMapping(value = "/list")
-    public ApiResponse<PageResult<ModelVo>> list(ModelVo model) {
+    public ApiResponse<PageResult<ModelResponse>> list(ModelRequest model) {
         log.info("管理后台用户[{}]分页查询车型信息", SecurityUtils.getUsername());
         startPage();
         ModelQuery query = ModelQuery.builder()
@@ -65,7 +66,7 @@ public class MptModelController extends BaseController {
      */
     @RequiresPermissions("completeVehicle:product:model:list")
     @GetMapping(value = "/listByPlatformCodeAndSeriesCode")
-    public ApiResponse<List<ModelVo>> listByPlatformCodeAndSeriesCode(@RequestParam String platformCode,
+    public ApiResponse<List<ModelResponse>> listByPlatformCodeAndSeriesCode(@RequestParam String platformCode,
                                                                       @RequestParam String seriesCode) {
         log.info("管理后台用户[{}]获取指定车辆平台[{}]及车系[{}]下的所有车型", SecurityUtils.getUsername(),
                 platformCode, seriesCode);
@@ -86,7 +87,7 @@ public class MptModelController extends BaseController {
     @Log(title = "车型管理", businessType = BusinessType.EXPORT)
     @RequiresPermissions("completeVehicle:product:model:export")
     @PostMapping("/export")
-    public void export(HttpServletResponse response, ModelVo model) {
+    public void export(HttpServletResponse response, ModelRequest model) {
         log.info("管理后台用户[{}]导出车型信息", SecurityUtils.getUsername());
     }
 
@@ -98,7 +99,7 @@ public class MptModelController extends BaseController {
      */
     @RequiresPermissions("completeVehicle:product:model:query")
     @GetMapping(value = "/{modelId}")
-    public ApiResponse<ModelVo> getInfo(@PathVariable Long modelId) {
+    public ApiResponse<ModelResponse> getInfo(@PathVariable Long modelId) {
         log.info("管理后台用户[{}]根据车型ID[{}]获取车型信息", SecurityUtils.getUsername(), modelId);
         return ApiResponse.ok(MptModelAssembler.INSTANCE.fromDto(modelAppService.getModelById(modelId)));
     }
@@ -112,12 +113,12 @@ public class MptModelController extends BaseController {
     @Log(title = "车型管理", businessType = BusinessType.INSERT)
     @RequiresPermissions("completeVehicle:product:model:add")
     @PostMapping
-    public ApiResponse<Void> add(@Validated @RequestBody ModelVo model) {
+    public ApiResponse<Void> add(@Validated @RequestBody ModelRequest model) {
         log.info("管理后台用户[{}]新增车型信息[{}]", SecurityUtils.getUsername(), model.getCode());
         if (!modelAppService.checkCodeUnique(model.getId(), model.getCode())) {
             return ApiResponse.fail("新增车型'" + model.getCode() + "'失败，车型代码已存在");
         }
-        modelAppService.createModel(MptModelAssembler.INSTANCE.toDto(model), SecurityUtils.getUserId().toString());
+        modelAppService.createModel(MptModelAssembler.INSTANCE.toCmd(model), SecurityUtils.getUserId().toString());
         return ApiResponse.ok();
     }
 
@@ -130,12 +131,12 @@ public class MptModelController extends BaseController {
     @Log(title = "车型管理", businessType = BusinessType.UPDATE)
     @RequiresPermissions("completeVehicle:product:model:edit")
     @PutMapping
-    public ApiResponse<Void> edit(@Validated @RequestBody ModelVo model) {
+    public ApiResponse<Void> edit(@Validated @RequestBody ModelRequest model) {
         log.info("管理后台用户[{}]修改保存车型信息[{}]", SecurityUtils.getUsername(), model.getCode());
         if (!modelAppService.checkCodeUnique(model.getId(), model.getCode())) {
             return ApiResponse.fail("修改保存车型'" + model.getCode() + "'失败，车型代码已存在");
         }
-        modelAppService.modifyModel(MptModelAssembler.INSTANCE.toDto(model), SecurityUtils.getUserId().toString());
+        modelAppService.modifyModel(MptModelAssembler.INSTANCE.toCmd(model), SecurityUtils.getUserId().toString());
         return ApiResponse.ok();
     }
 

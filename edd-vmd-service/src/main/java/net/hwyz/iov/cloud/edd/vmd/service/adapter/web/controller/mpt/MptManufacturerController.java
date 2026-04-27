@@ -3,10 +3,11 @@ package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.controller.mpt;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.edd.vmd.api.vo.ManufacturerVo;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.ManufacturerRequest;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.ManufacturerResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.MptManufacturerAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.ManufacturerDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.ManufacturerQuery;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ManufacturerDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.ManufacturerQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.ManufacturerAppService;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
 import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
@@ -41,7 +42,7 @@ public class MptManufacturerController extends BaseController {
      */
     @RequiresPermissions("completeVehicle:product:manufacturer:list")
     @GetMapping(value = "/list")
-    public ApiResponse<PageResult<ManufacturerVo>> list(ManufacturerVo manufacturer) {
+    public ApiResponse<PageResult<ManufacturerResponse>> list(ManufacturerRequest manufacturer) {
         log.info("管理后台用户[{}]分页查询生产厂商信息", SecurityUtils.getUsername());
         startPage();
         ManufacturerQuery query = ManufacturerQuery.builder()
@@ -63,7 +64,7 @@ public class MptManufacturerController extends BaseController {
     @Log(title = "生产厂商管理", businessType = BusinessType.EXPORT)
     @RequiresPermissions("completeVehicle:product:manufacturer:export")
     @PostMapping("/export")
-    public void export(HttpServletResponse response, ManufacturerVo manufacturer) {
+    public void export(HttpServletResponse response, ManufacturerRequest manufacturer) {
         log.info("管理后台用户[{}]导出生产厂商信息", SecurityUtils.getUsername());
     }
 
@@ -75,7 +76,7 @@ public class MptManufacturerController extends BaseController {
      */
     @RequiresPermissions("completeVehicle:product:manufacturer:query")
     @GetMapping(value = "/{manufacturerId}")
-    public ApiResponse<ManufacturerVo> getInfo(@PathVariable Long manufacturerId) {
+    public ApiResponse<ManufacturerResponse> getInfo(@PathVariable Long manufacturerId) {
         log.info("管理后台用户[{}]根据生产厂商ID[{}]获取生产厂商信息", SecurityUtils.getUsername(), manufacturerId);
         return ApiResponse.ok(MptManufacturerAssembler.INSTANCE.fromDto(manufacturerAppService.getManufacturerById(manufacturerId)));
     }
@@ -89,12 +90,12 @@ public class MptManufacturerController extends BaseController {
     @Log(title = "生产厂商管理", businessType = BusinessType.INSERT)
     @RequiresPermissions("completeVehicle:product:manufacturer:add")
     @PostMapping
-    public ApiResponse<Void> add(@Validated @RequestBody ManufacturerVo manufacturer) {
+    public ApiResponse<Void> add(@Validated @RequestBody ManufacturerRequest manufacturer) {
         log.info("管理后台用户[{}]新增生产厂商信息[{}]", SecurityUtils.getUsername(), manufacturer.getCode());
         if (!manufacturerAppService.checkCodeUnique(manufacturer.getId(), manufacturer.getCode())) {
             return ApiResponse.fail("新增生产厂商'" + manufacturer.getCode() + "'失败，生产厂商代码已存在");
         }
-        manufacturerAppService.createManufacturer(MptManufacturerAssembler.INSTANCE.toDto(manufacturer), SecurityUtils.getUserId().toString());
+        manufacturerAppService.createManufacturer(MptManufacturerAssembler.INSTANCE.toCmd(manufacturer), SecurityUtils.getUserId().toString());
         return ApiResponse.ok();
     }
 
@@ -107,12 +108,12 @@ public class MptManufacturerController extends BaseController {
     @Log(title = "生产厂商管理", businessType = BusinessType.UPDATE)
     @RequiresPermissions("completeVehicle:product:manufacturer:edit")
     @PutMapping
-    public ApiResponse<Void> edit(@Validated @RequestBody ManufacturerVo manufacturer) {
+    public ApiResponse<Void> edit(@Validated @RequestBody ManufacturerRequest manufacturer) {
         log.info("管理后台用户[{}]修改保存生产厂商信息[{}]", SecurityUtils.getUsername(), manufacturer.getCode());
         if (!manufacturerAppService.checkCodeUnique(manufacturer.getId(), manufacturer.getCode())) {
             return ApiResponse.fail("修改保存生产厂商'" + manufacturer.getCode() + "'失败，生产厂商代码已存在");
         }
-        manufacturerAppService.modifyManufacturer(MptManufacturerAssembler.INSTANCE.toDto(manufacturer), SecurityUtils.getUserId().toString());
+        manufacturerAppService.modifyManufacturer(MptManufacturerAssembler.INSTANCE.toCmd(manufacturer), SecurityUtils.getUserId().toString());
         return ApiResponse.ok();
     }
 

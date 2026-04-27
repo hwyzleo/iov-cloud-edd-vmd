@@ -1,10 +1,11 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.assembler;
 
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.VehicleLifecycleDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.VehicleLifecycleDto;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleLifecycle;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleLifecycleNode;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.VehicleLifecycleCmd;
 
 import java.util.List;
 
@@ -33,6 +34,14 @@ public interface VehicleLifecycleAssembler {
      * @return 领域对象
      */
     VehicleLifecycle toDomain(VehicleLifecycleDto vehicleLifecycleDto);
+    /**
+     * 命令转领域对象
+     *
+     * @param cmd 命令
+     * @return 领域对象
+     */
+    VehicleLifecycle toDomain(VehicleLifecycleCmd cmd);
+
 
     /**
      * 领域对象列表转 DTO 列表

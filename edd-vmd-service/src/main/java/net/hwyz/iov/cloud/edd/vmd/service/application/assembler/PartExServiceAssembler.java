@@ -1,6 +1,6 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.assembler;
 
-import net.hwyz.iov.cloud.edd.vmd.api.vo.PartExService;
+import net.hwyz.iov.cloud.edd.vmd.api.vo.response.PartExResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Part;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
@@ -23,7 +23,7 @@ public interface PartExServiceAssembler {
      * @param part 领域对象
      * @return 对外服务对象
      */
-    PartExService fromDomain(Part part);
+    PartExResponse fromDomain(Part part);
 
     /**
      * 对外服务对象转领域对象
@@ -31,7 +31,7 @@ public interface PartExServiceAssembler {
      * @param partExService 对外服务对象
      * @return 领域对象
      */
-    Part toDomain(PartExService partExService);
+    Part toDomain(PartExResponse partExService);
 
     /**
      * 领域对象列表转对外服务对象列表
@@ -39,6 +39,6 @@ public interface PartExServiceAssembler {
      * @param partList 领域对象列表
      * @return 对外服务对象列表
      */
-    List<PartExService> fromDomainList(List<Part> partList);
+    List<PartExResponse> fromDomainList(List<Part> partList);
 
 }

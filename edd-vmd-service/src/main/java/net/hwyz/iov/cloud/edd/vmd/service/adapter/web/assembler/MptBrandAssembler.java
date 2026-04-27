@@ -1,7 +1,9 @@
 package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler;
 
-import net.hwyz.iov.cloud.edd.vmd.api.vo.BrandVo;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.BrandDto;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.BrandRequest;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.BrandResponse;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.BrandCmd;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.BrandDto;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 
@@ -18,27 +20,27 @@ public interface MptBrandAssembler {
     MptBrandAssembler INSTANCE = Mappers.getMapper(MptBrandAssembler.class);
 
     /**
-     * DTO 转 VO
+     * DTO 转 Response
      *
      * @param brandDto DTO
-     * @return VO
+     * @return Response
      */
-    BrandVo fromDto(BrandDto brandDto);
+    BrandResponse fromDto(BrandDto brandDto);
 
     /**
-     * VO 转 DTO
+     * Request 转命令
      *
-     * @param brandVo VO
-     * @return DTO
+     * @param brandRequest Request
+     * @return 命令
      */
-    BrandDto toDto(BrandVo brandVo);
+    BrandCmd toCmd(BrandRequest brandRequest);
 
     /**
-     * DTO 列表转 VO 列表
+     * DTO 列表转 Response 列表
      *
      * @param brandDtoList DTO 列表
-     * @return VO 列表
+     * @return Response 列表
      */
-    List<BrandVo> fromDtoList(List<BrandDto> brandDtoList);
+    List<BrandResponse> fromDtoList(List<BrandDto> brandDtoList);
 
 }

@@ -3,10 +3,11 @@ package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.controller.mpt;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.edd.vmd.api.vo.DeviceVo;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.DeviceRequest;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.DeviceResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.MptDeviceAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.DeviceDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.DeviceQuery;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.DeviceDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.DeviceQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.DeviceAppService;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
 import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
@@ -44,7 +45,7 @@ public class MptDeviceController extends BaseController {
      */
     @RequiresPermissions("completeVehicle:vehicle:device:list")
     @GetMapping(value = "/list")
-    public ApiResponse<PageResult<DeviceVo>> list(DeviceVo device) {
+    public ApiResponse<PageResult<DeviceResponse>> list(DeviceRequest device) {
         log.info("管理后台用户[{}]分页查询设备信息", SecurityUtils.getUsername());
         startPage();
         DeviceQuery query = DeviceQuery.builder()
@@ -99,7 +100,7 @@ public class MptDeviceController extends BaseController {
     @Log(title = "设备信息管理", businessType = BusinessType.EXPORT)
     @RequiresPermissions("completeVehicle:vehicle:device:export")
     @PostMapping("/export")
-    public void export(HttpServletResponse response, DeviceVo device) {
+    public void export(HttpServletResponse response, DeviceRequest device) {
         log.info("管理后台用户[{}]导出设备信息", SecurityUtils.getUsername());
     }
 
@@ -111,7 +112,7 @@ public class MptDeviceController extends BaseController {
      */
     @RequiresPermissions("completeVehicle:vehicle:device:query")
     @GetMapping(value = "/{deviceId}")
-    public ApiResponse<DeviceVo> getInfo(@PathVariable Long deviceId) {
+    public ApiResponse<DeviceResponse> getInfo(@PathVariable Long deviceId) {
         log.info("管理后台用户[{}]根据设备信息ID[{}]获取设备信息", SecurityUtils.getUsername(), deviceId);
         return ApiResponse.ok(MptDeviceAssembler.INSTANCE.fromDto(deviceAppService.getDeviceById(deviceId)));
     }
@@ -125,12 +126,12 @@ public class MptDeviceController extends BaseController {
     @Log(title = "设备信息管理", businessType = BusinessType.INSERT)
     @RequiresPermissions("completeVehicle:vehicle:device:add")
     @PostMapping
-    public ApiResponse<Void> add(@Validated @RequestBody DeviceVo device) {
+    public ApiResponse<Void> add(@Validated @RequestBody DeviceRequest device) {
         log.info("管理后台用户[{}]新增设备信息[{}]", SecurityUtils.getUsername(), device.getCode());
         if (!deviceAppService.checkCodeUnique(device.getId(), device.getCode())) {
             return ApiResponse.fail("新增设备信息'" + device.getCode() + "'失败，设备信息代码已存在");
         }
-        deviceAppService.createDevice(MptDeviceAssembler.INSTANCE.toDto(device), SecurityUtils.getUserId().toString());
+        deviceAppService.createDevice(MptDeviceAssembler.INSTANCE.toCmd(device), SecurityUtils.getUserId().toString());
         return ApiResponse.ok();
     }
 
@@ -143,12 +144,12 @@ public class MptDeviceController extends BaseController {
     @Log(title = "设备信息管理", businessType = BusinessType.UPDATE)
     @RequiresPermissions("completeVehicle:vehicle:device:edit")
     @PutMapping
-    public ApiResponse<Void> edit(@Validated @RequestBody DeviceVo device) {
+    public ApiResponse<Void> edit(@Validated @RequestBody DeviceRequest device) {
         log.info("管理后台用户[{}]修改保存设备信息[{}]", SecurityUtils.getUsername(), device.getCode());
         if (!deviceAppService.checkCodeUnique(device.getId(), device.getCode())) {
             return ApiResponse.fail("修改保存设备信息'" + device.getCode() + "'失败，设备信息代码已存在");
         }
-        deviceAppService.modifyDevice(MptDeviceAssembler.INSTANCE.toDto(device), SecurityUtils.getUserId().toString());
+        deviceAppService.modifyDevice(MptDeviceAssembler.INSTANCE.toCmd(device), SecurityUtils.getUserId().toString());
         return ApiResponse.ok();
     }
 

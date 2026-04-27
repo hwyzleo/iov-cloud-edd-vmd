@@ -1,9 +1,11 @@
 package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler;
 
-import net.hwyz.iov.cloud.edd.vmd.api.vo.SeriesVo;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.SeriesDto;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.SeriesRequest;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.SeriesResponse;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.SeriesDto;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.SeriesCmd;
 
 import java.util.List;
 
@@ -23,7 +25,7 @@ public interface MptSeriesAssembler {
      * @param seriesDto DTO
      * @return VO
      */
-    SeriesVo fromDto(SeriesDto seriesDto);
+    SeriesResponse fromDto(SeriesDto seriesDto);
 
     /**
      * VO 转 DTO
@@ -31,7 +33,15 @@ public interface MptSeriesAssembler {
      * @param seriesVo VO
      * @return DTO
      */
-    SeriesDto toDto(SeriesVo seriesVo);
+    SeriesDto toDto(SeriesRequest seriesVo);
+    /**
+     * VO 转命令
+     *
+     * @param vo VO
+     * @return 命令
+     */
+    SeriesCmd toCmd(SeriesRequest vo);
+
 
     /**
      * DTO 列表转 VO 列表
@@ -39,6 +49,6 @@ public interface MptSeriesAssembler {
      * @param seriesDtoList DTO 列表
      * @return VO 列表
      */
-    List<SeriesVo> fromDtoList(List<SeriesDto> seriesDtoList);
+    List<SeriesResponse> fromDtoList(List<SeriesDto> seriesDtoList);
 
 }

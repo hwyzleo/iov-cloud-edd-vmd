@@ -2,7 +2,7 @@ package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.controller.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.edd.vmd.api.vo.DeviceExService;
+import net.hwyz.iov.cloud.edd.vmd.api.vo.response.DeviceExResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.DeviceExServiceAssembler;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.DeviceAppService;
 import net.hwyz.iov.cloud.framework.common.bean.ApiResponse;
@@ -34,9 +34,9 @@ public class ServiceDeviceController extends BaseController {
      * @return 设备信息
      */
     @GetMapping("/{code}")
-    public ApiResponse<DeviceExService> getByCode(@PathVariable String code) {
+    public DeviceExResponse getByCode(@PathVariable String code) {
         log.info("内部服务请求根据设备代码[{}]查询设备信息", code);
-        return ApiResponse.ok(DeviceExServiceAssembler.INSTANCE.fromDomain(deviceAppService.getDeviceByCode(code)));
+        return DeviceExServiceAssembler.INSTANCE.fromDomain(deviceAppService.getDeviceByCode(code));
     }
 
     /**
@@ -45,9 +45,9 @@ public class ServiceDeviceController extends BaseController {
      * @return 设备信息列表
      */
     @GetMapping("/listAllFota")
-    public ApiResponse<List<DeviceExService>> listAllFota() {
+    public List<DeviceExResponse> listAllFota() {
         log.info("内部服务请求获取所有升级设备信息");
-        return ApiResponse.ok(DeviceExServiceAssembler.INSTANCE.fromDomainList(deviceAppService.listAllFota()));
+        return DeviceExServiceAssembler.INSTANCE.fromDomainList(deviceAppService.listAllFota());
     }
 
 }

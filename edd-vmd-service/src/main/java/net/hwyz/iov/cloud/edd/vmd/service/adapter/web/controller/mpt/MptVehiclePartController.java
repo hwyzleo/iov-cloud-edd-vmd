@@ -3,10 +3,11 @@ package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.controller.mpt;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.edd.vmd.api.vo.VehiclePartVo;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.VehiclePartRequest;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.VehiclePartResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.MptVehiclePartAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.VehiclePartDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.VehiclePartQuery;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.VehiclePartDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.VehiclePartQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehiclePartAppService;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
 import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
@@ -41,7 +42,7 @@ public class MptVehiclePartController extends BaseController {
      */
     @RequiresPermissions("completeVehicle:vehicle:vehiclePart:list")
     @GetMapping(value = "/list")
-    public ApiResponse<PageResult<VehiclePartVo>> list(VehiclePartVo vehiclePart) {
+    public ApiResponse<PageResult<VehiclePartResponse>> list(VehiclePartRequest vehiclePart) {
         log.info("管理后台用户[{}]分页查询车辆零件", SecurityUtils.getUsername());
         startPage();
         VehiclePartQuery query = VehiclePartQuery.builder()
@@ -63,7 +64,7 @@ public class MptVehiclePartController extends BaseController {
     @Log(title = "车辆零件管理", businessType = BusinessType.EXPORT)
     @RequiresPermissions("completeVehicle:vehicle:vehiclePart:export")
     @PostMapping("/export")
-    public void export(HttpServletResponse response, VehiclePartVo vehiclePart) {
+    public void export(HttpServletResponse response, VehiclePartRequest vehiclePart) {
         log.info("管理后台用户[{}]导出车辆零件", SecurityUtils.getUsername());
     }
 
@@ -75,7 +76,7 @@ public class MptVehiclePartController extends BaseController {
      */
     @RequiresPermissions("completeVehicle:vehicle:vehiclePart:query")
     @GetMapping(value = "/{vehiclePartId}")
-    public ApiResponse<VehiclePartVo> getInfo(@PathVariable Long vehiclePartId) {
+    public ApiResponse<VehiclePartResponse> getInfo(@PathVariable Long vehiclePartId) {
         log.info("管理后台用户[{}]根据车辆零件ID[{}]获取车辆零件", SecurityUtils.getUsername(), vehiclePartId);
         return ApiResponse.ok(MptVehiclePartAssembler.INSTANCE.fromDto(vehiclePartAppService.getVehiclePartById(vehiclePartId)));
     }
@@ -89,12 +90,12 @@ public class MptVehiclePartController extends BaseController {
     @Log(title = "车辆零件管理", businessType = BusinessType.INSERT)
     @RequiresPermissions("completeVehicle:vehicle:vehiclePart:add")
     @PostMapping
-    public ApiResponse<Void> add(@Validated @RequestBody VehiclePartVo vehiclePart) {
+    public ApiResponse<Void> add(@Validated @RequestBody VehiclePartRequest vehiclePart) {
         log.info("管理后台用户[{}]新增车辆[{}]零件[{}:{}]", SecurityUtils.getUsername(), vehiclePart.getVin(), vehiclePart.getPn(), vehiclePart.getSn());
         if (!vehiclePartAppService.checkPnAndSnUnique(vehiclePart.getId(), vehiclePart.getPn(), vehiclePart.getSn())) {
             return ApiResponse.fail("新增车辆零件'" + vehiclePart.getPn() + "'失败，车辆零件已存在");
         }
-        vehiclePartAppService.createVehiclePart(MptVehiclePartAssembler.INSTANCE.toDto(vehiclePart), SecurityUtils.getUserId().toString());
+        vehiclePartAppService.createVehiclePart(MptVehiclePartAssembler.INSTANCE.toCmd(vehiclePart), SecurityUtils.getUserId().toString());
         return ApiResponse.ok();
     }
 
@@ -107,12 +108,12 @@ public class MptVehiclePartController extends BaseController {
     @Log(title = "车辆零件管理", businessType = BusinessType.UPDATE)
     @RequiresPermissions("completeVehicle:vehicle:vehiclePart:edit")
     @PutMapping
-    public ApiResponse<Void> edit(@Validated @RequestBody VehiclePartVo vehiclePart) {
+    public ApiResponse<Void> edit(@Validated @RequestBody VehiclePartRequest vehiclePart) {
         log.info("管理后台用户[{}]修改保存车辆[{}]零件[{}:{}]", SecurityUtils.getUsername(), vehiclePart.getVin(), vehiclePart.getPn(), vehiclePart.getSn());
         if (!vehiclePartAppService.checkPnAndSnUnique(vehiclePart.getId(), vehiclePart.getPn(), vehiclePart.getSn())) {
             return ApiResponse.fail("修改保存车辆零件'" + vehiclePart.getPn() + "'失败，车辆零件已存在");
         }
-        vehiclePartAppService.modifyVehiclePart(MptVehiclePartAssembler.INSTANCE.toDto(vehiclePart), SecurityUtils.getUserId().toString());
+        vehiclePartAppService.modifyVehiclePart(MptVehiclePartAssembler.INSTANCE.toCmd(vehiclePart), SecurityUtils.getUserId().toString());
         return ApiResponse.ok();
     }
 

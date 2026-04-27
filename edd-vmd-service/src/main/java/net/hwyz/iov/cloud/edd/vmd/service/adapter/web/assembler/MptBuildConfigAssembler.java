@@ -1,9 +1,11 @@
 package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler;
 
-import net.hwyz.iov.cloud.edd.vmd.api.vo.BuildConfigVo;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.BuildConfigDto;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.BuildConfigRequest;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.BuildConfigResponse;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.BuildConfigDto;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.BuildConfigCmd;
 
 import java.util.List;
 
@@ -23,7 +25,7 @@ public interface MptBuildConfigAssembler {
      * @param buildConfigDto DTO
      * @return VO
      */
-    BuildConfigVo fromDto(BuildConfigDto buildConfigDto);
+    BuildConfigResponse fromDto(BuildConfigDto buildConfigDto);
 
     /**
      * VO 转 DTO
@@ -31,7 +33,15 @@ public interface MptBuildConfigAssembler {
      * @param buildConfigVo VO
      * @return DTO
      */
-    BuildConfigDto toDto(BuildConfigVo buildConfigVo);
+    BuildConfigDto toDto(BuildConfigRequest buildConfigVo);
+    /**
+     * VO 转命令
+     *
+     * @param vo VO
+     * @return 命令
+     */
+    BuildConfigCmd toCmd(BuildConfigRequest vo);
+
 
     /**
      * DTO 列表转 VO 列表
@@ -39,6 +49,6 @@ public interface MptBuildConfigAssembler {
      * @param buildConfigDtoList DTO 列表
      * @return VO 列表
      */
-    List<BuildConfigVo> fromDtoList(List<BuildConfigDto> buildConfigDtoList);
+    List<BuildConfigResponse> fromDtoList(List<BuildConfigDto> buildConfigDtoList);
 
 }

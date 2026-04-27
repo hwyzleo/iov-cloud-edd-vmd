@@ -1,6 +1,7 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.assembler;
 
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.BaseModelDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.BaseModelCmd;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.BaseModelDto;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.BaseModel;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
@@ -32,6 +33,14 @@ public interface BaseModelAssembler {
      * @return 领域对象
      */
     BaseModel toDomain(BaseModelDto baseModelDto);
+
+    /**
+     * 命令转领域对象
+     *
+     * @param baseModelCmd 命令
+     * @return 领域对象
+     */
+    BaseModel toDomain(BaseModelCmd baseModelCmd);
 
     /**
      * 领域对象列表转 DTO 列表

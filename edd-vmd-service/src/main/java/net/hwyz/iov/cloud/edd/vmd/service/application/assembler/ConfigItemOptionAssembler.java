@@ -1,9 +1,10 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.assembler;
 
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.ConfigItemOptionDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ConfigItemOptionDto;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.ConfigItemOption;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.ConfigItemOptionCmd;
 
 import java.util.List;
 
@@ -32,6 +33,14 @@ public interface ConfigItemOptionAssembler {
      * @return 领域对象
      */
     ConfigItemOption toDomain(ConfigItemOptionDto configItemOptionDto);
+    /**
+     * 命令转领域对象
+     *
+     * @param cmd 命令
+     * @return 领域对象
+     */
+    ConfigItemOption toDomain(ConfigItemOptionCmd cmd);
+
 
     /**
      * 领域对象列表转 DTO 列表

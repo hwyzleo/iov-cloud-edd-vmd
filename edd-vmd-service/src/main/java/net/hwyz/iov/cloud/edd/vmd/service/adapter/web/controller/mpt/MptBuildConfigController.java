@@ -3,10 +3,11 @@ package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.controller.mpt;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.edd.vmd.api.vo.BuildConfigVo;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.BuildConfigRequest;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.BuildConfigResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.MptBuildConfigAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.BuildConfigDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.BuildConfigQuery;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.BuildConfigDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.BuildConfigQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.BuildConfigAppService;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
 import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
@@ -41,7 +42,7 @@ public class MptBuildConfigController extends BaseController {
      */
     @RequiresPermissions("completeVehicle:product:buildConfig:list")
     @GetMapping(value = "/list")
-    public ApiResponse<PageResult<BuildConfigVo>> list(BuildConfigVo buildConfig) {
+    public ApiResponse<PageResult<BuildConfigResponse>> list(BuildConfigRequest buildConfig) {
         log.info("管理后台用户[{}]分页查询生产配置信息", SecurityUtils.getUsername());
         startPage();
         BuildConfigQuery query = BuildConfigQuery.builder()
@@ -67,7 +68,7 @@ public class MptBuildConfigController extends BaseController {
     @Log(title = "生产配置管理", businessType = BusinessType.EXPORT)
     @RequiresPermissions("completeVehicle:product:buildConfig:export")
     @PostMapping("/export")
-    public void export(HttpServletResponse response, BuildConfigVo buildConfig) {
+    public void export(HttpServletResponse response, BuildConfigRequest buildConfig) {
         log.info("管理后台用户[{}]导出生产配置信息", SecurityUtils.getUsername());
     }
 
@@ -79,7 +80,7 @@ public class MptBuildConfigController extends BaseController {
      */
     @RequiresPermissions("completeVehicle:product:buildConfig:query")
     @GetMapping(value = "/{buildConfigId}")
-    public ApiResponse<BuildConfigVo> getInfo(@PathVariable Long buildConfigId) {
+    public ApiResponse<BuildConfigResponse> getInfo(@PathVariable Long buildConfigId) {
         log.info("管理后台用户[{}]根据生产配置ID[{}]获取生产配置信息", SecurityUtils.getUsername(), buildConfigId);
         return ApiResponse.ok(MptBuildConfigAssembler.INSTANCE.fromDto(buildConfigAppService.getBuildConfigById(buildConfigId)));
     }
@@ -93,12 +94,12 @@ public class MptBuildConfigController extends BaseController {
     @Log(title = "生产配置管理", businessType = BusinessType.INSERT)
     @RequiresPermissions("completeVehicle:product:buildConfig:add")
     @PostMapping
-    public ApiResponse<Void> add(@Validated @RequestBody BuildConfigVo buildConfig) {
+    public ApiResponse<Void> add(@Validated @RequestBody BuildConfigRequest buildConfig) {
         log.info("管理后台用户[{}]新增生产配置信息[{}]", SecurityUtils.getUsername(), buildConfig.getCode());
         if (!buildConfigAppService.checkCodeUnique(buildConfig.getId(), buildConfig.getCode())) {
             return ApiResponse.fail("新增生产配置'" + buildConfig.getCode() + "'失败，生产配置代码已存在");
         }
-        buildConfigAppService.createBuildConfig(MptBuildConfigAssembler.INSTANCE.toDto(buildConfig), SecurityUtils.getUserId().toString());
+        buildConfigAppService.createBuildConfig(MptBuildConfigAssembler.INSTANCE.toCmd(buildConfig), SecurityUtils.getUserId().toString());
         return ApiResponse.ok();
     }
 
@@ -111,12 +112,12 @@ public class MptBuildConfigController extends BaseController {
     @Log(title = "生产配置管理", businessType = BusinessType.UPDATE)
     @RequiresPermissions("completeVehicle:product:buildConfig:edit")
     @PutMapping
-    public ApiResponse<Void> edit(@Validated @RequestBody BuildConfigVo buildConfig) {
+    public ApiResponse<Void> edit(@Validated @RequestBody BuildConfigRequest buildConfig) {
         log.info("管理后台用户[{}]修改保存生产配置信息[{}]", SecurityUtils.getUsername(), buildConfig.getCode());
         if (!buildConfigAppService.checkCodeUnique(buildConfig.getId(), buildConfig.getCode())) {
             return ApiResponse.fail("修改保存生产配置'" + buildConfig.getCode() + "'失败，生产配置代码已存在");
         }
-        buildConfigAppService.modifyBuildConfig(MptBuildConfigAssembler.INSTANCE.toDto(buildConfig), SecurityUtils.getUserId().toString());
+        buildConfigAppService.modifyBuildConfig(MptBuildConfigAssembler.INSTANCE.toCmd(buildConfig), SecurityUtils.getUserId().toString());
         return ApiResponse.ok();
     }
 

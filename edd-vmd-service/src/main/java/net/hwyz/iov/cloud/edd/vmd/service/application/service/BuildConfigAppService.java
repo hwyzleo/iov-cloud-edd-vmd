@@ -4,14 +4,15 @@ import cn.hutool.core.util.ObjUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.BuildConfigAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.BuildConfigDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.BuildConfigQuery;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.BuildConfigDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.BuildConfigQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.BuildConfig;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBuildConfigRepository;
 import net.hwyz.iov.cloud.framework.common.util.ParamHelper;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Service;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.BuildConfigCmd;
 
 import java.util.HashMap;
 import java.util.List;
@@ -105,8 +106,8 @@ public class BuildConfigAppService {
      * @param userId        操作用户ID
      * @return 结果
      */
-    public int createBuildConfig(BuildConfigDto buildConfigDto, String userId) {
-        BuildConfig buildConfig = BuildConfigAssembler.INSTANCE.toDomain(buildConfigDto);
+    public int createBuildConfig(BuildConfigCmd buildConfigCmd, String userId) {
+        BuildConfig buildConfig = BuildConfigAssembler.INSTANCE.toDomain(buildConfigCmd);
         return vehBuildConfigRepository.insert(buildConfig);
     }
 
@@ -117,8 +118,8 @@ public class BuildConfigAppService {
      * @param userId        操作用户ID
      * @return 结果
      */
-    public int modifyBuildConfig(BuildConfigDto buildConfigDto, String userId) {
-        BuildConfig buildConfig = BuildConfigAssembler.INSTANCE.toDomain(buildConfigDto);
+    public int modifyBuildConfig(BuildConfigCmd buildConfigCmd, String userId) {
+        BuildConfig buildConfig = BuildConfigAssembler.INSTANCE.toDomain(buildConfigCmd);
         return vehBuildConfigRepository.update(buildConfig);
     }
 

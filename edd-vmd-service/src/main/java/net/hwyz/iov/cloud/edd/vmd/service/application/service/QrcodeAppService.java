@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.enums.QrcodeType;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.QrcodeAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.QrcodeDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.QrcodeDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.publish.QrcodePublish;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.factory.QrcodeFactory;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.aggregate.Qrcode;

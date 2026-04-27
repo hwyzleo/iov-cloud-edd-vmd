@@ -27,104 +27,88 @@ public class ServiceVehicleLifecycleController extends BaseController {
      * 记录第一次申请车联终端证书节点
      *
      * @param vin 车架号
-     * @return 结果
      */
     @PostMapping("/{vin}/recordFirstApplyTboxCertNode")
-    public ApiResponse<Void> recordFirstApplyTboxCertNode(@PathVariable String vin) {
+    public void recordFirstApplyTboxCertNode(@PathVariable String vin) {
         log.info("内部服务请求记录车辆[{}]第一次申请车联终端证书节点", vin);
         vehicleLifecycleAppService.recordFirstApplyTboxCertNode(vin);
-        return ApiResponse.ok();
     }
 
     /**
      * 记录第一次申请车联终端通讯密钥节点
      *
      * @param vin 车架号
-     * @return 结果
      */
     @PostMapping("/{vin}/recordFirstApplyTboxCommSkNode")
-    public ApiResponse<Void> recordFirstApplyTboxCommSkNode(@PathVariable String vin) {
+    public void recordFirstApplyTboxCommSkNode(@PathVariable String vin) {
         log.info("内部服务请求记录车辆[{}]第一次申请车联终端通讯密钥节点", vin);
         vehicleLifecycleAppService.recordFirstApplyTboxCommSkNode(vin);
-        return ApiResponse.ok();
     }
 
     /**
      * 记录第一次申请中央计算平台证书节点
      *
      * @param vin 车架号
-     * @return 结果
      */
     @PostMapping("/{vin}/recordFirstApplyCcpCertNode")
-    public ApiResponse<Void> recordFirstApplyCcpCertNode(@PathVariable String vin) {
+    public void recordFirstApplyCcpCertNode(@PathVariable String vin) {
         log.info("内部服务请求记录车辆[{}]第一次申请中央计算平台证书节点", vin);
         vehicleLifecycleAppService.recordFirstApplyCcpCertNode(vin);
-        return ApiResponse.ok();
     }
 
     /**
      * 记录第一次申请中央计算平台通讯密钥节点
      *
      * @param vin 车架号
-     * @return 结果
      */
     @PostMapping("/{vin}/recordFirstApplyCcpCommSkNode")
-    public ApiResponse<Void> recordFirstApplyCcpCommSkNode(@PathVariable String vin) {
+    public void recordFirstApplyCcpCommSkNode(@PathVariable String vin) {
         log.info("内部服务请求记录车辆[{}]第一次申请中央计算平台通讯密钥节点", vin);
         vehicleLifecycleAppService.recordFirstApplyCcpCommSkNode(vin);
-        return ApiResponse.ok();
     }
 
     /**
      * 记录第一次申请信息娱乐模块平台证书节点
      *
      * @param vin 车架号
-     * @return 结果
      */
     @PostMapping("/{vin}/recordFirstApplyIdcmCertNode")
-    public ApiResponse<Void> recordFirstApplyIdcmCertNode(@PathVariable String vin) {
+    public void recordFirstApplyIdcmCertNode(@PathVariable String vin) {
         log.info("内部服务请求记录车辆[{}]第一次申请信息娱乐模块平台证书节点", vin);
         vehicleLifecycleAppService.recordFirstApplyIdcmCertNode(vin);
-        return ApiResponse.ok();
     }
 
     /**
      * 记录第一次申请信息娱乐模块平台通讯密钥节点
      *
      * @param vin 车架号
-     * @return 结果
      */
     @PostMapping("/{vin}/recordFirstApplyIdcmCommSkNode")
-    public ApiResponse<Void> recordFirstApplyIdcmCommSkNode(@PathVariable String vin) {
+    public void recordFirstApplyIdcmCommSkNode(@PathVariable String vin) {
         log.info("内部服务请求记录车辆[{}]第一次申请信息娱乐模块平台通讯密钥节点", vin);
         vehicleLifecycleAppService.recordFirstApplyIdcmCommSkNode(vin);
-        return ApiResponse.ok();
     }
 
     /**
      * 记录第一次申请智驾模块平台证书节点
      *
      * @param vin 车架号
-     * @return 结果
      */
     @PostMapping("/{vin}/recordFirstApplyAdcmCertNode")
-    public ApiResponse<Void> recordFirstApplyAdcmCertNode(@PathVariable String vin) {
+    public void recordFirstApplyAdcmCertNode(@PathVariable String vin) {
         log.info("内部服务请求记录车辆[{}]第一次申请智驾模块平台证书节点", vin);
         vehicleLifecycleAppService.recordFirstApplyAdcmCertNode(vin);
-        return ApiResponse.ok();
     }
 
     /**
      * 记录第一次申请智驾模块平台通讯密钥节点
      *
      * @param vin 车架号
-     * @return 结果
      */
     @PostMapping("/{vin}/recordFirstApplyAdcmCommSkNode")
-    public ApiResponse<Void> recordFirstApplyAdcmCommSkNode(@PathVariable String vin) {
+    public void recordFirstApplyAdcmCommSkNode(@PathVariable String vin) {
         log.info("内部服务请求记录车辆[{}]第一次申请智驾模块平台通讯密钥节点", vin);
         vehicleLifecycleAppService.recordFirstApplyAdcmCommSkNode(vin);
-        return ApiResponse.ok();
     }
 
 }

@@ -1,9 +1,11 @@
 package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler;
 
-import net.hwyz.iov.cloud.edd.vmd.api.vo.VehicleImportDataVo;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.VehicleImportDataDto;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.VehicleImportDataRequest;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.VehicleImportDataResponse;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.VehicleImportDataDto;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.VehicleImportDataCmd;
 
 import java.util.List;
 
@@ -23,7 +25,7 @@ public interface MptVehicleImportDataAssembler {
      * @param vehicleImportDataDto 导入数据 DTO
      * @return 导入数据 VO
      */
-    VehicleImportDataVo fromDto(VehicleImportDataDto vehicleImportDataDto);
+    VehicleImportDataResponse fromDto(VehicleImportDataDto vehicleImportDataDto);
 
     /**
      * 导入数据 VO 转 DTO
@@ -31,7 +33,15 @@ public interface MptVehicleImportDataAssembler {
      * @param vehicleImportDataVo 导入数据 VO
      * @return 导入数据 DTO
      */
-    VehicleImportDataDto toDto(VehicleImportDataVo vehicleImportDataVo);
+    VehicleImportDataDto toDto(VehicleImportDataRequest vehicleImportDataVo);
+    /**
+     * VO 转命令
+     *
+     * @param vo VO
+     * @return 命令
+     */
+    VehicleImportDataCmd toCmd(VehicleImportDataRequest vo);
+
 
     /**
      * 导入数据 DTO 列表转 VO 列表
@@ -39,6 +49,6 @@ public interface MptVehicleImportDataAssembler {
      * @param vehicleImportDataDtoList 导入数据 DTO 列表
      * @return 导入数据 VO 列表
      */
-    List<VehicleImportDataVo> fromDtoList(List<VehicleImportDataDto> vehicleImportDataDtoList);
+    List<VehicleImportDataResponse> fromDtoList(List<VehicleImportDataDto> vehicleImportDataDtoList);
 
 }

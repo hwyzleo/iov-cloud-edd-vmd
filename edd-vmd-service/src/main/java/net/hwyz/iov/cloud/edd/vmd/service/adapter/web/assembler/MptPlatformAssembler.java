@@ -1,9 +1,11 @@
 package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler;
 
-import net.hwyz.iov.cloud.edd.vmd.api.vo.PlatformVo;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.PlatformDto;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.PlatformRequest;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.PlatformResponse;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.PlatformDto;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.PlatformCmd;
 
 import java.util.List;
 
@@ -23,7 +25,7 @@ public interface MptPlatformAssembler {
      * @param platformDto DTO
      * @return VO
      */
-    PlatformVo fromDto(PlatformDto platformDto);
+    PlatformResponse fromDto(PlatformDto platformDto);
 
     /**
      * VO 转 DTO
@@ -31,7 +33,15 @@ public interface MptPlatformAssembler {
      * @param platformVo VO
      * @return DTO
      */
-    PlatformDto toDto(PlatformVo platformVo);
+    PlatformDto toDto(PlatformRequest platformVo);
+    /**
+     * VO 转命令
+     *
+     * @param vo VO
+     * @return 命令
+     */
+    PlatformCmd toCmd(PlatformRequest vo);
+
 
     /**
      * DTO 列表转 VO 列表
@@ -39,6 +49,6 @@ public interface MptPlatformAssembler {
      * @param platformDtoList DTO 列表
      * @return VO 列表
      */
-    List<PlatformVo> fromDtoList(List<PlatformDto> platformDtoList);
+    List<PlatformResponse> fromDtoList(List<PlatformDto> platformDtoList);
 
 }

@@ -6,10 +6,10 @@ import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.ConfigItemAssembler;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.ConfigItemMappingAssembler;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.ConfigItemOptionAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.ConfigItemDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.ConfigItemMappingDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.ConfigItemOptionDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.ConfigItemQuery;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ConfigItemDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ConfigItemMappingDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ConfigItemOptionDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.ConfigItemQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.ConfigItem;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.ConfigItemMapping;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.ConfigItemOption;
@@ -17,6 +17,9 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.ConfigItemRepository
 import net.hwyz.iov.cloud.framework.common.util.ParamHelper;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Service;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.ConfigItemCmd;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.ConfigItemOptionCmd;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.ConfigItemMappingCmd;
 
 import java.util.HashMap;
 import java.util.List;
@@ -95,8 +98,8 @@ public class ConfigItemAppService {
      * @param userId        操作用户ID
      * @return 结果
      */
-    public int createConfigItem(ConfigItemDto configItemDto, String userId) {
-        ConfigItem configItem = ConfigItemAssembler.INSTANCE.toDomain(configItemDto);
+    public int createConfigItem(ConfigItemCmd configItemCmd, String userId) {
+        ConfigItem configItem = ConfigItemAssembler.INSTANCE.toDomain(configItemCmd);
         return configItemRepository.insert(configItem);
     }
 
@@ -107,8 +110,8 @@ public class ConfigItemAppService {
      * @param userId        操作用户ID
      * @return 结果
      */
-    public int modifyConfigItem(ConfigItemDto configItemDto, String userId) {
-        ConfigItem configItem = ConfigItemAssembler.INSTANCE.toDomain(configItemDto);
+    public int modifyConfigItem(ConfigItemCmd configItemCmd, String userId) {
+        ConfigItem configItem = ConfigItemAssembler.INSTANCE.toDomain(configItemCmd);
         return configItemRepository.update(configItem);
     }
 
@@ -154,8 +157,8 @@ public class ConfigItemAppService {
      * @param userId    操作用户ID
      * @return 结果
      */
-    public int createOption(ConfigItemOptionDto optionDto, String userId) {
-        ConfigItemOption option = ConfigItemOptionAssembler.INSTANCE.toDomain(optionDto);
+    public int createOption(ConfigItemOptionCmd optionCmd, String userId) {
+        ConfigItemOption option = ConfigItemOptionAssembler.INSTANCE.toDomain(optionCmd);
         return configItemRepository.insertOption(option);
     }
 
@@ -166,8 +169,8 @@ public class ConfigItemAppService {
      * @param userId    操作用户ID
      * @return 结果
      */
-    public int modifyOption(ConfigItemOptionDto optionDto, String userId) {
-        ConfigItemOption option = ConfigItemOptionAssembler.INSTANCE.toDomain(optionDto);
+    public int modifyOption(ConfigItemOptionCmd optionCmd, String userId) {
+        ConfigItemOption option = ConfigItemOptionAssembler.INSTANCE.toDomain(optionCmd);
         return configItemRepository.updateOption(option);
     }
 
@@ -213,8 +216,8 @@ public class ConfigItemAppService {
      * @param userId     操作用户ID
      * @return 结果
      */
-    public int createMapping(ConfigItemMappingDto mappingDto, String userId) {
-        ConfigItemMapping mapping = ConfigItemMappingAssembler.INSTANCE.toDomain(mappingDto);
+    public int createMapping(ConfigItemMappingCmd mappingCmd, String userId) {
+        ConfigItemMapping mapping = ConfigItemMappingAssembler.INSTANCE.toDomain(mappingCmd);
         return configItemRepository.insertMapping(mapping);
     }
 
@@ -225,8 +228,8 @@ public class ConfigItemAppService {
      * @param userId     操作用户ID
      * @return 结果
      */
-    public int modifyMapping(ConfigItemMappingDto mappingDto, String userId) {
-        ConfigItemMapping mapping = ConfigItemMappingAssembler.INSTANCE.toDomain(mappingDto);
+    public int modifyMapping(ConfigItemMappingCmd mappingCmd, String userId) {
+        ConfigItemMapping mapping = ConfigItemMappingAssembler.INSTANCE.toDomain(mappingCmd);
         return configItemRepository.updateMapping(mapping);
     }
 

@@ -3,10 +3,11 @@ package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.controller.mpt;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.edd.vmd.api.vo.BrandVo;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.MptBrandAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.BrandDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.BrandQuery;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.BrandRequest;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.BrandResponse;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.BrandQuery;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.BrandDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.BrandAppService;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
 import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
@@ -41,7 +42,7 @@ public class MptBrandController extends BaseController {
      */
     @RequiresPermissions("completeVehicle:product:brand:list")
     @GetMapping(value = "/list")
-    public ApiResponse<PageResult<BrandVo>> list(BrandVo brand) {
+    public ApiResponse<PageResult<BrandResponse>> list(BrandRequest brand) {
         log.info("管理后台用户[{}]分页查询车辆品牌信息", SecurityUtils.getUsername());
         startPage();
         BrandQuery query = BrandQuery.builder()
@@ -63,7 +64,7 @@ public class MptBrandController extends BaseController {
     @Log(title = "车辆品牌管理", businessType = BusinessType.EXPORT)
     @RequiresPermissions("completeVehicle:product:brand:export")
     @PostMapping("/export")
-    public void export(HttpServletResponse response, BrandVo brand) {
+    public void export(HttpServletResponse response, BrandRequest brand) {
         log.info("管理后台用户[{}]导出车辆品牌信息", SecurityUtils.getUsername());
     }
 
@@ -75,7 +76,7 @@ public class MptBrandController extends BaseController {
      */
     @RequiresPermissions("completeVehicle:product:brand:query")
     @GetMapping(value = "/{brandId}")
-    public ApiResponse<BrandVo> getInfo(@PathVariable Long brandId) {
+    public ApiResponse<BrandResponse> getInfo(@PathVariable Long brandId) {
         log.info("管理后台用户[{}]根据车辆品牌ID[{}]获取车辆品牌信息", SecurityUtils.getUsername(), brandId);
         return ApiResponse.ok(MptBrandAssembler.INSTANCE.fromDto(brandAppService.getBrandById(brandId)));
     }
@@ -89,12 +90,12 @@ public class MptBrandController extends BaseController {
     @Log(title = "车辆品牌管理", businessType = BusinessType.INSERT)
     @RequiresPermissions("completeVehicle:product:brand:add")
     @PostMapping
-    public ApiResponse<Void> add(@Validated @RequestBody BrandVo brand) {
+    public ApiResponse<Void> add(@Validated @RequestBody BrandRequest brand) {
         log.info("管理后台用户[{}]新增车辆品牌信息[{}]", SecurityUtils.getUsername(), brand.getCode());
         if (!brandAppService.checkCodeUnique(brand.getId(), brand.getCode())) {
             return ApiResponse.fail("新增车辆品牌'" + brand.getCode() + "'失败，车辆品牌代码已存在");
         }
-        brandAppService.createBrand(MptBrandAssembler.INSTANCE.toDto(brand), SecurityUtils.getUserId().toString());
+        brandAppService.createBrand(MptBrandAssembler.INSTANCE.toCmd(brand), SecurityUtils.getUserId().toString());
         return ApiResponse.ok();
     }
 
@@ -107,12 +108,12 @@ public class MptBrandController extends BaseController {
     @Log(title = "车辆品牌管理", businessType = BusinessType.UPDATE)
     @RequiresPermissions("completeVehicle:product:brand:edit")
     @PutMapping
-    public ApiResponse<Void> edit(@Validated @RequestBody BrandVo brand) {
+    public ApiResponse<Void> edit(@Validated @RequestBody BrandRequest brand) {
         log.info("管理后台用户[{}]修改保存车辆品牌信息[{}]", SecurityUtils.getUsername(), brand.getCode());
         if (!brandAppService.checkCodeUnique(brand.getId(), brand.getCode())) {
             return ApiResponse.fail("修改保存车辆品牌'" + brand.getCode() + "'失败，车辆品牌代码已存在");
         }
-        brandAppService.modifyBrand(MptBrandAssembler.INSTANCE.toDto(brand), SecurityUtils.getUserId().toString());
+        brandAppService.modifyBrand(MptBrandAssembler.INSTANCE.toCmd(brand), SecurityUtils.getUserId().toString());
         return ApiResponse.ok();
     }
 

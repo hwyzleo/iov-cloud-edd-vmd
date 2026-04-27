@@ -4,13 +4,14 @@ import cn.hutool.core.util.ObjUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.PartAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.PartDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.PartQuery;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.PartDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.PartQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Part;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartRepository;
 import net.hwyz.iov.cloud.framework.common.util.ParamHelper;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Service;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.PartCmd;
 
 import java.util.HashMap;
 import java.util.List;
@@ -103,8 +104,8 @@ public class PartAppService {
      * @param userId 操作用户ID
      * @return 结果
      */
-    public int createPart(PartDto partDto, String userId) {
-        Part part = PartAssembler.INSTANCE.toDomain(partDto);
+    public int createPart(PartCmd partCmd, String userId) {
+        Part part = PartAssembler.INSTANCE.toDomain(partCmd);
         return partRepository.insert(part);
     }
 
@@ -115,8 +116,8 @@ public class PartAppService {
      * @param userId 操作用户ID
      * @return 结果
      */
-    public int modifyPart(PartDto partDto, String userId) {
-        Part part = PartAssembler.INSTANCE.toDomain(partDto);
+    public int modifyPart(PartCmd partCmd, String userId) {
+        Part part = PartAssembler.INSTANCE.toDomain(partCmd);
         return partRepository.update(part);
     }
 

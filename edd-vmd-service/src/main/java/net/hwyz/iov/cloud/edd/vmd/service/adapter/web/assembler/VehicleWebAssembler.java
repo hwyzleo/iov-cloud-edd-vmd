@@ -1,7 +1,7 @@
 package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler;
 
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.VehicleResponse;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.VehicleDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.VehicleDto;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 

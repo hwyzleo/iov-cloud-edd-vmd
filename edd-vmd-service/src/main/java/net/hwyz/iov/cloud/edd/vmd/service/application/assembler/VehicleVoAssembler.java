@@ -1,7 +1,8 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.assembler;
 
-import net.hwyz.iov.cloud.edd.vmd.api.vo.VehicleVo;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.VehicleDto;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.VehicleRequest;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.VehicleResponse;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.VehicleDto;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleBasicInfo;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
@@ -24,7 +25,7 @@ public interface VehicleVoAssembler {
      * @param vehicleBasicInfo 领域对象
      * @return 数据传输对象
      */
-    VehicleVo fromDomain(VehicleBasicInfo vehicleBasicInfo);
+    VehicleResponse fromDomain(VehicleBasicInfo vehicleBasicInfo);
 
     /**
      * 数据传输对象转领域对象
@@ -32,7 +33,7 @@ public interface VehicleVoAssembler {
      * @param vehicleVo 数据传输对象
      * @return 领域对象
      */
-    VehicleBasicInfo toDomain(VehicleVo vehicleVo);
+    VehicleBasicInfo toDomain(VehicleResponse vehicleVo);
 
     /**
      * 领域对象列表转数据传输对象列表
@@ -40,7 +41,7 @@ public interface VehicleVoAssembler {
      * @param vehicleBasicInfoList 领域对象列表
      * @return 数据传输对象列表
      */
-    List<VehicleVo> fromDomainList(List<VehicleBasicInfo> vehicleBasicInfoList);
+    List<VehicleResponse> fromDomainList(List<VehicleBasicInfo> vehicleBasicInfoList);
 
     /**
      * DTO 转数据传输对象
@@ -48,6 +49,6 @@ public interface VehicleVoAssembler {
      * @param vehicleDto DTO
      * @return 数据传输对象
      */
-    VehicleVo fromDto(VehicleDto vehicleDto);
+    VehicleResponse fromDto(VehicleDto vehicleDto);
 
 }

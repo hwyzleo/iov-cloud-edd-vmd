@@ -1,7 +1,7 @@
 package net.hwyz.iov.cloud.edd.vmd.api.service;
 
 import net.hwyz.iov.cloud.framework.common.constant.ServiceNameConstants;
-import net.hwyz.iov.cloud.edd.vmd.api.vo.DeviceExService;
+import net.hwyz.iov.cloud.edd.vmd.api.vo.response.DeviceExResponse;
 import net.hwyz.iov.cloud.edd.vmd.api.fallback.VmdDeviceServiceFallbackFactory;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -24,7 +24,7 @@ public interface VmdDeviceService {
      * @return 设备信息
      */
     @GetMapping("/{code}")
-    DeviceExService getByCode(@PathVariable String code);
+    DeviceExResponse getByCode(@PathVariable String code);
 
     /**
      * 获取所有升级设备信息
@@ -32,6 +32,6 @@ public interface VmdDeviceService {
      * @return 设备信息列表
      */
     @GetMapping("/listAllFota")
-    List<DeviceExService> listAllFota();
+    List<DeviceExResponse> listAllFota();
 
 }

@@ -6,14 +6,15 @@ import cn.hutool.json.JSONUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.VehicleImportDataAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.VehicleImportDataDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.VehicleImportDataQuery;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.VehicleImportDataDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.VehicleImportDataQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParser;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleImportData;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehImportDataRepository;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.VehicleImportDataCmd;
 
 import java.util.HashMap;
 import java.util.List;
@@ -104,8 +105,8 @@ public class VehicleImportDataAppService {
      * @param userId              操作用户ID
      * @return 结果
      */
-    public int createVehicleImportData(VehicleImportDataDto vehicleImportDataDto, String userId) {
-        VehicleImportData vehicleImportData = VehicleImportDataAssembler.INSTANCE.toDomain(vehicleImportDataDto);
+    public int createVehicleImportData(VehicleImportDataCmd vehicleImportDataCmd, String userId) {
+        VehicleImportData vehicleImportData = VehicleImportDataAssembler.INSTANCE.toDomain(vehicleImportDataCmd);
         vehicleImportData.setHandle(false);
         return vehImportDataRepository.insert(vehicleImportData);
     }
@@ -117,8 +118,8 @@ public class VehicleImportDataAppService {
      * @param userId              操作用户ID
      * @return 结果
      */
-    public int modifyVehicleImportData(VehicleImportDataDto vehicleImportDataDto, String userId) {
-        VehicleImportData vehicleImportData = VehicleImportDataAssembler.INSTANCE.toDomain(vehicleImportDataDto);
+    public int modifyVehicleImportData(VehicleImportDataCmd vehicleImportDataCmd, String userId) {
+        VehicleImportData vehicleImportData = VehicleImportDataAssembler.INSTANCE.toDomain(vehicleImportDataCmd);
         return vehImportDataRepository.update(vehicleImportData);
     }
 

@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.response.QrcodeResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.WebQrcodeAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.QrcodeDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.QrcodeDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.QrcodeAppService;
 import net.hwyz.iov.cloud.framework.common.bean.ApiResponse;
 import net.hwyz.iov.cloud.framework.web.controller.BaseController;

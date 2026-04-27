@@ -1,9 +1,11 @@
 package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler;
 
-import net.hwyz.iov.cloud.edd.vmd.api.vo.DeviceVo;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.DeviceDto;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.DeviceRequest;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.DeviceResponse;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.DeviceDto;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.DeviceCmd;
 
 import java.util.List;
 
@@ -23,7 +25,7 @@ public interface MptDeviceAssembler {
      * @param deviceDto DTO
      * @return VO
      */
-    DeviceVo fromDto(DeviceDto deviceDto);
+    DeviceResponse fromDto(DeviceDto deviceDto);
 
     /**
      * VO 转 DTO
@@ -31,7 +33,15 @@ public interface MptDeviceAssembler {
      * @param deviceVo VO
      * @return DTO
      */
-    DeviceDto toDto(DeviceVo deviceVo);
+    DeviceDto toDto(DeviceRequest deviceVo);
+    /**
+     * VO 转命令
+     *
+     * @param vo VO
+     * @return 命令
+     */
+    DeviceCmd toCmd(DeviceRequest vo);
+
 
     /**
      * DTO 列表转 VO 列表
@@ -39,6 +49,6 @@ public interface MptDeviceAssembler {
      * @param deviceDtoList DTO 列表
      * @return VO 列表
      */
-    List<DeviceVo> fromDtoList(List<DeviceDto> deviceDtoList);
+    List<DeviceResponse> fromDtoList(List<DeviceDto> deviceDtoList);
 
 }

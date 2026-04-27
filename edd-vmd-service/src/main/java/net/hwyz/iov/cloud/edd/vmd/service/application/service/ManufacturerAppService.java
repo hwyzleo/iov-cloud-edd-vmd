@@ -4,8 +4,9 @@ import cn.hutool.core.util.ObjUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.ManufacturerAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.ManufacturerDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.ManufacturerQuery;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.ManufacturerCmd;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ManufacturerDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.ManufacturerQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Manufacturer;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehManufacturerRepository;
@@ -97,24 +98,24 @@ public class ManufacturerAppService {
     /**
      * 新增生产厂商
      *
-     * @param manufacturerDto 生产厂商信息 DTO
+     * @param manufacturerCmd 生产厂商信息 CMD
      * @param userId          操作用户ID
      * @return 结果
      */
-    public int createManufacturer(ManufacturerDto manufacturerDto, String userId) {
-        Manufacturer manufacturer = ManufacturerAssembler.INSTANCE.toDomain(manufacturerDto);
+    public int createManufacturer(ManufacturerCmd manufacturerCmd, String userId) {
+        Manufacturer manufacturer = ManufacturerAssembler.INSTANCE.toDomain(manufacturerCmd);
         return vehManufacturerRepository.insert(manufacturer);
     }
 
     /**
      * 修改生产厂商
      *
-     * @param manufacturerDto 生产厂商信息 DTO
+     * @param manufacturerCmd 生产厂商信息 CMD
      * @param userId          操作用户ID
      * @return 结果
      */
-    public int modifyManufacturer(ManufacturerDto manufacturerDto, String userId) {
-        Manufacturer manufacturer = ManufacturerAssembler.INSTANCE.toDomain(manufacturerDto);
+    public int modifyManufacturer(ManufacturerCmd manufacturerCmd, String userId) {
+        Manufacturer manufacturer = ManufacturerAssembler.INSTANCE.toDomain(manufacturerCmd);
         return vehManufacturerRepository.update(manufacturer);
     }
 

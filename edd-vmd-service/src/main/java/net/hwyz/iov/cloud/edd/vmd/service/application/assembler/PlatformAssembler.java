@@ -1,9 +1,10 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.assembler;
 
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.PlatformDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.PlatformDto;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Platform;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.PlatformCmd;
 
 import java.util.List;
 
@@ -32,6 +33,14 @@ public interface PlatformAssembler {
      * @return 领域对象
      */
     Platform toDomain(PlatformDto platformDto);
+    /**
+     * 命令转领域对象
+     *
+     * @param cmd 命令
+     * @return 领域对象
+     */
+    Platform toDomain(PlatformCmd cmd);
+
 
     /**
      * 领域对象列表转 DTO 列表

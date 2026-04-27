@@ -4,13 +4,14 @@ import cn.hutool.core.util.ObjUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.DeviceAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.DeviceDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.DeviceQuery;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.DeviceDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.DeviceQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Device;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.DeviceRepository;
 import net.hwyz.iov.cloud.framework.common.util.ParamHelper;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Service;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.DeviceCmd;
 
 import java.util.HashMap;
 import java.util.List;
@@ -108,8 +109,8 @@ public class DeviceAppService {
      * @param userId   操作用户ID
      * @return 结果
      */
-    public int createDevice(DeviceDto deviceDto, String userId) {
-        Device device = DeviceAssembler.INSTANCE.toDomain(deviceDto);
+    public int createDevice(DeviceCmd deviceCmd, String userId) {
+        Device device = DeviceAssembler.INSTANCE.toDomain(deviceCmd);
         return deviceRepository.insert(device);
     }
 
@@ -120,8 +121,8 @@ public class DeviceAppService {
      * @param userId   操作用户ID
      * @return 结果
      */
-    public int modifyDevice(DeviceDto deviceDto, String userId) {
-        Device device = DeviceAssembler.INSTANCE.toDomain(deviceDto);
+    public int modifyDevice(DeviceCmd deviceCmd, String userId) {
+        Device device = DeviceAssembler.INSTANCE.toDomain(deviceCmd);
         return deviceRepository.update(device);
     }
 

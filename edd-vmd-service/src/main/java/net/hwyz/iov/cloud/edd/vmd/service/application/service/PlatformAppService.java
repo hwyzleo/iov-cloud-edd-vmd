@@ -4,8 +4,8 @@ import cn.hutool.core.util.ObjUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.PlatformAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.PlatformDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.PlatformQuery;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.PlatformDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.PlatformQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Platform;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehPlatformRepository;
@@ -13,6 +13,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehSeriesRepository;
 import net.hwyz.iov.cloud.framework.common.util.ParamHelper;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Service;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.PlatformCmd;
 
 import java.util.HashMap;
 import java.util.List;
@@ -116,8 +117,8 @@ public class PlatformAppService {
      * @param userId      操作用户ID
      * @return 结果
      */
-    public int createPlatform(PlatformDto platformDto, String userId) {
-        Platform platform = PlatformAssembler.INSTANCE.toDomain(platformDto);
+    public int createPlatform(PlatformCmd platformCmd, String userId) {
+        Platform platform = PlatformAssembler.INSTANCE.toDomain(platformCmd);
         return vehPlatformRepository.insert(platform);
     }
 
@@ -128,8 +129,8 @@ public class PlatformAppService {
      * @param userId      操作用户ID
      * @return 结果
      */
-    public int modifyPlatform(PlatformDto platformDto, String userId) {
-        Platform platform = PlatformAssembler.INSTANCE.toDomain(platformDto);
+    public int modifyPlatform(PlatformCmd platformCmd, String userId) {
+        Platform platform = PlatformAssembler.INSTANCE.toDomain(platformCmd);
         return vehPlatformRepository.update(platform);
     }
 

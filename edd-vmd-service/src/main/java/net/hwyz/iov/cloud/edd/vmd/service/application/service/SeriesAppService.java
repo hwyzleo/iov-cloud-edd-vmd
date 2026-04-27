@@ -4,8 +4,8 @@ import cn.hutool.core.util.ObjUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.SeriesAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.SeriesDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.SeriesQuery;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.SeriesDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.SeriesQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Series;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehModelRepository;
@@ -13,6 +13,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehSeriesRepository;
 import net.hwyz.iov.cloud.framework.common.util.ParamHelper;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Service;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.SeriesCmd;
 
 import java.util.HashMap;
 import java.util.List;
@@ -117,8 +118,8 @@ public class SeriesAppService {
      * @param userId    操作用户ID
      * @return 结果
      */
-    public int createSeries(SeriesDto seriesDto, String userId) {
-        Series series = SeriesAssembler.INSTANCE.toDomain(seriesDto);
+    public int createSeries(SeriesCmd seriesCmd, String userId) {
+        Series series = SeriesAssembler.INSTANCE.toDomain(seriesCmd);
         return vehSeriesRepository.insert(series);
     }
 
@@ -129,8 +130,8 @@ public class SeriesAppService {
      * @param userId    操作用户ID
      * @return 结果
      */
-    public int modifySeries(SeriesDto seriesDto, String userId) {
-        Series series = SeriesAssembler.INSTANCE.toDomain(seriesDto);
+    public int modifySeries(SeriesCmd seriesCmd, String userId) {
+        Series series = SeriesAssembler.INSTANCE.toDomain(seriesCmd);
         return vehSeriesRepository.update(series);
     }
 

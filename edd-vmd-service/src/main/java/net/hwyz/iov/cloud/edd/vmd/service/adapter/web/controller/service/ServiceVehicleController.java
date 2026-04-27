@@ -2,8 +2,8 @@ package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.controller.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.edd.vmd.api.vo.VehicleExService;
-import net.hwyz.iov.cloud.edd.vmd.api.vo.VehicleOrderExService;
+import net.hwyz.iov.cloud.edd.vmd.api.vo.response.VehicleExResponse;
+import net.hwyz.iov.cloud.edd.vmd.api.vo.request.VehicleOrderExRequest;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.VmdVehicleExServiceAssembler;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleAppService;
 import net.hwyz.iov.cloud.framework.common.bean.ApiResponse;
@@ -29,13 +29,11 @@ public class ServiceVehicleController extends BaseController {
      *
      * @param vin          车架号
      * @param vehicleOrder 车辆订单
-     * @return 结果
      */
     @PostMapping("/{vin}/action/bindOrder")
-    public ApiResponse<Void> bindOrder(@PathVariable String vin, @RequestBody @Validated VehicleOrderExService vehicleOrder) {
+    public void bindOrder(@PathVariable String vin, @RequestBody @Validated VehicleOrderExRequest vehicleOrder) {
         log.info("内部服务请求车辆[{}]绑定订单[{}]", vin, vehicleOrder.getOrderNum());
         vehicleAppService.bindOrder(vin, vehicleOrder.getOrderNum());
-        return ApiResponse.ok();
     }
 
     /**
@@ -45,9 +43,9 @@ public class ServiceVehicleController extends BaseController {
      * @return 车辆信息
      */
     @GetMapping("/{vin}")
-    public ApiResponse<VehicleExService> getByVin(@PathVariable String vin) {
+    public VehicleExResponse getByVin(@PathVariable String vin) {
         log.info("内部服务请求根据车架号[{}]查询车辆信息", vin);
-        return ApiResponse.ok(VmdVehicleExServiceAssembler.INSTANCE.fromDomain(vehicleAppService.getVehicleBasicInfoByVin(vin)));
+        return VmdVehicleExServiceAssembler.INSTANCE.fromDomain(vehicleAppService.getVehicleBasicInfoByVin(vin));
     }
 
 }

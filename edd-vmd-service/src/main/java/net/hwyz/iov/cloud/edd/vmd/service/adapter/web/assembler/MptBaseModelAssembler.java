@@ -1,9 +1,13 @@
 package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler;
 
-import net.hwyz.iov.cloud.edd.vmd.api.vo.BaseModelFeatureCodeVo;
-import net.hwyz.iov.cloud.edd.vmd.api.vo.BaseModelVo;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.BaseModelDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.BaseModelFeatureCodeDto;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.BaseModelFeatureCodeRequest;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.BaseModelRequest;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.BaseModelFeatureCodeResponse;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.BaseModelResponse;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.BaseModelCmd;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.BaseModelFeatureCodeCmd;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.BaseModelDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.BaseModelFeatureCodeDto;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 
@@ -20,51 +24,51 @@ public interface MptBaseModelAssembler {
     MptBaseModelAssembler INSTANCE = Mappers.getMapper(MptBaseModelAssembler.class);
 
     /**
-     * DTO 转 VO
+     * DTO 转 Response
      *
      * @param baseModelDto DTO
-     * @return VO
+     * @return Response
      */
-    BaseModelVo fromDto(BaseModelDto baseModelDto);
+    BaseModelResponse fromDto(BaseModelDto baseModelDto);
 
     /**
-     * VO 转 DTO
+     * Request 转命令
      *
-     * @param baseModelVo VO
-     * @return DTO
+     * @param baseModelRequest Request
+     * @return 命令
      */
-    BaseModelDto toDto(BaseModelVo baseModelVo);
+    BaseModelCmd toCmd(BaseModelRequest baseModelRequest);
 
     /**
-     * DTO 列表转 VO 列表
+     * DTO 列表转 Response 列表
      *
      * @param baseModelDtoList DTO 列表
-     * @return VO 列表
+     * @return Response 列表
      */
-    List<BaseModelVo> fromDtoList(List<BaseModelDto> baseModelDtoList);
+    List<BaseModelResponse> fromDtoList(List<BaseModelDto> baseModelDtoList);
 
     /**
-     * 特征值 DTO 转 VO
+     * 特征值 DTO 转 Response
      *
      * @param baseModelFeatureCodeDto 特征值 DTO
-     * @return 特征值 VO
+     * @return 特征值 Response
      */
-    BaseModelFeatureCodeVo fromFeatureCodeDto(BaseModelFeatureCodeDto baseModelFeatureCodeDto);
+    BaseModelFeatureCodeResponse fromFeatureCodeDto(BaseModelFeatureCodeDto baseModelFeatureCodeDto);
 
     /**
-     * 特征值 VO 转 DTO
+     * 特征值 Request 转命令
      *
-     * @param baseModelFeatureCodeVo 特征值 VO
-     * @return 特征值 DTO
+     * @param baseModelFeatureCodeRequest 特征值 Request
+     * @return 特征值命令
      */
-    BaseModelFeatureCodeDto toFeatureCodeDto(BaseModelFeatureCodeVo baseModelFeatureCodeVo);
+    BaseModelFeatureCodeCmd toFeatureCodeCmd(BaseModelFeatureCodeRequest baseModelFeatureCodeRequest);
 
     /**
-     * 特征值 DTO 列表转 VO 列表
+     * 特征值 DTO 列表转 Response 列表
      *
      * @param baseModelFeatureCodeDtoList 特征值 DTO 列表
-     * @return 特征值 VO 列表
+     * @return 特征值 Response 列表
      */
-    List<BaseModelFeatureCodeVo> fromFeatureCodeDtoList(List<BaseModelFeatureCodeDto> baseModelFeatureCodeDtoList);
+    List<BaseModelFeatureCodeResponse> fromFeatureCodeDtoList(List<BaseModelFeatureCodeDto> baseModelFeatureCodeDtoList);
 
 }

@@ -1,6 +1,6 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.assembler;
 
-import net.hwyz.iov.cloud.edd.vmd.api.vo.DeviceExService;
+import net.hwyz.iov.cloud.edd.vmd.api.vo.response.DeviceExResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Device;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
@@ -23,7 +23,7 @@ public interface DeviceExServiceAssembler {
      * @param device 领域对象
      * @return 对外服务对象
      */
-    DeviceExService fromDomain(Device device);
+    DeviceExResponse fromDomain(Device device);
 
     /**
      * 对外服务对象转领域对象
@@ -31,7 +31,7 @@ public interface DeviceExServiceAssembler {
      * @param deviceExService 对外服务对象
      * @return 领域对象
      */
-    Device toDomain(DeviceExService deviceExService);
+    Device toDomain(DeviceExResponse deviceExService);
 
     /**
      * 领域对象列表转对外服务对象列表
@@ -39,6 +39,6 @@ public interface DeviceExServiceAssembler {
      * @param deviceList 领域对象列表
      * @return 对外服务对象列表
      */
-    List<DeviceExService> fromDomainList(List<Device> deviceList);
+    List<DeviceExResponse> fromDomainList(List<Device> deviceList);
 
 }

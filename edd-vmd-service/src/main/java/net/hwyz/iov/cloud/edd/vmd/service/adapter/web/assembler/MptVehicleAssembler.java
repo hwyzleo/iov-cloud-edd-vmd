@@ -1,7 +1,8 @@
 package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler;
 
-import net.hwyz.iov.cloud.edd.vmd.api.vo.VehicleVo;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.VehicleDto;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.VehicleRequest;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.VehicleResponse;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.VehicleDto;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 
@@ -23,7 +24,7 @@ public interface MptVehicleAssembler {
      * @param vehicleDto DTO
      * @return VO
      */
-    VehicleVo fromDto(VehicleDto vehicleDto);
+    VehicleResponse fromDto(VehicleDto vehicleDto);
 
     /**
      * DTO 列表转 VO 列表
@@ -31,6 +32,6 @@ public interface MptVehicleAssembler {
      * @param vehicleDtoList DTO 列表
      * @return VO 列表
      */
-    List<VehicleVo> fromDtoList(List<VehicleDto> vehicleDtoList);
+    List<VehicleResponse> fromDtoList(List<VehicleDto> vehicleDtoList);
 
 }

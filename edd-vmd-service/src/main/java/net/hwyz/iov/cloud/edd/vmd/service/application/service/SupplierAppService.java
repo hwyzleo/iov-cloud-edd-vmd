@@ -4,13 +4,14 @@ import cn.hutool.core.util.ObjUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.SupplierAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.SupplierDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.SupplierQuery;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.SupplierDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.SupplierQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Supplier;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.SupplierRepository;
 import net.hwyz.iov.cloud.framework.common.util.ParamHelper;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Service;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.SupplierCmd;
 
 import java.util.HashMap;
 import java.util.List;
@@ -86,8 +87,8 @@ public class SupplierAppService {
      * @param userId     操作用户ID
      * @return 结果
      */
-    public int createSupplier(SupplierDto supplierDto, String userId) {
-        Supplier supplier = SupplierAssembler.INSTANCE.toDomain(supplierDto);
+    public int createSupplier(SupplierCmd supplierCmd, String userId) {
+        Supplier supplier = SupplierAssembler.INSTANCE.toDomain(supplierCmd);
         return supplierRepository.insert(supplier);
     }
 
@@ -98,8 +99,8 @@ public class SupplierAppService {
      * @param userId     操作用户ID
      * @return 结果
      */
-    public int modifySupplier(SupplierDto supplierDto, String userId) {
-        Supplier supplier = SupplierAssembler.INSTANCE.toDomain(supplierDto);
+    public int modifySupplier(SupplierCmd supplierCmd, String userId) {
+        Supplier supplier = SupplierAssembler.INSTANCE.toDomain(supplierCmd);
         return supplierRepository.update(supplier);
     }
 

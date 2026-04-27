@@ -1,6 +1,7 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.assembler;
 
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.BaseModelFeatureCodeDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.BaseModelFeatureCodeCmd;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.BaseModelFeatureCodeDto;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.BaseModelFeatureCode;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -37,6 +38,16 @@ public interface BaseModelFeatureCodeAssembler {
     @Mapping(target = "featureCode", expression = "java(baseModelFeatureCodeDto.getFeatureCode() == null ? null : String.join(\",\", baseModelFeatureCodeDto.getFeatureCode()))")
     @Mapping(target = "featureName", expression = "java(baseModelFeatureCodeDto.getFeatureName() == null ? null : String.join(\",\", baseModelFeatureCodeDto.getFeatureName()))")
     BaseModelFeatureCode toDomain(BaseModelFeatureCodeDto baseModelFeatureCodeDto);
+
+    /**
+     * 命令转领域对象
+     *
+     * @param baseModelFeatureCodeCmd 命令
+     * @return 领域对象
+     */
+    @Mapping(target = "featureCode", expression = "java(baseModelFeatureCodeCmd.getFeatureCode() == null ? null : String.join(\",\", baseModelFeatureCodeCmd.getFeatureCode()))")
+    @Mapping(target = "featureName", expression = "java(baseModelFeatureCodeCmd.getFeatureName() == null ? null : String.join(\",\", baseModelFeatureCodeCmd.getFeatureName()))")
+    BaseModelFeatureCode toDomain(BaseModelFeatureCodeCmd baseModelFeatureCodeCmd);
 
     /**
      * 领域对象列表转 DTO 列表

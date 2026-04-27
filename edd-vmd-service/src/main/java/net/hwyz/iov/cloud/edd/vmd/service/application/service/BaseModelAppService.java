@@ -6,7 +6,13 @@ import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.MptFeatureAssembler;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.BaseModelAssembler;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.BaseModelFeatureCodeAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.*;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.BaseModelCmd;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.BaseModelFeatureCodeCmd;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.BaseModelQuery;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.BaseModelDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.BaseModelFeatureCodeDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.FeatureCodeDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.FeatureFamilyDto;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.BaseModel;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.BaseModelFeatureCode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBaseModelRepository;
@@ -120,22 +126,22 @@ public class BaseModelAppService {
     /**
      * 新增基础车型
      *
-     * @param baseModelDto 基础车型信息
+     * @param baseModelCmd 基础车型信息
      * @return 结果
      */
-    public int createBasicModel(BaseModelDto baseModelDto) {
-        BaseModel baseModel = BaseModelAssembler.INSTANCE.toDomain(baseModelDto);
+    public int createBasicModel(BaseModelCmd baseModelCmd) {
+        BaseModel baseModel = BaseModelAssembler.INSTANCE.toDomain(baseModelCmd);
         return vehBaseModelRepository.insert(baseModel);
     }
 
     /**
      * 修改基础车型
      *
-     * @param baseModelDto 基础车型信息
+     * @param baseModelCmd 基础车型信息
      * @return 结果
      */
-    public int modifyBasicModel(BaseModelDto baseModelDto) {
-        BaseModel baseModel = BaseModelAssembler.INSTANCE.toDomain(baseModelDto);
+    public int modifyBasicModel(BaseModelCmd baseModelCmd) {
+        BaseModel baseModel = BaseModelAssembler.INSTANCE.toDomain(baseModelCmd);
         return vehBaseModelRepository.update(baseModel);
     }
 
@@ -218,22 +224,22 @@ public class BaseModelAppService {
     /**
      * 新增基础车型特征关系
      *
-     * @param featureCodeDto 基础车型特征关系信息
+     * @param featureCodeCmd 基础车型特征关系信息
      * @return 结果
      */
-    public int createBasicModelFeatureCode(BaseModelFeatureCodeDto featureCodeDto) {
-        BaseModelFeatureCode featureCode = BaseModelFeatureCodeAssembler.INSTANCE.toDomain(featureCodeDto);
+    public int createBasicModelFeatureCode(BaseModelFeatureCodeCmd featureCodeCmd) {
+        BaseModelFeatureCode featureCode = BaseModelFeatureCodeAssembler.INSTANCE.toDomain(featureCodeCmd);
         return vehBaseModelRepository.batchInsertFeatureCode(List.of(featureCode));
     }
 
     /**
      * 修改基础车型特征关系
      *
-     * @param featureCodeDto 基础车型特征关系信息
+     * @param featureCodeCmd 基础车型特征关系信息
      * @return 结果
      */
-    public int modifyBaseModelFeatureCode(BaseModelFeatureCodeDto featureCodeDto) {
-        BaseModelFeatureCode featureCode = BaseModelFeatureCodeAssembler.INSTANCE.toDomain(featureCodeDto);
+    public int modifyBaseModelFeatureCode(BaseModelFeatureCodeCmd featureCodeCmd) {
+        BaseModelFeatureCode featureCode = BaseModelFeatureCodeAssembler.INSTANCE.toDomain(featureCodeCmd);
         return vehBaseModelRepository.updateFeatureCode(featureCode);
     }
 

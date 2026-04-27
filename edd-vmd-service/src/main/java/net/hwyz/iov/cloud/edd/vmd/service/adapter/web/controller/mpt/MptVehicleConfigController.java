@@ -3,12 +3,14 @@ package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.controller.mpt;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.edd.vmd.api.vo.VehicleConfigItemVo;
-import net.hwyz.iov.cloud.edd.vmd.api.vo.VehicleConfigVo;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.VehicleConfigItemRequest;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.VehicleConfigItemResponse;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.VehicleConfigRequest;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.VehicleConfigResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.MptVehicleConfigAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.VehicleConfigDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.VehicleConfigItemDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.VehicleConfigQuery;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.VehicleConfigDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.VehicleConfigItemDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.VehicleConfigQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleConfigAppService;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
 import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
@@ -42,7 +44,7 @@ public class MptVehicleConfigController extends BaseController {
      */
     @RequiresPermissions("iov:configCenter:vehicleConfig:list")
     @GetMapping(value = "/list")
-    public ApiResponse<PageResult<VehicleConfigVo>> list(VehicleConfigVo vehicleConfig) {
+    public ApiResponse<PageResult<VehicleConfigResponse>> list(VehicleConfigRequest vehicleConfig) {
         log.info("管理后台用户[{}]分页查询车辆配置", SecurityUtils.getUsername());
         startPage();
         VehicleConfigQuery query = VehicleConfigQuery.builder()
@@ -64,7 +66,7 @@ public class MptVehicleConfigController extends BaseController {
      */
     @RequiresPermissions("iov:configCenter:vehicleConfig:list")
     @GetMapping(value = "/{vin}/configItem/list")
-    public ApiResponse<PageResult<VehicleConfigItemVo>> listConfigItem(@PathVariable String vin, VehicleConfigItemVo vehicleConfigItem) {
+    public ApiResponse<PageResult<VehicleConfigItemResponse>> listConfigItem(@PathVariable String vin, VehicleConfigItemRequest vehicleConfigItem) {
         log.info("管理后台用户[{}]分页查询车辆[{}]配置项", SecurityUtils.getUsername(), vin);
         startPage();
         List<VehicleConfigItemDto> dtoList = vehicleConfigAppService.searchItem(vin, vehicleConfigItem.getVersion());
@@ -80,7 +82,7 @@ public class MptVehicleConfigController extends BaseController {
     @Log(title = "车辆配置管理", businessType = BusinessType.EXPORT)
     @RequiresPermissions("iov:configCenter:vehicleConfig:export")
     @PostMapping("/export")
-    public void export(HttpServletResponse response, VehicleConfigVo vehicleConfig) {
+    public void export(HttpServletResponse response, VehicleConfigRequest vehicleConfig) {
         log.info("管理后台用户[{}]导出车辆配置", SecurityUtils.getUsername());
     }
 
@@ -92,7 +94,7 @@ public class MptVehicleConfigController extends BaseController {
      */
     @RequiresPermissions("iov:configCenter:vehicleConfig:query")
     @GetMapping(value = "/{vehicleConfigId}")
-    public ApiResponse<VehicleConfigVo> getInfo(@PathVariable Long vehicleConfigId) {
+    public ApiResponse<VehicleConfigResponse> getInfo(@PathVariable Long vehicleConfigId) {
         log.info("管理后台用户[{}]根据车辆配置ID[{}]获取车辆配置", SecurityUtils.getUsername(), vehicleConfigId);
         return ApiResponse.ok(MptVehicleConfigAssembler.INSTANCE.fromConfigDto(vehicleConfigAppService.getVehicleConfigById(vehicleConfigId)));
     }
@@ -106,7 +108,7 @@ public class MptVehicleConfigController extends BaseController {
      */
     @RequiresPermissions("iov:configCenter:vehicleConfig:query")
     @GetMapping(value = "/{vin}/configItem/{vehicleConfigItemId}")
-    public ApiResponse<VehicleConfigItemVo> getConfigItemInfo(@PathVariable String vin, @PathVariable Long vehicleConfigItemId) {
+    public ApiResponse<VehicleConfigItemResponse> getConfigItemInfo(@PathVariable String vin, @PathVariable Long vehicleConfigItemId) {
         log.info("管理后台用户[{}]根据车辆[{}]配置项ID[{}]获取车辆配置项", SecurityUtils.getUsername(), vin, vehicleConfigItemId);
         return ApiResponse.ok(MptVehicleConfigAssembler.INSTANCE.fromItemDto(vehicleConfigAppService.getVehicleConfigItemById(vehicleConfigItemId)));
     }

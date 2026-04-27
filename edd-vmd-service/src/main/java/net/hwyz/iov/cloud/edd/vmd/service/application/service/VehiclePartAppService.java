@@ -4,12 +4,13 @@ import cn.hutool.core.util.ObjUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.VehiclePartAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.VehiclePartDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.VehiclePartQuery;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.VehiclePartDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.VehiclePartQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehiclePart;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehiclePartRepository;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Service;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.VehiclePartCmd;
 
 import java.time.Instant;
 import java.util.HashMap;
@@ -89,8 +90,8 @@ public class VehiclePartAppService {
      * @param userId        操作用户ID
      * @return 结果
      */
-    public int createVehiclePart(VehiclePartDto vehiclePartDto, String userId) {
-        VehiclePart vehiclePart = VehiclePartAssembler.INSTANCE.toDomain(vehiclePartDto);
+    public int createVehiclePart(VehiclePartCmd vehiclePartCmd, String userId) {
+        VehiclePart vehiclePart = VehiclePartAssembler.INSTANCE.toDomain(vehiclePartCmd);
         return vehiclePartRepository.insert(vehiclePart);
     }
 
@@ -101,8 +102,8 @@ public class VehiclePartAppService {
      * @param userId        操作用户ID
      * @return 结果
      */
-    public int modifyVehiclePart(VehiclePartDto vehiclePartDto, String userId) {
-        VehiclePart vehiclePart = VehiclePartAssembler.INSTANCE.toDomain(vehiclePartDto);
+    public int modifyVehiclePart(VehiclePartCmd vehiclePartCmd, String userId) {
+        VehiclePart vehiclePart = VehiclePartAssembler.INSTANCE.toDomain(vehiclePartCmd);
         return vehiclePartRepository.update(vehiclePart);
     }
 

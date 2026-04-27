@@ -1,11 +1,15 @@
 package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler;
 
-import net.hwyz.iov.cloud.edd.vmd.api.vo.FeatureCodeVo;
-import net.hwyz.iov.cloud.edd.vmd.api.vo.FeatureFamilyVo;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.FeatureCodeDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.FeatureFamilyDto;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.FeatureCodeRequest;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.FeatureCodeResponse;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.FeatureFamilyRequest;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.FeatureFamilyResponse;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.FeatureCodeDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.FeatureFamilyDto;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.FeatureFamilyCmd;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.FeatureCodeCmd;
 
 import java.util.List;
 
@@ -25,7 +29,7 @@ public interface MptFeatureAssembler {
      * @param featureFamilyDto 特征族 DTO
      * @return 特征族 VO
      */
-    FeatureFamilyVo fromFamilyDto(FeatureFamilyDto featureFamilyDto);
+    FeatureFamilyResponse fromFamilyDto(FeatureFamilyDto featureFamilyDto);
 
     /**
      * 特征族 VO 转 DTO
@@ -33,7 +37,9 @@ public interface MptFeatureAssembler {
      * @param featureFamilyVo 特征族 VO
      * @return 特征族 DTO
      */
-    FeatureFamilyDto toFamilyDto(FeatureFamilyVo featureFamilyVo);
+    FeatureFamilyDto toFamilyDto(FeatureFamilyRequest featureFamilyVo);
+    FeatureFamilyCmd toFamilyCmd(FeatureFamilyRequest vo);
+
 
     /**
      * 特征族 DTO 列表转 VO 列表
@@ -41,7 +47,7 @@ public interface MptFeatureAssembler {
      * @param featureFamilyDtoList 特征族 DTO 列表
      * @return 特征族 VO 列表
      */
-    List<FeatureFamilyVo> fromFamilyDtoList(List<FeatureFamilyDto> featureFamilyDtoList);
+    List<FeatureFamilyResponse> fromFamilyDtoList(List<FeatureFamilyDto> featureFamilyDtoList);
 
     /**
      * 特征值 DTO 转 VO
@@ -49,7 +55,7 @@ public interface MptFeatureAssembler {
      * @param featureCodeDto 特征值 DTO
      * @return 特征值 VO
      */
-    FeatureCodeVo fromCodeDto(FeatureCodeDto featureCodeDto);
+    FeatureCodeResponse fromCodeDto(FeatureCodeDto featureCodeDto);
 
     /**
      * 特征值 VO 转 DTO
@@ -57,7 +63,9 @@ public interface MptFeatureAssembler {
      * @param featureCodeVo 特征值 VO
      * @return 特征值 DTO
      */
-    FeatureCodeDto toCodeDto(FeatureCodeVo featureCodeVo);
+    FeatureCodeDto toCodeDto(FeatureCodeRequest featureCodeVo);
+    FeatureCodeCmd toCodeCmd(FeatureCodeRequest vo);
+
 
     /**
      * 特征值 DTO 列表转 VO 列表
@@ -65,6 +73,6 @@ public interface MptFeatureAssembler {
      * @param featureCodeDtoList 特征值 DTO 列表
      * @return 特征值 VO 列表
      */
-    List<FeatureCodeVo> fromCodeDtoList(List<FeatureCodeDto> featureCodeDtoList);
+    List<FeatureCodeResponse> fromCodeDtoList(List<FeatureCodeDto> featureCodeDtoList);
 
 }

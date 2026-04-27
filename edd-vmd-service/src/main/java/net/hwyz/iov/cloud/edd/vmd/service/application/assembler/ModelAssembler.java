@@ -1,6 +1,7 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.assembler;
 
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.ModelDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.ModelCmd;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ModelDto;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Model;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
@@ -32,6 +33,14 @@ public interface ModelAssembler {
      * @return 领域对象
      */
     Model toDomain(ModelDto modelDto);
+
+    /**
+     * CMD 转领域对象
+     *
+     * @param modelCmd CMD
+     * @return 领域对象
+     */
+    Model toDomain(ModelCmd modelCmd);
 
     /**
      * 领域对象列表转 DTO 列表
