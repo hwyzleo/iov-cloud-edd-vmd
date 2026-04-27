@@ -16,6 +16,7 @@ import net.hwyz.iov.cloud.framework.common.bean.PageResult;
 import net.hwyz.iov.cloud.framework.security.annotation.RequiresPermissions;
 import net.hwyz.iov.cloud.framework.security.util.SecurityUtils;
 import net.hwyz.iov.cloud.framework.web.controller.BaseController;
+import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -56,7 +57,7 @@ public class MptBuildConfigController extends BaseController {
                 .endTime(getEndTime(buildConfig))
                 .build();
         List<BuildConfigDto> buildConfigDtoList = buildConfigAppService.search(query);
-        return ApiResponse.ok(getPageResult(MptBuildConfigAssembler.INSTANCE.fromDtoList(buildConfigDtoList)));
+        return ApiResponse.ok(getPageResult(PageUtil.convert(buildConfigDtoList, MptBuildConfigAssembler.INSTANCE::fromDto)));
     }
 
     /**

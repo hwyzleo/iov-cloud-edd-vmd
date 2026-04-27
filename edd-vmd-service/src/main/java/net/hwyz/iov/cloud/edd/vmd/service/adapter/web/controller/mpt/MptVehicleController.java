@@ -17,6 +17,7 @@ import net.hwyz.iov.cloud.framework.common.bean.PageResult;
 import net.hwyz.iov.cloud.framework.security.annotation.RequiresPermissions;
 import net.hwyz.iov.cloud.framework.security.util.SecurityUtils;
 import net.hwyz.iov.cloud.framework.web.controller.BaseController;
+import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -53,7 +54,7 @@ public class MptVehicleController extends BaseController {
                 .endTime(getEndTime(vehicle))
                 .build();
         List<VehicleDto> vehicleDtoList = vehicleAppService.search(query);
-        return ApiResponse.ok(getPageResult(MptVehicleAssembler.INSTANCE.fromDtoList(vehicleDtoList)));
+        return ApiResponse.ok(getPageResult(PageUtil.convert(vehicleDtoList, MptVehicleAssembler.INSTANCE::fromDto)));
     }
 
     /**

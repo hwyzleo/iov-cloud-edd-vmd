@@ -19,6 +19,7 @@ import net.hwyz.iov.cloud.framework.common.bean.PageResult;
 import net.hwyz.iov.cloud.framework.security.annotation.RequiresPermissions;
 import net.hwyz.iov.cloud.framework.security.util.SecurityUtils;
 import net.hwyz.iov.cloud.framework.web.controller.BaseController;
+import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -58,7 +59,7 @@ public class MptBaseModelController extends BaseController {
                 .endTime(getEndTime(baseModel))
                 .build();
         List<BaseModelDto> baseModelDtoList = baseModelAppService.search(query);
-        return ApiResponse.ok(getPageResult(MptBaseModelAssembler.INSTANCE.fromDtoList(baseModelDtoList)));
+        return ApiResponse.ok(getPageResult(PageUtil.convert(baseModelDtoList, MptBaseModelAssembler.INSTANCE::fromDto)));
     }
 
     /**

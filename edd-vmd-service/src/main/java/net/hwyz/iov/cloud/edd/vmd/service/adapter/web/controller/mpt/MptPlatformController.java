@@ -16,6 +16,7 @@ import net.hwyz.iov.cloud.framework.common.bean.PageResult;
 import net.hwyz.iov.cloud.framework.security.annotation.RequiresPermissions;
 import net.hwyz.iov.cloud.framework.security.util.SecurityUtils;
 import net.hwyz.iov.cloud.framework.web.controller.BaseController;
+import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -52,7 +53,7 @@ public class MptPlatformController extends BaseController {
                 .endTime(getEndTime(platform))
                 .build();
         List<PlatformDto> platformDtoList = platformAppService.search(query);
-        return ApiResponse.ok(getPageResult(MptPlatformAssembler.INSTANCE.fromDtoList(platformDtoList)));
+        return ApiResponse.ok(getPageResult(PageUtil.convert(platformDtoList, MptPlatformAssembler.INSTANCE::fromDto)));
     }
 
     /**

@@ -3,11 +3,11 @@ package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.controller.mpt;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.MptSeriesAssembler;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.SeriesRequest;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.SeriesResponse;
-import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.MptSeriesAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.SeriesDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.SeriesQuery;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.SeriesDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.SeriesAppService;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
 import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
@@ -16,6 +16,7 @@ import net.hwyz.iov.cloud.framework.common.bean.PageResult;
 import net.hwyz.iov.cloud.framework.security.annotation.RequiresPermissions;
 import net.hwyz.iov.cloud.framework.security.util.SecurityUtils;
 import net.hwyz.iov.cloud.framework.web.controller.BaseController;
+import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -53,7 +54,7 @@ public class MptSeriesController extends BaseController {
                 .endTime(getEndTime(series))
                 .build();
         List<SeriesDto> seriesDtoList = seriesAppService.search(query);
-        return ApiResponse.ok(getPageResult(MptSeriesAssembler.INSTANCE.fromDtoList(seriesDtoList)));
+        return ApiResponse.ok(getPageResult(PageUtil.convert(seriesDtoList, MptSeriesAssembler.INSTANCE::fromDto)));
     }
 
     /**

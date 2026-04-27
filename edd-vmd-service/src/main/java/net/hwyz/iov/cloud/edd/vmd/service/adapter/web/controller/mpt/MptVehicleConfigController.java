@@ -19,6 +19,7 @@ import net.hwyz.iov.cloud.framework.common.bean.PageResult;
 import net.hwyz.iov.cloud.framework.security.annotation.RequiresPermissions;
 import net.hwyz.iov.cloud.framework.security.util.SecurityUtils;
 import net.hwyz.iov.cloud.framework.web.controller.BaseController;
+import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -54,7 +55,7 @@ public class MptVehicleConfigController extends BaseController {
                 .endTime(getEndTime(vehicleConfig))
                 .build();
         List<VehicleConfigDto> dtoList = vehicleConfigAppService.search(query);
-        return ApiResponse.ok(getPageResult(MptVehicleConfigAssembler.INSTANCE.fromConfigDtoList(dtoList)));
+        return ApiResponse.ok(getPageResult(PageUtil.convert(dtoList, MptVehicleConfigAssembler.INSTANCE::fromConfigDto)));
     }
 
     /**
@@ -70,7 +71,7 @@ public class MptVehicleConfigController extends BaseController {
         log.info("管理后台用户[{}]分页查询车辆[{}]配置项", SecurityUtils.getUsername(), vin);
         startPage();
         List<VehicleConfigItemDto> dtoList = vehicleConfigAppService.searchItem(vin, vehicleConfigItem.getVersion());
-        return ApiResponse.ok(getPageResult(MptVehicleConfigAssembler.INSTANCE.fromItemDtoList(dtoList)));
+        return ApiResponse.ok(getPageResult(PageUtil.convert(dtoList, MptVehicleConfigAssembler.INSTANCE::fromItemDto)));
     }
 
     /**

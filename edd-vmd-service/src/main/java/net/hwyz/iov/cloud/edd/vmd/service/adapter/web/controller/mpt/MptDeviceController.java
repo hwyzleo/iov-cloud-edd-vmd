@@ -17,6 +17,7 @@ import net.hwyz.iov.cloud.framework.common.enums.DeviceItem;
 import net.hwyz.iov.cloud.framework.security.annotation.RequiresPermissions;
 import net.hwyz.iov.cloud.framework.security.util.SecurityUtils;
 import net.hwyz.iov.cloud.framework.web.controller.BaseController;
+import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -56,7 +57,7 @@ public class MptDeviceController extends BaseController {
                 .endTime(getEndTime(device))
                 .build();
         List<DeviceDto> deviceDtoList = deviceAppService.search(query);
-        return ApiResponse.ok(getPageResult(MptDeviceAssembler.INSTANCE.fromDtoList(deviceDtoList)));
+        return ApiResponse.ok(getPageResult(PageUtil.convert(deviceDtoList, MptDeviceAssembler.INSTANCE::fromDto)));
     }
 
     /**
