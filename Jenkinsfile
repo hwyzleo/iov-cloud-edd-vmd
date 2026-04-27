@@ -11,7 +11,8 @@ pipeline {
     }
 
     parameters {
-        choice(choices: [true, false], description: '是否发布API', name: 'DEPLOY_API')
+        choice(name: 'DEPLOY_API', choices: [false, true], description: '是否发布API')
+        choice(name: 'DOCKER_NO_CACHE', choices: [false, true], description: '构建镜像时是否使用 --no-cache')
     }
 
     tools {
@@ -35,10 +36,12 @@ pipeline {
         stage('构建镜像') {
             steps {
                 script {
-                    sh '''
+                    def noCacheArg = params.DOCKER_NO_CACHE == "true" ? "--no-cache" : ""
+                    sh """
                         echo '============================== 构建镜像 =============================='
-                        docker build -t ${IMAGE_NAME} -f ../Dockerfile ./${DIR_SERVICE}/
-                    '''
+                        cp /var/jenkins_home/settings.xml ./${DIR_SERVICE}/settings.xml
+                        docker build ${noCacheArg} -t ${IMAGE_NAME} -f ../Dockerfile ./${DIR_SERVICE}/
+                    """
                 }
             }
         }
