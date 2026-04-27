@@ -3,19 +3,17 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 import cn.hutool.core.util.ObjUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.edd.vmd.api.vo.SeriesVo;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.SeriesAssembler;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.SeriesDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.SeriesQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Series;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBaseModelRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBuildConfigRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehModelRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehSeriesRepository;
 import net.hwyz.iov.cloud.framework.common.util.ParamHelper;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Service;
 
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,29 +28,23 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class SeriesAppService {
 
-    private final VehModelRepository vehModelRepository;
     private final VehSeriesRepository vehSeriesRepository;
+    private final VehModelRepository vehModelRepository;
     private final VehBasicInfoRepository vehBasicInfoRepository;
-    private final VehBaseModelRepository vehBasicModelRepository;
-    private final VehBuildConfigRepository vehBuildConfigRepository;
 
     /**
      * 查询车系信息
      *
-     * @param platformCode 车辆平台代码
-     * @param code         车系代码
-     * @param name         车系名称
-     * @param beginTime    开始时间
-     * @param endTime      结束时间
+     * @param query 查询 DTO
      * @return 车系列表
      */
-    public List<SeriesVo> search(String platformCode, String code, String name, Date beginTime, Date endTime) {
+    public List<SeriesDto> search(SeriesQuery query) {
         Map<String, Object> map = new HashMap<>();
-        map.put("platformCode", platformCode);
-        map.put("code", code);
-        map.put("name", ParamHelper.fuzzyQueryParam(name));
-        map.put("beginTime", beginTime);
-        map.put("endTime", endTime);
+        map.put("platformCode", query.getPlatformCode());
+        map.put("code", query.getCode());
+        map.put("name", ParamHelper.fuzzyQueryParam(query.getName()));
+        map.put("beginTime", query.getBeginTime());
+        map.put("endTime", query.getEndTime());
         List<Series> seriesList = vehSeriesRepository.selectByMap(map);
         return PageUtil.convert(seriesList, SeriesAssembler.INSTANCE::fromDomain);
     }
@@ -68,7 +60,7 @@ public class SeriesAppService {
         if (ObjUtil.isNull(seriesId)) {
             seriesId = -1L;
         }
-        Series series = getSeriesByCode(code);
+        Series series = vehSeriesRepository.selectByCode(code);
         return !ObjUtil.isNotNull(series) || series.getId().longValue() == seriesId.longValue();
     }
 
@@ -83,32 +75,6 @@ public class SeriesAppService {
         Map<String, Object> map = new HashMap<>();
         map.put("seriesCode", series.getCode());
         return vehModelRepository.countByMap(map) > 0;
-    }
-
-    /**
-     * 检查车系下是否存在基础车型
-     *
-     * @param seriesId 车系ID
-     * @return 结果
-     */
-    public Boolean checkSeriesBasicModelExist(Long seriesId) {
-        Series series = vehSeriesRepository.selectById(seriesId);
-        Map<String, Object> map = new HashMap<>();
-        map.put("seriesCode", series.getCode());
-        return vehBasicModelRepository.countByMap(map) > 0;
-    }
-
-    /**
-     * 检查车系下是否存在车型配置
-     *
-     * @param seriesId 车系ID
-     * @return 结果
-     */
-    public Boolean checkSeriesModelConfigExist(Long seriesId) {
-        Series series = vehSeriesRepository.selectById(seriesId);
-        Map<String, Object> map = new HashMap<>();
-        map.put("seriesCode", series.getCode());
-        return vehBuildConfigRepository.countByMap(map) > 0;
     }
 
     /**
@@ -128,9 +94,9 @@ public class SeriesAppService {
      * 根据主键ID获取车系信息
      *
      * @param id 主键ID
-     * @return 车系信息
+     * @return 车系 DTO
      */
-    public SeriesVo getSeriesById(Long id) {
+    public SeriesDto getSeriesById(Long id) {
         return SeriesAssembler.INSTANCE.fromDomain(vehSeriesRepository.selectById(id));
     }
 
@@ -147,24 +113,24 @@ public class SeriesAppService {
     /**
      * 新增车系
      *
-     * @param seriesVo 车系信息
-     * @param userId   操作用户ID
+     * @param seriesDto 车系信息 DTO
+     * @param userId    操作用户ID
      * @return 结果
      */
-    public int createSeries(SeriesVo seriesVo, String userId) {
-        Series series = SeriesAssembler.INSTANCE.toDomain(seriesVo);
+    public int createSeries(SeriesDto seriesDto, String userId) {
+        Series series = SeriesAssembler.INSTANCE.toDomain(seriesDto);
         return vehSeriesRepository.insert(series);
     }
 
     /**
      * 修改车系
      *
-     * @param seriesVo 车系信息
-     * @param userId   操作用户ID
+     * @param seriesDto 车系信息 DTO
+     * @param userId    操作用户ID
      * @return 结果
      */
-    public int modifySeries(SeriesVo seriesVo, String userId) {
-        Series series = SeriesAssembler.INSTANCE.toDomain(seriesVo);
+    public int modifySeries(SeriesDto seriesDto, String userId) {
+        Series series = SeriesAssembler.INSTANCE.toDomain(seriesDto);
         return vehSeriesRepository.update(series);
     }
 

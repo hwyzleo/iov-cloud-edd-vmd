@@ -3,15 +3,15 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 import cn.hutool.core.util.ObjUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.edd.vmd.api.vo.PartVo;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.PartAssembler;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.PartDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.PartQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Part;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartRepository;
 import net.hwyz.iov.cloud.framework.common.util.ParamHelper;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Service;
 
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,24 +31,18 @@ public class PartAppService {
     /**
      * 查询零件信息
      *
-     * @param key        关键程度
-     * @param pn         零件号
-     * @param name       零件名称
-     * @param type       零件类型
-     * @param deviceCode 设备代码
-     * @param beginTime  开始时间
-     * @param endTime    结束时间
-     * @return 零件列表
+     * @param query 查询 DTO
+     * @return 零件 DTO 列表
      */
-    public List<PartVo> search(String key, String pn, String name, String type, String deviceCode, Date beginTime, Date endTime) {
+    public List<PartDto> search(PartQuery query) {
         Map<String, Object> map = new HashMap<>();
-        map.put("keyPart", key);
-        map.put("pn", pn);
-        map.put("name", ParamHelper.fuzzyQueryParam(name));
-        map.put("type", type);
-        map.put("deviceCode", deviceCode);
-        map.put("beginTime", beginTime);
-        map.put("endTime", endTime);
+        map.put("keyPart", query.getKey());
+        map.put("pn", query.getPn());
+        map.put("name", ParamHelper.fuzzyQueryParam(query.getName()));
+        map.put("type", query.getType());
+        map.put("deviceCode", query.getDeviceCode());
+        map.put("beginTime", query.getBeginTime());
+        map.put("endTime", query.getEndTime());
         List<Part> partList = partRepository.selectByMap(map);
         return PageUtil.convert(partList, PartAssembler.INSTANCE::fromDomain);
     }
@@ -72,9 +66,9 @@ public class PartAppService {
      * 根据主键ID获取零件信息
      *
      * @param id 主键ID
-     * @return 零件信息
+     * @return 零件 DTO
      */
-    public PartVo getPartById(Long id) {
+    public PartDto getPartById(Long id) {
         return PartAssembler.INSTANCE.fromDomain(partRepository.selectById(id));
     }
 
@@ -105,24 +99,24 @@ public class PartAppService {
     /**
      * 新增零件
      *
-     * @param partVo 零件信息
+     * @param partDto 零件信息 DTO
      * @param userId 操作用户ID
      * @return 结果
      */
-    public int createPart(PartVo partVo, String userId) {
-        Part part = PartAssembler.INSTANCE.toDomain(partVo);
+    public int createPart(PartDto partDto, String userId) {
+        Part part = PartAssembler.INSTANCE.toDomain(partDto);
         return partRepository.insert(part);
     }
 
     /**
      * 修改零件
      *
-     * @param partVo 零件信息
+     * @param partDto 零件信息 DTO
      * @param userId 操作用户ID
      * @return 结果
      */
-    public int modifyPart(PartVo partVo, String userId) {
-        Part part = PartAssembler.INSTANCE.toDomain(partVo);
+    public int modifyPart(PartDto partDto, String userId) {
+        Part part = PartAssembler.INSTANCE.toDomain(partDto);
         return partRepository.update(part);
     }
 

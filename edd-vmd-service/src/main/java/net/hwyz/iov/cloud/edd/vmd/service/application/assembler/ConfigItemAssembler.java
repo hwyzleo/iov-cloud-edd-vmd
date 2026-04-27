@@ -1,6 +1,6 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.assembler;
 
-import net.hwyz.iov.cloud.edd.vmd.api.vo.ConfigItemVo;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.ConfigItemDto;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.ConfigItem;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
@@ -8,7 +8,7 @@ import org.mapstruct.factory.Mappers;
 import java.util.List;
 
 /**
- * 管理后台配置项转换类
+ * 配置项 DTO 转换器
  *
  * @author hwyz_leo
  */
@@ -18,27 +18,27 @@ public interface ConfigItemAssembler {
     ConfigItemAssembler INSTANCE = Mappers.getMapper(ConfigItemAssembler.class);
 
     /**
-     * 领域对象转数据传输对象
+     * 领域对象转 DTO
      *
      * @param configItem 领域对象
-     * @return 数据传输对象
+     * @return DTO
      */
-    ConfigItemVo fromDomain(ConfigItem configItem);
+    ConfigItemDto fromDomain(ConfigItem configItem);
 
     /**
-     * 数据传输对象转领域对象
+     * DTO 转领域对象
      *
-     * @param configItemVo 数据传输对象
+     * @param configItemDto DTO
      * @return 领域对象
      */
-    ConfigItem toDomain(ConfigItemVo configItemVo);
+    ConfigItem toDomain(ConfigItemDto configItemDto);
 
     /**
-     * 领域对象列表转数据传输对象列表
+     * 领域对象列表转 DTO 列表
      *
      * @param configItemList 领域对象列表
-     * @return 数据传输对象列表
+     * @return DTO 列表
      */
-    List<ConfigItemVo> fromDomainList(List<ConfigItem> configItemList);
+    List<ConfigItemDto> fromDomainList(List<ConfigItem> configItemList);
 
 }

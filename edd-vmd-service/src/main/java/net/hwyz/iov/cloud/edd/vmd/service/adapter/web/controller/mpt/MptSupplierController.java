@@ -4,6 +4,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.SupplierVo;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.MptSupplierAssembler;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.SupplierDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.SupplierQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.SupplierAppService;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
 import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
@@ -41,9 +44,14 @@ public class MptSupplierController extends BaseController {
     public ApiResponse<PageResult<SupplierVo>> list(SupplierVo supplier) {
         log.info("管理后台用户[{}]分页查询供应商信息", SecurityUtils.getUsername());
         startPage();
-        List<SupplierVo> supplierVoList = supplierAppService.search(supplier.getCode(), supplier.getName(),
-                getBeginTime(supplier), getEndTime(supplier));
-        return ApiResponse.ok(getPageResult(supplierVoList));
+        SupplierQuery query = SupplierQuery.builder()
+                .code(supplier.getCode())
+                .name(supplier.getName())
+                .beginTime(getBeginTime(supplier))
+                .endTime(getEndTime(supplier))
+                .build();
+        List<SupplierDto> dtoList = supplierAppService.search(query);
+        return ApiResponse.ok(getPageResult(MptSupplierAssembler.INSTANCE.fromDtoList(dtoList)));
     }
 
     /**
@@ -67,9 +75,9 @@ public class MptSupplierController extends BaseController {
      */
     @RequiresPermissions("completeVehicle:vehicle:supplier:query")
     @GetMapping(value = "/{supplierId}")
-    public ApiResponse getInfo(@PathVariable Long supplierId) {
+    public ApiResponse<SupplierVo> getInfo(@PathVariable Long supplierId) {
         log.info("管理后台用户[{}]根据供应商ID[{}]获取供应商信息", SecurityUtils.getUsername(), supplierId);
-        return ApiResponse.ok(supplierAppService.getSupplierById(supplierId));
+        return ApiResponse.ok(MptSupplierAssembler.INSTANCE.fromDto(supplierAppService.getSupplierById(supplierId)));
     }
 
     /**
@@ -81,12 +89,13 @@ public class MptSupplierController extends BaseController {
     @Log(title = "供应商管理", businessType = BusinessType.INSERT)
     @RequiresPermissions("completeVehicle:vehicle:supplier:add")
     @PostMapping
-    public ApiResponse add(@Validated @RequestBody SupplierVo supplier) {
+    public ApiResponse<Void> add(@Validated @RequestBody SupplierVo supplier) {
         log.info("管理后台用户[{}]新增供应商信息[{}]", SecurityUtils.getUsername(), supplier.getCode());
         if (!supplierAppService.checkCodeUnique(supplier.getId(), supplier.getCode())) {
             return ApiResponse.fail("新增供应商'" + supplier.getCode() + "'失败，供应商代码已存在");
         }
-        return supplierAppService.createSupplier(supplier, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
+        supplierAppService.createSupplier(MptSupplierAssembler.INSTANCE.toDto(supplier), SecurityUtils.getUserId().toString());
+        return ApiResponse.ok();
     }
 
     /**
@@ -98,12 +107,13 @@ public class MptSupplierController extends BaseController {
     @Log(title = "供应商管理", businessType = BusinessType.UPDATE)
     @RequiresPermissions("completeVehicle:vehicle:supplier:edit")
     @PutMapping
-    public ApiResponse edit(@Validated @RequestBody SupplierVo supplier) {
+    public ApiResponse<Void> edit(@Validated @RequestBody SupplierVo supplier) {
         log.info("管理后台用户[{}]修改保存供应商信息[{}]", SecurityUtils.getUsername(), supplier.getCode());
         if (!supplierAppService.checkCodeUnique(supplier.getId(), supplier.getCode())) {
             return ApiResponse.fail("修改保存供应商'" + supplier.getCode() + "'失败，供应商代码已存在");
         }
-        return supplierAppService.modifySupplier(supplier, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
+        supplierAppService.modifySupplier(MptSupplierAssembler.INSTANCE.toDto(supplier), SecurityUtils.getUserId().toString());
+        return ApiResponse.ok();
     }
 
     /**
@@ -115,7 +125,7 @@ public class MptSupplierController extends BaseController {
     @Log(title = "供应商管理", businessType = BusinessType.DELETE)
     @RequiresPermissions("completeVehicle:vehicle:supplier:remove")
     @DeleteMapping("/{supplierIds}")
-    public ApiResponse remove(@PathVariable Long[] supplierIds) {
+    public ApiResponse<Void> remove(@PathVariable Long[] supplierIds) {
         log.info("管理后台用户[{}]删除供应商信息[{}]", SecurityUtils.getUsername(), supplierIds);
         return supplierAppService.deleteSupplierByIds(supplierIds) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
     }

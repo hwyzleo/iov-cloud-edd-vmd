@@ -3,15 +3,15 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 import cn.hutool.core.util.ObjUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.edd.vmd.api.vo.DeviceVo;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.DeviceAssembler;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.DeviceDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.DeviceQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Device;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.DeviceRepository;
 import net.hwyz.iov.cloud.framework.common.util.ParamHelper;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Service;
 
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -31,20 +31,16 @@ public class DeviceAppService {
     /**
      * 查询设备信息
      *
-     * @param code       设备编码
-     * @param name       设备名称
-     * @param funcDomain 功能域
-     * @param beginTime  开始时间
-     * @param endTime    结束时间
-     * @return 设备列表
+     * @param query 查询 DTO
+     * @return 设备 DTO 列表
      */
-    public List<DeviceVo> search(String code, String name, String funcDomain, Date beginTime, Date endTime) {
+    public List<DeviceDto> search(DeviceQuery query) {
         Map<String, Object> map = new HashMap<>();
-        map.put("code", code);
-        map.put("name", ParamHelper.fuzzyQueryParam(name));
-        map.put("funcDomain", funcDomain);
-        map.put("beginTime", beginTime);
-        map.put("endTime", endTime);
+        map.put("code", query.getCode());
+        map.put("name", ParamHelper.fuzzyQueryParam(query.getName()));
+        map.put("funcDomain", query.getFuncDomain());
+        map.put("beginTime", query.getBeginTime());
+        map.put("endTime", query.getEndTime());
         List<Device> deviceList = deviceRepository.selectByMap(map);
         return PageUtil.convert(deviceList, DeviceAssembler.INSTANCE::fromDomain);
     }
@@ -52,9 +48,9 @@ public class DeviceAppService {
     /**
      * 获取所有设备
      *
-     * @return 设备列表
+     * @return 设备 DTO 列表
      */
-    public List<DeviceVo> listAll() {
+    public List<DeviceDto> listAll() {
         List<Device> deviceList = deviceRepository.selectByMap(new HashMap<>());
         return DeviceAssembler.INSTANCE.fromDomainList(deviceList);
     }
@@ -78,9 +74,9 @@ public class DeviceAppService {
      * 根据主键ID获取设备信息
      *
      * @param id 主键ID
-     * @return 设备信息
+     * @return 设备 DTO
      */
-    public DeviceVo getDeviceById(Long id) {
+    public DeviceDto getDeviceById(Long id) {
         return DeviceAssembler.INSTANCE.fromDomain(deviceRepository.selectById(id));
     }
 
@@ -108,24 +104,24 @@ public class DeviceAppService {
     /**
      * 新增设备
      *
-     * @param deviceVo 设备信息
+     * @param deviceDto 设备信息 DTO
      * @param userId   操作用户ID
      * @return 结果
      */
-    public int createDevice(DeviceVo deviceVo, String userId) {
-        Device device = DeviceAssembler.INSTANCE.toDomain(deviceVo);
+    public int createDevice(DeviceDto deviceDto, String userId) {
+        Device device = DeviceAssembler.INSTANCE.toDomain(deviceDto);
         return deviceRepository.insert(device);
     }
 
     /**
      * 修改设备
      *
-     * @param deviceVo 设备信息
+     * @param deviceDto 设备信息 DTO
      * @param userId   操作用户ID
      * @return 结果
      */
-    public int modifyDevice(DeviceVo deviceVo, String userId) {
-        Device device = DeviceAssembler.INSTANCE.toDomain(deviceVo);
+    public int modifyDevice(DeviceDto deviceDto, String userId) {
+        Device device = DeviceAssembler.INSTANCE.toDomain(deviceDto);
         return deviceRepository.update(device);
     }
 

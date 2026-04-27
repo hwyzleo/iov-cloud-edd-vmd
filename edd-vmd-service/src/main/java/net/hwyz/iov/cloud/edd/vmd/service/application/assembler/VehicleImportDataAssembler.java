@@ -1,6 +1,6 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.assembler;
 
-import net.hwyz.iov.cloud.edd.vmd.api.vo.VehicleImportDataVo;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.VehicleImportDataDto;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleImportData;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
@@ -8,7 +8,7 @@ import org.mapstruct.factory.Mappers;
 import java.util.List;
 
 /**
- * 车辆导入数据转换类
+ * 车辆导入数据 DTO 转换器
  *
  * @author hwyz_leo
  */
@@ -18,27 +18,27 @@ public interface VehicleImportDataAssembler {
     VehicleImportDataAssembler INSTANCE = Mappers.getMapper(VehicleImportDataAssembler.class);
 
     /**
-     * 领域对象转数据传输对象
+     * 领域对象转 DTO
      *
      * @param vehicleImportData 领域对象
-     * @return 数据传输对象
+     * @return DTO
      */
-    VehicleImportDataVo fromDomain(VehicleImportData vehicleImportData);
+    VehicleImportDataDto fromDomain(VehicleImportData vehicleImportData);
 
     /**
-     * 数据传输对象转领域对象
+     * DTO 转领域对象
      *
-     * @param vehicleImportDataVo 数据传输对象
+     * @param vehicleImportDataDto DTO
      * @return 领域对象
      */
-    VehicleImportData toDomain(VehicleImportDataVo vehicleImportDataVo);
+    VehicleImportData toDomain(VehicleImportDataDto vehicleImportDataDto);
 
     /**
-     * 领域对象列表转数据传输对象列表
+     * 领域对象列表转 DTO 列表
      *
      * @param vehicleImportDataList 领域对象列表
-     * @return 数据传输对象列表
+     * @return DTO 列表
      */
-    List<VehicleImportDataVo> fromDomainList(List<VehicleImportData> vehicleImportDataList);
+    List<VehicleImportDataDto> fromDomainList(List<VehicleImportData> vehicleImportDataList);
 
 }

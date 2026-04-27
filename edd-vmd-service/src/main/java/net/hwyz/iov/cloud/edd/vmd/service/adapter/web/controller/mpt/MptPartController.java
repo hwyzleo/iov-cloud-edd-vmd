@@ -4,6 +4,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.PartVo;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.MptPartAssembler;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.PartDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.PartQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartAppService;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
 import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
@@ -41,9 +44,17 @@ public class MptPartController extends BaseController {
     public ApiResponse<PageResult<PartVo>> list(PartVo part) {
         log.info("管理后台用户[{}]分页查询零件信息", SecurityUtils.getUsername());
         startPage();
-        List<PartVo> partVoList = partAppService.search(part.getKey(), part.getPn(), part.getName(), part.getType(),
-                part.getDeviceCode(), getBeginTime(part), getEndTime(part));
-        return ApiResponse.ok(getPageResult(partVoList));
+        PartQuery query = PartQuery.builder()
+                .key(part.getKey())
+                .pn(part.getPn())
+                .name(part.getName())
+                .type(part.getType())
+                .deviceCode(part.getDeviceCode())
+                .beginTime(getBeginTime(part))
+                .endTime(getEndTime(part))
+                .build();
+        List<PartDto> dtoList = partAppService.search(query);
+        return ApiResponse.ok(getPageResult(MptPartAssembler.INSTANCE.fromDtoList(dtoList)));
     }
 
     /**
@@ -67,9 +78,9 @@ public class MptPartController extends BaseController {
      */
     @RequiresPermissions("completeVehicle:vehicle:part:query")
     @GetMapping(value = "/{partId}")
-    public ApiResponse getInfo(@PathVariable Long partId) {
+    public ApiResponse<PartVo> getInfo(@PathVariable Long partId) {
         log.info("管理后台用户[{}]根据零件信息ID[{}]获取零件信息", SecurityUtils.getUsername(), partId);
-        return ApiResponse.ok(partAppService.getPartById(partId));
+        return ApiResponse.ok(MptPartAssembler.INSTANCE.fromDto(partAppService.getPartById(partId)));
     }
 
     /**
@@ -81,12 +92,13 @@ public class MptPartController extends BaseController {
     @Log(title = "零件信息管理", businessType = BusinessType.INSERT)
     @RequiresPermissions("completeVehicle:vehicle:part:add")
     @PostMapping
-    public ApiResponse add(@Validated @RequestBody PartVo part) {
+    public ApiResponse<Void> add(@Validated @RequestBody PartVo part) {
         log.info("管理后台用户[{}]新增零件信息[{}]", SecurityUtils.getUsername(), part.getPn());
         if (!partAppService.checkPnUnique(part.getId(), part.getPn())) {
             return ApiResponse.fail("新增零件信息'" + part.getPn() + "'失败，零件号已存在");
         }
-        return partAppService.createPart(part, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
+        partAppService.createPart(MptPartAssembler.INSTANCE.toDto(part), SecurityUtils.getUserId().toString());
+        return ApiResponse.ok();
     }
 
     /**
@@ -98,12 +110,13 @@ public class MptPartController extends BaseController {
     @Log(title = "零件信息管理", businessType = BusinessType.UPDATE)
     @RequiresPermissions("completeVehicle:vehicle:part:edit")
     @PutMapping
-    public ApiResponse edit(@Validated @RequestBody PartVo part) {
+    public ApiResponse<Void> edit(@Validated @RequestBody PartVo part) {
         log.info("管理后台用户[{}]修改保存零件信息[{}]", SecurityUtils.getUsername(), part.getPn());
         if (!partAppService.checkPnUnique(part.getId(), part.getPn())) {
             return ApiResponse.fail("修改保存零件信息'" + part.getPn() + "'失败，零件号已存在");
         }
-        return partAppService.modifyPart(part, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
+        partAppService.modifyPart(MptPartAssembler.INSTANCE.toDto(part), SecurityUtils.getUserId().toString());
+        return ApiResponse.ok();
     }
 
     /**
@@ -115,7 +128,7 @@ public class MptPartController extends BaseController {
     @Log(title = "零件信息管理", businessType = BusinessType.DELETE)
     @RequiresPermissions("completeVehicle:vehicle:part:remove")
     @DeleteMapping("/{partIds}")
-    public ApiResponse remove(@PathVariable Long[] partIds) {
+    public ApiResponse<Void> remove(@PathVariable Long[] partIds) {
         log.info("管理后台用户[{}]删除零件信息[{}]", SecurityUtils.getUsername(), partIds);
         return partAppService.deletePartByIds(partIds) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
     }

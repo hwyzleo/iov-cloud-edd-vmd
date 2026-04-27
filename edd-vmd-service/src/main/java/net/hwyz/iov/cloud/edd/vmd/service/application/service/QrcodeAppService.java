@@ -3,7 +3,8 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.enums.QrcodeType;
-import net.hwyz.iov.cloud.edd.vmd.api.vo.response.QrcodeResponse;
+import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.QrcodeAssembler;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.QrcodeDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.publish.QrcodePublish;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.factory.QrcodeFactory;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.aggregate.Qrcode;
@@ -34,9 +35,9 @@ public class QrcodeAppService {
      *
      * @param vin 车架号
      * @param sn  车机序列号
-     * @return 二维码状态
+     * @return 二维码 DTO
      */
-    public QrcodeResponse generateActiveQrcode(String vin, String sn) {
+    public QrcodeDto generateActiveQrcode(String vin, String sn) {
         Vehicle vehicle = vehicleRepository.getByVin(vin);
         if (vehicle.isActive()) {
             throw new VehicleHasActivatedException(vin);
@@ -50,9 +51,9 @@ public class QrcodeAppService {
      * @param qrcode 二维码
      * @param vin    车架号
      * @param sn     车机序列号
-     * @return 二维码状态
+     * @return 二维码 DTO
      */
-    public QrcodeResponse getActiveQrcodeState(String qrcode, String vin, String sn) {
+    public QrcodeDto getActiveQrcodeState(String qrcode, String vin, String sn) {
         return getQrcodeState(qrcode, vin, sn);
     }
 
@@ -62,16 +63,12 @@ public class QrcodeAppService {
      * @param type 二维码类型
      * @param vin  车架号
      * @param sn   车机序列号
-     * @return 二维码状态
+     * @return 二维码 DTO
      */
-    private QrcodeResponse generateQrcode(QrcodeType type, String vin, String sn) {
+    private QrcodeDto generateQrcode(QrcodeType type, String vin, String sn) {
         Qrcode qrcode = qrcodeFactory.buildQrcode(type, vin, sn);
         qrcodeRepository.save(qrcode);
-        return QrcodeResponse.builder()
-                .qrcode(qrcode.getQrcode())
-                .type(qrcode.getType())
-                .state(qrcode.getQrcodeState())
-                .build();
+        return QrcodeAssembler.INSTANCE.fromDomain(qrcode);
     }
 
     /**
@@ -80,20 +77,16 @@ public class QrcodeAppService {
      * @param qrcode 二维码
      * @param vin    车架号
      * @param sn     车机序列号
-     * @return 二维码状态
+     * @return 二维码 DTO
      */
-    private QrcodeResponse getQrcodeState(String qrcode, String vin, String sn) {
+    private QrcodeDto getQrcodeState(String qrcode, String vin, String sn) {
         Qrcode qrcodeDomain = qrcodeRepository.getByQrcode(qrcode).orElseThrow(() -> new QrcodeNotExistException(qrcode));
         if (!qrcodeDomain.getSn().equals(sn)) {
             log.warn("车辆[{}]获取二维码状态时，传入的SN[{}]与原SN[{}]不一致", vin, sn, qrcodeDomain.getSn());
         }
         qrcodeDomain.polling();
         qrcodeRepository.save(qrcodeDomain);
-        return QrcodeResponse.builder()
-                .qrcode(qrcodeDomain.getQrcode())
-                .type(qrcodeDomain.getType())
-                .state(qrcodeDomain.getQrcodeState())
-                .build();
+        return QrcodeAssembler.INSTANCE.fromDomain(qrcodeDomain);
     }
 
     /**
@@ -101,19 +94,15 @@ public class QrcodeAppService {
      *
      * @param qrcode    二维码
      * @param accountId 账号ID
-     * @return 二维码状态
+     * @return 二维码 DTO
      */
-    public QrcodeResponse validateQrcode(String qrcode, String accountId) {
+    public QrcodeDto validateQrcode(String qrcode, String accountId) {
         Qrcode qrcodeDomain = qrcodeRepository.getByQrcode(qrcode).orElseThrow(() -> new QrcodeNotExistException(qrcode));
         qrcodeDomain.polling();
         qrcodeDomain.validate(qrcode);
         qrcodeRepository.save(qrcodeDomain);
         qrcodePublish.validate(qrcodeDomain.getType(), qrcodeDomain.getVin(), accountId);
-        return QrcodeResponse.builder()
-                .qrcode(qrcodeDomain.getQrcode())
-                .type(qrcodeDomain.getType())
-                .state(qrcodeDomain.getQrcodeState())
-                .build();
+        return QrcodeAssembler.INSTANCE.fromDomain(qrcodeDomain);
     }
 
     /**
@@ -121,18 +110,14 @@ public class QrcodeAppService {
      *
      * @param qrcode    二维码
      * @param accountId 账号ID
-     * @return 二维码状态
+     * @return 二维码 DTO
      */
-    public QrcodeResponse confirmQrcode(String qrcode, String accountId) {
+    public QrcodeDto confirmQrcode(String qrcode, String accountId) {
         Qrcode qrcodeDomain = qrcodeRepository.getByQrcode(qrcode).orElseThrow(() -> new QrcodeNotExistException(qrcode));
         qrcodeDomain.polling();
         qrcodeDomain.confirm(qrcode);
         qrcodeRepository.save(qrcodeDomain);
         qrcodePublish.confirm(qrcodeDomain.getType(), qrcodeDomain.getVin(), accountId);
-        return QrcodeResponse.builder()
-                .qrcode(qrcodeDomain.getQrcode())
-                .type(qrcodeDomain.getType())
-                .state(qrcodeDomain.getQrcodeState())
-                .build();
+        return QrcodeAssembler.INSTANCE.fromDomain(qrcodeDomain);
     }
 }

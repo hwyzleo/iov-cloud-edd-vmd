@@ -3,8 +3,9 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 import cn.hutool.core.util.ObjUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.edd.vmd.api.vo.BuildConfigVo;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.BuildConfigAssembler;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.BuildConfigDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.BuildConfigQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.BuildConfig;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBuildConfigRepository;
@@ -12,7 +13,6 @@ import net.hwyz.iov.cloud.framework.common.util.ParamHelper;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Service;
 
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,24 +33,19 @@ public class BuildConfigAppService {
     /**
      * 查询生产配置信息
      *
-     * @param platformCode 车辆平台代码
-     * @param seriesCode   车系代码
-     * @param modelCode    车型代码
-     * @param code         生产配置代码
-     * @param name         生产配置名称
-     * @param beginTime    开始时间
-     * @param endTime      结束时间
+     * @param query 查询 DTO
      * @return 生产配置列表
      */
-    public List<BuildConfigVo> search(String platformCode, String seriesCode, String modelCode, String code, String name, Date beginTime, Date endTime) {
+    public List<BuildConfigDto> search(BuildConfigQuery query) {
         Map<String, Object> map = new HashMap<>();
-        map.put("platformCode", platformCode);
-        map.put("seriesCode", seriesCode);
-        map.put("modelCode", modelCode);
-        map.put("code", code);
-        map.put("name", ParamHelper.fuzzyQueryParam(name));
-        map.put("beginTime", beginTime);
-        map.put("endTime", endTime);
+        map.put("platformCode", query.getPlatformCode());
+        map.put("seriesCode", query.getSeriesCode());
+        map.put("modelCode", query.getModelCode());
+        map.put("baseModelCode", query.getBaseModelCode());
+        map.put("code", query.getCode());
+        map.put("name", ParamHelper.fuzzyQueryParam(query.getName()));
+        map.put("beginTime", query.getBeginTime());
+        map.put("endTime", query.getEndTime());
         List<BuildConfig> buildConfigList = vehBuildConfigRepository.selectByMap(map);
         return PageUtil.convert(buildConfigList, BuildConfigAssembler.INSTANCE::fromDomain);
     }
@@ -87,9 +82,9 @@ public class BuildConfigAppService {
      * 根据主键ID获取生产配置信息
      *
      * @param id 主键ID
-     * @return 生产配置信息
+     * @return 生产配置 DTO
      */
-    public BuildConfigVo getBuildConfigById(Long id) {
+    public BuildConfigDto getBuildConfigById(Long id) {
         return BuildConfigAssembler.INSTANCE.fromDomain(vehBuildConfigRepository.selectById(id));
     }
 
@@ -106,24 +101,24 @@ public class BuildConfigAppService {
     /**
      * 新增生产配置
      *
-     * @param buildConfigVo 生产配置信息
+     * @param buildConfigDto 生产配置信息 DTO
      * @param userId        操作用户ID
      * @return 结果
      */
-    public int createBuildConfig(BuildConfigVo buildConfigVo, String userId) {
-        BuildConfig buildConfig = BuildConfigAssembler.INSTANCE.toDomain(buildConfigVo);
+    public int createBuildConfig(BuildConfigDto buildConfigDto, String userId) {
+        BuildConfig buildConfig = BuildConfigAssembler.INSTANCE.toDomain(buildConfigDto);
         return vehBuildConfigRepository.insert(buildConfig);
     }
 
     /**
      * 修改生产配置
      *
-     * @param buildConfigVo 生产配置信息
+     * @param buildConfigDto 生产配置信息 DTO
      * @param userId        操作用户ID
      * @return 结果
      */
-    public int modifyBuildConfig(BuildConfigVo buildConfigVo, String userId) {
-        BuildConfig buildConfig = BuildConfigAssembler.INSTANCE.toDomain(buildConfigVo);
+    public int modifyBuildConfig(BuildConfigDto buildConfigDto, String userId) {
+        BuildConfig buildConfig = BuildConfigAssembler.INSTANCE.toDomain(buildConfigDto);
         return vehBuildConfigRepository.update(buildConfig);
     }
 

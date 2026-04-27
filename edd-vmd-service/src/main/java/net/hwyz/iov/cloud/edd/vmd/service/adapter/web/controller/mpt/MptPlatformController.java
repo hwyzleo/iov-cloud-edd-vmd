@@ -4,6 +4,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.PlatformVo;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.MptPlatformAssembler;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.PlatformDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.PlatformQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.PlatformAppService;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
 import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
@@ -41,22 +44,14 @@ public class MptPlatformController extends BaseController {
     public ApiResponse<PageResult<PlatformVo>> list(PlatformVo platform) {
         log.info("管理后台用户[{}]分页查询车辆平台信息", SecurityUtils.getUsername());
         startPage();
-        List<PlatformVo> platformVoList = platformAppService.search(platform.getCode(), platform.getName(),
-                getBeginTime(platform), getEndTime(platform));
-        return ApiResponse.ok(getPageResult(platformVoList));
-    }
-
-    /**
-     * 获取所有车辆平台信息
-     *
-     * @return 车辆平台信息列表
-     */
-    @RequiresPermissions("completeVehicle:product:platform:list")
-    @GetMapping(value = "/listAll")
-    public ApiResponse<List<PlatformVo>> listAll() {
-        log.info("管理后台用户[{}]获取所有车辆平台信息", SecurityUtils.getUsername());
-        List<PlatformVo> platformVoList = platformAppService.search(null, null, null, null);
-        return ApiResponse.ok(platformVoList);
+        PlatformQuery query = PlatformQuery.builder()
+                .code(platform.getCode())
+                .name(platform.getName())
+                .beginTime(getBeginTime(platform))
+                .endTime(getEndTime(platform))
+                .build();
+        List<PlatformDto> platformDtoList = platformAppService.search(query);
+        return ApiResponse.ok(getPageResult(MptPlatformAssembler.INSTANCE.fromDtoList(platformDtoList)));
     }
 
     /**
@@ -82,7 +77,7 @@ public class MptPlatformController extends BaseController {
     @GetMapping(value = "/{platformId}")
     public ApiResponse<PlatformVo> getInfo(@PathVariable Long platformId) {
         log.info("管理后台用户[{}]根据车辆平台ID[{}]获取车辆平台信息", SecurityUtils.getUsername(), platformId);
-        return ApiResponse.ok(platformAppService.getPlatformById(platformId));
+        return ApiResponse.ok(MptPlatformAssembler.INSTANCE.fromDto(platformAppService.getPlatformById(platformId)));
     }
 
     /**
@@ -99,7 +94,8 @@ public class MptPlatformController extends BaseController {
         if (!platformAppService.checkCodeUnique(platform.getId(), platform.getCode())) {
             return ApiResponse.fail("新增车辆平台'" + platform.getCode() + "'失败，车辆平台代码已存在");
         }
-        return platformAppService.createPlatform(platform, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("新增失败");
+        platformAppService.createPlatform(MptPlatformAssembler.INSTANCE.toDto(platform), SecurityUtils.getUserId().toString());
+        return ApiResponse.ok();
     }
 
     /**
@@ -116,7 +112,8 @@ public class MptPlatformController extends BaseController {
         if (!platformAppService.checkCodeUnique(platform.getId(), platform.getCode())) {
             return ApiResponse.fail("修改保存车辆平台'" + platform.getCode() + "'失败，车辆平台代码已存在");
         }
-        return platformAppService.modifyPlatform(platform, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("修改失败");
+        platformAppService.modifyPlatform(MptPlatformAssembler.INSTANCE.toDto(platform), SecurityUtils.getUserId().toString());
+        return ApiResponse.ok();
     }
 
     /**
@@ -133,15 +130,6 @@ public class MptPlatformController extends BaseController {
         for (Long platformId : platformIds) {
             if (platformAppService.checkPlatformSeriesExist(platformId)) {
                 return ApiResponse.fail("删除车辆平台'" + platformId + "'失败，该车辆平台下存在车系");
-            }
-            if (platformAppService.checkPlatformModelExist(platformId)) {
-                return ApiResponse.fail("删除车辆平台'" + platformId + "'失败，该车辆平台下存在车型");
-            }
-            if (platformAppService.checkPlatformBasicModelExist(platformId)) {
-                return ApiResponse.fail("删除车辆平台'" + platformId + "'失败，该车辆平台下存在基础车型");
-            }
-            if (platformAppService.checkPlatformModelConfigExist(platformId)) {
-                return ApiResponse.fail("删除车辆平台'" + platformId + "'失败，该车辆平台下存在车型配置");
             }
             if (platformAppService.checkPlatformVehicleExist(platformId)) {
                 return ApiResponse.fail("删除车辆平台'" + platformId + "'失败，该车辆平台下存在车辆");

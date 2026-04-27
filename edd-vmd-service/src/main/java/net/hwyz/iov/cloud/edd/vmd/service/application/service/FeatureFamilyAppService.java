@@ -3,10 +3,12 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 import cn.hutool.core.util.ObjUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.edd.vmd.api.vo.FeatureCodeVo;
-import net.hwyz.iov.cloud.edd.vmd.api.vo.FeatureFamilyVo;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.FeatureCodeAssembler;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.FeatureFamilyAssembler;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.FeatureCodeDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.FeatureCodeQuery;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.FeatureFamilyDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.FeatureFamilyQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.FeatureCode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.FeatureFamily;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehFeatureFamilyRepository;
@@ -14,7 +16,6 @@ import net.hwyz.iov.cloud.framework.common.util.ParamHelper;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Service;
 
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -36,20 +37,16 @@ public class FeatureFamilyAppService {
     /**
      * 查询特征族信息
      *
-     * @param code      特征族代码
-     * @param name      特征族名称
-     * @param type      特征族类型
-     * @param beginTime 开始时间
-     * @param endTime    结束时间
+     * @param query 查询 DTO
      * @return 特征族列表
      */
-    public List<FeatureFamilyVo> search(String code, String name, String type, Date beginTime, Date endTime) {
+    public List<FeatureFamilyDto> search(FeatureFamilyQuery query) {
         Map<String, Object> map = new HashMap<>();
-        map.put("code", code);
-        map.put("name", ParamHelper.fuzzyQueryParam(name));
-        map.put("type", type);
-        map.put("beginTime", beginTime);
-        map.put("endTime", endTime);
+        map.put("code", query.getCode());
+        map.put("name", ParamHelper.fuzzyQueryParam(query.getName()));
+        map.put("type", query.getType());
+        map.put("beginTime", query.getBeginTime());
+        map.put("endTime", query.getEndTime());
         List<FeatureFamily> featureFamilyList = vehFeatureFamilyRepository.selectByMap(map);
         return PageUtil.convert(featureFamilyList, FeatureFamilyAssembler.INSTANCE::fromDomain);
     }
@@ -88,9 +85,9 @@ public class FeatureFamilyAppService {
      * 根据主键ID获取特征族信息
      *
      * @param id 主键ID
-     * @return 特征族信息
+     * @return 特征族 DTO
      */
-    public FeatureFamilyVo getFeatureFamilyById(Long id) {
+    public FeatureFamilyDto getFeatureFamilyById(Long id) {
         return FeatureFamilyAssembler.INSTANCE.fromDomain(vehFeatureFamilyRepository.selectById(id));
     }
 
@@ -98,33 +95,33 @@ public class FeatureFamilyAppService {
      * 根据特征族代码获取特征族信息
      *
      * @param code 特征族代码
-     * @return 特征族信息
+     * @return 特征族 DTO
      */
-    public FeatureFamilyVo getFeatureFamilyByCode(String code) {
+    public FeatureFamilyDto getFeatureFamilyByCode(String code) {
         return FeatureFamilyAssembler.INSTANCE.fromDomain(vehFeatureFamilyRepository.selectByCode(code));
     }
 
     /**
      * 新增特征族
      *
-     * @param featureFamily 特征族信息
+     * @param featureFamilyDto 特征族信息 DTO
      * @param userId        操作用户ID
      * @return 结果
      */
-    public int createFeatureFamily(FeatureFamilyVo featureFamily, String userId) {
-        FeatureFamily featureFamilyDomain = FeatureFamilyAssembler.INSTANCE.toDomain(featureFamily);
+    public int createFeatureFamily(FeatureFamilyDto featureFamilyDto, String userId) {
+        FeatureFamily featureFamilyDomain = FeatureFamilyAssembler.INSTANCE.toDomain(featureFamilyDto);
         return vehFeatureFamilyRepository.insert(featureFamilyDomain);
     }
 
     /**
      * 修改特征族
      *
-     * @param featureFamily 特征族信息
+     * @param featureFamilyDto 特征族信息 DTO
      * @param userId        操作用户ID
      * @return 结果
      */
-    public int modifyFeatureFamily(FeatureFamilyVo featureFamily, String userId) {
-        FeatureFamily featureFamilyDomain = FeatureFamilyAssembler.INSTANCE.toDomain(featureFamily);
+    public int modifyFeatureFamily(FeatureFamilyDto featureFamilyDto, String userId) {
+        FeatureFamily featureFamilyDomain = FeatureFamilyAssembler.INSTANCE.toDomain(featureFamilyDto);
         return vehFeatureFamilyRepository.update(featureFamilyDomain);
     }
 
@@ -143,18 +140,13 @@ public class FeatureFamilyAppService {
     /**
      * 查询特征值信息
      *
-     * @param featureFamilyId 特征族ID
-     * @param familyCode      特征族代码
-     * @param name            特征值名称
-     * @param featureCode     特征值代码
-     * @param beginTime       开始时间
-     * @param endTime         结束时间
+     * @param query 查询 DTO
      * @return 特征值列表
      */
-    public List<FeatureCodeVo> searchFeatureCode(Long featureFamilyId, String familyCode, String name, String featureCode, Date beginTime, Date endTime) {
-        // 实现查询逻辑
-        if (ObjUtil.isNotNull(featureFamilyId)) {
-            FeatureFamily featureFamily = vehFeatureFamilyRepository.selectById(featureFamilyId);
+    public List<FeatureCodeDto> searchFeatureCode(FeatureCodeQuery query) {
+        String familyCode = query.getFamilyCode();
+        if (ObjUtil.isNotNull(query.getFeatureFamilyId())) {
+            FeatureFamily featureFamily = vehFeatureFamilyRepository.selectById(query.getFeatureFamilyId());
             if (featureFamily != null) {
                 familyCode = featureFamily.getCode();
             }
@@ -168,9 +160,9 @@ public class FeatureFamilyAppService {
      *
      * @param featureFamilyId 特征族ID
      * @param id              特征值ID
-     * @return 特征值信息
+     * @return 特征值 DTO
      */
-    public FeatureCodeVo getFeatureCodeById(Long featureFamilyId, Long id) {
+    public FeatureCodeDto getFeatureCodeById(Long featureFamilyId, Long id) {
         FeatureCode featureCode = vehFeatureFamilyRepository.selectFeatureCodeById(id);
         return FeatureCodeAssembler.INSTANCE.fromDomain(featureCode);
     }
@@ -179,9 +171,9 @@ public class FeatureFamilyAppService {
      * 根据特征值代码获取特征值信息
      *
      * @param code 特征值代码
-     * @return 特征值信息
+     * @return 特征值 DTO
      */
-    public FeatureCodeVo getFeatureCodeByCode(String code) {
+    public FeatureCodeDto getFeatureCodeByCode(String code) {
         return FeatureCodeAssembler.INSTANCE.fromDomain(vehFeatureFamilyRepository.selectFeatureCodeByCode(code));
     }
 
@@ -189,12 +181,12 @@ public class FeatureFamilyAppService {
      * 新增特征值
      *
      * @param familyId    特征族ID
-     * @param featureCode 特征值信息
+     * @param featureCodeDto 特征值信息 DTO
      * @param userId      操作用户ID
      * @return 结果
      */
-    public int createFeatureCode(Long familyId, FeatureCodeVo featureCode, String userId) {
-        FeatureCode featureCodeDomain = FeatureCodeAssembler.INSTANCE.toDomain(featureCode);
+    public int createFeatureCode(Long familyId, FeatureCodeDto featureCodeDto, String userId) {
+        FeatureCode featureCodeDomain = FeatureCodeAssembler.INSTANCE.toDomain(featureCodeDto);
         featureCodeDomain.setFamilyCode(vehFeatureFamilyRepository.selectById(familyId).getCode());
         return vehFeatureFamilyRepository.insertFeatureCode(featureCodeDomain);
     }
@@ -203,12 +195,12 @@ public class FeatureFamilyAppService {
      * 修改特征值
      *
      * @param featureFamilyId 特征族ID
-     * @param featureCode     特征值信息
+     * @param featureCodeDto     特征值信息 DTO
      * @param userId          操作用户ID
      * @return 结果
      */
-    public int modifyFeatureCode(Long featureFamilyId, FeatureCodeVo featureCode, String userId) {
-        FeatureCode featureCodeDomain = FeatureCodeAssembler.INSTANCE.toDomain(featureCode);
+    public int modifyFeatureCode(Long featureFamilyId, FeatureCodeDto featureCodeDto, String userId) {
+        FeatureCode featureCodeDomain = FeatureCodeAssembler.INSTANCE.toDomain(featureCodeDto);
         return vehFeatureFamilyRepository.updateFeatureCode(featureCodeDomain);
     }
 

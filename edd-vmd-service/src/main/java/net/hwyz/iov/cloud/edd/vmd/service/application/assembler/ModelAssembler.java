@@ -1,6 +1,6 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.assembler;
 
-import net.hwyz.iov.cloud.edd.vmd.api.vo.ModelVo;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.ModelDto;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Model;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
@@ -8,7 +8,7 @@ import org.mapstruct.factory.Mappers;
 import java.util.List;
 
 /**
- * 管理后台车型转换类
+ * 车型 DTO 转换器
  *
  * @author hwyz_leo
  */
@@ -18,27 +18,27 @@ public interface ModelAssembler {
     ModelAssembler INSTANCE = Mappers.getMapper(ModelAssembler.class);
 
     /**
-     * 领域对象转数据传输对象
+     * 领域对象转 DTO
      *
      * @param model 领域对象
-     * @return 数据传输对象
+     * @return DTO
      */
-    ModelVo fromDomain(Model model);
+    ModelDto fromDomain(Model model);
 
     /**
-     * 数据传输对象转领域对象
+     * DTO 转领域对象
      *
-     * @param modelVo 数据传输对象
+     * @param modelDto DTO
      * @return 领域对象
      */
-    Model toDomain(ModelVo modelVo);
+    Model toDomain(ModelDto modelDto);
 
     /**
-     * 领域对象列表转数据传输对象列表
+     * 领域对象列表转 DTO 列表
      *
      * @param modelList 领域对象列表
-     * @return 数据传输对象列表
+     * @return DTO 列表
      */
-    List<ModelVo> fromDomainList(List<Model> modelList);
+    List<ModelDto> fromDomainList(List<Model> modelList);
 
 }

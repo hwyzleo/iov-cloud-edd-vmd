@@ -1,6 +1,6 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.assembler;
 
-import net.hwyz.iov.cloud.edd.vmd.api.vo.BuildConfigVo;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.BuildConfigDto;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.BuildConfig;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
@@ -8,7 +8,7 @@ import org.mapstruct.factory.Mappers;
 import java.util.List;
 
 /**
- * 管理后台生产配置转换类
+ * 生产配置 DTO 转换器
  *
  * @author hwyz_leo
  */
@@ -18,27 +18,27 @@ public interface BuildConfigAssembler {
     BuildConfigAssembler INSTANCE = Mappers.getMapper(BuildConfigAssembler.class);
 
     /**
-     * 领域对象转数据传输对象
+     * 领域对象转 DTO
      *
      * @param buildConfig 领域对象
-     * @return 数据传输对象
+     * @return DTO
      */
-    BuildConfigVo fromDomain(BuildConfig buildConfig);
+    BuildConfigDto fromDomain(BuildConfig buildConfig);
 
     /**
-     * 数据传输对象转领域对象
+     * DTO 转领域对象
      *
-     * @param buildConfigVo 数据传输对象
+     * @param buildConfigDto DTO
      * @return 领域对象
      */
-    BuildConfig toDomain(BuildConfigVo buildConfigVo);
+    BuildConfig toDomain(BuildConfigDto buildConfigDto);
 
     /**
-     * 领域对象列表转数据传输对象列表
+     * 领域对象列表转 DTO 列表
      *
      * @param buildConfigList 领域对象列表
-     * @return 数据传输对象列表
+     * @return DTO 列表
      */
-    List<BuildConfigVo> fromDomainList(List<BuildConfig> buildConfigList);
+    List<BuildConfigDto> fromDomainList(List<BuildConfig> buildConfigList);
 
 }

@@ -4,6 +4,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.ModelVo;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.MptModelAssembler;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.ModelDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.ModelQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.ModelAppService;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
 import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
@@ -41,22 +44,37 @@ public class MptModelController extends BaseController {
     public ApiResponse<PageResult<ModelVo>> list(ModelVo model) {
         log.info("管理后台用户[{}]分页查询车型信息", SecurityUtils.getUsername());
         startPage();
-        List<ModelVo> modelVoList = modelAppService.search(model.getPlatformCode(), model.getSeriesCode(), model.getCode(),
-                model.getName(), getBeginTime(model), getEndTime(model));
-        return ApiResponse.ok(getPageResult(modelVoList));
+        ModelQuery query = ModelQuery.builder()
+                .platformCode(model.getPlatformCode())
+                .seriesCode(model.getSeriesCode())
+                .code(model.getCode())
+                .name(model.getName())
+                .beginTime(getBeginTime(model))
+                .endTime(getEndTime(model))
+                .build();
+        List<ModelDto> modelDtoList = modelAppService.search(query);
+        return ApiResponse.ok(getPageResult(MptModelAssembler.INSTANCE.fromDtoList(modelDtoList)));
     }
 
     /**
      * 获取指定车辆平台及车系下的所有车型
      *
+     * @param platformCode 车辆平台代码
+     * @param seriesCode   车系代码
      * @return 车型信息列表
      */
     @RequiresPermissions("completeVehicle:product:model:list")
     @GetMapping(value = "/listByPlatformCodeAndSeriesCode")
-    public ApiResponse<List<ModelVo>> listByPlatformCodeAndSeriesCode(@RequestParam String platformCode, @RequestParam String seriesCode) {
-        log.info("管理后台用户[{}]获取指定车辆平台[{}]及车系[{}]下的所有车型", SecurityUtils.getUsername(), platformCode, seriesCode);
-        List<ModelVo> modelVoList = modelAppService.search(platformCode, seriesCode, null, null, null, null);
-        return ApiResponse.ok(modelVoList);
+    public ApiResponse<List<ModelVo>> listByPlatformCodeAndSeriesCode(@RequestParam String platformCode,
+                                                                      @RequestParam String seriesCode) {
+        log.info("管理后台用户[{}]获取指定车辆平台[{}]及车系[{}]下的所有车型", SecurityUtils.getUsername(),
+                platformCode, seriesCode);
+        ModelQuery query = ModelQuery.builder()
+                .platformCode(platformCode)
+                .seriesCode(seriesCode)
+                .build();
+        List<ModelDto> modelDtoList = modelAppService.search(query);
+        return ApiResponse.ok(MptModelAssembler.INSTANCE.fromDtoList(modelDtoList));
     }
 
     /**
@@ -82,7 +100,7 @@ public class MptModelController extends BaseController {
     @GetMapping(value = "/{modelId}")
     public ApiResponse<ModelVo> getInfo(@PathVariable Long modelId) {
         log.info("管理后台用户[{}]根据车型ID[{}]获取车型信息", SecurityUtils.getUsername(), modelId);
-        return ApiResponse.ok(modelAppService.getModelById(modelId));
+        return ApiResponse.ok(MptModelAssembler.INSTANCE.fromDto(modelAppService.getModelById(modelId)));
     }
 
     /**
@@ -99,7 +117,8 @@ public class MptModelController extends BaseController {
         if (!modelAppService.checkCodeUnique(model.getId(), model.getCode())) {
             return ApiResponse.fail("新增车型'" + model.getCode() + "'失败，车型代码已存在");
         }
-        return modelAppService.createModel(model, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("新增失败");
+        modelAppService.createModel(MptModelAssembler.INSTANCE.toDto(model), SecurityUtils.getUserId().toString());
+        return ApiResponse.ok();
     }
 
     /**
@@ -116,7 +135,8 @@ public class MptModelController extends BaseController {
         if (!modelAppService.checkCodeUnique(model.getId(), model.getCode())) {
             return ApiResponse.fail("修改保存车型'" + model.getCode() + "'失败，车型代码已存在");
         }
-        return modelAppService.modifyModel(model, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("修改失败");
+        modelAppService.modifyModel(MptModelAssembler.INSTANCE.toDto(model), SecurityUtils.getUserId().toString());
+        return ApiResponse.ok();
     }
 
     /**
@@ -131,11 +151,8 @@ public class MptModelController extends BaseController {
     public ApiResponse<Void> remove(@PathVariable Long[] modelIds) {
         log.info("管理后台用户[{}]删除车型信息[{}]", SecurityUtils.getUsername(), modelIds);
         for (Long modelId : modelIds) {
-            if (modelAppService.checkModelBasicModelExist(modelId)) {
+            if (modelAppService.checkModelBaseModelExist(modelId)) {
                 return ApiResponse.fail("删除车型'" + modelId + "'失败，该车型下存在基础车型");
-            }
-            if (modelAppService.checkModelModelConfigExist(modelId)) {
-                return ApiResponse.fail("删除车型'" + modelId + "'失败，该车型下存在车型配置");
             }
             if (modelAppService.checkModelVehicleExist(modelId)) {
                 return ApiResponse.fail("删除车型'" + modelId + "'失败，该车型下存在车辆");

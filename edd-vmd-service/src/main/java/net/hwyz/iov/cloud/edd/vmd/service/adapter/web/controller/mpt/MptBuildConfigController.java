@@ -4,6 +4,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.BuildConfigVo;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.MptBuildConfigAssembler;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.BuildConfigDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.BuildConfigQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.BuildConfigAppService;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
 import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
@@ -41,9 +44,18 @@ public class MptBuildConfigController extends BaseController {
     public ApiResponse<PageResult<BuildConfigVo>> list(BuildConfigVo buildConfig) {
         log.info("管理后台用户[{}]分页查询生产配置信息", SecurityUtils.getUsername());
         startPage();
-        List<BuildConfigVo> buildConfigVoList = buildConfigAppService.search(buildConfig.getPlatformCode(), buildConfig.getSeriesCode(),
-                buildConfig.getModelCode(), buildConfig.getCode(), buildConfig.getName(), getBeginTime(buildConfig), getEndTime(buildConfig));
-        return ApiResponse.ok(getPageResult(buildConfigVoList));
+        BuildConfigQuery query = BuildConfigQuery.builder()
+                .platformCode(buildConfig.getPlatformCode())
+                .seriesCode(buildConfig.getSeriesCode())
+                .modelCode(buildConfig.getModelCode())
+                .baseModelCode(buildConfig.getBaseModelCode())
+                .code(buildConfig.getCode())
+                .name(buildConfig.getName())
+                .beginTime(getBeginTime(buildConfig))
+                .endTime(getEndTime(buildConfig))
+                .build();
+        List<BuildConfigDto> buildConfigDtoList = buildConfigAppService.search(query);
+        return ApiResponse.ok(getPageResult(MptBuildConfigAssembler.INSTANCE.fromDtoList(buildConfigDtoList)));
     }
 
     /**
@@ -69,7 +81,7 @@ public class MptBuildConfigController extends BaseController {
     @GetMapping(value = "/{buildConfigId}")
     public ApiResponse<BuildConfigVo> getInfo(@PathVariable Long buildConfigId) {
         log.info("管理后台用户[{}]根据生产配置ID[{}]获取生产配置信息", SecurityUtils.getUsername(), buildConfigId);
-        return ApiResponse.ok(buildConfigAppService.getBuildConfigById(buildConfigId));
+        return ApiResponse.ok(MptBuildConfigAssembler.INSTANCE.fromDto(buildConfigAppService.getBuildConfigById(buildConfigId)));
     }
 
     /**
@@ -86,7 +98,8 @@ public class MptBuildConfigController extends BaseController {
         if (!buildConfigAppService.checkCodeUnique(buildConfig.getId(), buildConfig.getCode())) {
             return ApiResponse.fail("新增生产配置'" + buildConfig.getCode() + "'失败，生产配置代码已存在");
         }
-        return buildConfigAppService.createBuildConfig(buildConfig, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("新增失败");
+        buildConfigAppService.createBuildConfig(MptBuildConfigAssembler.INSTANCE.toDto(buildConfig), SecurityUtils.getUserId().toString());
+        return ApiResponse.ok();
     }
 
     /**
@@ -103,7 +116,8 @@ public class MptBuildConfigController extends BaseController {
         if (!buildConfigAppService.checkCodeUnique(buildConfig.getId(), buildConfig.getCode())) {
             return ApiResponse.fail("修改保存生产配置'" + buildConfig.getCode() + "'失败，生产配置代码已存在");
         }
-        return buildConfigAppService.modifyBuildConfig(buildConfig, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("修改失败");
+        buildConfigAppService.modifyBuildConfig(MptBuildConfigAssembler.INSTANCE.toDto(buildConfig), SecurityUtils.getUserId().toString());
+        return ApiResponse.ok();
     }
 
     /**

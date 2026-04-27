@@ -4,6 +4,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.VehicleImportDataVo;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.MptVehicleImportDataAssembler;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.VehicleImportDataDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.VehicleImportDataQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleImportDataAppService;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
 import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
@@ -41,9 +44,15 @@ public class MptVehicleImportDataController extends BaseController {
     public ApiResponse<PageResult<VehicleImportDataVo>> list(VehicleImportDataVo vehicleImportData) {
         log.info("管理后台用户[{}]分页查询车辆导入数据", SecurityUtils.getUsername());
         startPage();
-        List<VehicleImportDataVo> vehicleImportDataVoList = vehicleImportDataAppService.search(vehicleImportData.getBatchNum(),
-                vehicleImportData.getType(), vehicleImportData.getVersion(), getBeginTime(vehicleImportData), getEndTime(vehicleImportData));
-        return ApiResponse.ok(getPageResult(vehicleImportDataVoList));
+        VehicleImportDataQuery query = VehicleImportDataQuery.builder()
+                .batchNum(vehicleImportData.getBatchNum())
+                .type(vehicleImportData.getType())
+                .handle(vehicleImportData.getHandle())
+                .beginTime(getBeginTime(vehicleImportData))
+                .endTime(getEndTime(vehicleImportData))
+                .build();
+        List<VehicleImportDataDto> dtoList = vehicleImportDataAppService.search(query);
+        return ApiResponse.ok(getPageResult(MptVehicleImportDataAssembler.INSTANCE.fromDtoList(dtoList)));
     }
 
     /**
@@ -69,7 +78,7 @@ public class MptVehicleImportDataController extends BaseController {
     @GetMapping(value = "/{vehicleImportDataId}")
     public ApiResponse<VehicleImportDataVo> getInfo(@PathVariable Long vehicleImportDataId) {
         log.info("管理后台用户[{}]根据车辆导入数据ID[{}]获取车辆导入数据", SecurityUtils.getUsername(), vehicleImportDataId);
-        return ApiResponse.ok(vehicleImportDataAppService.getVehicleImportDataById(vehicleImportDataId));
+        return ApiResponse.ok(MptVehicleImportDataAssembler.INSTANCE.fromDto(vehicleImportDataAppService.getVehicleImportDataById(vehicleImportDataId)));
     }
 
     /**
@@ -86,13 +95,17 @@ public class MptVehicleImportDataController extends BaseController {
         if (!vehicleImportDataAppService.checkBatchNumUnique(vehicleImportData.getId(), vehicleImportData.getBatchNum())) {
             return ApiResponse.fail("新增车辆导入数据'" + vehicleImportData.getBatchNum() + "'失败，批次号已存在");
         }
-        ApiResponse<Void> result = vehicleImportDataAppService.createVehicleImportData(vehicleImportData, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
+        VehicleImportDataDto dto = MptVehicleImportDataAssembler.INSTANCE.toDto(vehicleImportData);
+        if (vehicleImportDataAppService.createVehicleImportData(dto, SecurityUtils.getUserId().toString()) <= 0) {
+            return ApiResponse.fail("操作失败");
+        }
         try {
             vehicleImportDataAppService.parseVehicleImportData(vehicleImportData.getBatchNum());
         } catch (Exception e) {
+            log.error("车辆导入数据[{}]解析异常", vehicleImportData.getBatchNum(), e);
             return ApiResponse.fail("车辆导入数据'" + vehicleImportData.getBatchNum() + "'解析异常");
         }
-        return result;
+        return ApiResponse.ok();
     }
 
     /**
@@ -109,13 +122,17 @@ public class MptVehicleImportDataController extends BaseController {
         if (!vehicleImportDataAppService.checkBatchNumUnique(vehicleImportData.getId(), vehicleImportData.getBatchNum())) {
             return ApiResponse.fail("修改保存车辆导入数据'" + vehicleImportData.getBatchNum() + "'失败，批次号已存在");
         }
-        ApiResponse<Void> result = vehicleImportDataAppService.modifyVehicleImportData(vehicleImportData, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
+        VehicleImportDataDto dto = MptVehicleImportDataAssembler.INSTANCE.toDto(vehicleImportData);
+        if (vehicleImportDataAppService.modifyVehicleImportData(dto, SecurityUtils.getUserId().toString()) <= 0) {
+            return ApiResponse.fail("操作失败");
+        }
         try {
             vehicleImportDataAppService.parseVehicleImportData(vehicleImportData.getBatchNum());
         } catch (Exception e) {
+            log.error("车辆导入数据[{}]解析异常", vehicleImportData.getBatchNum(), e);
             return ApiResponse.fail("车辆导入数据'" + vehicleImportData.getBatchNum() + "'解析异常");
         }
-        return result;
+        return ApiResponse.ok();
     }
 
     /**

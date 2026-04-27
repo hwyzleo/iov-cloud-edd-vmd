@@ -2,6 +2,7 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.assembler;
 
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.VehicleDto;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.aggregate.Vehicle;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleBasicInfo;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 
@@ -24,6 +25,22 @@ public interface VehicleAssembler {
      * @return DTO
      */
     VehicleDto toDto(Vehicle vehicle);
+
+    /**
+     * 基础信息领域对象转 DTO
+     *
+     * @param vehicleBasicInfo 基础信息领域对象
+     * @return DTO
+     */
+    VehicleDto fromBasicInfo(VehicleBasicInfo vehicleBasicInfo);
+
+    /**
+     * 基础信息领域对象列表转 DTO 列表
+     *
+     * @param vehicleBasicInfoList 基础信息领域对象列表
+     * @return DTO 列表
+     */
+    List<VehicleDto> fromBasicInfoList(List<VehicleBasicInfo> vehicleBasicInfoList);
 
     /**
      * 领域对象列表转 DTO 列表

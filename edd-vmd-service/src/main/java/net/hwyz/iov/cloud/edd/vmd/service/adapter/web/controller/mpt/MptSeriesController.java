@@ -4,6 +4,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.SeriesVo;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.MptSeriesAssembler;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.SeriesDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.SeriesQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.SeriesAppService;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
 import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
@@ -41,23 +44,32 @@ public class MptSeriesController extends BaseController {
     public ApiResponse<PageResult<SeriesVo>> list(SeriesVo series) {
         log.info("管理后台用户[{}]分页查询车系信息", SecurityUtils.getUsername());
         startPage();
-        List<SeriesVo> seriesVoList = seriesAppService.search(series.getPlatformCode(), series.getCode(),
-                series.getName(), getBeginTime(series), getEndTime(series));
-        return ApiResponse.ok(getPageResult(seriesVoList));
+        SeriesQuery query = SeriesQuery.builder()
+                .platformCode(series.getPlatformCode())
+                .code(series.getCode())
+                .name(series.getName())
+                .beginTime(getBeginTime(series))
+                .endTime(getEndTime(series))
+                .build();
+        List<SeriesDto> seriesDtoList = seriesAppService.search(query);
+        return ApiResponse.ok(getPageResult(MptSeriesAssembler.INSTANCE.fromDtoList(seriesDtoList)));
     }
 
     /**
      * 获取指定车辆平台下的所有车系
      *
      * @param platformCode 车辆平台代码
-     * @return 车系列表
+     * @return 车系信息列表
      */
     @RequiresPermissions("completeVehicle:product:series:list")
     @GetMapping(value = "/listByPlatformCode")
     public ApiResponse<List<SeriesVo>> listByPlatformCode(@RequestParam String platformCode) {
         log.info("管理后台用户[{}]获取指定车辆平台[{}]下的所有车系", SecurityUtils.getUsername(), platformCode);
-        List<SeriesVo> seriesVoList = seriesAppService.search(platformCode, null, null, null, null);
-        return ApiResponse.ok(seriesVoList);
+        SeriesQuery query = SeriesQuery.builder()
+                .platformCode(platformCode)
+                .build();
+        List<SeriesDto> seriesDtoList = seriesAppService.search(query);
+        return ApiResponse.ok(MptSeriesAssembler.INSTANCE.fromDtoList(seriesDtoList));
     }
 
     /**
@@ -83,7 +95,7 @@ public class MptSeriesController extends BaseController {
     @GetMapping(value = "/{seriesId}")
     public ApiResponse<SeriesVo> getInfo(@PathVariable Long seriesId) {
         log.info("管理后台用户[{}]根据车系ID[{}]获取车系信息", SecurityUtils.getUsername(), seriesId);
-        return ApiResponse.ok(seriesAppService.getSeriesById(seriesId));
+        return ApiResponse.ok(MptSeriesAssembler.INSTANCE.fromDto(seriesAppService.getSeriesById(seriesId)));
     }
 
     /**
@@ -100,7 +112,8 @@ public class MptSeriesController extends BaseController {
         if (!seriesAppService.checkCodeUnique(series.getId(), series.getCode())) {
             return ApiResponse.fail("新增车系'" + series.getCode() + "'失败，车系代码已存在");
         }
-        return seriesAppService.createSeries(series, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("新增失败");
+        seriesAppService.createSeries(MptSeriesAssembler.INSTANCE.toDto(series), SecurityUtils.getUserId().toString());
+        return ApiResponse.ok();
     }
 
     /**
@@ -117,7 +130,8 @@ public class MptSeriesController extends BaseController {
         if (!seriesAppService.checkCodeUnique(series.getId(), series.getCode())) {
             return ApiResponse.fail("修改保存车系'" + series.getCode() + "'失败，车系代码已存在");
         }
-        return seriesAppService.modifySeries(series, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("修改失败");
+        seriesAppService.modifySeries(MptSeriesAssembler.INSTANCE.toDto(series), SecurityUtils.getUserId().toString());
+        return ApiResponse.ok();
     }
 
     /**
@@ -134,12 +148,6 @@ public class MptSeriesController extends BaseController {
         for (Long seriesId : seriesIds) {
             if (seriesAppService.checkSeriesModelExist(seriesId)) {
                 return ApiResponse.fail("删除车系'" + seriesId + "'失败，该车系下存在车型");
-            }
-            if (seriesAppService.checkSeriesBasicModelExist(seriesId)) {
-                return ApiResponse.fail("删除车系'" + seriesId + "'失败，该车系下存在基础车型");
-            }
-            if (seriesAppService.checkSeriesModelConfigExist(seriesId)) {
-                return ApiResponse.fail("删除车系'" + seriesId + "'失败，该车系下存在车型配置");
             }
             if (seriesAppService.checkSeriesVehicleExist(seriesId)) {
                 return ApiResponse.fail("删除车系'" + seriesId + "'失败，该车系下存在车辆");

@@ -4,6 +4,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.ManufacturerVo;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.MptManufacturerAssembler;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.ManufacturerDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.ManufacturerQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.ManufacturerAppService;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
 import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
@@ -18,7 +21,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 车辆工厂相关管理接口实现类
+ * 生产厂商相关管理接口实现类
  *
  * @author hwyz_leo
  */
@@ -31,95 +34,102 @@ public class MptManufacturerController extends BaseController {
     private final ManufacturerAppService manufacturerAppService;
 
     /**
-     * 分页查询车辆工厂信息
+     * 分页查询生产厂商信息
      *
-     * @param manufacturer 车辆工厂信息
-     * @return 车辆工厂信息列表
+     * @param manufacturer 生产厂商信息
+     * @return 生产厂商信息列表
      */
     @RequiresPermissions("completeVehicle:product:manufacturer:list")
     @GetMapping(value = "/list")
     public ApiResponse<PageResult<ManufacturerVo>> list(ManufacturerVo manufacturer) {
-        log.info("管理后台用户[{}]分页查询工厂信息", SecurityUtils.getUsername());
+        log.info("管理后台用户[{}]分页查询生产厂商信息", SecurityUtils.getUsername());
         startPage();
-        List<ManufacturerVo> manufacturerVoList = manufacturerAppService.search(manufacturer.getCode(), manufacturer.getName(),
-                getBeginTime(manufacturer), getEndTime(manufacturer));
-        return ApiResponse.ok(getPageResult(manufacturerVoList));
+        ManufacturerQuery query = ManufacturerQuery.builder()
+                .code(manufacturer.getCode())
+                .name(manufacturer.getName())
+                .beginTime(getBeginTime(manufacturer))
+                .endTime(getEndTime(manufacturer))
+                .build();
+        List<ManufacturerDto> manufacturerDtoList = manufacturerAppService.search(query);
+        return ApiResponse.ok(getPageResult(MptManufacturerAssembler.INSTANCE.fromDtoList(manufacturerDtoList)));
     }
 
     /**
-     * 导出车辆工厂信息
+     * 导出生产厂商信息
      *
      * @param response     响应
-     * @param manufacturer 车辆平台信息
+     * @param manufacturer 生产厂商信息
      */
-    @Log(title = "工厂管理", businessType = BusinessType.EXPORT)
+    @Log(title = "生产厂商管理", businessType = BusinessType.EXPORT)
     @RequiresPermissions("completeVehicle:product:manufacturer:export")
     @PostMapping("/export")
     public void export(HttpServletResponse response, ManufacturerVo manufacturer) {
-        log.info("管理后台用户[{}]导出车辆工厂信息", SecurityUtils.getUsername());
+        log.info("管理后台用户[{}]导出生产厂商信息", SecurityUtils.getUsername());
     }
 
     /**
-     * 根据车辆工厂ID获取车辆工厂信息
+     * 根据生产厂商ID获取生产厂商信息
      *
-     * @param manufacturerId 车辆工厂ID
-     * @return 车辆工厂信息
+     * @param manufacturerId 生产厂商ID
+     * @return 生产厂商信息
      */
     @RequiresPermissions("completeVehicle:product:manufacturer:query")
     @GetMapping(value = "/{manufacturerId}")
     public ApiResponse<ManufacturerVo> getInfo(@PathVariable Long manufacturerId) {
-        log.info("管理后台用户[{}]根据车辆工厂ID[{}]获取车辆工厂信息", SecurityUtils.getUsername(), manufacturerId);
-        return ApiResponse.ok(manufacturerAppService.getManufacturerById(manufacturerId));
+        log.info("管理后台用户[{}]根据生产厂商ID[{}]获取生产厂商信息", SecurityUtils.getUsername(), manufacturerId);
+        return ApiResponse.ok(MptManufacturerAssembler.INSTANCE.fromDto(manufacturerAppService.getManufacturerById(manufacturerId)));
     }
 
     /**
-     * 新增车辆工厂信息
+     * 新增生产厂商信息
      *
-     * @param manufacturer 车辆工厂信息
+     * @param manufacturer 生产厂商信息
      * @return 结果
      */
-    @Log(title = "工厂管理", businessType = BusinessType.INSERT)
+    @Log(title = "生产厂商管理", businessType = BusinessType.INSERT)
     @RequiresPermissions("completeVehicle:product:manufacturer:add")
     @PostMapping
     public ApiResponse<Void> add(@Validated @RequestBody ManufacturerVo manufacturer) {
-        log.info("管理后台用户[{}]新增车辆工厂信息[{}]", SecurityUtils.getUsername(), manufacturer.getCode());
+        log.info("管理后台用户[{}]新增生产厂商信息[{}]", SecurityUtils.getUsername(), manufacturer.getCode());
         if (!manufacturerAppService.checkCodeUnique(manufacturer.getId(), manufacturer.getCode())) {
-            return ApiResponse.fail("新增车辆工厂'" + manufacturer.getCode() + "'失败，车辆工厂代码已存在");
+            return ApiResponse.fail("新增生产厂商'" + manufacturer.getCode() + "'失败，生产厂商代码已存在");
         }
-        return manufacturerAppService.createManufacturer(manufacturer, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("新增失败");
+        manufacturerAppService.createManufacturer(MptManufacturerAssembler.INSTANCE.toDto(manufacturer), SecurityUtils.getUserId().toString());
+        return ApiResponse.ok();
     }
 
     /**
-     * 修改保存车辆工厂信息
+     * 修改保存生产厂商信息
      *
-     * @param manufacturer 车辆工厂信息
+     * @param manufacturer 生产厂商信息
      * @return 结果
      */
-    @Log(title = "工厂管理", businessType = BusinessType.UPDATE)
+    @Log(title = "生产厂商管理", businessType = BusinessType.UPDATE)
     @RequiresPermissions("completeVehicle:product:manufacturer:edit")
     @PutMapping
     public ApiResponse<Void> edit(@Validated @RequestBody ManufacturerVo manufacturer) {
-        log.info("管理后台用户[{}]修改保存车辆工厂信息[{}]", SecurityUtils.getUsername(), manufacturer.getCode());
+        log.info("管理后台用户[{}]修改保存生产厂商信息[{}]", SecurityUtils.getUsername(), manufacturer.getCode());
         if (!manufacturerAppService.checkCodeUnique(manufacturer.getId(), manufacturer.getCode())) {
-            return ApiResponse.fail("修改保存车辆工厂'" + manufacturer.getCode() + "'失败，车辆工厂代码已存在");
+            return ApiResponse.fail("修改保存生产厂商'" + manufacturer.getCode() + "'失败，生产厂商代码已存在");
         }
-        return manufacturerAppService.modifyManufacturer(manufacturer, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("修改失败");
+        manufacturerAppService.modifyManufacturer(MptManufacturerAssembler.INSTANCE.toDto(manufacturer), SecurityUtils.getUserId().toString());
+        return ApiResponse.ok();
     }
 
     /**
-     * 删除车辆工厂信息
+     * 删除生产厂商信息
      *
-     * @param manufacturerIds 车辆工厂ID数组
+     * @param manufacturerIds 生产厂商ID数组
      * @return 结果
      */
-    @Log(title = "工厂管理", businessType = BusinessType.DELETE)
+    @Log(title = "生产厂商管理", businessType = BusinessType.DELETE)
     @RequiresPermissions("completeVehicle:product:manufacturer:remove")
     @DeleteMapping("/{manufacturerIds}")
     public ApiResponse<Void> remove(@PathVariable Long[] manufacturerIds) {
-        log.info("管理后台用户[{}]删除车辆工厂信息[{}]", SecurityUtils.getUsername(), manufacturerIds);
+        log.info("管理后台用户[{}]删除生产厂商信息[{}]", SecurityUtils.getUsername(), manufacturerIds);
         for (Long manufacturerId : manufacturerIds) {
             if (manufacturerAppService.checkManufacturerVehicleExist(manufacturerId)) {
-                return ApiResponse.fail("删除车辆工厂'" + manufacturerId + "'失败，该车辆工厂下存在车辆");
+                return ApiResponse.fail("删除生产厂商'" + manufacturerId + "'失败，该生产厂商下存在车辆");
             }
         }
         return manufacturerAppService.deleteManufacturerByIds(manufacturerIds) > 0 ? ApiResponse.ok() : ApiResponse.fail("删除失败");

@@ -4,6 +4,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.DeviceVo;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.MptDeviceAssembler;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.DeviceDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.DeviceQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.DeviceAppService;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
 import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
@@ -44,9 +47,15 @@ public class MptDeviceController extends BaseController {
     public ApiResponse<PageResult<DeviceVo>> list(DeviceVo device) {
         log.info("管理后台用户[{}]分页查询设备信息", SecurityUtils.getUsername());
         startPage();
-        List<DeviceVo> deviceVoList = deviceAppService.search(device.getCode(), device.getName(), device.getFuncDomain(),
-                getBeginTime(device), getEndTime(device));
-        return ApiResponse.ok(getPageResult(deviceVoList));
+        DeviceQuery query = DeviceQuery.builder()
+                .code(device.getCode())
+                .name(device.getName())
+                .funcDomain(device.getFuncDomain())
+                .beginTime(getBeginTime(device))
+                .endTime(getEndTime(device))
+                .build();
+        List<DeviceDto> deviceDtoList = deviceAppService.search(query);
+        return ApiResponse.ok(getPageResult(MptDeviceAssembler.INSTANCE.fromDtoList(deviceDtoList)));
     }
 
     /**
@@ -56,7 +65,7 @@ public class MptDeviceController extends BaseController {
      */
     @RequiresPermissions("completeVehicle:vehicle:device:list")
     @GetMapping(value = "/listAllDeviceItem")
-    public ApiResponse listAllDeviceItem() {
+    public ApiResponse<List<Map<String, Object>>> listAllDeviceItem() {
         log.info("管理后台用户[{}]获取所有设备项", SecurityUtils.getUsername());
         List<Map<String, Object>> list = new ArrayList<>();
         for (DeviceItem deviceItem : DeviceItem.values()) {
@@ -72,10 +81,10 @@ public class MptDeviceController extends BaseController {
      */
     @RequiresPermissions("completeVehicle:vehicle:device:list")
     @GetMapping(value = "/listAllDevice")
-    public ApiResponse listAllDevice() {
+    public ApiResponse<List<Map<String, Object>>> listAllDevice() {
         log.info("管理后台用户[{}]获取所有设备", SecurityUtils.getUsername());
         List<Map<String, Object>> list = new ArrayList<>();
-        for (DeviceVo device : deviceAppService.listAll()) {
+        for (DeviceDto device : deviceAppService.listAll()) {
             list.add(Map.of("code", device.getCode(), "label", device.getName()));
         }
         return ApiResponse.ok(list);
@@ -102,9 +111,9 @@ public class MptDeviceController extends BaseController {
      */
     @RequiresPermissions("completeVehicle:vehicle:device:query")
     @GetMapping(value = "/{deviceId}")
-    public ApiResponse getInfo(@PathVariable Long deviceId) {
+    public ApiResponse<DeviceVo> getInfo(@PathVariable Long deviceId) {
         log.info("管理后台用户[{}]根据设备信息ID[{}]获取设备信息", SecurityUtils.getUsername(), deviceId);
-        return ApiResponse.ok(deviceAppService.getDeviceById(deviceId));
+        return ApiResponse.ok(MptDeviceAssembler.INSTANCE.fromDto(deviceAppService.getDeviceById(deviceId)));
     }
 
     /**
@@ -116,12 +125,13 @@ public class MptDeviceController extends BaseController {
     @Log(title = "设备信息管理", businessType = BusinessType.INSERT)
     @RequiresPermissions("completeVehicle:vehicle:device:add")
     @PostMapping
-    public ApiResponse add(@Validated @RequestBody DeviceVo device) {
+    public ApiResponse<Void> add(@Validated @RequestBody DeviceVo device) {
         log.info("管理后台用户[{}]新增设备信息[{}]", SecurityUtils.getUsername(), device.getCode());
         if (!deviceAppService.checkCodeUnique(device.getId(), device.getCode())) {
             return ApiResponse.fail("新增设备信息'" + device.getCode() + "'失败，设备信息代码已存在");
         }
-        return deviceAppService.createDevice(device, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
+        deviceAppService.createDevice(MptDeviceAssembler.INSTANCE.toDto(device), SecurityUtils.getUserId().toString());
+        return ApiResponse.ok();
     }
 
     /**
@@ -133,12 +143,13 @@ public class MptDeviceController extends BaseController {
     @Log(title = "设备信息管理", businessType = BusinessType.UPDATE)
     @RequiresPermissions("completeVehicle:vehicle:device:edit")
     @PutMapping
-    public ApiResponse edit(@Validated @RequestBody DeviceVo device) {
+    public ApiResponse<Void> edit(@Validated @RequestBody DeviceVo device) {
         log.info("管理后台用户[{}]修改保存设备信息[{}]", SecurityUtils.getUsername(), device.getCode());
         if (!deviceAppService.checkCodeUnique(device.getId(), device.getCode())) {
             return ApiResponse.fail("修改保存设备信息'" + device.getCode() + "'失败，设备信息代码已存在");
         }
-        return deviceAppService.modifyDevice(device, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
+        deviceAppService.modifyDevice(MptDeviceAssembler.INSTANCE.toDto(device), SecurityUtils.getUserId().toString());
+        return ApiResponse.ok();
     }
 
     /**
@@ -150,7 +161,7 @@ public class MptDeviceController extends BaseController {
     @Log(title = "设备信息管理", businessType = BusinessType.DELETE)
     @RequiresPermissions("completeVehicle:vehicle:device:remove")
     @DeleteMapping("/{deviceIds}")
-    public ApiResponse remove(@PathVariable Long[] deviceIds) {
+    public ApiResponse<Void> remove(@PathVariable Long[] deviceIds) {
         log.info("管理后台用户[{}]删除设备信息[{}]", SecurityUtils.getUsername(), deviceIds);
         return deviceAppService.deleteDeviceByIds(deviceIds) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
     }

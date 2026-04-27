@@ -3,21 +3,23 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 import cn.hutool.core.util.ObjUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.edd.vmd.api.vo.PlatformVo;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.PlatformAssembler;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.PlatformDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.PlatformQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Platform;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.*;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehPlatformRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehSeriesRepository;
 import net.hwyz.iov.cloud.framework.common.util.ParamHelper;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Service;
 
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 /**
- * 平台应用服务类
+ * 车辆平台应用服务类
  *
  * @author hwyz_leo
  */
@@ -28,38 +30,22 @@ public class PlatformAppService {
 
     private final VehPlatformRepository vehPlatformRepository;
     private final VehSeriesRepository vehSeriesRepository;
-    private final VehModelRepository vehModelRepository;
-    private final VehBaseModelRepository vehBaseModelRepository;
-    private final VehBuildConfigRepository vehBuildConfigRepository;
     private final VehBasicInfoRepository vehBasicInfoRepository;
 
     /**
-     * 查询平台信息
+     * 查询车辆平台信息
      *
-     * @param code      平台代码
-     * @param name      平台名称
-     * @param beginTime 开始时间
-     * @param endTime    结束时间
-     * @return 平台列表
+     * @param query 查询 DTO
+     * @return 车辆平台列表
      */
-    public List<PlatformVo> search(String code, String name, Date beginTime, Date endTime) {
+    public List<PlatformDto> search(PlatformQuery query) {
         Map<String, Object> map = new HashMap<>();
-        map.put("code", code);
-        map.put("name", ParamHelper.fuzzyQueryParam(name));
-        map.put("beginTime", beginTime);
-        map.put("endTime", endTime);
+        map.put("code", query.getCode());
+        map.put("name", ParamHelper.fuzzyQueryParam(query.getName()));
+        map.put("beginTime", query.getBeginTime());
+        map.put("endTime", query.getEndTime());
         List<Platform> platformList = vehPlatformRepository.selectByMap(map);
         return PageUtil.convert(platformList, PlatformAssembler.INSTANCE::fromDomain);
-    }
-
-    /**
-     * 获取所有平台信息
-     *
-     * @return 平台信息列表
-     */
-    public List<PlatformVo> listAll() {
-        List<Platform> platformList = vehPlatformRepository.selectByMap(new HashMap<>());
-        return PlatformAssembler.INSTANCE.fromDomainList(platformList);
     }
 
     /**
@@ -73,7 +59,7 @@ public class PlatformAppService {
         if (ObjUtil.isNull(platformId)) {
             platformId = -1L;
         }
-        Platform platform = getPlatformByCode(code);
+        Platform platform = vehPlatformRepository.selectByCode(code);
         return !ObjUtil.isNotNull(platform) || platform.getId().longValue() == platformId.longValue();
     }
 
@@ -91,45 +77,6 @@ public class PlatformAppService {
     }
 
     /**
-     * 检查平台下是否存在车型
-     *
-     * @param platformId 平台ID
-     * @return 结果
-     */
-    public Boolean checkPlatformModelExist(Long platformId) {
-        Platform platform = vehPlatformRepository.selectById(platformId);
-        Map<String, Object> map = new HashMap<>();
-        map.put("platformCode", platform.getCode());
-        return vehModelRepository.countByMap(map) > 0;
-    }
-
-    /**
-     * 检查平台下是否存在基础车型
-     *
-     * @param platformId 平台ID
-     * @return 结果
-     */
-    public Boolean checkPlatformBasicModelExist(Long platformId) {
-        Platform platform = vehPlatformRepository.selectById(platformId);
-        Map<String, Object> map = new HashMap<>();
-        map.put("platformCode", platform.getCode());
-        return vehBaseModelRepository.countByMap(map) > 0;
-    }
-
-    /**
-     * 检查平台下是否存在车型配置
-     *
-     * @param platformId 平台ID
-     * @return 结果
-     */
-    public Boolean checkPlatformModelConfigExist(Long platformId) {
-        Platform platform = vehPlatformRepository.selectById(platformId);
-        Map<String, Object> map = new HashMap<>();
-        map.put("platformCode", platform.getCode());
-        return vehBuildConfigRepository.countByMap(map) > 0;
-    }
-
-    /**
      * 检查平台下是否存在车辆
      *
      * @param platformId 平台ID
@@ -143,53 +90,53 @@ public class PlatformAppService {
     }
 
     /**
-     * 根据主键ID获取平台信息
+     * 根据主键ID获取车辆平台信息
      *
      * @param id 主键ID
-     * @return platform信息
+     * @return 车辆平台 DTO
      */
-    public PlatformVo getPlatformById(Long id) {
+    public PlatformDto getPlatformById(Long id) {
         return PlatformAssembler.INSTANCE.fromDomain(vehPlatformRepository.selectById(id));
     }
 
     /**
-     * 根据平台代码获取平台信息
+     * 根据车辆平台代码获取车辆平台信息
      *
-     * @param code 平台代码
-     * @return 平台领域对象
+     * @param code 车辆平台代码
+     * @return 车辆平台领域对象
      */
     public Platform getPlatformByCode(String code) {
         return vehPlatformRepository.selectByCode(code);
     }
 
     /**
-     * 新增平台
+     * 新增车辆平台
      *
-     * @param platformVo 平台信息
-     * @param userId     操作用户ID
+     * @param platformDto 车辆平台信息 DTO
+     * @param userId      操作用户ID
      * @return 结果
      */
-    public int createPlatform(PlatformVo platformVo, String userId) {
-        Platform platform = PlatformAssembler.INSTANCE.toDomain(platformVo);
+    public int createPlatform(PlatformDto platformDto, String userId) {
+        Platform platform = PlatformAssembler.INSTANCE.toDomain(platformDto);
         return vehPlatformRepository.insert(platform);
     }
 
     /**
-     * 修改平台
+     * 修改车辆平台
      *
-     * @param platformVo 平台信息
-     * @param userId     操作用户ID
+     * @param platformDto 车辆平台信息 DTO
+     * @param userId      操作用户ID
      * @return 结果
      */
-    public int modifyPlatform(PlatformVo platformVo, String userId) {
-        Platform platform = PlatformAssembler.INSTANCE.toDomain(platformVo);
+    public int modifyPlatform(PlatformDto platformDto, String userId) {
+        Platform platform = PlatformAssembler.INSTANCE.toDomain(platformDto);
         return vehPlatformRepository.update(platform);
     }
 
     /**
-     * 批量删除平台
+     * 批量删除车辆平台
      *
-     * @param ids 平台ID数组
+     * @param ids 车辆平台ID数组
      * @return 结果
      */
     public int deletePlatformByIds(Long[] ids) {

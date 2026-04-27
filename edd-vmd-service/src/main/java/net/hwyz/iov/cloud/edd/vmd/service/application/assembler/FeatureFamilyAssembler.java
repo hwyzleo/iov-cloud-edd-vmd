@@ -1,6 +1,6 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.assembler;
 
-import net.hwyz.iov.cloud.edd.vmd.api.vo.FeatureFamilyVo;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.FeatureFamilyDto;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.FeatureFamily;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
@@ -8,7 +8,7 @@ import org.mapstruct.factory.Mappers;
 import java.util.List;
 
 /**
- * 管理后台特征族转换类
+ * 特征族 DTO 转换器
  *
  * @author hwyz_leo
  */
@@ -18,27 +18,27 @@ public interface FeatureFamilyAssembler {
     FeatureFamilyAssembler INSTANCE = Mappers.getMapper(FeatureFamilyAssembler.class);
 
     /**
-     * 领域对象转数据传输对象
+     * 领域对象转 DTO
      *
      * @param featureFamily 领域对象
-     * @return 数据传输对象
+     * @return DTO
      */
-    FeatureFamilyVo fromDomain(FeatureFamily featureFamily);
+    FeatureFamilyDto fromDomain(FeatureFamily featureFamily);
 
     /**
-     * 数据传输对象转领域对象
+     * DTO 转领域对象
      *
-     * @param featureFamilyVo 数据传输对象
+     * @param featureFamilyDto DTO
      * @return 领域对象
      */
-    FeatureFamily toDomain(FeatureFamilyVo featureFamilyVo);
+    FeatureFamily toDomain(FeatureFamilyDto featureFamilyDto);
 
     /**
-     * 领域对象列表转数据传输对象列表
+     * 领域对象列表转 DTO 列表
      *
      * @param featureFamilyList 领域对象列表
-     * @return 数据传输对象列表
+     * @return DTO 列表
      */
-    List<FeatureFamilyVo> fromDomainList(List<FeatureFamily> featureFamilyList);
+    List<FeatureFamilyDto> fromDomainList(List<FeatureFamily> featureFamilyList);
 
 }

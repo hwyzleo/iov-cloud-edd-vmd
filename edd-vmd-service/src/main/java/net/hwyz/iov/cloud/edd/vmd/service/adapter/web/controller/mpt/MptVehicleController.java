@@ -4,8 +4,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.VehicleVo;
-import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.VehicleVoAssembler;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.MptVehicleAssembler;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.VehicleDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.VehicleQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleLifecycleAppService;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
@@ -44,9 +45,14 @@ public class MptVehicleController extends BaseController {
     public ApiResponse<PageResult<VehicleVo>> list(VehicleVo vehicle) {
         log.info("管理后台用户[{}]分页查询车辆信息", SecurityUtils.getUsername());
         startPage();
-        List<VehicleVo> vehicleVoList = vehicleAppService.search(vehicle.getVin(), vehicle.getBuildConfigCode(),
-                getBeginTime(vehicle), getEndTime(vehicle), null, null);
-        return ApiResponse.ok(getPageResult(vehicleVoList));
+        VehicleQuery query = VehicleQuery.builder()
+                .vin(vehicle.getVin())
+                .buildConfigCode(vehicle.getBuildConfigCode())
+                .beginTime(getBeginTime(vehicle))
+                .endTime(getEndTime(vehicle))
+                .build();
+        List<VehicleDto> vehicleDtoList = vehicleAppService.search(query);
+        return ApiResponse.ok(getPageResult(MptVehicleAssembler.INSTANCE.fromDtoList(vehicleDtoList)));
     }
 
     /**
@@ -60,7 +66,7 @@ public class MptVehicleController extends BaseController {
     public ApiResponse<VehicleVo> getInfoByVin(@PathVariable String vin) {
         log.info("管理后台用户[{}]根据车架号[{}]获取车辆信息", SecurityUtils.getUsername(), vin);
         VehicleDto vehicleDto = vehicleAppService.getVehicleByVin(vin);
-        return ApiResponse.ok(VehicleVoAssembler.INSTANCE.fromDto(vehicleDto));
+        return ApiResponse.ok(MptVehicleAssembler.INSTANCE.fromDto(vehicleDto));
     }
 
     /**

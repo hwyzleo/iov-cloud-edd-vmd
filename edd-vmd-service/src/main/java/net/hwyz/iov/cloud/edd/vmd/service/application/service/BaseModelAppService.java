@@ -3,10 +3,10 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 import cn.hutool.core.util.ObjUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.edd.vmd.api.vo.BaseModelFeatureCodeVo;
-import net.hwyz.iov.cloud.edd.vmd.api.vo.BaseModelVo;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.MptFeatureAssembler;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.BaseModelAssembler;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.BaseModelFeatureCodeAssembler;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.*;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.BaseModel;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.BaseModelFeatureCode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBaseModelRepository;
@@ -16,7 +16,6 @@ import net.hwyz.iov.cloud.framework.common.util.ParamHelper;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Service;
 
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,30 +33,25 @@ public class BaseModelAppService {
     private final VehBaseModelRepository vehBaseModelRepository;
     private final VehBasicInfoRepository vehBasicInfoRepository;
     private final VehBuildConfigRepository vehBuildConfigRepository;
+    private final FeatureFamilyAppService featureFamilyAppService;
 
     // ==================== 基础车型 ====================
 
     /**
      * 查询基础车型信息
      *
-     * @param platformCode 车辆平台代码
-     * @param seriesCode   车系代码
-     * @param modelCode    车型代码
-     * @param code         基础车型代码
-     * @param name         基础车型名称
-     * @param beginTime    开始时间
-     * @param endTime      结束时间
+     * @param query 查询 DTO
      * @return 基础车型列表
      */
-    public List<BaseModelVo> search(String platformCode, String seriesCode, String modelCode, String code, String name, Date beginTime, Date endTime) {
+    public List<BaseModelDto> search(BaseModelQuery query) {
         Map<String, Object> map = new HashMap<>();
-        map.put("platformCode", platformCode);
-        map.put("seriesCode", seriesCode);
-        map.put("modelCode", modelCode);
-        map.put("code", code);
-        map.put("name", ParamHelper.fuzzyQueryParam(name));
-        map.put("beginTime", beginTime);
-        map.put("endTime", endTime);
+        map.put("platformCode", query.getPlatformCode());
+        map.put("seriesCode", query.getSeriesCode());
+        map.put("modelCode", query.getModelCode());
+        map.put("code", query.getCode());
+        map.put("name", ParamHelper.fuzzyQueryParam(query.getName()));
+        map.put("beginTime", query.getBeginTime());
+        map.put("endTime", query.getEndTime());
         List<BaseModel> baseModelList = vehBaseModelRepository.selectByMap(map);
         return PageUtil.convert(baseModelList, BaseModelAssembler.INSTANCE::fromDomain);
     }
@@ -109,7 +103,7 @@ public class BaseModelAppService {
      * @param id 主键ID
      * @return 基础车型信息
      */
-    public BaseModelVo getBaseModelById(Long id) {
+    public BaseModelDto getBaseModelById(Long id) {
         return BaseModelAssembler.INSTANCE.fromDomain(vehBaseModelRepository.selectById(id));
     }
 
@@ -126,24 +120,22 @@ public class BaseModelAppService {
     /**
      * 新增基础车型
      *
-     * @param baseModelVo 基础车型信息
-     * @param userId      操作用户ID
+     * @param baseModelDto 基础车型信息
      * @return 结果
      */
-    public int createBasicModel(BaseModelVo baseModelVo, String userId) {
-        BaseModel baseModel = BaseModelAssembler.INSTANCE.toDomain(baseModelVo);
+    public int createBasicModel(BaseModelDto baseModelDto) {
+        BaseModel baseModel = BaseModelAssembler.INSTANCE.toDomain(baseModelDto);
         return vehBaseModelRepository.insert(baseModel);
     }
 
     /**
      * 修改基础车型
      *
-     * @param baseModelVo 基础车型信息
-     * @param userId      操作用户ID
+     * @param baseModelDto 基础车型信息
      * @return 结果
      */
-    public int modifyBasicModel(BaseModelVo baseModelVo, String userId) {
-        BaseModel baseModel = BaseModelAssembler.INSTANCE.toDomain(baseModelVo);
+    public int modifyBasicModel(BaseModelDto baseModelDto) {
+        BaseModel baseModel = BaseModelAssembler.INSTANCE.toDomain(baseModelDto);
         return vehBaseModelRepository.update(baseModel);
     }
 
@@ -164,17 +156,33 @@ public class BaseModelAppService {
      *
      * @param baseModelCode 基础车型编码
      * @param familyCode    特征族编码
-     * @param beginTime     开始时间
-     * @param endTime       结束时间
      * @return 基础车型特征关系列表
      */
-    public List<BaseModelFeatureCodeVo> searchFeatureCode(String baseModelCode, String familyCode, Date beginTime, Date endTime) {
+    public List<BaseModelFeatureCodeDto> searchFeatureCode(String baseModelCode, String familyCode) {
         BaseModelFeatureCode example = BaseModelFeatureCode.builder()
                 .baseModelCode(baseModelCode)
                 .familyCode(familyCode)
                 .build();
         List<BaseModelFeatureCode> list = vehBaseModelRepository.selectFeatureCodeByExample(example);
-        return PageUtil.convert(list, BaseModelFeatureCodeAssembler.INSTANCE::fromDomain);
+        List<BaseModelFeatureCodeDto> dtoList = PageUtil.convert(list, BaseModelFeatureCodeAssembler.INSTANCE::fromDomain);
+        dtoList.forEach(dto -> {
+            FeatureFamilyDto featureFamily = featureFamilyAppService.getFeatureFamilyByCode(dto.getFamilyCode());
+            if (featureFamily != null) {
+                dto.setFamilyName(featureFamily.getName());
+            }
+            if (dto.getFeatureCode() != null) {
+                dto.setFeatureName(new String[dto.getFeatureCode().length]);
+                int i = 0;
+                for (String code : dto.getFeatureCode()) {
+                    FeatureCodeDto featureCode = featureFamilyAppService.getFeatureCodeByCode(code);
+                    if (featureCode != null) {
+                        dto.getFeatureName()[i] = featureCode.getName();
+                    }
+                    i++;
+                }
+            }
+        });
+        return dtoList;
     }
 
     /**
@@ -183,7 +191,7 @@ public class BaseModelAppService {
      * @param id 主键ID
      * @return 基础车型特征关系信息
      */
-    public BaseModelFeatureCodeVo getBaseModelFeatureCodeById(Long id) {
+    public BaseModelFeatureCodeDto getBaseModelFeatureCodeById(Long id) {
         List<BaseModelFeatureCode> list = vehBaseModelRepository.selectFeatureCodeByExample(BaseModelFeatureCode.builder().id(id).build());
         return list.isEmpty() ? null : BaseModelFeatureCodeAssembler.INSTANCE.fromDomain(list.get(0));
     }
@@ -210,24 +218,22 @@ public class BaseModelAppService {
     /**
      * 新增基础车型特征关系
      *
-     * @param featureCodeVo 基础车型特征关系信息
-     * @param userId        操作用户ID
+     * @param featureCodeDto 基础车型特征关系信息
      * @return 结果
      */
-    public int createBasicModelFeatureCode(BaseModelFeatureCodeVo featureCodeVo, String userId) {
-        BaseModelFeatureCode featureCode = BaseModelFeatureCodeAssembler.INSTANCE.toDomain(featureCodeVo);
+    public int createBasicModelFeatureCode(BaseModelFeatureCodeDto featureCodeDto) {
+        BaseModelFeatureCode featureCode = BaseModelFeatureCodeAssembler.INSTANCE.toDomain(featureCodeDto);
         return vehBaseModelRepository.batchInsertFeatureCode(List.of(featureCode));
     }
 
     /**
      * 修改基础车型特征关系
      *
-     * @param featureCodeVo 基础车型特征关系信息
-     * @param userId        操作用户ID
+     * @param featureCodeDto 基础车型特征关系信息
      * @return 结果
      */
-    public int modifyBaseModelFeatureCode(BaseModelFeatureCodeVo featureCodeVo, String userId) {
-        BaseModelFeatureCode featureCode = BaseModelFeatureCodeAssembler.INSTANCE.toDomain(featureCodeVo);
+    public int modifyBaseModelFeatureCode(BaseModelFeatureCodeDto featureCodeDto) {
+        BaseModelFeatureCode featureCode = BaseModelFeatureCodeAssembler.INSTANCE.toDomain(featureCodeDto);
         return vehBaseModelRepository.updateFeatureCode(featureCode);
     }
 

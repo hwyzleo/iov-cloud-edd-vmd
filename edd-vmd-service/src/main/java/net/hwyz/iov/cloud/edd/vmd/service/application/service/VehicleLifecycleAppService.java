@@ -2,12 +2,13 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 
 import lombok.RequiredArgsConstructor;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.VehicleLifecycleAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.VehicleLifecycleNodeAssembler;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.VehicleLifecycleDto;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleLifecycle;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleLifecycleNode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.VehicleLifecycleNodeEnum;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehicleLifecycleNodeRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehLifecycleRepository;
+import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -30,10 +31,11 @@ public class VehicleLifecycleAppService {
      * 根据车架号查询车辆生命周期信息
      *
      * @param vin 车架号
-     * @return 车辆生命周期列表
+     * @return 车辆生命周期 DTO 列表
      */
-    public List<VehicleLifecycle> getVehicleLifecycleByVin(String vin) {
-        return vehLifecycleRepository.selectByVin(vin);
+    public List<VehicleLifecycleDto> getVehicleLifecycleByVin(String vin) {
+        List<VehicleLifecycle> list = vehLifecycleRepository.selectByVin(vin);
+        return PageUtil.convert(list, VehicleLifecycleAssembler.INSTANCE::fromDomain);
     }
 
     /**
@@ -42,7 +44,7 @@ public class VehicleLifecycleAppService {
      * @param vin 车架号
      * @return 车辆生命周期节点信息
      */
-    public VehicleLifecycle getVehicleLifecycleNode(String vin) {
+    public VehicleLifecycleDto getVehicleLifecycleNode(String vin) {
         List<VehicleLifecycleNode> nodes = vehicleLifecycleNodeRepository.selectByVin(vin);
         return VehicleLifecycleAssembler.INSTANCE.fromNodes(vin, nodes);
     }

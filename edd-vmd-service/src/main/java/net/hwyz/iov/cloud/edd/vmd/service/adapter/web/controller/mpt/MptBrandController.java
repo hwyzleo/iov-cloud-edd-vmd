@@ -4,6 +4,9 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.BrandVo;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.MptBrandAssembler;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.BrandDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.BrandQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.BrandAppService;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
 import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
@@ -41,9 +44,14 @@ public class MptBrandController extends BaseController {
     public ApiResponse<PageResult<BrandVo>> list(BrandVo brand) {
         log.info("管理后台用户[{}]分页查询车辆品牌信息", SecurityUtils.getUsername());
         startPage();
-        List<BrandVo> brandVoList = brandAppService.search(brand.getCode(), brand.getName(), getBeginTime(brand),
-                getEndTime(brand));
-        return ApiResponse.ok(getPageResult(brandVoList));
+        BrandQuery query = BrandQuery.builder()
+                .code(brand.getCode())
+                .name(brand.getName())
+                .beginTime(getBeginTime(brand))
+                .endTime(getEndTime(brand))
+                .build();
+        List<BrandDto> brandDtoList = brandAppService.search(query);
+        return ApiResponse.ok(getPageResult(MptBrandAssembler.INSTANCE.fromDtoList(brandDtoList)));
     }
 
     /**
@@ -69,7 +77,7 @@ public class MptBrandController extends BaseController {
     @GetMapping(value = "/{brandId}")
     public ApiResponse<BrandVo> getInfo(@PathVariable Long brandId) {
         log.info("管理后台用户[{}]根据车辆品牌ID[{}]获取车辆品牌信息", SecurityUtils.getUsername(), brandId);
-        return ApiResponse.ok(brandAppService.getBrandById(brandId));
+        return ApiResponse.ok(MptBrandAssembler.INSTANCE.fromDto(brandAppService.getBrandById(brandId)));
     }
 
     /**
@@ -86,7 +94,8 @@ public class MptBrandController extends BaseController {
         if (!brandAppService.checkCodeUnique(brand.getId(), brand.getCode())) {
             return ApiResponse.fail("新增车辆品牌'" + brand.getCode() + "'失败，车辆品牌代码已存在");
         }
-        return brandAppService.createBrand(brand, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("新增失败");
+        brandAppService.createBrand(MptBrandAssembler.INSTANCE.toDto(brand), SecurityUtils.getUserId().toString());
+        return ApiResponse.ok();
     }
 
     /**
@@ -103,7 +112,8 @@ public class MptBrandController extends BaseController {
         if (!brandAppService.checkCodeUnique(brand.getId(), brand.getCode())) {
             return ApiResponse.fail("修改保存车辆品牌'" + brand.getCode() + "'失败，车辆品牌代码已存在");
         }
-        return brandAppService.modifyBrand(brand, SecurityUtils.getUserId().toString()) > 0 ? ApiResponse.ok() : ApiResponse.fail("修改失败");
+        brandAppService.modifyBrand(MptBrandAssembler.INSTANCE.toDto(brand), SecurityUtils.getUserId().toString());
+        return ApiResponse.ok();
     }
 
     /**

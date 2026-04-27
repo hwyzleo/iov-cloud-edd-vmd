@@ -3,10 +3,9 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 import cn.hutool.core.util.ObjUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.edd.vmd.api.vo.VehicleVo;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.VehicleAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.VehicleVoAssembler;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.VehicleDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.VehicleQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.aggregate.Vehicle;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleBasicInfo;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleDetail;
@@ -22,7 +21,6 @@ import net.hwyz.iov.cloud.tsp.account.api.contract.Account;
 import net.hwyz.iov.cloud.tsp.account.api.feign.service.ExAccountService;
 import org.springframework.stereotype.Service;
 
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -45,24 +43,19 @@ public class VehicleAppService {
     /**
      * 查询车辆信息
      *
-     * @param vin             车架号
-     * @param buildConfigCode 生产配置代码
-     * @param beginTime       开始时间
-     * @param endTime         结束时间
-     * @param isEol           是否下线
-     * @param isOrder         是否有订单
-     * @return 车辆 VO 列表
+     * @param query 查询 DTO
+     * @return 车辆 DTO 列表
      */
-    public List<VehicleVo> search(String vin, String buildConfigCode, Date beginTime, Date endTime, Boolean isEol, Boolean isOrder) {
+    public List<VehicleDto> search(VehicleQuery query) {
         Map<String, Object> map = new HashMap<>();
-        map.put("vin", ParamHelper.fuzzyQueryParam(vin));
-        map.put("buildConfigCode", buildConfigCode);
-        map.put("beginTime", beginTime);
-        map.put("endTime", endTime);
-        map.put("isEol", isEol);
-        map.put("isOrder", isOrder);
+        map.put("vin", ParamHelper.fuzzyQueryParam(query.getVin()));
+        map.put("buildConfigCode", query.getBuildConfigCode());
+        map.put("beginTime", query.getBeginTime());
+        map.put("endTime", query.getEndTime());
+        map.put("isEol", query.getIsEol());
+        map.put("isOrder", query.getIsOrder());
         List<VehicleBasicInfo> vehicleBasicInfoList = vehBasicInfoRepository.selectByMap(map);
-        return PageUtil.convert(vehicleBasicInfoList, VehicleVoAssembler.INSTANCE::fromDomain);
+        return PageUtil.convert(vehicleBasicInfoList, VehicleAssembler.INSTANCE::fromBasicInfo);
     }
 
     /**

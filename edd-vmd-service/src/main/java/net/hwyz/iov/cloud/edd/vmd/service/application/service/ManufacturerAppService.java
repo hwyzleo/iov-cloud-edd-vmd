@@ -3,8 +3,9 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 import cn.hutool.core.util.ObjUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.edd.vmd.api.vo.ManufacturerVo;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.ManufacturerAssembler;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.ManufacturerDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.ManufacturerQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Manufacturer;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehManufacturerRepository;
@@ -12,7 +13,6 @@ import net.hwyz.iov.cloud.framework.common.util.ParamHelper;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Service;
 
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,41 +33,38 @@ public class ManufacturerAppService {
     /**
      * 查询生产厂商信息
      *
-     * @param code      工厂代码
-     * @param name      工厂名称
-     * @param beginTime 开始时间
-     * @param endTime    结束时间
+     * @param query 查询 DTO
      * @return 生产厂商列表
      */
-    public List<ManufacturerVo> search(String code, String name, Date beginTime, Date endTime) {
+    public List<ManufacturerDto> search(ManufacturerQuery query) {
         Map<String, Object> map = new HashMap<>();
-        map.put("code", code);
-        map.put("name", ParamHelper.fuzzyQueryParam(name));
-        map.put("beginTime", beginTime);
-        map.put("endTime", endTime);
+        map.put("code", query.getCode());
+        map.put("name", ParamHelper.fuzzyQueryParam(query.getName()));
+        map.put("beginTime", query.getBeginTime());
+        map.put("endTime", query.getEndTime());
         List<Manufacturer> manufacturerList = vehManufacturerRepository.selectByMap(map);
         return PageUtil.convert(manufacturerList, ManufacturerAssembler.INSTANCE::fromDomain);
     }
 
     /**
-     * 检查工厂代码是否唯一
+     * 检查厂商代码是否唯一
      *
-     * @param manufacturerId 工厂ID
-     * @param code           工厂代码
+     * @param manufacturerId 厂商ID
+     * @param code           厂商代码
      * @return 结果
      */
     public Boolean checkCodeUnique(Long manufacturerId, String code) {
         if (ObjUtil.isNull(manufacturerId)) {
             manufacturerId = -1L;
         }
-        Manufacturer manufacturer = getManufacturerByCode(code);
+        Manufacturer manufacturer = vehManufacturerRepository.selectByCode(code);
         return !ObjUtil.isNotNull(manufacturer) || manufacturer.getId().longValue() == manufacturerId.longValue();
     }
 
     /**
-     * 检查工厂下是否存在车辆
+     * 检查厂商下是否存在车辆
      *
-     * @param manufacturerId 工厂ID
+     * @param manufacturerId 厂商ID
      * @return 结果
      */
     public Boolean checkManufacturerVehicleExist(Long manufacturerId) {
@@ -81,16 +78,16 @@ public class ManufacturerAppService {
      * 根据主键ID获取生产厂商信息
      *
      * @param id 主键ID
-     * @return 生产厂商信息
+     * @return 生产厂商 DTO
      */
-    public ManufacturerVo getManufacturerById(Long id) {
+    public ManufacturerDto getManufacturerById(Long id) {
         return ManufacturerAssembler.INSTANCE.fromDomain(vehManufacturerRepository.selectById(id));
     }
 
     /**
-     * 根据工厂代码获取生产厂商信息
+     * 根据生产厂商代码获取生产厂商信息
      *
-     * @param code 工厂代码
+     * @param code 生产厂商代码
      * @return 生产厂商领域对象
      */
     public Manufacturer getManufacturerByCode(String code) {
@@ -100,24 +97,24 @@ public class ManufacturerAppService {
     /**
      * 新增生产厂商
      *
-     * @param manufacturerVo 生产厂商信息
-     * @param userId         操作用户ID
+     * @param manufacturerDto 生产厂商信息 DTO
+     * @param userId          操作用户ID
      * @return 结果
      */
-    public int createManufacturer(ManufacturerVo manufacturerVo, String userId) {
-        Manufacturer manufacturer = ManufacturerAssembler.INSTANCE.toDomain(manufacturerVo);
+    public int createManufacturer(ManufacturerDto manufacturerDto, String userId) {
+        Manufacturer manufacturer = ManufacturerAssembler.INSTANCE.toDomain(manufacturerDto);
         return vehManufacturerRepository.insert(manufacturer);
     }
 
     /**
      * 修改生产厂商
      *
-     * @param manufacturerVo 生产厂商信息
-     * @param userId         操作用户ID
+     * @param manufacturerDto 生产厂商信息 DTO
+     * @param userId          操作用户ID
      * @return 结果
      */
-    public int modifyManufacturer(ManufacturerVo manufacturerVo, String userId) {
-        Manufacturer manufacturer = ManufacturerAssembler.INSTANCE.toDomain(manufacturerVo);
+    public int modifyManufacturer(ManufacturerDto manufacturerDto, String userId) {
+        Manufacturer manufacturer = ManufacturerAssembler.INSTANCE.toDomain(manufacturerDto);
         return vehManufacturerRepository.update(manufacturer);
     }
 

@@ -1,6 +1,6 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.assembler;
 
-import net.hwyz.iov.cloud.edd.vmd.api.vo.ManufacturerVo;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.ManufacturerDto;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Manufacturer;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
@@ -8,7 +8,7 @@ import org.mapstruct.factory.Mappers;
 import java.util.List;
 
 /**
- * 管理后台生产厂商转换类
+ * 生产厂商 DTO 转换器
  *
  * @author hwyz_leo
  */
@@ -18,27 +18,27 @@ public interface ManufacturerAssembler {
     ManufacturerAssembler INSTANCE = Mappers.getMapper(ManufacturerAssembler.class);
 
     /**
-     * 领域对象转数据传输对象
+     * 领域对象转 DTO
      *
      * @param manufacturer 领域对象
-     * @return 数据传输对象
+     * @return DTO
      */
-    ManufacturerVo fromDomain(Manufacturer manufacturer);
+    ManufacturerDto fromDomain(Manufacturer manufacturer);
 
     /**
-     * 数据传输对象转领域对象
+     * DTO 转领域对象
      *
-     * @param manufacturerVo 数据传输对象
+     * @param manufacturerDto DTO
      * @return 领域对象
      */
-    Manufacturer toDomain(ManufacturerVo manufacturerVo);
+    Manufacturer toDomain(ManufacturerDto manufacturerDto);
 
     /**
-     * 领域对象列表转数据传输对象列表
+     * 领域对象列表转 DTO 列表
      *
      * @param manufacturerList 领域对象列表
-     * @return 数据传输对象列表
+     * @return DTO 列表
      */
-    List<ManufacturerVo> fromDomainList(List<Manufacturer> manufacturerList);
+    List<ManufacturerDto> fromDomainList(List<Manufacturer> manufacturerList);
 
 }
