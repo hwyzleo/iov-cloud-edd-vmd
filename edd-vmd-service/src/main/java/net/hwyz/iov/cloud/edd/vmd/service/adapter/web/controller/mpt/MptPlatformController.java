@@ -3,11 +3,11 @@ package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.controller.mpt;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.MptPlatformAssembler;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.PlatformRequest;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.PlatformResponse;
-import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.MptPlatformAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.PlatformDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.PlatformQuery;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.PlatformDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.PlatformAppService;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
 import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
@@ -54,6 +54,22 @@ public class MptPlatformController extends BaseController {
                 .build();
         List<PlatformDto> platformDtoList = platformAppService.search(query);
         return ApiResponse.ok(getPageResult(PageUtil.convert(platformDtoList, MptPlatformAssembler.INSTANCE::fromDto)));
+    }
+
+    /**
+     * 列出所有车辆平台信息
+     *
+     * @param platform 车辆平台信息
+     * @return 车辆平台信息列表
+     */
+    @RequiresPermissions("completeVehicle:product:platform:list")
+    @GetMapping(value = "/listAll")
+    public ApiResponse<List<PlatformResponse>> listAll(PlatformRequest platform) {
+        log.info("管理后台用户[{}]列出所有车辆平台信息", SecurityUtils.getUsername());
+        PlatformQuery query = PlatformQuery.builder()
+                .build();
+        List<PlatformDto> platformDtoList = platformAppService.search(query);
+        return ApiResponse.ok(MptPlatformAssembler.INSTANCE.fromDtoList(platformDtoList));
     }
 
     /**

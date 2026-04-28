@@ -3,15 +3,15 @@ package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.controller.mpt;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.FeatureCodeRequest;
-import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.FeatureCodeResponse;
-import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.FeatureFamilyRequest;
-import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.FeatureFamilyResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.MptFeatureAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.FeatureCodeDto;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.FeatureCodeRequest;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.FeatureFamilyRequest;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.FeatureCodeResponse;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.FeatureFamilyResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.FeatureCodeQuery;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.FeatureFamilyDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.FeatureFamilyQuery;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.FeatureCodeDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.FeatureFamilyDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.FeatureFamilyAppService;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
 import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
@@ -34,7 +34,7 @@ import java.util.List;
 @Slf4j
 @RestController
 @RequiredArgsConstructor
-@RequestMapping(value = "/api/mpt/feature/v1")
+@RequestMapping(value = "/api/mpt/featureFamily/v1")
 public class MptFeatureFamilyController extends BaseController {
 
     private final FeatureFamilyAppService featureFamilyAppService;
@@ -154,6 +154,23 @@ public class MptFeatureFamilyController extends BaseController {
     }
 
     // ==================== 特征值 ====================
+
+    /**
+     * 查询特征族下所有特征值
+     *
+     * @param familyCode 特征族代码
+     * @return 特征值信息列表
+     */
+    @RequiresPermissions("completeVehicle:product:feature:list")
+    @GetMapping(value = "/listAllFeatureCode")
+    public ApiResponse<List<FeatureCodeResponse>> listAllFeatureCode(@RequestParam String familyCode) {
+        log.info("管理后台用户[{}]查询特征族[{}]下特征值", SecurityUtils.getUsername(), familyCode);
+        FeatureCodeQuery query = FeatureCodeQuery.builder()
+                .familyCode(familyCode)
+                .build();
+        List<FeatureCodeDto> dtoList = featureFamilyAppService.searchFeatureCode(query);
+        return ApiResponse.ok(MptFeatureAssembler.INSTANCE.fromCodeDtoList(dtoList));
+    }
 
     /**
      * 查询特征族下特征值
