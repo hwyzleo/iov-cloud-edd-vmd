@@ -1,6 +1,13 @@
 spring:
   application:
     name: edd-vmd
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    locations: db/migration
+    table: flyway_schema_history
+    validate-on-migrate: true
   cloud:
     nacos:
       discovery:

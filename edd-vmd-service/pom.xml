@@ -79,6 +79,16 @@
             <version>${wms.version}</version>
         </dependency>
 
+        <!-- 框架: Flyway -->
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.flywaydb</groupId>
+            <artifactId>flyway-mysql</artifactId>
+        </dependency>
+
         <!-- 框架: MySQL -->
         <dependency>
             <groupId>net.hwyz.iov.cloud.framework</groupId>
