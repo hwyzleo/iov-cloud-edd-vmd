@@ -3,16 +3,14 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.BuildConfig;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.BuildConfigFeatureCode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBuildConfigRepository;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
-/**
- * 车系车型配置相关应用服务类
- *
- * @author hwyz_leo
- */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -20,54 +18,71 @@ public class VehicleModelConfigAppService {
 
     private final VehBuildConfigRepository vehBuildConfigRepository;
 
-    /**
-     * 根据车型配置类型获取生产配置编码
-     *
-     * @param baseModelCode 基础车型编码
-     * @param exteriorCode  外饰编码
-     * @param interiorCode  内饰编码
-     * @param wheelCode     轮毂编码
-     * @param tireCode      轮胎编码
-     * @param spareTireCode 备胎编码
-     * @param adasCode      智驾编码
-     * @param seatCode      座椅编码
-     * @return 生产配置编码
-     */
     public String getBuildConfigCodeByType(String baseModelCode, String exteriorCode, String interiorCode, String wheelCode,
                                            String tireCode, String spareTireCode, String adasCode, String seatCode) {
+        Map<String, String> featureCodeMap = new HashMap<>();
+        if (exteriorCode != null && !exteriorCode.isEmpty()) {
+            featureCodeMap.put("EXTERIOR", exteriorCode);
+        }
+        if (interiorCode != null && !interiorCode.isEmpty()) {
+            featureCodeMap.put("INTERIOR", interiorCode);
+        }
+        if (wheelCode != null && !wheelCode.isEmpty()) {
+            featureCodeMap.put("WHEEL", wheelCode);
+        }
+        if (tireCode != null && !tireCode.isEmpty()) {
+            featureCodeMap.put("TIRE", tireCode);
+        }
+        if (spareTireCode != null && !spareTireCode.isEmpty()) {
+            featureCodeMap.put("SPARE_TIRE", spareTireCode);
+        }
+        if (adasCode != null && !adasCode.isEmpty()) {
+            featureCodeMap.put("ADAS", adasCode);
+        }
+        if (seatCode != null && !seatCode.isEmpty()) {
+            featureCodeMap.put("SEAT", seatCode);
+        }
+
         List<BuildConfig> buildConfigList = vehBuildConfigRepository.selectByExample(BuildConfig.builder()
                 .baseModelCode(baseModelCode)
-                .exteriorCode(exteriorCode)
-                .interiorCode(interiorCode)
-                .wheelCode(wheelCode)
-                .tireCode(tireCode)
-                .spareTireCode(spareTireCode)
-                .adasCode(adasCode)
-                .seatCode(seatCode)
                 .build());
-        if (buildConfigList.isEmpty()) {
-            return null;
+
+        for (BuildConfig buildConfig : buildConfigList) {
+            List<BuildConfigFeatureCode> featureCodes = vehBuildConfigRepository.selectFeatureCodeByExample(
+                    BuildConfigFeatureCode.builder()
+                            .buildConfigCode(buildConfig.getCode())
+                            .build());
+
+            boolean matched = true;
+            for (Map.Entry<String, String> entry : featureCodeMap.entrySet()) {
+                String familyCode = entry.getKey();
+                String expectedFeatureCode = entry.getValue();
+
+                boolean found = false;
+                for (BuildConfigFeatureCode fc : featureCodes) {
+                    if (fc.getFamilyCode().equals(familyCode)) {
+                        if (fc.getFeatureCode() != null && fc.getFeatureCode().contains(expectedFeatureCode)) {
+                            found = true;
+                            break;
+                        }
+                    }
+                }
+                if (!found) {
+                    matched = false;
+                    break;
+                }
+            }
+
+            if (matched) {
+                if (buildConfigList.size() > 1) {
+                    log.warn("车型[{}]特征值组合匹配到多个生产配置", baseModelCode);
+                }
+                return buildConfig.getCode();
+            }
         }
-        if (buildConfigList.size() > 1) {
-            log.warn("车型[{}]外饰[{}]内饰[{}]轮毂[{}]轮胎[{}]备胎[{}]智驾[{}]查询车型配置编码结果数量大于1", baseModelCode,
-                    exteriorCode, interiorCode, wheelCode, tireCode, spareTireCode, adasCode);
-        }
-        return buildConfigList.get(0).getCode();
+        return null;
     }
 
-    /**
-     * 根据车型配置类型得到匹配的生产配置代码
-     *
-     * @param baseModelCode 基础车型代码
-     * @param exteriorCode  外饰代码
-     * @param interiorCode  内饰代码
-     * @param wheelCode     轮毂代码
-     * @param tireCode      轮胎代码
-     * @param spareTireCode 备胎代码
-     * @param adasCode      智驾代码
-     * @param seatCode      座椅代码
-     * @return 生产配置代码
-     */
     public String getVehicleBuildConfigCode(String baseModelCode, String exteriorCode, String interiorCode, String wheelCode,
                                             String tireCode, String spareTireCode, String adasCode, String seatCode) {
         return getBuildConfigCodeByType(baseModelCode, exteriorCode, interiorCode, wheelCode, tireCode, spareTireCode, adasCode, seatCode);

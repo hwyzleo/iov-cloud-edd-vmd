@@ -3,10 +3,13 @@ package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.controller.mpt;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.BuildConfigFeatureCodeRequest;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.BuildConfigRequest;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.BuildConfigFeatureCodeResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.BuildConfigResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.MptBuildConfigAssembler;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.BuildConfigDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.BuildConfigFeatureCodeDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.BuildConfigQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.BuildConfigAppService;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
@@ -22,11 +25,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/**
- * 生产配置相关管理接口实现类
- *
- * @author hwyz_leo
- */
 @Slf4j
 @RestController
 @RequiredArgsConstructor
@@ -35,12 +33,6 @@ public class MptBuildConfigController extends BaseController {
 
     private final BuildConfigAppService buildConfigAppService;
 
-    /**
-     * 分页查询生产配置信息
-     *
-     * @param buildConfig 生产配置信息
-     * @return 生产配置信息列表
-     */
     @RequiresPermissions("completeVehicle:product:buildConfig:list")
     @GetMapping(value = "/list")
     public ApiResponse<PageResult<BuildConfigResponse>> list(BuildConfigRequest buildConfig) {
@@ -60,12 +52,14 @@ public class MptBuildConfigController extends BaseController {
         return ApiResponse.ok(getPageResult(PageUtil.convert(buildConfigDtoList, MptBuildConfigAssembler.INSTANCE::fromDto)));
     }
 
-    /**
-     * 导出生产配置信息
-     *
-     * @param response    响应
-     * @param buildConfig 生产配置信息
-     */
+    @RequiresPermissions("completeVehicle:product:buildConfig:list")
+    @GetMapping(value = "/{buildConfigCode}/featureCode/list")
+    public ApiResponse<List<BuildConfigFeatureCodeResponse>> listFeatureCode(@PathVariable String buildConfigCode, BuildConfigFeatureCodeRequest buildConfigFeatureCode) {
+        log.info("管理后台用户[{}]分页查询生产配置下特征值", SecurityUtils.getUsername());
+        List<BuildConfigFeatureCodeDto> dtoList = buildConfigAppService.searchFeatureCode(buildConfigCode, buildConfigFeatureCode.getFamilyCode());
+        return ApiResponse.ok(MptBuildConfigAssembler.INSTANCE.fromFeatureCodeDtoList(dtoList));
+    }
+
     @Log(title = "生产配置管理", businessType = BusinessType.EXPORT)
     @RequiresPermissions("completeVehicle:product:buildConfig:export")
     @PostMapping("/export")
@@ -73,12 +67,6 @@ public class MptBuildConfigController extends BaseController {
         log.info("管理后台用户[{}]导出生产配置信息", SecurityUtils.getUsername());
     }
 
-    /**
-     * 根据生产配置ID获取生产配置信息
-     *
-     * @param buildConfigId 生产配置ID
-     * @return 生产配置信息
-     */
     @RequiresPermissions("completeVehicle:product:buildConfig:query")
     @GetMapping(value = "/{buildConfigId}")
     public ApiResponse<BuildConfigResponse> getInfo(@PathVariable Long buildConfigId) {
@@ -86,12 +74,13 @@ public class MptBuildConfigController extends BaseController {
         return ApiResponse.ok(MptBuildConfigAssembler.INSTANCE.fromDto(buildConfigAppService.getBuildConfigById(buildConfigId)));
     }
 
-    /**
-     * 新增生产配置信息
-     *
-     * @param buildConfig 生产配置信息
-     * @return 结果
-     */
+    @RequiresPermissions("completeVehicle:product:buildConfig:query")
+    @GetMapping(value = "/{buildConfigCode}/featureCode/{buildConfigFeatureCodeId}")
+    public ApiResponse<BuildConfigFeatureCodeResponse> getFeatureCodeInfo(@PathVariable String buildConfigCode, @PathVariable Long buildConfigFeatureCodeId) {
+        log.info("管理后台用户[{}]根据生产配置[{}]特征值ID[{}]获取生产配置特征值信息", SecurityUtils.getUsername(), buildConfigCode, buildConfigFeatureCodeId);
+        return ApiResponse.ok(MptBuildConfigAssembler.INSTANCE.fromFeatureCodeDto(buildConfigAppService.getBuildConfigFeatureCodeById(buildConfigFeatureCodeId)));
+    }
+
     @Log(title = "生产配置管理", businessType = BusinessType.INSERT)
     @RequiresPermissions("completeVehicle:product:buildConfig:add")
     @PostMapping
@@ -104,12 +93,18 @@ public class MptBuildConfigController extends BaseController {
         return ApiResponse.ok();
     }
 
-    /**
-     * 修改保存生产配置信息
-     *
-     * @param buildConfig 生产配置信息
-     * @return 结果
-     */
+    @Log(title = "生产配置管理", businessType = BusinessType.UPDATE)
+    @RequiresPermissions("completeVehicle:product:buildConfig:edit")
+    @PostMapping("/{buildConfigCode}/featureCode")
+    public ApiResponse<Void> addFeatureCode(@PathVariable String buildConfigCode, @Validated @RequestBody BuildConfigFeatureCodeRequest buildConfigFeatureCode) {
+        log.info("管理后台用户[{}]新增生产配置[{}]特征值[{}]", SecurityUtils.getUsername(), buildConfigCode, buildConfigFeatureCode.getFamilyCode());
+        if (!buildConfigAppService.checkFeatureCodeUnique(buildConfigFeatureCode.getId(), buildConfigCode, buildConfigFeatureCode.getFamilyCode())) {
+            return ApiResponse.fail("新增生产配置特征值'" + buildConfigFeatureCode.getFamilyCode() + "'失败，生产配置特征值已存在");
+        }
+        buildConfigAppService.createBuildConfigFeatureCode(MptBuildConfigAssembler.INSTANCE.toFeatureCodeCmd(buildConfigFeatureCode));
+        return ApiResponse.ok();
+    }
+
     @Log(title = "生产配置管理", businessType = BusinessType.UPDATE)
     @RequiresPermissions("completeVehicle:product:buildConfig:edit")
     @PutMapping
@@ -122,12 +117,18 @@ public class MptBuildConfigController extends BaseController {
         return ApiResponse.ok();
     }
 
-    /**
-     * 删除生产配置信息
-     *
-     * @param buildConfigIds 生产配置ID数组
-     * @return 结果
-     */
+    @Log(title = "生产配置管理", businessType = BusinessType.UPDATE)
+    @RequiresPermissions("completeVehicle:product:buildConfig:edit")
+    @PutMapping("/{buildConfigCode}/featureCode")
+    public ApiResponse<Void> editFeatureCode(@PathVariable String buildConfigCode, @Validated @RequestBody BuildConfigFeatureCodeRequest buildConfigFeatureCode) {
+        log.info("管理后台用户[{}]修改保存生产配置[{}]特征值[{}]", SecurityUtils.getUsername(), buildConfigCode, buildConfigFeatureCode.getFamilyCode());
+        if (!buildConfigAppService.checkFeatureCodeUnique(buildConfigFeatureCode.getId(), buildConfigCode, buildConfigFeatureCode.getFamilyCode())) {
+            return ApiResponse.fail("修改保存生产配置特征值'" + buildConfigFeatureCode.getFamilyCode() + "'失败，生产配置特征值已存在");
+        }
+        buildConfigAppService.modifyBuildConfigFeatureCode(MptBuildConfigAssembler.INSTANCE.toFeatureCodeCmd(buildConfigFeatureCode));
+        return ApiResponse.ok();
+    }
+
     @Log(title = "生产配置管理", businessType = BusinessType.DELETE)
     @RequiresPermissions("completeVehicle:product:buildConfig:remove")
     @DeleteMapping("/{buildConfigIds}")
@@ -139,6 +140,14 @@ public class MptBuildConfigController extends BaseController {
             }
         }
         return buildConfigAppService.deleteBuildConfigByIds(buildConfigIds) > 0 ? ApiResponse.ok() : ApiResponse.fail("删除失败");
+    }
+
+    @Log(title = "生产配置管理", businessType = BusinessType.UPDATE)
+    @RequiresPermissions("completeVehicle:product:buildConfig:edit")
+    @DeleteMapping("/{buildConfigCode}/featureCode/{buildConfigFeatureCodeIds}")
+    public ApiResponse<Void> removeFeatureCode(@PathVariable String buildConfigCode, @PathVariable Long[] buildConfigFeatureCodeIds) {
+        log.info("管理后台用户[{}]删除生产配置[{}]特征值[{}]", SecurityUtils.getUsername(), buildConfigCode, buildConfigFeatureCodeIds);
+        return buildConfigAppService.deleteBuildConfigFeatureCodeByIds(buildConfigFeatureCodeIds) > 0 ? ApiResponse.ok() : ApiResponse.fail("删除失败");
     }
 
 }

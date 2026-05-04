@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehBuildConfigFeatureCodeMapper">
+
+    <resultMap id="baseResultMap" type="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehBuildConfigFeatureCodePo">
+        <id column="id" property="id" />
+        <result column="description" property="description" />
+        <result column="create_time" property="createTime" />
+        <result column="create_by" property="createBy" />
+        <result column="modify_time" property="modifyTime" />
+        <result column="modify_by" property="modifyBy" />
+        <result column="row_version" property="rowVersion" />
+        <result column="row_valid" property="rowValid" />
+        <result column="build_config_code" property="buildConfigCode" />
+        <result column="family_code" property="familyCode" />
+        <result column="feature_code" property="featureCode" />
+        <result column="feature_type" property="featureType" />
+    </resultMap>
+
+    <sql id="baseColumnList">
+        id, build_config_code, family_code, feature_code, feature_type,
+        description, create_time, create_by, modify_time, modify_by, row_version, row_valid
+    </sql>
+
+    <insert id="insertPo" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO tb_veh_build_config_feature_code (
+            id, build_config_code, family_code, feature_code, feature_type,
+            description, create_time, create_by, modify_time, modify_by, row_version, row_valid
+        )
+        VALUES (
+            #{id}, #{buildConfigCode}, #{familyCode}, #{featureCode}, #{featureType},
+            #{description}, now(), #{createBy}, now(), #{modifyBy}, 1, 1
+        )
+    </insert>
+
+    <insert id="batchInsertPo" useGeneratedKeys="true" keyProperty="id" parameterType="java.util.List">
+        INSERT INTO tb_veh_build_config_feature_code (
+            id, build_config_code, family_code, feature_code, feature_type,
+            description, create_time, create_by, modify_time, modify_by, row_version, row_valid
+        )
+        VALUES
+        <foreach collection="list" item="item" index="index" separator=",">
+        (
+            #{item.id}, #{item.buildConfigCode}, #{item.familyCode}, #{item.featureCode}, #{item.featureType},
+            #{item.description}, now(), #{item.createBy}, now(), #{item.modifyBy}, 1, 1
+        )
+        </foreach>
+    </insert>
+
+    <update id="updatePo" parameterType="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehBuildConfigFeatureCodePo">
+        UPDATE tb_veh_build_config_feature_code t SET
+        <if test="buildConfigCode != null and buildConfigCode != ''">
+            t.build_config_code = #{buildConfigCode},
+        </if>
+        <if test="familyCode != null and familyCode != ''">
+            t.family_code = #{familyCode},
+        </if>
+        <if test="featureCode != null and featureCode != ''">
+            t.feature_code = #{featureCode},
+        </if>
+        <if test="featureType != null and featureType != ''">
+            t.feature_type = #{featureType},
+        </if>
+        <if test="description != null and description != ''">
+            t.description = #{description},
+        </if>
+        <if test="modifyBy != null">
+            t.modify_by = #{modifyBy},
+        </if>
+        t.row_version = t.row_version + 1,
+        t.modify_time = now()
+        WHERE id = #{id}
+    </update>
+
+    <update id="logicalDeletePo" parameterType="Long">
+        UPDATE tb_veh_build_config_feature_code t SET
+        t.row_version = t.row_version + 1,
+        t.modify_time = now(),
+        t.row_valid = 0
+        WHERE t.id = #{value}
+    </update>
+
+    <delete id="physicalDeletePo" parameterType="Long">
+        DELETE FROM tb_veh_build_config_feature_code t
+        WHERE t.id = #{value}
+    </delete>
+
+    <delete id="batchPhysicalDeletePo" parameterType="Long">
+        DELETE FROM tb_veh_build_config_feature_code t
+        WHERE t.id IN
+        <foreach collection="array" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+    <select id="selectPoById" parameterType="Long" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList"/>
+        FROM tb_veh_build_config_feature_code t
+        WHERE t.id = #{value}
+        AND t.row_valid = 1
+    </select>
+
+    <select id="selectPoByExample" parameterType="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehBuildConfigFeatureCodePo" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList"/>
+        FROM tb_veh_build_config_feature_code t
+        WHERE t.row_valid = 1
+        <if test="id != null">
+            AND t.id = #{id}
+        </if>
+        <if test="buildConfigCode != null and buildConfigCode != ''">
+            AND t.build_config_code = #{buildConfigCode}
+        </if>
+        <if test="familyCode != null and familyCode != ''">
+            AND t.family_code = #{familyCode}
+        </if>
+        <if test="featureCode != null and featureCode != ''">
+            AND t.feature_code = #{featureCode}
+        </if>
+        <if test="featureType != null and featureType != ''">
+            AND t.feature_type = #{featureType}
+        </if>
+        <if test="description != null and description != ''">
+            AND t.description = #{description}
+        </if>
+        <if test="createTime != null">
+            AND t.create_time = #{createTime}
+        </if>
+        <if test="createBy != null and createBy != ''">
+            AND t.create_by = #{createBy}
+        </if>
+        <if test="modifyTime != null">
+            AND t.modify_time = #{modifyTime}
+        </if>
+        <if test="modifyBy != null and modifyBy != ''">
+            AND t.modify_by = #{modifyBy}
+        </if>
+        <if test="rowVersion != null">
+            AND t.row_version = #{rowVersion}
+        </if>
+        ORDER BY t.id DESC
+    </select>
+
+    <select id="selectPoByMap" parameterType="java.util.Map" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList"/>
+        FROM tb_veh_build_config_feature_code t
+        WHERE t.row_valid = 1
+        <if test="buildConfigCode != null and buildConfigCode != ''">
+            AND t.build_config_code = #{buildConfigCode}
+        </if>
+        ORDER BY t.family_code ASC
+    </select>
+
+    <select id="selectPoByBuildConfigCodeAndFamilyCode" parameterType="java.util.Map" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList"/>
+        FROM tb_veh_build_config_feature_code t
+        WHERE t.row_valid = 1
+        AND t.build_config_code = #{buildConfigCode}
+        AND t.family_code = #{familyCode}
+        LIMIT 1
+    </select>
+
+    <select id="countPoByMap" parameterType="java.util.Map" resultType="int">
+        SELECT COUNT(*)
+        FROM tb_veh_build_config_feature_code t
+        WHERE t.row_valid = 1
+    </select>
+</mapper>

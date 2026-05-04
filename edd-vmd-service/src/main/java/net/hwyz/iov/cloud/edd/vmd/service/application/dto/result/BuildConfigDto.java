@@ -5,11 +5,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * 生产配置 DTO
- *
- * @author hwyz_leo
- */
 @Data
 @Builder
 @NoArgsConstructor
@@ -25,13 +20,6 @@ public class BuildConfigDto {
     private String name;
     private String nameEn;
     private String vehicleStageCode;
-    private String exteriorCode;
-    private String interiorCode;
-    private String wheelCode;
-    private String tireCode;
-    private String spareTireCode;
-    private String adasCode;
-    private String seatCode;
     private Boolean enable;
     private Integer sort;
     private String description;
