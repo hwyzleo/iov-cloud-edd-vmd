@@ -47,11 +47,28 @@ public class BuildConfigAppService {
         return PageUtil.convert(buildConfigList, BuildConfigAssembler.INSTANCE::fromDomain);
     }
 
+    public List<BuildConfigDto> getBuildConfigListByBaseModelCode(String baseModelCode) {
+        List<BuildConfig> buildConfigList = vehBuildConfigRepository.selectByExample(BuildConfig.builder()
+                .baseModelCode(baseModelCode)
+                .enable(true)
+                .build());
+        return PageUtil.convert(buildConfigList, BuildConfigAssembler.INSTANCE::fromDomain);
+    }
+
+public BuildConfigDto getBuildConfigByCode(String code) {
+        BuildConfig buildConfig = vehBuildConfigRepository.selectByCode(code);
+        return BuildConfigAssembler.INSTANCE.fromDomain(buildConfig);
+    }
+
+    public BuildConfig getBuildConfigEntityByCode(String code) {
+        return vehBuildConfigRepository.selectByCode(code);
+    }
+
     public Boolean checkCodeUnique(Long buildConfigId, String code) {
         if (ObjUtil.isNull(buildConfigId)) {
             buildConfigId = -1L;
         }
-        BuildConfig buildConfig = getBuildConfigByCode(code);
+        BuildConfig buildConfig = getBuildConfigEntityByCode(code);
         return !ObjUtil.isNotNull(buildConfig) || buildConfig.getId().longValue() == buildConfigId.longValue();
     }
 
@@ -64,10 +81,6 @@ public class BuildConfigAppService {
 
     public BuildConfigDto getBuildConfigById(Long id) {
         return BuildConfigAssembler.INSTANCE.fromDomain(vehBuildConfigRepository.selectById(id));
-    }
-
-    public BuildConfig getBuildConfigByCode(String code) {
-        return vehBuildConfigRepository.selectByCode(code);
     }
 
     public int createBuildConfig(BuildConfigCmd buildConfigCmd, String userId) {

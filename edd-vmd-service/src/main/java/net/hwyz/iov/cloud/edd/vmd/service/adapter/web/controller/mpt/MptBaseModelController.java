@@ -87,9 +87,9 @@ public class MptBaseModelController extends BaseController {
      */
     @RequiresPermissions("completeVehicle:product:baseModel:list")
     @GetMapping(value = "/listByPlatformCodeAndSeriesCodeAndModelCode")
-    public ApiResponse<List<BaseModelResponse>> listByPlatformCodeAndSeriesCodeAndModelCode(@RequestParam String platformCode,
-                                                                                             @RequestParam String seriesCode,
-                                                                                             @RequestParam String modelCode) {
+    public ApiResponse<List<BaseModelResponse>> listByPlatformCodeAndSeriesCodeAndModelCode(@RequestParam(required = false) String platformCode,
+                                                                                            @RequestParam(required = false) String seriesCode,
+                                                                                            @RequestParam(required = false) String modelCode) {
         log.info("管理后台用户[{}]获取指定车辆平台[{}]及车系[{}]及车型[{}]下的所有基础车型", SecurityUtils.getUsername(),
                 platformCode, seriesCode, modelCode);
         BaseModelQuery query = BaseModelQuery.builder()

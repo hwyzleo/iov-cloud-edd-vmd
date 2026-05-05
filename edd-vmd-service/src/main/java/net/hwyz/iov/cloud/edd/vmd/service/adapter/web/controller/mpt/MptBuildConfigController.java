@@ -53,6 +53,14 @@ public class MptBuildConfigController extends BaseController {
     }
 
     @RequiresPermissions("completeVehicle:product:buildConfig:list")
+    @GetMapping(value = "/listByBaseModelCode/{baseModelCode}")
+    public ApiResponse<List<BuildConfigResponse>> listByBaseModelCode(@PathVariable String baseModelCode) {
+        log.info("管理后台用户[{}]根据基础车型代码[{}]查询生产配置列表", SecurityUtils.getUsername(), baseModelCode);
+        List<BuildConfigDto> buildConfigDtoList = buildConfigAppService.getBuildConfigListByBaseModelCode(baseModelCode);
+        return ApiResponse.ok(PageUtil.convert(buildConfigDtoList, MptBuildConfigAssembler.INSTANCE::fromDto));
+    }
+
+    @RequiresPermissions("completeVehicle:product:buildConfig:list")
     @GetMapping(value = "/{buildConfigCode}/featureCode/list")
     public ApiResponse<List<BuildConfigFeatureCodeResponse>> listFeatureCode(@PathVariable String buildConfigCode, BuildConfigFeatureCodeRequest buildConfigFeatureCode) {
         log.info("管理后台用户[{}]分页查询生产配置下特征值", SecurityUtils.getUsername());

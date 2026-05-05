@@ -1,10 +1,14 @@
 package net.hwyz.iov.cloud.edd.vmd.api.service;
 
+import net.hwyz.iov.cloud.edd.vmd.api.vo.response.VmdBuildConfigResponse;
 import net.hwyz.iov.cloud.framework.common.constant.ServiceNameConstants;
 import net.hwyz.iov.cloud.edd.vmd.api.fallback.VmdVehicleModelConfigServiceFallbackFactory;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
+
+import java.util.List;
 
 /**
  * 车辆车系车型配置相关服务接口
@@ -32,5 +36,23 @@ public interface VmdVehicleModelConfigService {
                                      @RequestParam String interiorCode, @RequestParam String wheelCode,
                                      @RequestParam String tireCode, @RequestParam String spareTireCode,
                                      @RequestParam String adasCode, @RequestParam String seatCode);
+
+    /**
+     * 根据基础车型代码获取生产配置列表
+     *
+     * @param baseModelCode 基础车型代码
+     * @return 生产配置列表
+     */
+    @GetMapping("/buildConfig/list/{baseModelCode}")
+    List<VmdBuildConfigResponse> getBuildConfigListByBaseModelCode(@PathVariable String baseModelCode);
+
+    /**
+     * 根据生产配置代码获取生产配置详细信息（包含特征值）
+     *
+     * @param buildConfigCode 生产配置代码
+     * @return 生产配置详细信息
+     */
+    @GetMapping("/buildConfig/{buildConfigCode}")
+    VmdBuildConfigResponse getBuildConfigByCode(@PathVariable String buildConfigCode);
 
 }
