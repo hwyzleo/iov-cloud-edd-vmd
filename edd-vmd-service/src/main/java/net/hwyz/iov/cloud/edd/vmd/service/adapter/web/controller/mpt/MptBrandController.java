@@ -15,6 +15,7 @@ import net.hwyz.iov.cloud.framework.common.bean.ApiResponse;
 import net.hwyz.iov.cloud.framework.common.bean.PageResult;
 import net.hwyz.iov.cloud.framework.security.annotation.RequiresPermissions;
 import net.hwyz.iov.cloud.framework.security.util.SecurityUtils;
+import net.hwyz.iov.cloud.framework.web.context.SecurityContextHolder;
 import net.hwyz.iov.cloud.framework.web.controller.BaseController;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.validation.annotation.Validated;
@@ -44,7 +45,7 @@ public class MptBrandController extends BaseController {
     @RequiresPermissions("completeVehicle:product:brand:list")
     @GetMapping(value = "/list")
     public ApiResponse<PageResult<BrandResponse>> list(BrandRequest brand) {
-        log.info("管理后台用户[{}]分页查询车辆品牌信息", SecurityUtils.getUsername());
+        log.info("管理后台用户[{}]分页查询车辆品牌信息", SecurityContextHolder.getUserName());
         startPage();
         BrandQuery query = BrandQuery.builder()
                 .code(brand.getCode())
@@ -66,7 +67,7 @@ public class MptBrandController extends BaseController {
     @RequiresPermissions("completeVehicle:product:brand:export")
     @PostMapping("/export")
     public void export(HttpServletResponse response, BrandRequest brand) {
-        log.info("管理后台用户[{}]导出车辆品牌信息", SecurityUtils.getUsername());
+        log.info("管理后台用户[{}]导出车辆品牌信息", SecurityContextHolder.getUserName());
     }
 
     /**
@@ -78,7 +79,7 @@ public class MptBrandController extends BaseController {
     @RequiresPermissions("completeVehicle:product:brand:query")
     @GetMapping(value = "/{brandId}")
     public ApiResponse<BrandResponse> getInfo(@PathVariable Long brandId) {
-        log.info("管理后台用户[{}]根据车辆品牌ID[{}]获取车辆品牌信息", SecurityUtils.getUsername(), brandId);
+        log.info("管理后台用户[{}]根据车辆品牌ID[{}]获取车辆品牌信息", SecurityContextHolder.getUserName(), brandId);
         return ApiResponse.ok(MptBrandAssembler.INSTANCE.fromDto(brandAppService.getBrandById(brandId)));
     }
 
@@ -92,7 +93,7 @@ public class MptBrandController extends BaseController {
     @RequiresPermissions("completeVehicle:product:brand:add")
     @PostMapping
     public ApiResponse<Void> add(@Validated @RequestBody BrandRequest brand) {
-        log.info("管理后台用户[{}]新增车辆品牌信息[{}]", SecurityUtils.getUsername(), brand.getCode());
+        log.info("管理后台用户[{}]新增车辆品牌信息[{}]", SecurityContextHolder.getUserName(), brand.getCode());
         if (!brandAppService.checkCodeUnique(brand.getId(), brand.getCode())) {
             return ApiResponse.fail("新增车辆品牌'" + brand.getCode() + "'失败，车辆品牌代码已存在");
         }
@@ -110,7 +111,7 @@ public class MptBrandController extends BaseController {
     @RequiresPermissions("completeVehicle:product:brand:edit")
     @PutMapping
     public ApiResponse<Void> edit(@Validated @RequestBody BrandRequest brand) {
-        log.info("管理后台用户[{}]修改保存车辆品牌信息[{}]", SecurityUtils.getUsername(), brand.getCode());
+        log.info("管理后台用户[{}]修改保存车辆品牌信息[{}]", SecurityContextHolder.getUserName(), brand.getCode());
         if (!brandAppService.checkCodeUnique(brand.getId(), brand.getCode())) {
             return ApiResponse.fail("修改保存车辆品牌'" + brand.getCode() + "'失败，车辆品牌代码已存在");
         }
@@ -128,7 +129,7 @@ public class MptBrandController extends BaseController {
     @RequiresPermissions("completeVehicle:product:brand:remove")
     @DeleteMapping("/{brandIds}")
     public ApiResponse<Void> remove(@PathVariable Long[] brandIds) {
-        log.info("管理后台用户[{}]删除车辆品牌信息[{}]", SecurityUtils.getUsername(), brandIds);
+        log.info("管理后台用户[{}]删除车辆品牌信息[{}]", SecurityContextHolder.getUserName(), brandIds);
         for (Long brandId : brandIds) {
             if (brandAppService.checkBrandSeriesExist(brandId)) {
                 return ApiResponse.fail("删除车辆品牌'" + brandId + "'失败，该车辆品牌下存在车系");

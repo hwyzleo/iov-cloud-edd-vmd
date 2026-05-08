@@ -15,6 +15,7 @@ import net.hwyz.iov.cloud.framework.common.bean.ApiResponse;
 import net.hwyz.iov.cloud.framework.common.bean.PageResult;
 import net.hwyz.iov.cloud.framework.security.annotation.RequiresPermissions;
 import net.hwyz.iov.cloud.framework.security.util.SecurityUtils;
+import net.hwyz.iov.cloud.framework.web.context.SecurityContextHolder;
 import net.hwyz.iov.cloud.framework.web.controller.BaseController;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.validation.annotation.Validated;
@@ -44,7 +45,7 @@ public class MptVehiclePartController extends BaseController {
     @RequiresPermissions("completeVehicle:vehicle:vehiclePart:list")
     @GetMapping(value = "/list")
     public ApiResponse<PageResult<VehiclePartResponse>> list(VehiclePartRequest vehiclePart) {
-        log.info("管理后台用户[{}]分页查询车辆零件", SecurityUtils.getUsername());
+        log.info("管理后台用户[{}]分页查询车辆零件", SecurityContextHolder.getUserName());
         startPage();
         VehiclePartQuery query = VehiclePartQuery.builder()
                 .vin(vehiclePart.getVin())
@@ -66,7 +67,7 @@ public class MptVehiclePartController extends BaseController {
     @RequiresPermissions("completeVehicle:vehicle:vehiclePart:export")
     @PostMapping("/export")
     public void export(HttpServletResponse response, VehiclePartRequest vehiclePart) {
-        log.info("管理后台用户[{}]导出车辆零件", SecurityUtils.getUsername());
+        log.info("管理后台用户[{}]导出车辆零件", SecurityContextHolder.getUserName());
     }
 
     /**
@@ -78,7 +79,7 @@ public class MptVehiclePartController extends BaseController {
     @RequiresPermissions("completeVehicle:vehicle:vehiclePart:query")
     @GetMapping(value = "/{vehiclePartId}")
     public ApiResponse<VehiclePartResponse> getInfo(@PathVariable Long vehiclePartId) {
-        log.info("管理后台用户[{}]根据车辆零件ID[{}]获取车辆零件", SecurityUtils.getUsername(), vehiclePartId);
+        log.info("管理后台用户[{}]根据车辆零件ID[{}]获取车辆零件", SecurityContextHolder.getUserName(), vehiclePartId);
         return ApiResponse.ok(MptVehiclePartAssembler.INSTANCE.fromDto(vehiclePartAppService.getVehiclePartById(vehiclePartId)));
     }
 
@@ -92,7 +93,7 @@ public class MptVehiclePartController extends BaseController {
     @RequiresPermissions("completeVehicle:vehicle:vehiclePart:add")
     @PostMapping
     public ApiResponse<Void> add(@Validated @RequestBody VehiclePartRequest vehiclePart) {
-        log.info("管理后台用户[{}]新增车辆[{}]零件[{}:{}]", SecurityUtils.getUsername(), vehiclePart.getVin(), vehiclePart.getPn(), vehiclePart.getSn());
+        log.info("管理后台用户[{}]新增车辆[{}]零件[{}:{}]", SecurityContextHolder.getUserName(), vehiclePart.getVin(), vehiclePart.getPn(), vehiclePart.getSn());
         if (!vehiclePartAppService.checkPnAndSnUnique(vehiclePart.getId(), vehiclePart.getPn(), vehiclePart.getSn())) {
             return ApiResponse.fail("新增车辆零件'" + vehiclePart.getPn() + "'失败，车辆零件已存在");
         }
@@ -110,7 +111,7 @@ public class MptVehiclePartController extends BaseController {
     @RequiresPermissions("completeVehicle:vehicle:vehiclePart:edit")
     @PutMapping
     public ApiResponse<Void> edit(@Validated @RequestBody VehiclePartRequest vehiclePart) {
-        log.info("管理后台用户[{}]修改保存车辆[{}]零件[{}:{}]", SecurityUtils.getUsername(), vehiclePart.getVin(), vehiclePart.getPn(), vehiclePart.getSn());
+        log.info("管理后台用户[{}]修改保存车辆[{}]零件[{}:{}]", SecurityContextHolder.getUserName(), vehiclePart.getVin(), vehiclePart.getPn(), vehiclePart.getSn());
         if (!vehiclePartAppService.checkPnAndSnUnique(vehiclePart.getId(), vehiclePart.getPn(), vehiclePart.getSn())) {
             return ApiResponse.fail("修改保存车辆零件'" + vehiclePart.getPn() + "'失败，车辆零件已存在");
         }
@@ -128,7 +129,7 @@ public class MptVehiclePartController extends BaseController {
     @RequiresPermissions("completeVehicle:vehicle:vehiclePart:remove")
     @DeleteMapping("/{vehiclePartIds}")
     public ApiResponse<Void> remove(@PathVariable Long[] vehiclePartIds) {
-        log.info("管理后台用户[{}]删除车辆零件[{}]", SecurityUtils.getUsername(), vehiclePartIds);
+        log.info("管理后台用户[{}]删除车辆零件[{}]", SecurityContextHolder.getUserName(), vehiclePartIds);
         return vehiclePartAppService.deleteVehiclePartByIds(vehiclePartIds) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
     }
 

@@ -15,6 +15,7 @@ import net.hwyz.iov.cloud.framework.common.bean.ApiResponse;
 import net.hwyz.iov.cloud.framework.common.bean.PageResult;
 import net.hwyz.iov.cloud.framework.security.annotation.RequiresPermissions;
 import net.hwyz.iov.cloud.framework.security.util.SecurityUtils;
+import net.hwyz.iov.cloud.framework.web.context.SecurityContextHolder;
 import net.hwyz.iov.cloud.framework.web.controller.BaseController;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.validation.annotation.Validated;
@@ -44,7 +45,7 @@ public class MptPlatformController extends BaseController {
     @RequiresPermissions("completeVehicle:product:platform:list")
     @GetMapping(value = "/list")
     public ApiResponse<PageResult<PlatformResponse>> list(PlatformRequest platform) {
-        log.info("管理后台用户[{}]分页查询车辆平台信息", SecurityUtils.getUsername());
+        log.info("管理后台用户[{}]分页查询车辆平台信息", SecurityContextHolder.getUserName());
         startPage();
         PlatformQuery query = PlatformQuery.builder()
                 .code(platform.getCode())
@@ -65,7 +66,7 @@ public class MptPlatformController extends BaseController {
     @RequiresPermissions("completeVehicle:product:platform:list")
     @GetMapping(value = "/listAll")
     public ApiResponse<List<PlatformResponse>> listAll(PlatformRequest platform) {
-        log.info("管理后台用户[{}]列出所有车辆平台信息", SecurityUtils.getUsername());
+        log.info("管理后台用户[{}]列出所有车辆平台信息", SecurityContextHolder.getUserName());
         PlatformQuery query = PlatformQuery.builder()
                 .build();
         List<PlatformDto> platformDtoList = platformAppService.search(query);
@@ -82,7 +83,7 @@ public class MptPlatformController extends BaseController {
     @RequiresPermissions("completeVehicle:product:platform:export")
     @PostMapping("/export")
     public void export(HttpServletResponse response, PlatformRequest platform) {
-        log.info("管理后台用户[{}]导出车辆平台信息", SecurityUtils.getUsername());
+        log.info("管理后台用户[{}]导出车辆平台信息", SecurityContextHolder.getUserName());
     }
 
     /**
@@ -94,7 +95,7 @@ public class MptPlatformController extends BaseController {
     @RequiresPermissions("completeVehicle:product:platform:query")
     @GetMapping(value = "/{platformId}")
     public ApiResponse<PlatformResponse> getInfo(@PathVariable Long platformId) {
-        log.info("管理后台用户[{}]根据车辆平台ID[{}]获取车辆平台信息", SecurityUtils.getUsername(), platformId);
+        log.info("管理后台用户[{}]根据车辆平台ID[{}]获取车辆平台信息", SecurityContextHolder.getUserName(), platformId);
         return ApiResponse.ok(MptPlatformAssembler.INSTANCE.fromDto(platformAppService.getPlatformById(platformId)));
     }
 
@@ -108,7 +109,7 @@ public class MptPlatformController extends BaseController {
     @RequiresPermissions("completeVehicle:product:platform:add")
     @PostMapping
     public ApiResponse<Void> add(@Validated @RequestBody PlatformRequest platform) {
-        log.info("管理后台用户[{}]新增车辆平台信息[{}]", SecurityUtils.getUsername(), platform.getCode());
+        log.info("管理后台用户[{}]新增车辆平台信息[{}]", SecurityContextHolder.getUserName(), platform.getCode());
         if (!platformAppService.checkCodeUnique(platform.getId(), platform.getCode())) {
             return ApiResponse.fail("新增车辆平台'" + platform.getCode() + "'失败，车辆平台代码已存在");
         }
@@ -126,7 +127,7 @@ public class MptPlatformController extends BaseController {
     @RequiresPermissions("completeVehicle:product:platform:edit")
     @PutMapping
     public ApiResponse<Void> edit(@Validated @RequestBody PlatformRequest platform) {
-        log.info("管理后台用户[{}]修改保存车辆平台信息[{}]", SecurityUtils.getUsername(), platform.getCode());
+        log.info("管理后台用户[{}]修改保存车辆平台信息[{}]", SecurityContextHolder.getUserName(), platform.getCode());
         if (!platformAppService.checkCodeUnique(platform.getId(), platform.getCode())) {
             return ApiResponse.fail("修改保存车辆平台'" + platform.getCode() + "'失败，车辆平台代码已存在");
         }
@@ -144,7 +145,7 @@ public class MptPlatformController extends BaseController {
     @RequiresPermissions("completeVehicle:product:platform:remove")
     @DeleteMapping("/{platformIds}")
     public ApiResponse<Void> remove(@PathVariable Long[] platformIds) {
-        log.info("管理后台用户[{}]删除车辆平台信息[{}]", SecurityUtils.getUsername(), platformIds);
+        log.info("管理后台用户[{}]删除车辆平台信息[{}]", SecurityContextHolder.getUserName(), platformIds);
         for (Long platformId : platformIds) {
             if (platformAppService.checkPlatformSeriesExist(platformId)) {
                 return ApiResponse.fail("删除车辆平台'" + platformId + "'失败，该车辆平台下存在车系");

@@ -15,6 +15,7 @@ import net.hwyz.iov.cloud.framework.common.bean.ApiResponse;
 import net.hwyz.iov.cloud.framework.common.bean.PageResult;
 import net.hwyz.iov.cloud.framework.security.annotation.RequiresPermissions;
 import net.hwyz.iov.cloud.framework.security.util.SecurityUtils;
+import net.hwyz.iov.cloud.framework.web.context.SecurityContextHolder;
 import net.hwyz.iov.cloud.framework.web.controller.BaseController;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.validation.annotation.Validated;
@@ -44,7 +45,7 @@ public class MptSeriesController extends BaseController {
     @RequiresPermissions("completeVehicle:product:series:list")
     @GetMapping(value = "/list")
     public ApiResponse<PageResult<SeriesResponse>> list(SeriesRequest series) {
-        log.info("管理后台用户[{}]分页查询车系信息", SecurityUtils.getUsername());
+        log.info("管理后台用户[{}]分页查询车系信息", SecurityContextHolder.getUserName());
         startPage();
         SeriesQuery query = SeriesQuery.builder()
                 .platformCode(series.getPlatformCode())
@@ -66,7 +67,7 @@ public class MptSeriesController extends BaseController {
     @RequiresPermissions("completeVehicle:product:series:list")
     @GetMapping(value = "/listByPlatformCode")
     public ApiResponse<List<SeriesResponse>> listByPlatformCode(@RequestParam String platformCode) {
-        log.info("管理后台用户[{}]获取指定车辆平台[{}]下的所有车系", SecurityUtils.getUsername(), platformCode);
+        log.info("管理后台用户[{}]获取指定车辆平台[{}]下的所有车系", SecurityContextHolder.getUserName(), platformCode);
         SeriesQuery query = SeriesQuery.builder()
                 .platformCode(platformCode)
                 .build();
@@ -84,7 +85,7 @@ public class MptSeriesController extends BaseController {
     @RequiresPermissions("completeVehicle:product:series:export")
     @PostMapping("/export")
     public void export(HttpServletResponse response, SeriesRequest series) {
-        log.info("管理后台用户[{}]导出车系信息", SecurityUtils.getUsername());
+        log.info("管理后台用户[{}]导出车系信息", SecurityContextHolder.getUserName());
     }
 
     /**
@@ -96,7 +97,7 @@ public class MptSeriesController extends BaseController {
     @RequiresPermissions("completeVehicle:product:series:query")
     @GetMapping(value = "/{seriesId}")
     public ApiResponse<SeriesResponse> getInfo(@PathVariable Long seriesId) {
-        log.info("管理后台用户[{}]根据车系ID[{}]获取车系信息", SecurityUtils.getUsername(), seriesId);
+        log.info("管理后台用户[{}]根据车系ID[{}]获取车系信息", SecurityContextHolder.getUserName(), seriesId);
         return ApiResponse.ok(MptSeriesAssembler.INSTANCE.fromDto(seriesAppService.getSeriesById(seriesId)));
     }
 
@@ -110,7 +111,7 @@ public class MptSeriesController extends BaseController {
     @RequiresPermissions("completeVehicle:product:series:add")
     @PostMapping
     public ApiResponse<Void> add(@Validated @RequestBody SeriesRequest series) {
-        log.info("管理后台用户[{}]新增车系信息[{}]", SecurityUtils.getUsername(), series.getCode());
+        log.info("管理后台用户[{}]新增车系信息[{}]", SecurityContextHolder.getUserName(), series.getCode());
         if (!seriesAppService.checkCodeUnique(series.getId(), series.getCode())) {
             return ApiResponse.fail("新增车系'" + series.getCode() + "'失败，车系代码已存在");
         }
@@ -128,7 +129,7 @@ public class MptSeriesController extends BaseController {
     @RequiresPermissions("completeVehicle:product:series:edit")
     @PutMapping
     public ApiResponse<Void> edit(@Validated @RequestBody SeriesRequest series) {
-        log.info("管理后台用户[{}]修改保存车系信息[{}]", SecurityUtils.getUsername(), series.getCode());
+        log.info("管理后台用户[{}]修改保存车系信息[{}]", SecurityContextHolder.getUserName(), series.getCode());
         if (!seriesAppService.checkCodeUnique(series.getId(), series.getCode())) {
             return ApiResponse.fail("修改保存车系'" + series.getCode() + "'失败，车系代码已存在");
         }
@@ -146,7 +147,7 @@ public class MptSeriesController extends BaseController {
     @RequiresPermissions("completeVehicle:product:series:remove")
     @DeleteMapping("/{seriesIds}")
     public ApiResponse<Void> remove(@PathVariable Long[] seriesIds) {
-        log.info("管理后台用户[{}]删除车系信息[{}]", SecurityUtils.getUsername(), seriesIds);
+        log.info("管理后台用户[{}]删除车系信息[{}]", SecurityContextHolder.getUserName(), seriesIds);
         for (Long seriesId : seriesIds) {
             if (seriesAppService.checkSeriesModelExist(seriesId)) {
                 return ApiResponse.fail("删除车系'" + seriesId + "'失败，该车系下存在车型");

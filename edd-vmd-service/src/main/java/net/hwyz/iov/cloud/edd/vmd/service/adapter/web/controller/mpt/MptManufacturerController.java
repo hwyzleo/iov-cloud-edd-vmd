@@ -15,6 +15,7 @@ import net.hwyz.iov.cloud.framework.common.bean.ApiResponse;
 import net.hwyz.iov.cloud.framework.common.bean.PageResult;
 import net.hwyz.iov.cloud.framework.security.annotation.RequiresPermissions;
 import net.hwyz.iov.cloud.framework.security.util.SecurityUtils;
+import net.hwyz.iov.cloud.framework.web.context.SecurityContextHolder;
 import net.hwyz.iov.cloud.framework.web.controller.BaseController;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.validation.annotation.Validated;
@@ -44,7 +45,7 @@ public class MptManufacturerController extends BaseController {
     @RequiresPermissions("completeVehicle:product:manufacturer:list")
     @GetMapping(value = "/list")
     public ApiResponse<PageResult<ManufacturerResponse>> list(ManufacturerRequest manufacturer) {
-        log.info("管理后台用户[{}]分页查询生产厂商信息", SecurityUtils.getUsername());
+        log.info("管理后台用户[{}]分页查询生产厂商信息", SecurityContextHolder.getUserName());
         startPage();
         ManufacturerQuery query = ManufacturerQuery.builder()
                 .code(manufacturer.getCode())
@@ -66,7 +67,7 @@ public class MptManufacturerController extends BaseController {
     @RequiresPermissions("completeVehicle:product:manufacturer:export")
     @PostMapping("/export")
     public void export(HttpServletResponse response, ManufacturerRequest manufacturer) {
-        log.info("管理后台用户[{}]导出生产厂商信息", SecurityUtils.getUsername());
+        log.info("管理后台用户[{}]导出生产厂商信息", SecurityContextHolder.getUserName());
     }
 
     /**
@@ -78,7 +79,7 @@ public class MptManufacturerController extends BaseController {
     @RequiresPermissions("completeVehicle:product:manufacturer:query")
     @GetMapping(value = "/{manufacturerId}")
     public ApiResponse<ManufacturerResponse> getInfo(@PathVariable Long manufacturerId) {
-        log.info("管理后台用户[{}]根据生产厂商ID[{}]获取生产厂商信息", SecurityUtils.getUsername(), manufacturerId);
+        log.info("管理后台用户[{}]根据生产厂商ID[{}]获取生产厂商信息", SecurityContextHolder.getUserName(), manufacturerId);
         return ApiResponse.ok(MptManufacturerAssembler.INSTANCE.fromDto(manufacturerAppService.getManufacturerById(manufacturerId)));
     }
 
@@ -92,7 +93,7 @@ public class MptManufacturerController extends BaseController {
     @RequiresPermissions("completeVehicle:product:manufacturer:add")
     @PostMapping
     public ApiResponse<Void> add(@Validated @RequestBody ManufacturerRequest manufacturer) {
-        log.info("管理后台用户[{}]新增生产厂商信息[{}]", SecurityUtils.getUsername(), manufacturer.getCode());
+        log.info("管理后台用户[{}]新增生产厂商信息[{}]", SecurityContextHolder.getUserName(), manufacturer.getCode());
         if (!manufacturerAppService.checkCodeUnique(manufacturer.getId(), manufacturer.getCode())) {
             return ApiResponse.fail("新增生产厂商'" + manufacturer.getCode() + "'失败，生产厂商代码已存在");
         }
@@ -110,7 +111,7 @@ public class MptManufacturerController extends BaseController {
     @RequiresPermissions("completeVehicle:product:manufacturer:edit")
     @PutMapping
     public ApiResponse<Void> edit(@Validated @RequestBody ManufacturerRequest manufacturer) {
-        log.info("管理后台用户[{}]修改保存生产厂商信息[{}]", SecurityUtils.getUsername(), manufacturer.getCode());
+        log.info("管理后台用户[{}]修改保存生产厂商信息[{}]", SecurityContextHolder.getUserName(), manufacturer.getCode());
         if (!manufacturerAppService.checkCodeUnique(manufacturer.getId(), manufacturer.getCode())) {
             return ApiResponse.fail("修改保存生产厂商'" + manufacturer.getCode() + "'失败，生产厂商代码已存在");
         }
@@ -128,7 +129,7 @@ public class MptManufacturerController extends BaseController {
     @RequiresPermissions("completeVehicle:product:manufacturer:remove")
     @DeleteMapping("/{manufacturerIds}")
     public ApiResponse<Void> remove(@PathVariable Long[] manufacturerIds) {
-        log.info("管理后台用户[{}]删除生产厂商信息[{}]", SecurityUtils.getUsername(), manufacturerIds);
+        log.info("管理后台用户[{}]删除生产厂商信息[{}]", SecurityContextHolder.getUserName(), manufacturerIds);
         for (Long manufacturerId : manufacturerIds) {
             if (manufacturerAppService.checkManufacturerVehicleExist(manufacturerId)) {
                 return ApiResponse.fail("删除生产厂商'" + manufacturerId + "'失败，该生产厂商下存在车辆");

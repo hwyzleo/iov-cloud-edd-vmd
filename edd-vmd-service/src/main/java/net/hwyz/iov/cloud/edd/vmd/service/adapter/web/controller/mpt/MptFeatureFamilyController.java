@@ -19,6 +19,7 @@ import net.hwyz.iov.cloud.framework.common.bean.ApiResponse;
 import net.hwyz.iov.cloud.framework.common.bean.PageResult;
 import net.hwyz.iov.cloud.framework.security.annotation.RequiresPermissions;
 import net.hwyz.iov.cloud.framework.security.util.SecurityUtils;
+import net.hwyz.iov.cloud.framework.web.context.SecurityContextHolder;
 import net.hwyz.iov.cloud.framework.web.controller.BaseController;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.validation.annotation.Validated;
@@ -50,7 +51,7 @@ public class MptFeatureFamilyController extends BaseController {
     @RequiresPermissions("completeVehicle:product:feature:list")
     @GetMapping(value = "/list")
     public ApiResponse<PageResult<FeatureFamilyResponse>> list(FeatureFamilyRequest featureFamily) {
-        log.info("管理后台用户[{}]分页查询特征族信息", SecurityUtils.getUsername());
+        log.info("管理后台用户[{}]分页查询特征族信息", SecurityContextHolder.getUserName());
         startPage();
         FeatureFamilyQuery query = FeatureFamilyQuery.builder()
                 .code(featureFamily.getCode())
@@ -71,7 +72,7 @@ public class MptFeatureFamilyController extends BaseController {
     @RequiresPermissions("completeVehicle:product:feature:list")
     @GetMapping(value = "/listAll")
     public ApiResponse<List<FeatureFamilyResponse>> listAll() {
-        log.info("管理后台用户[{}]获取所有特征族", SecurityUtils.getUsername());
+        log.info("管理后台用户[{}]获取所有特征族", SecurityContextHolder.getUserName());
         FeatureFamilyQuery query = FeatureFamilyQuery.builder().build();
         List<FeatureFamilyDto> dtoList = featureFamilyAppService.search(query);
         return ApiResponse.ok(MptFeatureAssembler.INSTANCE.fromFamilyDtoList(dtoList));
@@ -87,7 +88,7 @@ public class MptFeatureFamilyController extends BaseController {
     @RequiresPermissions("completeVehicle:product:feature:export")
     @PostMapping("/export")
     public void export(HttpServletResponse response, FeatureFamilyRequest featureFamily) {
-        log.info("管理后台用户[{}]导出特征族信息", SecurityUtils.getUsername());
+        log.info("管理后台用户[{}]导出特征族信息", SecurityContextHolder.getUserName());
     }
 
     /**
@@ -99,7 +100,7 @@ public class MptFeatureFamilyController extends BaseController {
     @RequiresPermissions("completeVehicle:product:feature:query")
     @GetMapping(value = "/{featureFamilyId}")
     public ApiResponse<FeatureFamilyResponse> getInfo(@PathVariable Long featureFamilyId) {
-        log.info("管理后台用户[{}]根据特征族ID[{}]获取特征族信息", SecurityUtils.getUsername(), featureFamilyId);
+        log.info("管理后台用户[{}]根据特征族ID[{}]获取特征族信息", SecurityContextHolder.getUserName(), featureFamilyId);
         return ApiResponse.ok(MptFeatureAssembler.INSTANCE.fromFamilyDto(featureFamilyAppService.getFeatureFamilyById(featureFamilyId)));
     }
 
@@ -113,7 +114,7 @@ public class MptFeatureFamilyController extends BaseController {
     @RequiresPermissions("completeVehicle:product:feature:add")
     @PostMapping
     public ApiResponse<Void> add(@Validated @RequestBody FeatureFamilyRequest featureFamily) {
-        log.info("管理后台用户[{}]新增特征族信息[{}]", SecurityUtils.getUsername(), featureFamily.getCode());
+        log.info("管理后台用户[{}]新增特征族信息[{}]", SecurityContextHolder.getUserName(), featureFamily.getCode());
         if (!featureFamilyAppService.checkFamilyCodeUnique(featureFamily.getId(), featureFamily.getCode())) {
             return ApiResponse.fail("新增特征族'" + featureFamily.getCode() + "'失败，特征族代码已存在");
         }
@@ -131,7 +132,7 @@ public class MptFeatureFamilyController extends BaseController {
     @RequiresPermissions("completeVehicle:product:feature:edit")
     @PutMapping
     public ApiResponse<Void> edit(@Validated @RequestBody FeatureFamilyRequest featureFamily) {
-        log.info("管理后台用户[{}]修改保存特征族信息[{}]", SecurityUtils.getUsername(), featureFamily.getCode());
+        log.info("管理后台用户[{}]修改保存特征族信息[{}]", SecurityContextHolder.getUserName(), featureFamily.getCode());
         if (!featureFamilyAppService.checkFamilyCodeUnique(featureFamily.getId(), featureFamily.getCode())) {
             return ApiResponse.fail("修改保存特征族'" + featureFamily.getCode() + "'失败，特征族代码已存在");
         }
@@ -149,7 +150,7 @@ public class MptFeatureFamilyController extends BaseController {
     @RequiresPermissions("completeVehicle:product:feature:remove")
     @DeleteMapping("/{featureFamilyIds}")
     public ApiResponse<Void> remove(@PathVariable Long[] featureFamilyIds) {
-        log.info("管理后台用户[{}]删除特征族信息[{}]", SecurityUtils.getUsername(), featureFamilyIds);
+        log.info("管理后台用户[{}]删除特征族信息[{}]", SecurityContextHolder.getUserName(), featureFamilyIds);
         return featureFamilyAppService.deleteFeatureFamilyByIds(featureFamilyIds) > 0 ? ApiResponse.ok() : ApiResponse.fail("删除失败");
     }
 
@@ -164,7 +165,7 @@ public class MptFeatureFamilyController extends BaseController {
     @RequiresPermissions("completeVehicle:product:feature:list")
     @GetMapping(value = "/listAllFeatureCode")
     public ApiResponse<List<FeatureCodeResponse>> listAllFeatureCode(@RequestParam String familyCode) {
-        log.info("管理后台用户[{}]查询特征族[{}]下特征值", SecurityUtils.getUsername(), familyCode);
+        log.info("管理后台用户[{}]查询特征族[{}]下特征值", SecurityContextHolder.getUserName(), familyCode);
         FeatureCodeQuery query = FeatureCodeQuery.builder()
                 .familyCode(familyCode)
                 .build();
@@ -182,7 +183,7 @@ public class MptFeatureFamilyController extends BaseController {
     @RequiresPermissions("completeVehicle:product:feature:list")
     @GetMapping(value = "/{featureFamilyId}/featureCode/list")
     public ApiResponse<PageResult<FeatureCodeResponse>> listFeatureCode(@PathVariable Long featureFamilyId, FeatureCodeRequest featureCode) {
-        log.info("管理后台用户[{}]查询特征族[{}]下特征值", SecurityUtils.getUsername(), featureFamilyId);
+        log.info("管理后台用户[{}]查询特征族[{}]下特征值", SecurityContextHolder.getUserName(), featureFamilyId);
         startPage();
         FeatureCodeQuery query = FeatureCodeQuery.builder()
                 .featureFamilyId(featureFamilyId)
@@ -206,7 +207,7 @@ public class MptFeatureFamilyController extends BaseController {
     @RequiresPermissions("completeVehicle:product:feature:query")
     @GetMapping(value = "/{featureFamilyId}/featureCode/{featureCodeId}")
     public ApiResponse<FeatureCodeResponse> getFeatureCodeInfo(@PathVariable Long featureFamilyId, @PathVariable Long featureCodeId) {
-        log.info("管理后台用户[{}]根据特征值ID[{}]获取特征值信息", SecurityUtils.getUsername(), featureCodeId);
+        log.info("管理后台用户[{}]根据特征值ID[{}]获取特征值信息", SecurityContextHolder.getUserName(), featureCodeId);
         return ApiResponse.ok(MptFeatureAssembler.INSTANCE.fromCodeDto(featureFamilyAppService.getFeatureCodeById(featureFamilyId, featureCodeId)));
     }
 
@@ -221,7 +222,7 @@ public class MptFeatureFamilyController extends BaseController {
     @RequiresPermissions("completeVehicle:product:feature:add")
     @PostMapping("/{featureFamilyId}/featureCode")
     public ApiResponse<Void> addFeatureCode(@PathVariable Long featureFamilyId, @Validated @RequestBody FeatureCodeRequest featureCode) {
-        log.info("管理后台用户[{}]新增特征族[{}]下特征值信息[{}]", SecurityUtils.getUsername(), featureFamilyId, featureCode.getCode());
+        log.info("管理后台用户[{}]新增特征族[{}]下特征值信息[{}]", SecurityContextHolder.getUserName(), featureFamilyId, featureCode.getCode());
         if (!featureFamilyAppService.checkFeatureCodeUnique(featureCode.getId(), featureCode.getCode())) {
             return ApiResponse.fail("新增特征值'" + featureCode.getCode() + "'失败，特征值代码已存在");
         }
@@ -240,7 +241,7 @@ public class MptFeatureFamilyController extends BaseController {
     @RequiresPermissions("completeVehicle:product:feature:edit")
     @PutMapping("/{featureFamilyId}/featureCode")
     public ApiResponse<Void> editFeatureCode(@PathVariable Long featureFamilyId, @Validated @RequestBody FeatureCodeRequest featureCode) {
-        log.info("管理后台用户[{}]修改保存特征族[{}]下特征值信息[{}]", SecurityUtils.getUsername(), featureFamilyId, featureCode.getCode());
+        log.info("管理后台用户[{}]修改保存特征族[{}]下特征值信息[{}]", SecurityContextHolder.getUserName(), featureFamilyId, featureCode.getCode());
         if (!featureFamilyAppService.checkFeatureCodeUnique(featureCode.getId(), featureCode.getCode())) {
             return ApiResponse.fail("修改保存特征值'" + featureCode.getCode() + "'失败，特征值代码已存在");
         }
@@ -259,7 +260,7 @@ public class MptFeatureFamilyController extends BaseController {
     @RequiresPermissions("completeVehicle:product:feature:remove")
     @DeleteMapping("/{featureFamilyId}/featureCode/{featureCodeIds}")
     public ApiResponse<Void> removeFeatureCode(@PathVariable Long featureFamilyId, @PathVariable Long[] featureCodeIds) {
-        log.info("管理后台用户[{}]删除特征族[{}]下特征值信息[{}]", SecurityUtils.getUsername(), featureFamilyId, featureCodeIds);
+        log.info("管理后台用户[{}]删除特征族[{}]下特征值信息[{}]", SecurityContextHolder.getUserName(), featureFamilyId, featureCodeIds);
         return featureFamilyAppService.deleteFeatureCodeByIds(featureFamilyId, featureCodeIds) > 0 ? ApiResponse.ok() : ApiResponse.fail("删除失败");
     }
 

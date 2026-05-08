@@ -15,7 +15,7 @@ import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
 import net.hwyz.iov.cloud.framework.common.bean.ApiResponse;
 import net.hwyz.iov.cloud.framework.common.bean.PageResult;
 import net.hwyz.iov.cloud.framework.security.annotation.RequiresPermissions;
-import net.hwyz.iov.cloud.framework.security.util.SecurityUtils;
+import net.hwyz.iov.cloud.framework.web.context.SecurityContextHolder;
 import net.hwyz.iov.cloud.framework.web.controller.BaseController;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.web.bind.annotation.*;
@@ -45,7 +45,7 @@ public class MptVehicleController extends BaseController {
     @RequiresPermissions("completeVehicle:vehicle:info:list")
     @GetMapping(value = "/list")
     public ApiResponse<PageResult<VehicleResponse>> list(VehicleRequest vehicle) {
-        log.info("管理后台用户[{}]分页查询车辆信息", SecurityUtils.getUsername());
+        log.info("管理后台用户[{}]分页查询车辆信息", SecurityContextHolder.getUserName());
         startPage();
         VehicleQuery query = VehicleQuery.builder()
                 .vin(vehicle.getVin())
@@ -66,7 +66,7 @@ public class MptVehicleController extends BaseController {
     @RequiresPermissions("completeVehicle:vehicle:info:query")
     @GetMapping(value = "/vin/{vin}")
     public ApiResponse<VehicleResponse> getInfoByVin(@PathVariable String vin) {
-        log.info("管理后台用户[{}]根据车架号[{}]获取车辆信息", SecurityUtils.getUsername(), vin);
+        log.info("管理后台用户[{}]根据车架号[{}]获取车辆信息", SecurityContextHolder.getUserName(), vin);
         VehicleDto vehicleDto = vehicleAppService.getVehicleByVin(vin);
         return ApiResponse.ok(MptVehicleAssembler.INSTANCE.fromDto(vehicleDto));
     }
@@ -81,7 +81,7 @@ public class MptVehicleController extends BaseController {
     @RequiresPermissions("completeVehicle:vehicle:info:export")
     @PostMapping("/export")
     public void export(HttpServletResponse response, VehicleRequest vehicle) {
-        log.info("管理后台用户[{}]导出车辆信息", SecurityUtils.getUsername());
+        log.info("管理后台用户[{}]导出车辆信息", SecurityContextHolder.getUserName());
     }
 
     /**
@@ -94,7 +94,7 @@ public class MptVehicleController extends BaseController {
     @RequiresPermissions("completeVehicle:vehicle:info:remove")
     @DeleteMapping("/{vehicleIds}")
     public ApiResponse<Void> remove(@PathVariable Long[] vehicleIds) {
-        log.info("管理后台用户[{}]删除车辆信息[{}]", SecurityUtils.getUsername(), vehicleIds);
+        log.info("管理后台用户[{}]删除车辆信息[{}]", SecurityContextHolder.getUserName(), vehicleIds);
         return vehicleAppService.deleteVehicleByIds(vehicleIds) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
     }
 }

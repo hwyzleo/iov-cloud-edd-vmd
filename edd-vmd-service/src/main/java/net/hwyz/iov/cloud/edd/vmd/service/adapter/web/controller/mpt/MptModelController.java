@@ -15,6 +15,7 @@ import net.hwyz.iov.cloud.framework.common.bean.ApiResponse;
 import net.hwyz.iov.cloud.framework.common.bean.PageResult;
 import net.hwyz.iov.cloud.framework.security.annotation.RequiresPermissions;
 import net.hwyz.iov.cloud.framework.security.util.SecurityUtils;
+import net.hwyz.iov.cloud.framework.web.context.SecurityContextHolder;
 import net.hwyz.iov.cloud.framework.web.controller.BaseController;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.validation.annotation.Validated;
@@ -44,7 +45,7 @@ public class MptModelController extends BaseController {
     @RequiresPermissions("completeVehicle:product:model:list")
     @GetMapping(value = "/list")
     public ApiResponse<PageResult<ModelResponse>> list(ModelRequest model) {
-        log.info("管理后台用户[{}]分页查询车型信息", SecurityUtils.getUsername());
+        log.info("管理后台用户[{}]分页查询车型信息", SecurityContextHolder.getUserName());
         startPage();
         ModelQuery query = ModelQuery.builder()
                 .platformCode(model.getPlatformCode())
@@ -69,7 +70,7 @@ public class MptModelController extends BaseController {
     @GetMapping(value = "/listByPlatformCodeAndSeriesCode")
     public ApiResponse<List<ModelResponse>> listByPlatformCodeAndSeriesCode(@RequestParam String platformCode,
                                                                       @RequestParam String seriesCode) {
-        log.info("管理后台用户[{}]获取指定车辆平台[{}]及车系[{}]下的所有车型", SecurityUtils.getUsername(),
+        log.info("管理后台用户[{}]获取指定车辆平台[{}]及车系[{}]下的所有车型", SecurityContextHolder.getUserName(),
                 platformCode, seriesCode);
         ModelQuery query = ModelQuery.builder()
                 .platformCode(platformCode)
@@ -89,7 +90,7 @@ public class MptModelController extends BaseController {
     @RequiresPermissions("completeVehicle:product:model:export")
     @PostMapping("/export")
     public void export(HttpServletResponse response, ModelRequest model) {
-        log.info("管理后台用户[{}]导出车型信息", SecurityUtils.getUsername());
+        log.info("管理后台用户[{}]导出车型信息", SecurityContextHolder.getUserName());
     }
 
     /**
@@ -101,7 +102,7 @@ public class MptModelController extends BaseController {
     @RequiresPermissions("completeVehicle:product:model:query")
     @GetMapping(value = "/{modelId}")
     public ApiResponse<ModelResponse> getInfo(@PathVariable Long modelId) {
-        log.info("管理后台用户[{}]根据车型ID[{}]获取车型信息", SecurityUtils.getUsername(), modelId);
+        log.info("管理后台用户[{}]根据车型ID[{}]获取车型信息", SecurityContextHolder.getUserName(), modelId);
         return ApiResponse.ok(MptModelAssembler.INSTANCE.fromDto(modelAppService.getModelById(modelId)));
     }
 
@@ -115,7 +116,7 @@ public class MptModelController extends BaseController {
     @RequiresPermissions("completeVehicle:product:model:add")
     @PostMapping
     public ApiResponse<Void> add(@Validated @RequestBody ModelRequest model) {
-        log.info("管理后台用户[{}]新增车型信息[{}]", SecurityUtils.getUsername(), model.getCode());
+        log.info("管理后台用户[{}]新增车型信息[{}]", SecurityContextHolder.getUserName(), model.getCode());
         if (!modelAppService.checkCodeUnique(model.getId(), model.getCode())) {
             return ApiResponse.fail("新增车型'" + model.getCode() + "'失败，车型代码已存在");
         }
@@ -133,7 +134,7 @@ public class MptModelController extends BaseController {
     @RequiresPermissions("completeVehicle:product:model:edit")
     @PutMapping
     public ApiResponse<Void> edit(@Validated @RequestBody ModelRequest model) {
-        log.info("管理后台用户[{}]修改保存车型信息[{}]", SecurityUtils.getUsername(), model.getCode());
+        log.info("管理后台用户[{}]修改保存车型信息[{}]", SecurityContextHolder.getUserName(), model.getCode());
         if (!modelAppService.checkCodeUnique(model.getId(), model.getCode())) {
             return ApiResponse.fail("修改保存车型'" + model.getCode() + "'失败，车型代码已存在");
         }
@@ -151,7 +152,7 @@ public class MptModelController extends BaseController {
     @RequiresPermissions("completeVehicle:product:model:remove")
     @DeleteMapping("/{modelIds}")
     public ApiResponse<Void> remove(@PathVariable Long[] modelIds) {
-        log.info("管理后台用户[{}]删除车型信息[{}]", SecurityUtils.getUsername(), modelIds);
+        log.info("管理后台用户[{}]删除车型信息[{}]", SecurityContextHolder.getUserName(), modelIds);
         for (Long modelId : modelIds) {
             if (modelAppService.checkModelBaseModelExist(modelId)) {
                 return ApiResponse.fail("删除车型'" + modelId + "'失败，该车型下存在基础车型");

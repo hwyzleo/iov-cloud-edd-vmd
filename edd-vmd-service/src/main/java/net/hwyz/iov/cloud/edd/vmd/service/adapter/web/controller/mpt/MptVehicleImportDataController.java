@@ -16,6 +16,7 @@ import net.hwyz.iov.cloud.framework.common.bean.ApiResponse;
 import net.hwyz.iov.cloud.framework.common.bean.PageResult;
 import net.hwyz.iov.cloud.framework.security.annotation.RequiresPermissions;
 import net.hwyz.iov.cloud.framework.security.util.SecurityUtils;
+import net.hwyz.iov.cloud.framework.web.context.SecurityContextHolder;
 import net.hwyz.iov.cloud.framework.web.controller.BaseController;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.validation.annotation.Validated;
@@ -45,7 +46,7 @@ public class MptVehicleImportDataController extends BaseController {
     @RequiresPermissions("completeVehicle:vehicle:importData:list")
     @GetMapping(value = "/list")
     public ApiResponse<PageResult<VehicleImportDataResponse>> list(VehicleImportDataRequest vehicleImportData) {
-        log.info("管理后台用户[{}]分页查询车辆导入数据", SecurityUtils.getUsername());
+        log.info("管理后台用户[{}]分页查询车辆导入数据", SecurityContextHolder.getUserName());
         startPage();
         VehicleImportDataQuery query = VehicleImportDataQuery.builder()
                 .batchNum(vehicleImportData.getBatchNum())
@@ -68,7 +69,7 @@ public class MptVehicleImportDataController extends BaseController {
     @RequiresPermissions("completeVehicle:vehicle:importData:export")
     @PostMapping("/export")
     public void export(HttpServletResponse response, VehicleImportDataRequest vehicleImportData) {
-        log.info("管理后台用户[{}]导出车辆导入数据", SecurityUtils.getUsername());
+        log.info("管理后台用户[{}]导出车辆导入数据", SecurityContextHolder.getUserName());
     }
 
     /**
@@ -80,7 +81,7 @@ public class MptVehicleImportDataController extends BaseController {
     @RequiresPermissions("completeVehicle:vehicle:importData:query")
     @GetMapping(value = "/{vehicleImportDataId}")
     public ApiResponse<VehicleImportDataResponse> getInfo(@PathVariable Long vehicleImportDataId) {
-        log.info("管理后台用户[{}]根据车辆导入数据ID[{}]获取车辆导入数据", SecurityUtils.getUsername(), vehicleImportDataId);
+        log.info("管理后台用户[{}]根据车辆导入数据ID[{}]获取车辆导入数据", SecurityContextHolder.getUserName(), vehicleImportDataId);
         return ApiResponse.ok(MptVehicleImportDataAssembler.INSTANCE.fromDto(vehicleImportDataAppService.getVehicleImportDataById(vehicleImportDataId)));
     }
 
@@ -94,7 +95,7 @@ public class MptVehicleImportDataController extends BaseController {
     @RequiresPermissions("completeVehicle:vehicle:importData:add")
     @PostMapping
     public ApiResponse<Void> add(@Validated @RequestBody VehicleImportDataRequest vehicleImportData) {
-        log.info("管理后台用户[{}]新增车辆导入数据[{}]", SecurityUtils.getUsername(), vehicleImportData.getBatchNum());
+        log.info("管理后台用户[{}]新增车辆导入数据[{}]", SecurityContextHolder.getUserName(), vehicleImportData.getBatchNum());
         if (!vehicleImportDataAppService.checkBatchNumUnique(vehicleImportData.getId(), vehicleImportData.getBatchNum())) {
             return ApiResponse.fail("新增车辆导入数据'" + vehicleImportData.getBatchNum() + "'失败，批次号已存在");
         }
@@ -121,7 +122,7 @@ public class MptVehicleImportDataController extends BaseController {
     @RequiresPermissions("completeVehicle:vehicle:importData:edit")
     @PutMapping
     public ApiResponse<Void> edit(@Validated @RequestBody VehicleImportDataRequest vehicleImportData) {
-        log.info("管理后台用户[{}]修改保存车辆导入数据[{}]", SecurityUtils.getUsername(), vehicleImportData.getBatchNum());
+        log.info("管理后台用户[{}]修改保存车辆导入数据[{}]", SecurityContextHolder.getUserName(), vehicleImportData.getBatchNum());
         if (!vehicleImportDataAppService.checkBatchNumUnique(vehicleImportData.getId(), vehicleImportData.getBatchNum())) {
             return ApiResponse.fail("修改保存车辆导入数据'" + vehicleImportData.getBatchNum() + "'失败，批次号已存在");
         }
@@ -148,7 +149,7 @@ public class MptVehicleImportDataController extends BaseController {
     @RequiresPermissions("completeVehicle:vehicle:importData:remove")
     @DeleteMapping("/{vehicleImportDataIds}")
     public ApiResponse<Void> remove(@PathVariable Long[] vehicleImportDataIds) {
-        log.info("管理后台用户[{}]删除车辆导入数据[{}]", SecurityUtils.getUsername(), vehicleImportDataIds);
+        log.info("管理后台用户[{}]删除车辆导入数据[{}]", SecurityContextHolder.getUserName(), vehicleImportDataIds);
         return vehicleImportDataAppService.deleteVehicleImportDataByIds(vehicleImportDataIds) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
     }
 }

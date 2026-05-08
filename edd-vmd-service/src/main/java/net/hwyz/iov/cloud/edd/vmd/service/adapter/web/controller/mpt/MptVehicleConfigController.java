@@ -17,7 +17,7 @@ import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
 import net.hwyz.iov.cloud.framework.common.bean.ApiResponse;
 import net.hwyz.iov.cloud.framework.common.bean.PageResult;
 import net.hwyz.iov.cloud.framework.security.annotation.RequiresPermissions;
-import net.hwyz.iov.cloud.framework.security.util.SecurityUtils;
+import net.hwyz.iov.cloud.framework.web.context.SecurityContextHolder;
 import net.hwyz.iov.cloud.framework.web.controller.BaseController;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.web.bind.annotation.*;
@@ -46,7 +46,7 @@ public class MptVehicleConfigController extends BaseController {
     @RequiresPermissions("iov:configCenter:vehicleConfig:list")
     @GetMapping(value = "/list")
     public ApiResponse<PageResult<VehicleConfigResponse>> list(VehicleConfigRequest vehicleConfig) {
-        log.info("管理后台用户[{}]分页查询车辆配置", SecurityUtils.getUsername());
+        log.info("管理后台用户[{}]分页查询车辆配置", SecurityContextHolder.getUserName());
         startPage();
         VehicleConfigQuery query = VehicleConfigQuery.builder()
                 .vin(vehicleConfig.getVin())
@@ -68,7 +68,7 @@ public class MptVehicleConfigController extends BaseController {
     @RequiresPermissions("iov:configCenter:vehicleConfig:list")
     @GetMapping(value = "/{vin}/configItem/list")
     public ApiResponse<PageResult<VehicleConfigItemResponse>> listConfigItem(@PathVariable String vin, VehicleConfigItemRequest vehicleConfigItem) {
-        log.info("管理后台用户[{}]分页查询车辆[{}]配置项", SecurityUtils.getUsername(), vin);
+        log.info("管理后台用户[{}]分页查询车辆[{}]配置项", SecurityContextHolder.getUserName(), vin);
         startPage();
         List<VehicleConfigItemDto> dtoList = vehicleConfigAppService.searchItem(vin, vehicleConfigItem.getVersion());
         return ApiResponse.ok(getPageResult(PageUtil.convert(dtoList, MptVehicleConfigAssembler.INSTANCE::fromItemDto)));
@@ -84,7 +84,7 @@ public class MptVehicleConfigController extends BaseController {
     @RequiresPermissions("iov:configCenter:vehicleConfig:export")
     @PostMapping("/export")
     public void export(HttpServletResponse response, VehicleConfigRequest vehicleConfig) {
-        log.info("管理后台用户[{}]导出车辆配置", SecurityUtils.getUsername());
+        log.info("管理后台用户[{}]导出车辆配置", SecurityContextHolder.getUserName());
     }
 
     /**
@@ -96,7 +96,7 @@ public class MptVehicleConfigController extends BaseController {
     @RequiresPermissions("iov:configCenter:vehicleConfig:query")
     @GetMapping(value = "/{vehicleConfigId}")
     public ApiResponse<VehicleConfigResponse> getInfo(@PathVariable Long vehicleConfigId) {
-        log.info("管理后台用户[{}]根据车辆配置ID[{}]获取车辆配置", SecurityUtils.getUsername(), vehicleConfigId);
+        log.info("管理后台用户[{}]根据车辆配置ID[{}]获取车辆配置", SecurityContextHolder.getUserName(), vehicleConfigId);
         return ApiResponse.ok(MptVehicleConfigAssembler.INSTANCE.fromConfigDto(vehicleConfigAppService.getVehicleConfigById(vehicleConfigId)));
     }
 
@@ -110,7 +110,7 @@ public class MptVehicleConfigController extends BaseController {
     @RequiresPermissions("iov:configCenter:vehicleConfig:query")
     @GetMapping(value = "/{vin}/configItem/{vehicleConfigItemId}")
     public ApiResponse<VehicleConfigItemResponse> getConfigItemInfo(@PathVariable String vin, @PathVariable Long vehicleConfigItemId) {
-        log.info("管理后台用户[{}]根据车辆[{}]配置项ID[{}]获取车辆配置项", SecurityUtils.getUsername(), vin, vehicleConfigItemId);
+        log.info("管理后台用户[{}]根据车辆[{}]配置项ID[{}]获取车辆配置项", SecurityContextHolder.getUserName(), vin, vehicleConfigItemId);
         return ApiResponse.ok(MptVehicleConfigAssembler.INSTANCE.fromItemDto(vehicleConfigAppService.getVehicleConfigItemById(vehicleConfigItemId)));
     }
 }

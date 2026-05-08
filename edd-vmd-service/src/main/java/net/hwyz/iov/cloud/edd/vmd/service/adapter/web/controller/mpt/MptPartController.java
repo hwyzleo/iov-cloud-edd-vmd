@@ -15,6 +15,7 @@ import net.hwyz.iov.cloud.framework.common.bean.ApiResponse;
 import net.hwyz.iov.cloud.framework.common.bean.PageResult;
 import net.hwyz.iov.cloud.framework.security.annotation.RequiresPermissions;
 import net.hwyz.iov.cloud.framework.security.util.SecurityUtils;
+import net.hwyz.iov.cloud.framework.web.context.SecurityContextHolder;
 import net.hwyz.iov.cloud.framework.web.controller.BaseController;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.validation.annotation.Validated;
@@ -44,7 +45,7 @@ public class MptPartController extends BaseController {
     @RequiresPermissions("completeVehicle:vehicle:part:list")
     @GetMapping(value = "/list")
     public ApiResponse<PageResult<PartResponse>> list(PartRequest part) {
-        log.info("管理后台用户[{}]分页查询零件信息", SecurityUtils.getUsername());
+        log.info("管理后台用户[{}]分页查询零件信息", SecurityContextHolder.getUserName());
         startPage();
         PartQuery query = PartQuery.builder()
                 .key(part.getKey())
@@ -69,7 +70,7 @@ public class MptPartController extends BaseController {
     @RequiresPermissions("completeVehicle:vehicle:part:export")
     @PostMapping("/export")
     public void export(HttpServletResponse response, PartRequest part) {
-        log.info("管理后台用户[{}]导出零件信息", SecurityUtils.getUsername());
+        log.info("管理后台用户[{}]导出零件信息", SecurityContextHolder.getUserName());
     }
 
     /**
@@ -81,7 +82,7 @@ public class MptPartController extends BaseController {
     @RequiresPermissions("completeVehicle:vehicle:part:query")
     @GetMapping(value = "/{partId}")
     public ApiResponse<PartResponse> getInfo(@PathVariable Long partId) {
-        log.info("管理后台用户[{}]根据零件信息ID[{}]获取零件信息", SecurityUtils.getUsername(), partId);
+        log.info("管理后台用户[{}]根据零件信息ID[{}]获取零件信息", SecurityContextHolder.getUserName(), partId);
         return ApiResponse.ok(MptPartAssembler.INSTANCE.fromDto(partAppService.getPartById(partId)));
     }
 
@@ -95,7 +96,7 @@ public class MptPartController extends BaseController {
     @RequiresPermissions("completeVehicle:vehicle:part:add")
     @PostMapping
     public ApiResponse<Void> add(@Validated @RequestBody PartRequest part) {
-        log.info("管理后台用户[{}]新增零件信息[{}]", SecurityUtils.getUsername(), part.getPn());
+        log.info("管理后台用户[{}]新增零件信息[{}]", SecurityContextHolder.getUserName(), part.getPn());
         if (!partAppService.checkPnUnique(part.getId(), part.getPn())) {
             return ApiResponse.fail("新增零件信息'" + part.getPn() + "'失败，零件号已存在");
         }
@@ -113,7 +114,7 @@ public class MptPartController extends BaseController {
     @RequiresPermissions("completeVehicle:vehicle:part:edit")
     @PutMapping
     public ApiResponse<Void> edit(@Validated @RequestBody PartRequest part) {
-        log.info("管理后台用户[{}]修改保存零件信息[{}]", SecurityUtils.getUsername(), part.getPn());
+        log.info("管理后台用户[{}]修改保存零件信息[{}]", SecurityContextHolder.getUserName(), part.getPn());
         if (!partAppService.checkPnUnique(part.getId(), part.getPn())) {
             return ApiResponse.fail("修改保存零件信息'" + part.getPn() + "'失败，零件号已存在");
         }
@@ -131,7 +132,7 @@ public class MptPartController extends BaseController {
     @RequiresPermissions("completeVehicle:vehicle:part:remove")
     @DeleteMapping("/{partIds}")
     public ApiResponse<Void> remove(@PathVariable Long[] partIds) {
-        log.info("管理后台用户[{}]删除零件信息[{}]", SecurityUtils.getUsername(), partIds);
+        log.info("管理后台用户[{}]删除零件信息[{}]", SecurityContextHolder.getUserName(), partIds);
         return partAppService.deletePartByIds(partIds) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
     }
 

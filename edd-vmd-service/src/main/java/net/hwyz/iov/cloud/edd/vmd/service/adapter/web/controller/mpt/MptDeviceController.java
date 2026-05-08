@@ -16,6 +16,7 @@ import net.hwyz.iov.cloud.framework.common.bean.PageResult;
 import net.hwyz.iov.cloud.framework.common.enums.DeviceItem;
 import net.hwyz.iov.cloud.framework.security.annotation.RequiresPermissions;
 import net.hwyz.iov.cloud.framework.security.util.SecurityUtils;
+import net.hwyz.iov.cloud.framework.web.context.SecurityContextHolder;
 import net.hwyz.iov.cloud.framework.web.controller.BaseController;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.validation.annotation.Validated;
@@ -47,7 +48,7 @@ public class MptDeviceController extends BaseController {
     @RequiresPermissions("completeVehicle:vehicle:device:list")
     @GetMapping(value = "/list")
     public ApiResponse<PageResult<DeviceResponse>> list(DeviceRequest device) {
-        log.info("管理后台用户[{}]分页查询设备信息", SecurityUtils.getUsername());
+        log.info("管理后台用户[{}]分页查询设备信息", SecurityContextHolder.getUserName());
         startPage();
         DeviceQuery query = DeviceQuery.builder()
                 .code(device.getCode())
@@ -68,7 +69,7 @@ public class MptDeviceController extends BaseController {
     @RequiresPermissions("completeVehicle:vehicle:device:list")
     @GetMapping(value = "/listAllDeviceItem")
     public ApiResponse<List<Map<String, Object>>> listAllDeviceItem() {
-        log.info("管理后台用户[{}]获取所有设备项", SecurityUtils.getUsername());
+        log.info("管理后台用户[{}]获取所有设备项", SecurityContextHolder.getUserName());
         List<Map<String, Object>> list = new ArrayList<>();
         for (DeviceItem deviceItem : DeviceItem.values()) {
             list.add(Map.of("code", deviceItem.name(), "label", deviceItem.label));
@@ -84,7 +85,7 @@ public class MptDeviceController extends BaseController {
     @RequiresPermissions("completeVehicle:vehicle:device:list")
     @GetMapping(value = "/listAllDevice")
     public ApiResponse<List<Map<String, Object>>> listAllDevice() {
-        log.info("管理后台用户[{}]获取所有设备", SecurityUtils.getUsername());
+        log.info("管理后台用户[{}]获取所有设备", SecurityContextHolder.getUserName());
         List<Map<String, Object>> list = new ArrayList<>();
         for (DeviceDto device : deviceAppService.listAll()) {
             list.add(Map.of("code", device.getCode(), "label", device.getName()));
@@ -102,7 +103,7 @@ public class MptDeviceController extends BaseController {
     @RequiresPermissions("completeVehicle:vehicle:device:export")
     @PostMapping("/export")
     public void export(HttpServletResponse response, DeviceRequest device) {
-        log.info("管理后台用户[{}]导出设备信息", SecurityUtils.getUsername());
+        log.info("管理后台用户[{}]导出设备信息", SecurityContextHolder.getUserName());
     }
 
     /**
@@ -114,7 +115,7 @@ public class MptDeviceController extends BaseController {
     @RequiresPermissions("completeVehicle:vehicle:device:query")
     @GetMapping(value = "/{deviceId}")
     public ApiResponse<DeviceResponse> getInfo(@PathVariable Long deviceId) {
-        log.info("管理后台用户[{}]根据设备信息ID[{}]获取设备信息", SecurityUtils.getUsername(), deviceId);
+        log.info("管理后台用户[{}]根据设备信息ID[{}]获取设备信息", SecurityContextHolder.getUserName(), deviceId);
         return ApiResponse.ok(MptDeviceAssembler.INSTANCE.fromDto(deviceAppService.getDeviceById(deviceId)));
     }
 
@@ -128,7 +129,7 @@ public class MptDeviceController extends BaseController {
     @RequiresPermissions("completeVehicle:vehicle:device:add")
     @PostMapping
     public ApiResponse<Void> add(@Validated @RequestBody DeviceRequest device) {
-        log.info("管理后台用户[{}]新增设备信息[{}]", SecurityUtils.getUsername(), device.getCode());
+        log.info("管理后台用户[{}]新增设备信息[{}]", SecurityContextHolder.getUserName(), device.getCode());
         if (!deviceAppService.checkCodeUnique(device.getId(), device.getCode())) {
             return ApiResponse.fail("新增设备信息'" + device.getCode() + "'失败，设备信息代码已存在");
         }
@@ -146,7 +147,7 @@ public class MptDeviceController extends BaseController {
     @RequiresPermissions("completeVehicle:vehicle:device:edit")
     @PutMapping
     public ApiResponse<Void> edit(@Validated @RequestBody DeviceRequest device) {
-        log.info("管理后台用户[{}]修改保存设备信息[{}]", SecurityUtils.getUsername(), device.getCode());
+        log.info("管理后台用户[{}]修改保存设备信息[{}]", SecurityContextHolder.getUserName(), device.getCode());
         if (!deviceAppService.checkCodeUnique(device.getId(), device.getCode())) {
             return ApiResponse.fail("修改保存设备信息'" + device.getCode() + "'失败，设备信息代码已存在");
         }
@@ -164,7 +165,7 @@ public class MptDeviceController extends BaseController {
     @RequiresPermissions("completeVehicle:vehicle:device:remove")
     @DeleteMapping("/{deviceIds}")
     public ApiResponse<Void> remove(@PathVariable Long[] deviceIds) {
-        log.info("管理后台用户[{}]删除设备信息[{}]", SecurityUtils.getUsername(), deviceIds);
+        log.info("管理后台用户[{}]删除设备信息[{}]", SecurityContextHolder.getUserName(), deviceIds);
         return deviceAppService.deleteDeviceByIds(deviceIds) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
     }
 

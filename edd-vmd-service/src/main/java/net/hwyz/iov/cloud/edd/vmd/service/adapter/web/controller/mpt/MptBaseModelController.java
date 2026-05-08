@@ -17,7 +17,7 @@ import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
 import net.hwyz.iov.cloud.framework.common.bean.ApiResponse;
 import net.hwyz.iov.cloud.framework.common.bean.PageResult;
 import net.hwyz.iov.cloud.framework.security.annotation.RequiresPermissions;
-import net.hwyz.iov.cloud.framework.security.util.SecurityUtils;
+import net.hwyz.iov.cloud.framework.web.context.SecurityContextHolder;
 import net.hwyz.iov.cloud.framework.web.controller.BaseController;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.validation.annotation.Validated;
@@ -47,7 +47,7 @@ public class MptBaseModelController extends BaseController {
     @RequiresPermissions("completeVehicle:product:baseModel:list")
     @GetMapping(value = "/list")
     public ApiResponse<PageResult<BaseModelResponse>> list(BaseModelRequest baseModel) {
-        log.info("管理后台用户[{}]分页查询基础车型信息", SecurityUtils.getUsername());
+        log.info("管理后台用户[{}]分页查询基础车型信息", SecurityContextHolder.getUserName());
         startPage();
         BaseModelQuery query = BaseModelQuery.builder()
                 .platformCode(baseModel.getPlatformCode())
@@ -72,7 +72,7 @@ public class MptBaseModelController extends BaseController {
     @RequiresPermissions("completeVehicle:product:baseModel:list")
     @GetMapping(value = "/{baseModelCode}/featureCode/list")
     public ApiResponse<List<BaseModelFeatureCodeResponse>> listFeatureCode(@PathVariable String baseModelCode, BaseModelFeatureCodeRequest baseModelFeatureCode) {
-        log.info("管理后台用户[{}]分页查询基础车型下特征值", SecurityUtils.getUsername());
+        log.info("管理后台用户[{}]分页查询基础车型下特征值", SecurityContextHolder.getUserName());
         List<BaseModelFeatureCodeDto> dtoList = baseModelAppService.searchFeatureCode(baseModelCode, baseModelFeatureCode.getFamilyCode());
         return ApiResponse.ok(MptBaseModelAssembler.INSTANCE.fromFeatureCodeDtoList(dtoList));
     }
@@ -90,7 +90,7 @@ public class MptBaseModelController extends BaseController {
     public ApiResponse<List<BaseModelResponse>> listByPlatformCodeAndSeriesCodeAndModelCode(@RequestParam(required = false) String platformCode,
                                                                                             @RequestParam(required = false) String seriesCode,
                                                                                             @RequestParam(required = false) String modelCode) {
-        log.info("管理后台用户[{}]获取指定车辆平台[{}]及车系[{}]及车型[{}]下的所有基础车型", SecurityUtils.getUsername(),
+        log.info("管理后台用户[{}]获取指定车辆平台[{}]及车系[{}]及车型[{}]下的所有基础车型", SecurityContextHolder.getUserName(),
                 platformCode, seriesCode, modelCode);
         BaseModelQuery query = BaseModelQuery.builder()
                 .platformCode(platformCode)
@@ -111,7 +111,7 @@ public class MptBaseModelController extends BaseController {
     @RequiresPermissions("completeVehicle:product:baseModel:export")
     @PostMapping("/export")
     public void export(HttpServletResponse response, BaseModelRequest baseModel) {
-        log.info("管理后台用户[{}]导出基础车型信息", SecurityUtils.getUsername());
+        log.info("管理后台用户[{}]导出基础车型信息", SecurityContextHolder.getUserName());
     }
 
     /**
@@ -123,7 +123,7 @@ public class MptBaseModelController extends BaseController {
     @RequiresPermissions("completeVehicle:product:baseModel:query")
     @GetMapping(value = "/{baseModelId}")
     public ApiResponse<BaseModelResponse> getInfo(@PathVariable Long baseModelId) {
-        log.info("管理后台用户[{}]根据基础车型ID[{}]获取基础车型信息", SecurityUtils.getUsername(), baseModelId);
+        log.info("管理后台用户[{}]根据基础车型ID[{}]获取基础车型信息", SecurityContextHolder.getUserName(), baseModelId);
         return ApiResponse.ok(MptBaseModelAssembler.INSTANCE.fromDto(baseModelAppService.getBaseModelById(baseModelId)));
     }
 
@@ -137,7 +137,7 @@ public class MptBaseModelController extends BaseController {
     @RequiresPermissions("completeVehicle:product:baseModel:query")
     @GetMapping(value = "/{baseModelCode}/featureCode/{baseModelFeatureCodeId}")
     public ApiResponse<BaseModelFeatureCodeResponse> getFeatureCodeInfo(@PathVariable String baseModelCode, @PathVariable Long baseModelFeatureCodeId) {
-        log.info("管理后台用户[{}]根据基础车型[{}]特征值ID[{}]获取基础车型特征值信息", SecurityUtils.getUsername(), baseModelCode, baseModelFeatureCodeId);
+        log.info("管理后台用户[{}]根据基础车型[{}]特征值ID[{}]获取基础车型特征值信息", SecurityContextHolder.getUserName(), baseModelCode, baseModelFeatureCodeId);
         return ApiResponse.ok(MptBaseModelAssembler.INSTANCE.fromFeatureCodeDto(baseModelAppService.getBaseModelFeatureCodeById(baseModelFeatureCodeId)));
     }
 
@@ -151,7 +151,7 @@ public class MptBaseModelController extends BaseController {
     @RequiresPermissions("completeVehicle:product:baseModel:add")
     @PostMapping
     public ApiResponse<Void> add(@Validated @RequestBody BaseModelRequest baseModel) {
-        log.info("管理后台用户[{}]新增基础车型信息[{}]", SecurityUtils.getUsername(), baseModel.getCode());
+        log.info("管理后台用户[{}]新增基础车型信息[{}]", SecurityContextHolder.getUserName(), baseModel.getCode());
         if (!baseModelAppService.checkCodeUnique(baseModel.getId(), baseModel.getCode())) {
             return ApiResponse.fail("新增基础车型'" + baseModel.getCode() + "'失败，基础车型代码已存在");
         }
@@ -170,7 +170,7 @@ public class MptBaseModelController extends BaseController {
     @RequiresPermissions("completeVehicle:product:baseModel:edit")
     @PostMapping("/{baseModelCode}/featureCode")
     public ApiResponse<Void> addFeatureCode(@PathVariable String baseModelCode, @Validated @RequestBody BaseModelFeatureCodeRequest baseModelFeatureCode) {
-        log.info("管理后台用户[{}]新增基础车型[{}]特征值[{}]", SecurityUtils.getUsername(), baseModelCode, baseModelFeatureCode.getFamilyCode());
+        log.info("管理后台用户[{}]新增基础车型[{}]特征值[{}]", SecurityContextHolder.getUserName(), baseModelCode, baseModelFeatureCode.getFamilyCode());
         if (!baseModelAppService.checkFeatureCodeUnique(baseModelFeatureCode.getId(), baseModelCode, baseModelFeatureCode.getFamilyCode())) {
             return ApiResponse.fail("新增基础车型特征值'" + baseModelFeatureCode.getFamilyCode() + "'失败，基础车型特征值已存在");
         }
@@ -188,7 +188,7 @@ public class MptBaseModelController extends BaseController {
     @RequiresPermissions("completeVehicle:product:baseModel:edit")
     @PutMapping
     public ApiResponse<Void> edit(@Validated @RequestBody BaseModelRequest baseModel) {
-        log.info("管理后台用户[{}]修改保存基础车型信息[{}]", SecurityUtils.getUsername(), baseModel.getCode());
+        log.info("管理后台用户[{}]修改保存基础车型信息[{}]", SecurityContextHolder.getUserName(), baseModel.getCode());
         if (!baseModelAppService.checkCodeUnique(baseModel.getId(), baseModel.getCode())) {
             return ApiResponse.fail("修改保存基础车型'" + baseModel.getCode() + "'失败，基础车型代码已存在");
         }
@@ -207,7 +207,7 @@ public class MptBaseModelController extends BaseController {
     @RequiresPermissions("completeVehicle:product:baseModel:edit")
     @PutMapping("/{baseModelCode}/featureCode")
     public ApiResponse<Void> editFeatureCode(@PathVariable String baseModelCode, @Validated @RequestBody BaseModelFeatureCodeRequest baseModelFeatureCode) {
-        log.info("管理后台用户[{}]修改保存基础车型[{}]特征值[{}]", SecurityUtils.getUsername(), baseModelCode, baseModelFeatureCode.getFamilyCode());
+        log.info("管理后台用户[{}]修改保存基础车型[{}]特征值[{}]", SecurityContextHolder.getUserName(), baseModelCode, baseModelFeatureCode.getFamilyCode());
         if (!baseModelAppService.checkFeatureCodeUnique(baseModelFeatureCode.getId(), baseModelCode, baseModelFeatureCode.getFamilyCode())) {
             return ApiResponse.fail("修改保存基础车型特征值'" + baseModelFeatureCode.getFamilyCode() + "'失败，基础车型特征值已存在");
         }
@@ -225,7 +225,7 @@ public class MptBaseModelController extends BaseController {
     @RequiresPermissions("completeVehicle:product:baseModel:remove")
     @DeleteMapping("/{baseModelIds}")
     public ApiResponse<Void> remove(@PathVariable Long[] baseModelIds) {
-        log.info("管理后台用户[{}]删除基础车型信息[{}]", SecurityUtils.getUsername(), baseModelIds);
+        log.info("管理后台用户[{}]删除基础车型信息[{}]", SecurityContextHolder.getUserName(), baseModelIds);
         for (Long baseModelId : baseModelIds) {
             if (baseModelAppService.checkBaseModelBuildConfigExist(baseModelId)) {
                 return ApiResponse.fail("删除基础车型'" + baseModelId + "'失败，该基础车型下存在生产配置");
@@ -248,7 +248,7 @@ public class MptBaseModelController extends BaseController {
     @RequiresPermissions("completeVehicle:product:baseModel:edit")
     @DeleteMapping("/{baseModelCode}/featureCode/{baseModelFeatureCodeIds}")
     public ApiResponse<Void> removeFeatureCode(@PathVariable String baseModelCode, @PathVariable Long[] baseModelFeatureCodeIds) {
-        log.info("管理后台用户[{}]删除基础车型[{}]特征值[{}]", SecurityUtils.getUsername(), baseModelCode, baseModelFeatureCodeIds);
+        log.info("管理后台用户[{}]删除基础车型[{}]特征值[{}]", SecurityContextHolder.getUserName(), baseModelCode, baseModelFeatureCodeIds);
         return baseModelAppService.deleteBaseModelFeatureCodeByIds(baseModelFeatureCodeIds) > 0 ? ApiResponse.ok() : ApiResponse.fail("删除失败");
     }
 }
