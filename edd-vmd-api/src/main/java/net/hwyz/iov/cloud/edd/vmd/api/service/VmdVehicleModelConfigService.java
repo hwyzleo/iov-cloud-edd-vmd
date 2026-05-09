@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 车辆车系车型配置相关服务接口
@@ -18,24 +19,14 @@ import java.util.List;
 @FeignClient(contextId = "exVehicleModelConfigService", value = ServiceNameConstants.EDD_VMD, path = "/api/service/vehicleModelConfig/v1", fallbackFactory = VmdVehicleModelConfigServiceFallbackFactory.class)
 public interface VmdVehicleModelConfigService {
 
-    /**
-     * 根据车型配置类型得到匹配的生产配置代码
+/**
+     * 根据特征族特征值组合得到匹配的生产配置代码
      *
-     * @param baseModelCode 基础车型代码
-     * @param exteriorCode  外饰代码
-     * @param interiorCode  内饰代码
-     * @param wheelCode     轮毂代码
-     * @param tireCode      轮胎代码
-     * @param spareTireCode 备胎代码
-     * @param adasCode      智驾代码
-     * @param seatCode      座椅代码
+     * @param featureCodeMap  特征族代码-特征值代码映射
      * @return 生产配置代码
      */
     @GetMapping("/buildConfigCode")
-    String getVehicleBuildConfigCode(@RequestParam String baseModelCode, @RequestParam String exteriorCode,
-                                     @RequestParam String interiorCode, @RequestParam String wheelCode,
-                                     @RequestParam String tireCode, @RequestParam String spareTireCode,
-                                     @RequestParam String adasCode, @RequestParam String seatCode);
+    String getVehicleBuildConfigCode(@RequestParam Map<String, String> featureCodeMap);
 
     /**
      * 根据基础车型代码获取生产配置列表

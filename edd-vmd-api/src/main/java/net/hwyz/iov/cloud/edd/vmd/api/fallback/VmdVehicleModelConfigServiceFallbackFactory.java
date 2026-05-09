@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 车辆车系车型配置相关服务降级处理
@@ -22,11 +23,8 @@ public class VmdVehicleModelConfigServiceFallbackFactory implements FallbackFact
     public VmdVehicleModelConfigService create(Throwable throwable) {
         return new VmdVehicleModelConfigService() {
             @Override
-            public String getVehicleBuildConfigCode(String baseModelCode, String exteriorCode, String interiorCode,
-                                                    String wheelCode, String tireCode, String spareTireCode,
-                                                    String adasCode, String seatCode) {
-                log.error("车辆车系车型配置服务根据生产配置类型[{}:{}:{}:{}:{}:{}:{}:{}]得到匹配的车型配置代码调用失败", baseModelCode,
-                        exteriorCode, interiorCode, wheelCode, tireCode, spareTireCode, adasCode, seatCode, throwable);
+            public String getVehicleBuildConfigCode(Map<String, String> featureCodeMap) {
+                log.error("车辆车系车型配置服务根据特征族特征值[{}]得到匹配的生产配置代码调用失败", featureCodeMap, throwable);
                 return null;
             }
 

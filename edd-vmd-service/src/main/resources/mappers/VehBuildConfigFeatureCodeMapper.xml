@@ -164,4 +164,17 @@
         FROM tb_veh_build_config_feature_code t
         WHERE t.row_valid = 1
     </select>
+
+    <select id="selectBuildConfigCodeByFeatureCodeMap" parameterType="java.util.Map" resultType="java.lang.String">
+        SELECT t.build_config_code
+        FROM tb_veh_build_config_feature_code t
+        WHERE t.row_valid = 1
+        AND (
+        <foreach collection="featureCodeMap.entrySet()" item="featureCode" index="familyCode" separator=" OR ">
+            (t.family_code = #{familyCode} AND FIND_IN_SET(#{featureCode}, t.feature_code) > 0)
+        </foreach>
+        )
+        GROUP BY t.build_config_code
+        HAVING COUNT(DISTINCT t.family_code) = #{familyCount}
+    </select>
 </mapper>

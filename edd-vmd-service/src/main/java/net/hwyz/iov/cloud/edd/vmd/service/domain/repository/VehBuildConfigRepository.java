@@ -32,4 +32,6 @@ public interface VehBuildConfigRepository {
 
     int batchPhysicalDeleteFeatureCode(Long[] ids);
 
+    String selectBuildConfigCodeByFeatureCodeMap(Map<String, String> featureCodeMap);
+
 }

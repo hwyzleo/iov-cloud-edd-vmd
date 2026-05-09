@@ -92,4 +92,12 @@ public class VehBuildConfigRepositoryImpl implements VehBuildConfigRepository {
         return vehBuildConfigFeatureCodeMapper.batchPhysicalDeletePo(ids);
     }
 
+    @Override
+    public String selectBuildConfigCodeByFeatureCodeMap(Map<String, String> featureCodeMap) {
+        Map<String, Object> params = new java.util.HashMap<>();
+        params.put("featureCodeMap", featureCodeMap);
+        params.put("familyCount", featureCodeMap.size());
+        return vehBuildConfigFeatureCodeMapper.selectBuildConfigCodeByFeatureCodeMap(params);
+    }
+
 }
