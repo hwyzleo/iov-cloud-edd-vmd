@@ -12,7 +12,7 @@
         <result column="modify_by" property="modifyBy" />
         <result column="row_version" property="rowVersion" />
         <result column="row_valid" property="rowValid" />
-        <result column="platform_code" property="platformCode" />
+        <result column="brand_code" property="brandCode" />
         <result column="code" property="code" />
         <result column="name" property="name" />
         <result column="name_en" property="nameEn" />
@@ -22,18 +22,18 @@
 
     <!-- 通用查询结果列 -->
     <sql id="baseColumnList">
-        id, platform_code, code, name, name_en, enable, sort, 
+        id, brand_code, code, name, name_en, enable, sort, 
         description, create_time, create_by, modify_time, modify_by, row_version, row_valid
     </sql>
 
     <!-- 插入 -->
     <insert id="insertPo" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO tb_veh_series (
-            id, platform_code, code, name, name_en, enable, sort, 
+            id, brand_code, code, name, name_en, enable, sort, 
             description, create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
         VALUES (
-            #{id}, #{platformCode}, #{code}, #{name}, #{nameEn}, #{enable}, #{sort}, 
+            #{id}, #{brandCode}, #{code}, #{name}, #{nameEn}, #{enable}, #{sort}, 
             #{description}, now(), #{createBy}, now(), #{modifyBy}, 1, 1
         )
     </insert>
@@ -41,13 +41,13 @@
     <!-- 批量插入 -->
     <insert id="batchInsertPo" useGeneratedKeys="true" keyProperty="id" parameterType="java.util.List">
         INSERT INTO tb_veh_series (
-            id, platform_code, code, name, name_en, enable, sort, 
+            id, brand_code, code, name, name_en, enable, sort, 
             description, create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
         VALUES
         <foreach collection="list" item="item" index="index" separator=",">
         (
-            #{item.id}, #{item.platformCode}, #{item.code}, #{item.name}, #{item.nameEn}, #{item.enable}, #{item.sort}, 
+            #{item.id}, #{item.brandCode}, #{item.code}, #{item.name}, #{item.nameEn}, #{item.enable}, #{item.sort}, 
             #{item.description}, now(), #{item.createBy}, now(), #{item.modifyBy}, 1, 1
         )
         </foreach>
@@ -119,8 +119,8 @@
         <if test="id != null">
             AND t.id = #{id}
         </if>
-        <if test="platformCode != null and platformCode != ''">
-            AND t.platform_code = #{platformCode}
+        <if test="brandCode != null and brandCode != ''">
+            AND t.brand_code = #{brandCode}
         </if>
         <if test="code != null and code != ''">
             AND t.code = #{code}
@@ -164,8 +164,8 @@
         FROM tb_veh_series t
         WHERE t.row_valid = 1
         <!-- 添加自定义条件 -->
-        <if test="platformCode != null and platformCode != ''">
-            AND t.platform_code = #{platformCode}
+        <if test="brandCode != null and brandCode != ''">
+            AND t.brand_code = #{brandCode}
         </if>
         <if test="code != null and code != ''">
             AND t.code = #{code}
@@ -197,8 +197,8 @@
         FROM tb_veh_series t
         WHERE t.row_valid = 1
         <!-- 添加自定义条件 -->
-        <if test="platformCode != null and platformCode != ''">
-            AND t.platform_code = #{platformCode}
+        <if test="brandCode != null and brandCode != ''">
+            AND t.brand_code = #{brandCode}
         </if>
     </select>
 </mapper>
