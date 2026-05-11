@@ -41,7 +41,7 @@ public class SeriesAppService {
      */
     public List<SeriesDto> search(SeriesQuery query) {
         Map<String, Object> map = new HashMap<>();
-        map.put("platformCode", query.getBrandCode());
+        map.put("brandCode", query.getBrandCode());
         map.put("code", query.getCode());
         map.put("name", ParamHelper.fuzzyQueryParam(query.getName()));
         map.put("beginTime", query.getBeginTime());
