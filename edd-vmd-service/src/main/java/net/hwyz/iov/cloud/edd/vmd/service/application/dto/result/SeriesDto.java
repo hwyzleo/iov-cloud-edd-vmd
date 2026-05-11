@@ -17,7 +17,7 @@ import lombok.NoArgsConstructor;
 public class SeriesDto {
 
     private Long id;
-    private String platformCode;
+    private String brandCode;
     private String code;
     private String name;
     private String nameEn;

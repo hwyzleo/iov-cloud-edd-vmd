@@ -14,7 +14,7 @@ import java.util.Date;
 @Builder
 public class SeriesQuery {
 
-    private String platformCode;
+    private String brandCode;
     private String code;
     private String name;
     private Date beginTime;

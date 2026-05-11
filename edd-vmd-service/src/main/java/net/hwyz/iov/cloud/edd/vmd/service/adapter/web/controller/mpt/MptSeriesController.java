@@ -48,7 +48,7 @@ public class MptSeriesController extends BaseController {
         log.info("管理后台用户[{}]分页查询车系信息", SecurityContextHolder.getUserName());
         startPage();
         SeriesQuery query = SeriesQuery.builder()
-                .platformCode(series.getPlatformCode())
+                .brandCode(series.getPlatformCode())
                 .code(series.getCode())
                 .name(series.getName())
                 .beginTime(getBeginTime(series))
@@ -69,7 +69,7 @@ public class MptSeriesController extends BaseController {
     public ApiResponse<List<SeriesResponse>> listByPlatformCode(@RequestParam String platformCode) {
         log.info("管理后台用户[{}]获取指定车辆平台[{}]下的所有车系", SecurityContextHolder.getUserName(), platformCode);
         SeriesQuery query = SeriesQuery.builder()
-                .platformCode(platformCode)
+                .brandCode(platformCode)
                 .build();
         List<SeriesDto> seriesDtoList = seriesAppService.search(query);
         return ApiResponse.ok(MptSeriesAssembler.INSTANCE.fromDtoList(seriesDtoList));
