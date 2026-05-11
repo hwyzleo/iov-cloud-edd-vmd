@@ -59,17 +59,17 @@ public class MptSeriesController extends BaseController {
     }
 
     /**
-     * 获取指定车辆平台下的所有车系
+     * 获取指定品牌下的所有车系
      *
-     * @param platformCode 车辆平台代码
+     * @param brandCode 品牌代码
      * @return 车系信息列表
      */
     @RequiresPermissions("completeVehicle:product:series:list")
-    @GetMapping(value = "/listByPlatformCode")
-    public ApiResponse<List<SeriesResponse>> listByPlatformCode(@RequestParam String platformCode) {
-        log.info("管理后台用户[{}]获取指定车辆平台[{}]下的所有车系", SecurityContextHolder.getUserName(), platformCode);
+    @GetMapping(value = "/listByBrandCode")
+    public ApiResponse<List<SeriesResponse>> listByBrandCode(@RequestParam String brandCode) {
+        log.info("管理后台用户[{}]获取指定品牌[{}]下的所有车系", SecurityContextHolder.getUserName(), brandCode);
         SeriesQuery query = SeriesQuery.builder()
-                .brandCode(platformCode)
+                .brandCode(brandCode)
                 .build();
         List<SeriesDto> seriesDtoList = seriesAppService.search(query);
         return ApiResponse.ok(MptSeriesAssembler.INSTANCE.fromDtoList(seriesDtoList));
