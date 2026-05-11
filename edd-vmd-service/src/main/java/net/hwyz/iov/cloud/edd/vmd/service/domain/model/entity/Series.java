@@ -25,9 +25,9 @@ public class Series implements DomainObj<Series> {
     private Long id;
 
     /**
-     * 平台代码
+     * 品牌代码
      */
-    private String platformCode;
+    private String brandCode;
 
     /**
      * 车系代码
