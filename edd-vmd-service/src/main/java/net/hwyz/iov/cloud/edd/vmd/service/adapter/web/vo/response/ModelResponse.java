@@ -22,6 +22,11 @@ public class ModelResponse {
     private Long id;
 
     /**
+     * 品牌代码
+     */
+    private String brandCode;
+
+    /**
      * 车辆平台代码
      */
     private String platformCode;

@@ -66,7 +66,7 @@ public class MptSeriesController extends BaseController {
      */
     @RequiresPermissions("completeVehicle:product:series:list")
     @GetMapping(value = "/listByBrandCode")
-    public ApiResponse<List<SeriesResponse>> listByBrandCode(@RequestParam String brandCode) {
+    public ApiResponse<List<SeriesResponse>> listByBrandCode(@RequestParam(required = false) String brandCode) {
         log.info("管理后台用户[{}]获取指定品牌[{}]下的所有车系", SecurityContextHolder.getUserName(), brandCode);
         SeriesQuery query = SeriesQuery.builder()
                 .brandCode(brandCode)

@@ -7,9 +7,11 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.ModelAssembler;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ModelDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.ModelQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Model;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Series;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBaseModelRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehModelRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehSeriesRepository;
 import net.hwyz.iov.cloud.framework.common.util.ParamHelper;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Service;
@@ -30,6 +32,7 @@ import java.util.Map;
 public class ModelAppService {
 
     private final VehModelRepository vehModelRepository;
+    private final VehSeriesRepository vehSeriesRepository;
     private final VehBaseModelRepository vehBaseModelRepository;
     private final VehBasicInfoRepository vehBasicInfoRepository;
 
@@ -99,7 +102,13 @@ public class ModelAppService {
      * @return 车型 DTO
      */
     public ModelDto getModelById(Long id) {
-        return ModelAssembler.INSTANCE.fromDomain(vehModelRepository.selectById(id));
+        Model model = vehModelRepository.selectById(id);
+        ModelDto modelDto = ModelAssembler.INSTANCE.fromDomain(model);
+        Series series = vehSeriesRepository.selectByCode(model.getSeriesCode());
+        if (series != null) {
+            modelDto.setBrandCode(series.getBrandCode());
+        }
+        return modelDto;
     }
 
     /**

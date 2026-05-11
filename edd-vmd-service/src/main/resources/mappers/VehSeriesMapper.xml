@@ -56,6 +56,9 @@
     <!-- 更新 -->
     <update id="updatePo" parameterType="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehSeriesPo">
         UPDATE tb_veh_series t SET
+        <if test="brandCode != null and brandCode != ''">
+            t.brand_code = #{brandCode},
+        </if>
         <if test="name != null and name != ''">
             t.name = #{name},
         </if>
