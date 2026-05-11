@@ -20,6 +20,8 @@ public class VmdBuildConfigResponse {
 
     private String baseModelCode;
 
+    private String brandCode;
+
     private String code;
 
     private String name;

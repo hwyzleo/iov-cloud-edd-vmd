@@ -7,7 +7,9 @@ import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.ServiceBuildConf
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.BuildConfigDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.BuildConfigFeatureCodeDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.BuildConfigAppService;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.SeriesAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleModelConfigAppService;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Series;
 import net.hwyz.iov.cloud.framework.web.controller.BaseController;
 import org.springframework.web.bind.annotation.*;
 
@@ -27,6 +29,7 @@ public class ServiceVehicleModelConfigController extends BaseController {
 
     private final VehicleModelConfigAppService vehicleModelConfigAppService;
     private final BuildConfigAppService buildConfigAppService;
+    private final SeriesAppService seriesAppService;
 
     /**
      * 根据特征族特征值组合得到匹配的生产配置代码
@@ -67,6 +70,13 @@ public class ServiceVehicleModelConfigController extends BaseController {
 
         VmdBuildConfigResponse response = ServiceBuildConfigAssembler.INSTANCE.toExResponse(buildConfigDto);
         response.setFeatureCodes(ServiceBuildConfigAssembler.INSTANCE.toFeatureCodeExResponseList(featureCodeDtoList));
+
+        if (buildConfigDto.getSeriesCode() != null) {
+            Series series = seriesAppService.getSeriesByCode(buildConfigDto.getSeriesCode());
+            if (series != null && series.getBrandCode() != null) {
+                response.setBrandCode(series.getBrandCode());
+            }
+        }
 
         return response;
     }
