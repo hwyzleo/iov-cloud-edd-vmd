@@ -27,7 +27,7 @@ pipeline {
                     dir(DIR_API) {
                         sh '''
                             echo '============================== 构建并发布 =============================='
-                            mvn clean deploy -DaltDeploymentRepository=${REPO_ID}::default::${REPO_URL}
+                            mvn clean deploy -U -DskipTests -DaltDeploymentRepository=${REPO_ID}::default::${REPO_URL}
                         '''
                     }
                 }
@@ -40,7 +40,7 @@ pipeline {
                     sh """
                         echo '============================== 构建镜像 =============================='
                         cp /var/jenkins_home/settings.xml ./${DIR_SERVICE}/settings.xml
-                        docker build ${noCacheArg} -t ${IMAGE_NAME} -f ../Dockerfile ./${DIR_SERVICE}/
+                        docker build --network appnet ${noCacheArg} -t ${IMAGE_NAME} -f ../Dockerfile ./${DIR_SERVICE}/
                     """
                 }
             }
@@ -64,7 +64,7 @@ pipeline {
                         docker rm ${PROJECT_NAME}
                     fi
                     docker pull ${IMAGE_NAME}
-                    docker run -d --name ${PROJECT_NAME} ${IMAGE_NAME}
+                    docker run -d --name ${PROJECT_NAME} --network appnet ${IMAGE_NAME}
                     sleep 10
                     docker logs ${PROJECT_NAME}
                 '''
