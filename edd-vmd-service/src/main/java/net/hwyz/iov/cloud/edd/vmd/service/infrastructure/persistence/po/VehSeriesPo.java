@@ -35,10 +35,10 @@ public class VehSeriesPo extends BasePo {
     private Long id;
 
     /**
-     * 平台代码
+     * 品牌代码
      */
-    @TableField("platform_code")
-    private String platformCode;
+    @TableField("brand_code")
+    private String brandCode;
 
     /**
      * 车系代码
