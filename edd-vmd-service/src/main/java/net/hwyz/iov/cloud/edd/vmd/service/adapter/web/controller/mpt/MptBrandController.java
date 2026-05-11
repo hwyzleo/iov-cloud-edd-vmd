@@ -58,6 +58,20 @@ public class MptBrandController extends BaseController {
     }
 
     /**
+     * 获取所有品牌列表
+     *
+     * @return 品牌信息列表
+     */
+    @RequiresPermissions("completeVehicle:product:brand:list")
+    @GetMapping(value = "/listAll")
+    public ApiResponse<List<BrandResponse>> listAll() {
+        log.info("管理后台用户[{}]获取所有品牌列表", SecurityContextHolder.getUserName());
+        BrandQuery query = BrandQuery.builder().build();
+        List<BrandDto> brandDtoList = brandAppService.search(query);
+        return ApiResponse.ok(MptBrandAssembler.INSTANCE.fromDtoList(brandDtoList));
+    }
+
+    /**
      * 导出车辆品牌信息
      *
      * @param response 响应
