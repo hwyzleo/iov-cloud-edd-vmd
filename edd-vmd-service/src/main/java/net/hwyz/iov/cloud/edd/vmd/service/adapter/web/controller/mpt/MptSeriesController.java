@@ -48,7 +48,7 @@ public class MptSeriesController extends BaseController {
         log.info("管理后台用户[{}]分页查询车系信息", SecurityContextHolder.getUserName());
         startPage();
         SeriesQuery query = SeriesQuery.builder()
-                .brandCode(series.getPlatformCode())
+                .brandCode(series.getBrandCode())
                 .code(series.getCode())
                 .name(series.getName())
                 .beginTime(getBeginTime(series))
