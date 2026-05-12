@@ -17,8 +17,8 @@ import net.hwyz.iov.cloud.edd.vmd.service.common.exception.VehicleWithoutPresetO
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
 import net.hwyz.iov.cloud.framework.common.util.ParamHelper;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
-import net.hwyz.iov.cloud.tsp.account.api.contract.Account;
-import net.hwyz.iov.cloud.tsp.account.api.feign.service.ExAccountService;
+//import net.hwyz.iov.cloud.tsp.account.api.contract.Account;
+//import net.hwyz.iov.cloud.tsp.account.api.feign.service.ExAccountService;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -36,7 +36,7 @@ import java.util.Map;
 public class VehicleAppService {
 
     private final VehBasicInfoRepository vehBasicInfoRepository;
-    private final ExAccountService exAccountService;
+//    private final ExAccountService exAccountService;
     private final VehicleRepository vehicleRepository;
     private final VehicleLifecycleAppService vehicleLifecycleAppService;
 
@@ -174,16 +174,16 @@ public class VehicleAppService {
      * @param accountId 账号ID
      */
     public void checkVehiclePresetOwner(String vin, String accountId) {
-        List<VehiclePresetOwner> vehiclePresetOwnerList = vehBasicInfoRepository.selectPresetOwnerByExample(VehiclePresetOwner.builder().vin(vin).build());
-        if (vehiclePresetOwnerList.isEmpty()) {
-            throw new VehicleWithoutPresetOwnerException(vin);
-        }
-        VehiclePresetOwner vehiclePresetOwner = vehiclePresetOwnerList.get(0);
-        Account account = exAccountService.getAccountInfo(accountId);
-        if (!vehiclePresetOwner.getMobile().equals(account.getMobile()) ||
-                !vehiclePresetOwner.getCountryRegionCode().equals(account.getCountryRegionCode())) {
-            throw new VehiclePresetOwnerNotMatchException(vin, account.getCountryRegionCode(), account.getMobile(),
-                    vehiclePresetOwner.getCountryRegionCode(), vehiclePresetOwner.getMobile());
-        }
+//        List<VehiclePresetOwner> vehiclePresetOwnerList = vehBasicInfoRepository.selectPresetOwnerByExample(VehiclePresetOwner.builder().vin(vin).build());
+//        if (vehiclePresetOwnerList.isEmpty()) {
+//            throw new VehicleWithoutPresetOwnerException(vin);
+//        }
+//        VehiclePresetOwner vehiclePresetOwner = vehiclePresetOwnerList.get(0);
+//        Account account = exAccountService.getAccountInfo(accountId);
+//        if (!vehiclePresetOwner.getMobile().equals(account.getMobile()) ||
+//                !vehiclePresetOwner.getCountryRegionCode().equals(account.getCountryRegionCode())) {
+//            throw new VehiclePresetOwnerNotMatchException(vin, account.getCountryRegionCode(), account.getMobile(),
+//                    vehiclePresetOwner.getCountryRegionCode(), vehiclePresetOwner.getMobile());
+//        }
     }
 }

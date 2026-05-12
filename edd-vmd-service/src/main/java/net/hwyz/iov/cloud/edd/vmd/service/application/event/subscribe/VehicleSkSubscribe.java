@@ -4,7 +4,7 @@ import cn.hutool.core.util.ObjUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.VehicleProduceEvent;
-import net.hwyz.iov.cloud.tsp.sec.api.feign.service.ExSkService;
+//import net.hwyz.iov.cloud.tsp.sec.api.feign.service.ExSkService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleLifecycleAppService;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -21,7 +21,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class VehicleSkSubscribe {
 
-    private final ExSkService exSkService;
+//    private final ExSkService exSkService;
     private final VehicleLifecycleAppService vehicleLifecycleAppService;
 
     /**
@@ -31,10 +31,10 @@ public class VehicleSkSubscribe {
      */
     @EventListener
     public void onVehicleProduceEvent(VehicleProduceEvent event) {
-        Map<String, String> skMap = exSkService.generateVehicleSk(event.getVin());
-        if (ObjUtil.isNotNull(skMap) && !skMap.isEmpty()) {
-            vehicleLifecycleAppService.recordGenerateVehicleSkNode(event.getVin());
-        }
+//        Map<String, String> skMap = exSkService.generateVehicleSk(event.getVin());
+//        if (ObjUtil.isNotNull(skMap) && !skMap.isEmpty()) {
+//            vehicleLifecycleAppService.recordGenerateVehicleSkNode(event.getVin());
+//        }
     }
 
 }
