@@ -15,10 +15,8 @@
     <version>0.0.1-SNAPSHOT</version>
 
     <properties>
-        <vmd.version>0.0.1-SNAPSHOT</vmd.version>
         <account.version>0.0.1-SNAPSHOT</account.version>
         <sec.version>0.0.1-SNAPSHOT</sec.version>
-        <mno.version>0.0.1-SNAPSHOT</mno.version>
         <tbox.version>0.0.1-SNAPSHOT</tbox.version>
         <ccp.version>0.0.1-SNAPSHOT</ccp.version>
         <idk.version>0.0.1-SNAPSHOT</idk.version>
@@ -31,7 +29,6 @@
         <dependency>
             <groupId>net.hwyz.iov.cloud.edd</groupId>
             <artifactId>edd-vmd-api</artifactId>
-            <version>${vmd.version}</version>
         </dependency>
 <!--        <dependency>-->
 <!--            <groupId>net.hwyz.iov.cloud.tsp</groupId>-->
@@ -43,11 +40,10 @@
 <!--            <artifactId>sec-api</artifactId>-->
 <!--            <version>${sec.version}</version>-->
 <!--        </dependency>-->
-<!--        <dependency>-->
-<!--            <groupId>net.hwyz.iov.cloud.tsp</groupId>-->
-<!--            <artifactId>mno-api</artifactId>-->
-<!--            <version>${mno.version}</version>-->
-<!--        </dependency>-->
+        <dependency>
+            <groupId>net.hwyz.iov.cloud.iov</groupId>
+            <artifactId>iov-tsp-api</artifactId>
+        </dependency>
 <!--        <dependency>-->
 <!--            <groupId>net.hwyz.iov.cloud.tsp</groupId>-->
 <!--            <artifactId>tbox-api</artifactId>-->
@@ -79,16 +75,6 @@
 <!--            <version>${wms.version}</version>-->
 <!--        </dependency>-->
 
-        <!-- 框架: Flyway -->
-        <dependency>
-            <groupId>org.flywaydb</groupId>
-            <artifactId>flyway-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>org.flywaydb</groupId>
-            <artifactId>flyway-mysql</artifactId>
-        </dependency>
-
         <!-- 框架: MySQL -->
         <dependency>
             <groupId>net.hwyz.iov.cloud.framework</groupId>
@@ -99,12 +85,6 @@
         <dependency>
             <groupId>net.hwyz.iov.cloud.framework</groupId>
             <artifactId>framework-redis-starter</artifactId>
-        </dependency>
-
-        <!-- 框架: 审计 -->
-        <dependency>
-            <groupId>net.hwyz.iov.cloud.framework</groupId>
-            <artifactId>framework-audit-starter</artifactId>
         </dependency>
     </dependencies>
 

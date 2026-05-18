@@ -76,7 +76,7 @@ public class VehicleImportDataAppService {
             log.warn("批次号[{}]对应的导入数据不存在", batchNum);
             return;
         }
-        String parserBeanName = vehicleImportData.getType().toLowerCase() + "DataParser";
+        String parserBeanName = vehicleImportData.getType().toLowerCase() + "DataParserV" + vehicleImportData.getVersion();
         ImportDataParser importDataParser = applicationContext.getBean(parserBeanName, ImportDataParser.class);
         if (ObjUtil.isNull(importDataParser)) {
             log.error("未找到对应的解析器[{}]", parserBeanName);

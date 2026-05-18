@@ -21,6 +21,7 @@ public class VehicleImportDataCmd {
     private Long id;
     private String batchNum;
     private String type;
+    private String version;
     private String data;
     private Boolean handle;
     private String errorMsg;
