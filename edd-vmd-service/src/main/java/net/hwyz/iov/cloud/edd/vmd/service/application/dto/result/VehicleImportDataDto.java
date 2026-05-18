@@ -5,7 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.Instant;
+import java.util.Date;
 
 /**
  * 车辆导入数据 DTO
@@ -21,10 +21,11 @@ public class VehicleImportDataDto {
     private Long id;
     private String batchNum;
     private String type;
+    private String version;
     private String data;
     private Boolean handle;
     private String errorMsg;
-    private Instant handleTime;
     private String description;
+    private Date createTime;
 
 }

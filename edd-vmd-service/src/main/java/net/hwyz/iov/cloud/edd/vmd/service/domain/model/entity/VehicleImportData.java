@@ -7,7 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import net.hwyz.iov.cloud.framework.common.domain.DomainObj;
 
-import java.time.Instant;
+import java.util.Date;
 
 /**
  * 车辆导入数据领域对象
@@ -49,5 +49,10 @@ public class VehicleImportData implements DomainObj<VehicleImportData> {
      * 是否处理
      */
     private Boolean handle;
+
+    /**
+     * 创建时间
+     */
+    private Date createTime;
 
 }
