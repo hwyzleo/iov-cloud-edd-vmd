@@ -69,7 +69,7 @@ public class DevicePo extends BasePo {
      * 功能域
      */
     @TableField("func_domain")
-    private String funcPomain;
+    private String funcDomain;
 
     /**
      * 节点类型
