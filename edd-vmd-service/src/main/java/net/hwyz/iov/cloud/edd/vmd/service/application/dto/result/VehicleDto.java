@@ -18,6 +18,7 @@ import java.time.Instant;
 @AllArgsConstructor
 public class VehicleDto {
 
+    private Long id;
     private String vin;
     private String manufacturerCode;
     private String brandCode;
