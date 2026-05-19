@@ -48,11 +48,10 @@
             <groupId>net.hwyz.iov.cloud.iov</groupId>
             <artifactId>iov-idk-api</artifactId>
         </dependency>
-<!--        <dependency>-->
-<!--            <groupId>net.hwyz.iov.cloud.ota</groupId>-->
-<!--            <artifactId>pota-api</artifactId>-->
-<!--            <version>${pota.version}</version>-->
-<!--        </dependency>-->
+        <dependency>
+            <groupId>net.hwyz.iov.cloud.iov</groupId>
+            <artifactId>iov-ota-api</artifactId>
+        </dependency>
 <!--        <dependency>-->
 <!--            <groupId>net.hwyz.iov.cloud.otd</groupId>-->
 <!--            <artifactId>wms-api</artifactId>-->
