@@ -41,6 +41,9 @@ public class VehicleLifecycleNode extends BaseDo<String> implements DomainObj<Ve
     private Integer sort;
 
     public void init() {
+        if (sort == null) {
+            sort = 0;
+        }
         stateInit();
     }
 
