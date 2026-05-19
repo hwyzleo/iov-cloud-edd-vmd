@@ -49,11 +49,6 @@
             <artifactId>iov-idk-api</artifactId>
         </dependency>
 <!--        <dependency>-->
-<!--            <groupId>net.hwyz.iov.cloud.tsp</groupId>-->
-<!--            <artifactId>idcm-api</artifactId>-->
-<!--            <version>${idcm.version}</version>-->
-<!--        </dependency>-->
-<!--        <dependency>-->
 <!--            <groupId>net.hwyz.iov.cloud.ota</groupId>-->
 <!--            <artifactId>pota-api</artifactId>-->
 <!--            <version>${pota.version}</version>-->
