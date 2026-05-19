@@ -44,21 +44,10 @@
             <groupId>net.hwyz.iov.cloud.iov</groupId>
             <artifactId>iov-tsp-api</artifactId>
         </dependency>
-<!--        <dependency>-->
-<!--            <groupId>net.hwyz.iov.cloud.tsp</groupId>-->
-<!--            <artifactId>tbox-api</artifactId>-->
-<!--            <version>${tbox.version}</version>-->
-<!--        </dependency>-->
-<!--        <dependency>-->
-<!--            <groupId>net.hwyz.iov.cloud.tsp</groupId>-->
-<!--            <artifactId>ccp-api</artifactId>-->
-<!--            <version>${ccp.version}</version>-->
-<!--        </dependency>-->
-<!--        <dependency>-->
-<!--            <groupId>net.hwyz.iov.cloud.tsp</groupId>-->
-<!--            <artifactId>idk-api</artifactId>-->
-<!--            <version>${idk.version}</version>-->
-<!--        </dependency>-->
+        <dependency>
+            <groupId>net.hwyz.iov.cloud.iov</groupId>
+            <artifactId>iov-idk-api</artifactId>
+        </dependency>
 <!--        <dependency>-->
 <!--            <groupId>net.hwyz.iov.cloud.tsp</groupId>-->
 <!--            <artifactId>idcm-api</artifactId>-->
