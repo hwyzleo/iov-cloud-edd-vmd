@@ -11,11 +11,14 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.VehicleEolPart
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.publish.VehiclePublish;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleLifecycleAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParser;
+import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParserRegistry;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleBasicInfo;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleDetail;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
 import net.hwyz.iov.cloud.framework.common.util.StrUtil;
 import org.springframework.stereotype.Component;
+
+import jakarta.annotation.PostConstruct;
 
 import java.time.Instant;
 import java.util.List;
@@ -41,6 +44,22 @@ public class EolDataParserV1_0 extends BaseParser implements ImportDataParser {
     private final VehicleInfoPersister vehicleInfoPersister;
     private final VehiclePartBinder vehiclePartBinder;
     private final VehicleLifecycleAppService vehicleLifecycleAppService;
+    private final ImportDataParserRegistry parserRegistry;
+
+    @PostConstruct
+    public void init() {
+        parserRegistry.register(this);
+    }
+
+    @Override
+    public String getType() {
+        return "EOL";
+    }
+
+    @Override
+    public String getVersion() {
+        return "1.0";
+    }
 
     @Override
     public void parse(String batchNum, JSONObject dataJson) {

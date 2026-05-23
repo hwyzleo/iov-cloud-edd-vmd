@@ -8,10 +8,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.publish.VehiclePublish;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParser;
+import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParserRegistry;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleBasicInfo;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
 import net.hwyz.iov.cloud.framework.common.util.StrUtil;
 import org.springframework.stereotype.Component;
+
+import jakarta.annotation.PostConstruct;
 
 /**
  * 车辆生产数据解析器V1.0
@@ -25,6 +28,22 @@ public class ProduceDataParserV1_0 extends BaseParser implements ImportDataParse
 
     private final VehiclePublish vehiclePublish;
     private final VehBasicInfoRepository vehBasicInfoRepository;
+    private final ImportDataParserRegistry parserRegistry;
+
+    @PostConstruct
+    public void init() {
+        parserRegistry.register(this);
+    }
+
+    @Override
+    public String getType() {
+        return "PRODUCE";
+    }
+
+    @Override
+    public String getVersion() {
+        return "1.0";
+    }
 
     @Override
     public void parse(String batchNum, JSONObject dataJson) {

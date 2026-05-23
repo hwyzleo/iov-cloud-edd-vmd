@@ -128,7 +128,7 @@ graph TB
 | D6 | 分页策略 | PageHelper `startPage()` + `getPageResult()`，下沉 SQL `LIMIT` | `findAll()` + 内存分页 / 自写 OFFSET | PROJECT_GUIDE 反向模式禁止内存分页；MPT 列表需稳定性能 |
 | D7 | 域内事件分发 | Spring `ApplicationEventPublisher`（同进程） | Kafka 跨进程异步 | 当前事件链路均在 edd-vmd 内部；生命周期节点写入（PRODUCE/EOL）使用同步 `@EventListener` 确保事务一致性；**EOL 解析器对 TSP/OTA 的下游调用通过 `VehicleEolPartBoundEvent` + `@Async @EventListener` 异步解耦**，下游不可用时不阻塞 EOL 主流程；未来可平滑迁移至 Kafka |
 | D8 | 二维码过期机制 | **当前为空实现（已知缺陷，对应 §5 O9）**；`Qrcode.polling()` 方法体仅含注释 "由于 createTime 已移除，polling 逻辑需依赖基础设施层或重新设计，此处暂时移除超时逻辑，待后续完善"；`QrcodeType.VEHICLE_ACTIVE.timeout=1800` 字段已在 `edd-vmd-api` 定义但未被消费 | ① Redis TTL（Key 自动过期） ② 数据库定时扫表 ③ Qrcode 表加 `expireTime` 列 | Rationale：本 spec 为代码现状基线，仅记录缺陷形态，不规定修复方式。备选项均不在当前代码中体现 |
-| D9 | 导入解析器 SPI | Spring Bean Name 命名约定 + `applicationContext.getBean("<type>DataParserV<version>")` | ① ServiceLoader ② 显式注册表 ③ 策略枚举 | 已存在 7 个解析器（`produceDataParserV1.0` 等）；新增解析器只需注册 Bean，零侵入；命名约定支持版本切换（V2.0 时不破坏 V1.0） |
+| D9 | 导入解析器 SPI（**CR-008 修订**） | `ImportDataParserRegistry` 自注册表 + `ParserNotFoundException` 异常传播 | ① 原 Bean Name 字符串拼接 ② ServiceLoader ③ 策略枚举 | **类型安全**：解析器实现 `getType()`/`getVersion()` 自描述，`@PostConstruct` 自注册到 `ConcurrentHashMap<String, ImportDataParser>`；运行时通过 `registry.getParser(type, version)` 类型安全获取，编译期约束 `ImportDataParser` 接口。**错误可感知**：解析器缺失时抛 `ParserNotFoundException`（`VmdErrorCode.PARSER_NOT_FOUND`，错误码 `202013`），由框架统一异常处理链路捕获返回前端，不再静默 `handle=false`。**扩展性不变**：新增解析器仍只需实现接口 + 注册 Bean，零侵入 |
 | D10 | Feign 契约策略（**CR-006 修订**） | 强类型 DTO + `*FallbackFactory` + VIN 不存在抛 `VehicleNotExistException` | 返回 `null` / 返回 `Optional<T>` | **fail-fast 原则**：VIN 不存在时抛 `VehicleNotExistException`（`VmdErrorCode.VEHICLE_NOT_EXIST`，错误码 `202001`），由 `GlobalExceptionHandler` 统一捕获返回 `ApiResponse.fail`；`VmdBaseException` 继承 `BusinessException` 以纳入框架统一异常处理链路；Fallback 仅处理基础设施故障（网络/超时），此时抛 `RuntimeException` 让调用方感知服务不可用 |
 | D11 | `Vehicle.isActive()` 实现 | **硬编码 `return true`（已知缺陷，对应 §5 O6）**；导致所有 VIN 在 `generateActiveQrcode` 都被判定为已激活并抛 `VehicleHasActivatedException` | ① 查询 `VehicleLifecycleNode` 表是否存在 `VEHICLE_ACTIVE` 节点 ② 通过 qrcode CONFIRMED 判定 ③ 在 `Vehicle` 表加 `active` 状态列 | Rationale：本 spec 为代码现状基线，仅记录缺陷形态。激活的真实判定规则未在当前代码中实现 |
 | D12 | IMMO_SK 死代码现状 | `VehicleSkSubscribe` 类整体注释 + `ExSkService` import 注释 + 事件订阅方法体注释；`recordGenerateVehicleSkNode` 永不被触发 | — | Rationale：本 spec 为代码现状基线，仅记录现状形态（死代码保留），不规定处理方式（删除/恢复/标 Deprecated 等改造均需走单独 CR） |
@@ -267,7 +267,7 @@ sequenceDiagram
     participant U as Mpt-User
     participant C as MptVehicleImportDataController
     participant A as VehicleImportDataAppService
-    participant CTX as ApplicationContext
+    participant REG as ImportDataParserRegistry
     participant P as <type>DataParserV<version>
     participant R as VehImportDataRepository
 
@@ -276,13 +276,13 @@ sequenceDiagram
     A->>R: existsByBatchNum(batchNum)
     R-->>A: false
     A->>R: save(record handle=false)
-    A->>CTX: getBean("<type>DataParserV<version>")
-    alt Bean 不存在
-        CTX-->>A: NoSuchBeanDefinitionException
-        A->>A: log.warn("解析器不存在")
-        A-->>C: ApiResponse.fail
+    A->>REG: getParser(type, version)
+    alt 解析器不存在
+        REG-->>A: throw ParserNotFoundException
+        A-->>C: 异常传播（GlobalExceptionHandler 捕获）
+        C-->>U: ApiResponse.fail("不支持的数据类型[X]版本[Y]")
     else
-        CTX-->>A: parser
+        REG-->>A: parser
         A->>P: parse(batchNum, data)
         P->>P: 校验 ITEM 必填字段<br/>逐条入库 / 调下游 / 发事件
         P-->>A: result
@@ -609,6 +609,7 @@ graph LR
 | `VehicleImportDataException` | `202010` | 200 | 导入解析失败 | `车辆导入数据异常` |
 | `PartNotExistException` | `202011` | 200 | PN 不存在 | `零件不存在` |
 | `PartNotAllowBindException` | `202012` | 200 | 零件不允许绑定 | `零件不允许绑定` |
+| `ParserNotFoundException` | `202013` | 200 | 导入数据解析器不存在 | `不支持的数据类型[X]版本[Y]` |
 
 ## 6. Coverage Mapping
 
@@ -670,3 +671,4 @@ graph LR
 | 2026-05-23 | CR-004 | Modified | **US-020 EOL 解析器改事件驱动**：D7 决策更新（EOL 对 TSP/OTA 调用改为 `@Async @EventListener`）；§4.3 F3 时序图重构（EOL parser 只负责数据入库 + 发布 `VehicleEolPartBoundEvent`，TSP/OTA 调用移至 `VehicleEolTspOtaSubscribe`）；§4.5 F5 事件图新增 `VehicleEolPartBoundEvent` 及其订阅者 |
 | 2026-05-23 | CR-006 | Modified | **US-011 VIN 不存在改为抛异常（fail-fast）**：D10 决策从"返回 null"改为"抛 `VehicleNotExistException`"；§4.4 F4 时序图更新（VIN 不存在时 Service 端抛异常 + Fallback 改为抛 RuntimeException）；§5.2.1 Fallback 规范更新；§5.3 错误码总表更新（新增 `VmdErrorCode` 错误码列、HTTP 状态码统一为 200、移除 `VmdBaseException` 基类行）；异常体系重构：`VmdBaseException` 从 `extends BaseException` 改为 `extends BusinessException`，新增 `VmdErrorCode` 枚举 |
 | 2026-05-23 | CR-007 | Modified | **US-020 EOL 解析器职责拆分**：将 `EolDataParserV1_0`（200 行上帝对象）拆分为薄编排层（102 行）+ 3 个独立可测试组件：`VehicleInfoExtractor`（字段映射，8 基础信息 + 28 详情）、`VehicleInfoPersister`（insert/update + 批量插入）、`VehiclePartBinder`（零件校验/绑定/PartMeta 构建）；§4.3 F3 时序图重构为编排层委托模式 |
+| 2026-05-23 | CR-008 | Modified | **US-018 解析器 SPI 类型安全改造**：D9 决策从"Bean Name 字符串拼接"改为"`ImportDataParserRegistry` 自注册表 + `ParserNotFoundException` 异常传播"；`ImportDataParser` 接口新增 `getType()`/`getVersion()` 自描述方法；7 个解析器通过 `@PostConstruct` 自注册到 `ConcurrentHashMap`；`VehicleImportDataAppService` 改用 `registry.getParser(type, version)` 替代 `applicationContext.getBean()`；新增 `ParserNotFoundException`（`VmdErrorCode.PARSER_NOT_FOUND`，错误码 `202013`），解析器缺失时异常传播到前端而非静默 `handle=false`；§4.2 F2 时序图更新 |

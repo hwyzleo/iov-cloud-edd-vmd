@@ -9,10 +9,10 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.VehicleImportDat
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.VehicleImportDataDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.VehicleImportDataQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParser;
+import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParserRegistry;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleImportData;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehImportDataRepository;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
-import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Service;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.VehicleImportDataCmd;
 
@@ -30,7 +30,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class VehicleImportDataAppService {
 
-    private final ApplicationContext applicationContext;
+    private final ImportDataParserRegistry parserRegistry;
     private final VehImportDataRepository vehImportDataRepository;
 
     /**
@@ -76,12 +76,9 @@ public class VehicleImportDataAppService {
             log.warn("批次号[{}]对应的导入数据不存在", batchNum);
             return;
         }
-        String parserBeanName = vehicleImportData.getType().toLowerCase() + "DataParserV" + vehicleImportData.getVersion();
-        ImportDataParser importDataParser = applicationContext.getBean(parserBeanName, ImportDataParser.class);
-        if (ObjUtil.isNull(importDataParser)) {
-            log.error("未找到对应的解析器[{}]", parserBeanName);
-            return;
-        }
+        String type = vehicleImportData.getType();
+        String version = vehicleImportData.getVersion();
+        ImportDataParser importDataParser = parserRegistry.getParser(type, version);
         JSONObject dataJson = JSONUtil.parseObj(vehicleImportData.getData());
         importDataParser.parse(batchNum, dataJson);
         vehicleImportData.setHandle(true);

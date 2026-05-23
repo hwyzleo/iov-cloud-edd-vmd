@@ -6,6 +6,7 @@ import cn.hutool.json.JSONUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParser;
+import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParserRegistry;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehiclePart;
 import net.hwyz.iov.cloud.framework.common.enums.DeviceItem;
 import net.hwyz.iov.cloud.framework.common.util.StrUtil;
@@ -13,6 +14,8 @@ import net.hwyz.iov.cloud.iov.tsp.api.service.TspTboxInfoService;
 import net.hwyz.iov.cloud.iov.tsp.api.vo.TboxVo;
 import net.hwyz.iov.cloud.iov.tsp.api.vo.request.BatchImportTboxRequest;
 import org.springframework.stereotype.Component;
+
+import jakarta.annotation.PostConstruct;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -30,6 +33,22 @@ import java.util.Map;
 public class TboxDataParserV1_0 extends BaseParser implements ImportDataParser {
 
     private final TspTboxInfoService tspTboxInfoService;
+    private final ImportDataParserRegistry parserRegistry;
+
+    @PostConstruct
+    public void init() {
+        parserRegistry.register(this);
+    }
+
+    @Override
+    public String getType() {
+        return "TBOX";
+    }
+
+    @Override
+    public String getVersion() {
+        return "1.0";
+    }
 
     @Override
     public void parse(String batchNum, JSONObject dataJson) {

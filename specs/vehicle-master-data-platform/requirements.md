@@ -185,7 +185,7 @@
 
 **Acceptance Criteria**:
 - WHEN 提交导入数据 IF `batchNum` 已存在（不含自身 ID）THEN THE SYSTEM SHALL 返回"批次号已存在"。
-- WHEN 解析时 THE SYSTEM SHALL 按命名规则 `<type>DataParserV<version>` 从 Spring 容器查找 Bean（如 `produceDataParserV1.0`）；查找失败时 SHALL 记录 `WARN` 日志并将 `handle` 置为 false。
+- WHEN 解析时 THE SYSTEM SHALL 通过 `ImportDataParserRegistry.getParser(type, version)` 类型安全获取解析器；解析器不存在时 SHALL 抛出 `ParserNotFoundException`（`VmdErrorCode.PARSER_NOT_FOUND`，错误码 `202013`），由框架统一异常处理链路捕获返回前端明确错误信息。
 - WHEN 解析成功 THE SYSTEM SHALL 将 `VehicleImportData.handle` 置为 true 并 update。
 - IF 解析过程中抛异常 THEN THE SYSTEM SHALL 在 Controller 层返回 `ApiResponse.fail("车辆导入数据'<batchNum>'解析异常")` 但 import 数据 record 仍保留供重试。
 

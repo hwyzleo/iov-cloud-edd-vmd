@@ -7,6 +7,7 @@ import cn.hutool.json.JSONUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParser;
+import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParserRegistry;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.VehicleImportDataException;
 import net.hwyz.iov.cloud.framework.common.util.StrUtil;
 import net.hwyz.iov.cloud.iov.tsp.api.service.TspSimService;
@@ -14,6 +15,8 @@ import net.hwyz.iov.cloud.iov.tsp.api.vo.SimVo;
 import net.hwyz.iov.cloud.iov.tsp.api.vo.enums.MnoType;
 import net.hwyz.iov.cloud.iov.tsp.api.vo.request.BatchImportSimRequest;
 import org.springframework.stereotype.Component;
+
+import jakarta.annotation.PostConstruct;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,6 +32,22 @@ import java.util.List;
 public class SimDataParserV1_0 extends BaseParser implements ImportDataParser {
 
     private final TspSimService tspSimService;
+    private final ImportDataParserRegistry parserRegistry;
+
+    @PostConstruct
+    public void init() {
+        parserRegistry.register(this);
+    }
+
+    @Override
+    public String getType() {
+        return "SIM";
+    }
+
+    @Override
+    public String getVersion() {
+        return "1.0";
+    }
 
     @Override
     public void parse(String batchNum, JSONObject dataJson) {
