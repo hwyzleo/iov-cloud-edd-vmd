@@ -18,43 +18,8 @@ public class VmdVehicleLifecycleServiceFallbackFactory implements FallbackFactor
     public VmdVehicleLifecycleService create(Throwable throwable) {
         return new VmdVehicleLifecycleService() {
             @Override
-            public void recordFirstApplyTboxCertNode(String vin) {
-                log.error("车辆生命周期服务记录车辆[{}]第一次申请车联终端证书节点调用失败", vin, throwable);
-            }
-
-            @Override
-            public void recordFirstApplyTboxCommSkNode(String vin) {
-                log.error("车辆生命周期服务记录车辆[{}]第一次申请车联终端通讯密钥节点调用失败", vin, throwable);
-            }
-
-            @Override
-            public void recordFirstApplyCcpCertNode(String vin) {
-                log.error("车辆生命周期服务记录车辆[{}]第一次申请中央计算平台证书节点调用失败", vin, throwable);
-            }
-
-            @Override
-            public void recordFirstApplyCcpCommSkNode(String vin) {
-                log.error("车辆生命周期服务记录车辆[{}]第一次申请中央计算平台通讯密钥节点调用失败", vin, throwable);
-            }
-
-            @Override
-            public void recordFirstApplyIdcmCertNode(String vin) {
-                log.error("车辆生命周期服务记录车辆[{}]第一次申请信息娱乐模块证书节点调用失败", vin, throwable);
-            }
-
-            @Override
-            public void recordFirstApplyIdcmCommSkNode(String vin) {
-                log.error("车辆生命周期服务记录车辆[{}]第一次申请信息娱乐模块通讯密钥节点调用失败", vin, throwable);
-            }
-
-            @Override
-            public void recordFirstApplyAdcmCertNode(String vin) {
-                log.error("车辆生命周期服务记录车辆[{}]第一次申请智驾模块证书节点调用失败", vin, throwable);
-            }
-
-            @Override
-            public void recordFirstApplyAdcmCommSkNode(String vin) {
-                log.error("车辆生命周期服务记录车辆[{}]第一次申请智驾模块通讯密钥节点调用失败", vin, throwable);
+            public void recordFirstApplyNode(String vin, String nodeCode) {
+                log.error("车辆生命周期服务记录车辆[{}]第一次申请节点[{}]调用失败", vin, nodeCode, throwable);
             }
         };
     }

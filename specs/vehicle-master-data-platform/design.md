@@ -568,9 +568,9 @@ graph LR
 **错误码**：`VehicleNotExistException`（`VmdErrorCode.VEHICLE_NOT_EXIST`，错误码 `202001`，VIN 不存在时由 Service 端抛出，通过 `GlobalExceptionHandler` 返回 `ApiResponse.fail`）；`VehicleHasBindOrderException`（`VmdErrorCode.VEHICLE_HAS_BIND_ORDER`，错误码 `202009`，重复绑定订单）。
 
 #### 5.2.2 `VmdVehicleLifecycleService`（→ US-027）
-8 个 `recordFirstApply*Node` 端点（TBOX_CERT / TBOX_COMM_SK / CCP_CERT / CCP_COMM_SK / IDCM_CERT / IDCM_COMM_SK / ADCM_CERT / ADCM_COMM_SK）。
+统一端点 `recordFirstApplyNode(vin, nodeCode)`，通过 `nodeCode` 参数区分节点类型（TBOX_CERT / TBOX_COMM_SK / CCP_CERT / CCP_COMM_SK / IDCM_CERT / IDCM_COMM_SK / ADCM_CERT / ADCM_COMM_SK 等）。
 
-**Fallback**：所有方法 no-op + log。
+**Fallback**：no-op + log。
 
 #### 5.2.3 `VmdPartService`（→ US-014）
 - `PartExResponse getByPn(@PathVariable String pn)`
