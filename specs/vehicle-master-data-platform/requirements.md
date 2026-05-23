@@ -277,6 +277,8 @@
 - THE SYSTEM SHALL 通过订阅 `QrcodeConfirmEvent`（`type==VEHICLE_ACTIVE`）自动写入 VEHICLE_ACTIVE 节点。
 - THE SYSTEM SHALL 通过订阅 `QrcodeValidateEvent`（`type==VEHICLE_ACTIVE`）触发 `VehicleAppService.checkVehiclePresetOwner(vin, accountId)` 校验预设车主。
 - WHEN 删除车辆 THE SYSTEM SHALL 通过 `vehLifecycleRepository.physicalDeleteByVin(vin)` 物理删除生命周期记录。
+- THE SYSTEM SHALL 在数据库层对 `tb_veh_lifecycle` 表施加 `UNIQUE KEY uk_vin_node(vin, node)` 约束，保证同一 VIN 同一节点最多一条记录。
+- THE SYSTEM SHALL 保证节点写入具有幂等性：首次写入记录 `reachTime`，重复调用忽略后续写入（首次写入胜出语义）。
 
 #### US-027: 内部服务记录"首次申请"类节点
 **As a** Service-Caller (TSP), **I want** 通过 `POST /api/service/vehicleLifecycle/v1/{vin}/recordFirstApply{X}` 记录 8 个证书/通讯密钥节点, **so that** 各模块的密钥/证书申请触达时间可被收口。
@@ -285,6 +287,7 @@
 - THE SYSTEM SHALL 暴露 8 个端点：`recordFirstApplyTboxCertNode / recordFirstApplyTboxCommSkNode / recordFirstApplyCcpCertNode / recordFirstApplyCcpCommSkNode / recordFirstApplyIdcmCertNode / recordFirstApplyIdcmCommSkNode / recordFirstApplyAdcmCertNode / recordFirstApplyAdcmCommSkNode`。
 - WHEN 调用 SHALL 写入对应 `VehicleLifecycleNodeEnum`，`reachTime=Instant.now()`。
 - THE SYSTEM SHALL 通过 `VmdVehicleLifecycleServiceFallbackFactory` 提供 fallback。
+- THE SYSTEM SHALL 保证 `recordFirstApplyNode` 具有幂等性：首次调用写入节点及 `reachTime`，重复调用忽略后续写入（首次写入胜出语义）。
 
 ### 3.9 对外 RPC 服务域
 

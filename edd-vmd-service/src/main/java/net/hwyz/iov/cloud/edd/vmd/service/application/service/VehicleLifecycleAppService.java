@@ -1,6 +1,7 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.VehicleLifecycleAssembler;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.VehicleLifecycleDto;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleLifecycle;
@@ -20,6 +21,7 @@ import java.util.List;
  *
  * @author hwyz_leo
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class VehicleLifecycleAppService {
@@ -142,7 +144,7 @@ public class VehicleLifecycleAppService {
     }
 
     /**
-     * 记录第一次申请节点
+     * 记录第一次申请节点（幂等：首次写入胜出，重复调用忽略）
      *
      * @param vin      车架号
      * @param nodeCode 节点编码
@@ -151,6 +153,10 @@ public class VehicleLifecycleAppService {
         VehicleLifecycleNodeEnum nodeEnum = VehicleLifecycleNodeEnum.valOf(nodeCode);
         if (nodeEnum == null) {
             throw new IllegalArgumentException("无效的节点编码: " + nodeCode);
+        }
+        if (vehicleLifecycleNodeRepository.existsByVinAndNode(vin, nodeEnum)) {
+            log.debug("车辆生命周期节点已存在，跳过写入: vin={}, node={}", vin, nodeCode);
+            return;
         }
         VehicleLifecycleNode node = VehicleLifecycleNode.builder()
                 .vin(vin)

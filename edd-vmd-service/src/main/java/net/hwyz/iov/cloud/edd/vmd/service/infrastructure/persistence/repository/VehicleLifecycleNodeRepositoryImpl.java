@@ -3,6 +3,7 @@ package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.repository
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleLifecycleNode;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.VehicleLifecycleNodeEnum;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehicleLifecycleNodeRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter.VehicleLifecycleNodeConverter;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehLifecycleMapper;
@@ -31,6 +32,15 @@ public class VehicleLifecycleNodeRepositoryImpl extends AbstractRepository<Strin
     public List<VehicleLifecycleNode> selectByVin(String vin) {
         List<VehLifecyclePo> poList = vehLifecycleMapper.selectPoByMap(Map.of("vin", vin));
         return PageUtil.convert(poList, VehicleLifecycleNodeConverter.INSTANCE::toDomain);
+    }
+
+    @Override
+    public boolean existsByVinAndNode(String vin, VehicleLifecycleNodeEnum node) {
+        VehLifecyclePo example = VehLifecyclePo.builder()
+                .vin(vin)
+                .node(node.name())
+                .build();
+        return vehLifecycleMapper.countPoByMap(Map.of("vin", vin, "node", node.name())) > 0;
     }
 
     @Override

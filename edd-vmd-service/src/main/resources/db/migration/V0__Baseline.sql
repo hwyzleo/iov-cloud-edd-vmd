@@ -589,6 +589,7 @@ CREATE TABLE IF NOT EXISTS `tb_veh_lifecycle` (
   `row_version` int DEFAULT '1' COMMENT '记录版本',
   `row_valid` tinyint DEFAULT '1' COMMENT '记录是否有效',
   PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_vin_node` (`vin`, `node`),
   KEY `idx_vin` (`vin`)
 ) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='车辆生命周期表';
 
