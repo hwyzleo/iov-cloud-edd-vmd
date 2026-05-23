@@ -72,8 +72,5 @@ doc/material_code_rule.xlsx
 + .env.*
 + *.env
 
-spec/
-AGENTS.md
 graphify-out
 .opencode
-docs/superpowers/

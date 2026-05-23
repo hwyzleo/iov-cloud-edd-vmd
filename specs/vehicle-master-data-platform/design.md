@@ -1,0 +1,752 @@
+# Vehicle Master Data Platform - Design
+
+> 本文档基于 `requirements.md` (CR-001 + CR-002) 产出。所有章节通过 §6 Coverage Mapping 显式回链到 US-ID。
+> 任何后续变更必须遵循 SPEC_GUIDE §6 变更管理规则。
+
+## 1. Architecture Overview
+
+### 1.1 系统上下文
+
+```mermaid
+graph LR
+    subgraph "上游调用方"
+        MPT[Mpt 后台<br/>completeVehicle:* / iov:configCenter:*]
+        IDCM[IDCM 车机端<br/>X-VIN / X-SN]
+        APP[移动端 App<br/>SecurityUtils.getUserId]
+        TSP_C[TSP 服务<br/>记录证书/密钥节点]
+        OTH_C[其他下游<br/>OTA/订单/账号 等]
+    end
+
+    GW[API Gateway<br/>鉴权/限流/审计]
+
+    subgraph "edd-vmd 微服务"
+        API[edd-vmd-api<br/>Feign 契约 + Fallback]
+        SVC[edd-vmd-service<br/>DDD 四层实现]
+    end
+
+    subgraph "下游调用方（被 edd-vmd 主动调用）"
+        TSP_D[TSP 服务<br/>TspVehicleNetwork/Tbox/Ccp/Idcm/...]
+        OTA[OTA 服务<br/>OtaVehiclePartService]
+        IDK[IDK 服务<br/>IdkBtmInfoService]
+        ACC[(账号服务<br/>ExAccountService<br/>当前注释)]
+        SK[(安全密钥服务<br/>ExSkService<br/>当前注释)]
+    end
+
+    subgraph "基础设施"
+        MYSQL[(MySQL 8<br/>Flyway 管理)]
+        REDIS[(Redis<br/>二维码 TTL)]
+        NACOS[(Nacos<br/>注册 + 配置)]
+    end
+
+    MPT --> GW
+    IDCM --> GW
+    APP --> GW
+    GW --> SVC
+    TSP_C -.Feign.-> API
+    OTH_C -.Feign.-> API
+    API -.routing.-> SVC
+
+    SVC --> TSP_D
+    SVC --> OTA
+    SVC --> IDK
+    SVC -.x.-> ACC
+    SVC -.x.-> SK
+
+    SVC --> MYSQL
+    SVC --> REDIS
+    SVC --> NACOS
+```
+
+### 1.2 模块依赖
+
+```mermaid
+graph TD
+    A[edd-vmd-api<br/>纯接口/DTO/枚举/Fallback] -->|被引用| B[edd-vmd-service]
+    A -->|被引用| C[其他微服务<br/>iov-cloud-tsp / iov-cloud-edd-... 等]
+
+    B -->|依赖| F1[framework-common]
+    B -->|依赖| F2[framework-mysql-starter]
+    B -->|依赖| F3[framework-redis-starter]
+    B -->|依赖| F4[framework-web-starter]
+    B -->|依赖| F5[framework-security]
+    B -->|依赖| F6[framework-audit-starter]
+    B -->|依赖| F7[framework-exception-starter]
+    B -->|依赖| F8[framework-kafka-starter]
+```
+
+### 1.3 DDD 四层
+
+```mermaid
+graph TB
+    subgraph "adapter（适配层）"
+        A1[web/controller<br/>23 个 Controller]
+        A2[web/vo/request<br/>web/vo/response<br/>web/assembler]
+    end
+    subgraph "application（应用层）"
+        AP1[service<br/>20 个 *AppService]
+        AP2[assembler<br/>MapStruct 跨层转换]
+        AP3[dto<br/>cmd / query / result]
+        AP4[event<br/>publish + subscribe + event]
+        AP5[vid<br/>ImportDataParser SPI]
+    end
+    subgraph "domain（领域层）"
+        D1[model<br/>aggregate Vehicle/Qrcode]
+        D2[model<br/>entity 21 个 + valueobject]
+        D3[repository<br/>20 个抽象接口]
+        D4[service<br/>VehicleService]
+        D5[factory<br/>QrcodeFactory]
+    end
+    subgraph "infrastructure（基础设施层）"
+        I1[persistence/mapper<br/>MyBatis-Plus]
+        I2[persistence/po<br/>持久化对象]
+        I3[persistence/converter<br/>MapStruct PO↔Domain]
+        I4[persistence/repository<br/>Repository 实现]
+        I5[cache<br/>CacheService Redis]
+    end
+
+    A1 --> AP1
+    AP1 --> D3
+    AP1 --> D4
+    AP1 --> D5
+    D3 -.实现.-> I4
+    I4 --> I1
+    I4 --> I2
+    I4 --> I3
+```
+
+**强分层规则**（PROJECT_GUIDE 硬性约束）：
+- adapter 仅依赖 application，禁止直接依赖 domain/infrastructure
+- application 仅依赖 domain，禁止持有 PO
+- domain 不依赖任何外部框架（仅依赖 framework-common 中的基类如 `BaseDo` / `DomainObj`）
+- infrastructure 实现 domain.repository 接口，对外只暴露领域对象
+
+## 2. Tech Stack & Decisions
+
+| # | Decision | Choice | Alternatives | Rationale |
+|---|----------|--------|--------------|-----------|
+| D1 | 运行时 | JDK 17 | JDK 11 / JDK 21 | 与 `iov-cloud-parent` 父 POM 锁定一致；JDK 17 LTS，支持 record / pattern matching；项目已固化于 `/Library/Java/JavaVirtualMachines/jdk-17.0.1.jdk` |
+| D2 | 微服务注册/配置中心 | Nacos（namespace `32c13f29-...`）| Eureka / Consul | 与 `iov-cloud-*` 全家桶统一；支持 namespace 隔离 + 共享 yaml（application/mysql/redis）；`bootstrap.yml` 已锁定 |
+| D3 | ORM | MyBatis-Plus + Flyway | JPA / Hibernate | 框架层 `framework-mysql-starter` 已绑定 MyBatis-Plus；SQL 可控；Flyway V0/V1/V2 已落库 |
+| D4 | 跨层对象转换 | MapStruct（编译期生成） | BeanUtils / 手写 | 编译期检查 + 零反射，已在 `application/assembler` 与 `infrastructure/persistence/converter` 全面使用 |
+| D5 | 架构模式 | DDD 四层 + 仓储模式 | 贫血三层（Controller/Service/DAO） | PROJECT_GUIDE 硬性要求；聚合 `Vehicle`/`Qrcode` 自带行为（如 `bindOrder`、`validate`、`confirm`），避免逻辑下沉到 Service |
+| D6 | 分页策略 | PageHelper `startPage()` + `getPageResult()`，下沉 SQL `LIMIT` | `findAll()` + 内存分页 / 自写 OFFSET | PROJECT_GUIDE 反向模式禁止内存分页；MPT 列表需稳定性能 |
+| D7 | 域内事件分发 | Spring `ApplicationEventPublisher`（同进程同步） | Kafka 跨进程异步 | 当前事件链路均在 edd-vmd 内部（PRODUCE→Lifecycle / EOL→Lifecycle / QrcodeConfirm→Active），同步确保事务一致性；跨域事件由 AppService 显式调用下游 Feign 而非事件总线 |
+| D8 | 二维码过期机制 | **当前为空实现（已知缺陷，对应 §5 O9）**；`Qrcode.polling()` 方法体仅含注释 "由于 createTime 已移除，polling 逻辑需依赖基础设施层或重新设计，此处暂时移除超时逻辑，待后续完善"；`QrcodeType.VEHICLE_ACTIVE.timeout=1800` 字段已在 `edd-vmd-api` 定义但未被消费 | ① Redis TTL（Key 自动过期） ② 数据库定时扫表 ③ Qrcode 表加 `expireTime` 列 | Rationale：本 spec 为代码现状基线，仅记录缺陷形态，不规定修复方式。备选项均不在当前代码中体现 |
+| D9 | 导入解析器 SPI | Spring Bean Name 命名约定 + `applicationContext.getBean("<type>DataParserV<version>")` | ① ServiceLoader ② 显式注册表 ③ 策略枚举 | 已存在 7 个解析器（`produceDataParserV1.0` 等）；新增解析器只需注册 Bean，零侵入；命名约定支持版本切换（V2.0 时不破坏 V1.0） |
+| D10 | Feign 契约策略（**OQ-2 决议**） | 强类型 DTO + `*FallbackFactory` + VIN 不存在返回 `null` | 抛 `VehicleNotExistException` / 返回 `Optional<T>` | **决议保持现状**：抛异常会破坏所有现有下游调用方；`Optional` 类型在 Feign 跨进程 JSON 序列化中不被原生支持；下游通过 fallback + null 检查实现降级 |
+| D11 | `Vehicle.isActive()` 实现 | **硬编码 `return true`（已知缺陷，对应 §5 O6）**；导致所有 VIN 在 `generateActiveQrcode` 都被判定为已激活并抛 `VehicleHasActivatedException` | ① 查询 `VehicleLifecycleNode` 表是否存在 `VEHICLE_ACTIVE` 节点 ② 通过 qrcode CONFIRMED 判定 ③ 在 `Vehicle` 表加 `active` 状态列 | Rationale：本 spec 为代码现状基线，仅记录缺陷形态。激活的真实判定规则未在当前代码中实现 |
+| D12 | IMMO_SK 死代码现状 | `VehicleSkSubscribe` 类整体注释 + `ExSkService` import 注释 + 事件订阅方法体注释；`recordGenerateVehicleSkNode` 永不被触发 | — | Rationale：本 spec 为代码现状基线，仅记录现状形态（死代码保留），不规定处理方式（删除/恢复/标 Deprecated 等改造均需走单独 CR） |
+
+## 3. Data Model
+
+### 3.1 持久化表清单（23 张）
+
+按业务域分组，所有表通过 Flyway V0/V1/V2 创建（V3 由本 design 引入）。
+
+#### 产品树域（10 张）
+| 表名 | PO 类 | 关键列 | 唯一约束 | 关联 |
+|------|------|--------|----------|------|
+| `veh_brand` | `VehBrandPo` | `code`, `name` | UK(`code`) | — |
+| `veh_series` | `VehSeriesPo` | `code`, `name`, `brand_code` | UK(`code`) | → `veh_brand.code` |
+| `veh_platform` | `VehPlatformPo` | `code`, `name` | UK(`code`) | — |
+| `veh_model` | `VehModelPo` | `code`, `name`, `platform_code`, `series_code` | UK(`code`) | → `veh_platform.code`, `veh_series.code` |
+| `veh_base_model` | `VehBaseModelPo` | `code`, `name`, `platform_code`, `series_code`, `model_code` | UK(`code`) | → `veh_model.code` |
+| `veh_base_model_feature_code` | `VehBaseModelFeatureCodePo` | `base_model_code`, `family_code`, `feature_code` | UK(`base_model_code`,`family_code`) | → `veh_base_model.code`, `veh_feature_family.code`, `veh_feature_code.code` |
+| `veh_build_config` | `VehBuildConfigPo` | `code`, `name`, `base_model_code` | UK(`code`) | → `veh_base_model.code` |
+| `veh_build_config_feature_code` | `VehBuildConfigFeatureCodePo` | `build_config_code`, `family_code`, `feature_code` | UK(`build_config_code`,`family_code`) | → `veh_build_config.code` |
+| `veh_feature_family` | `VehFeatureFamilyPo` | `code`, `name`, `type` | UK(`code`) | — |
+| `veh_feature_code` | `VehFeatureCodePo` | `code`, `name`, `family_code` | UK(`code`) | → `veh_feature_family.code` |
+| `veh_manufacturer` | `VehManufacturerPo` | `code`, `name` | UK(`code`) | — |
+
+#### 配置项域（3 张）
+| 表名 | PO 类 | 关键列 | 唯一约束 |
+|------|------|--------|----------|
+| `config_item` | `ConfigItemPo` | `code`, `name` | UK(`code`) |
+| `config_item_option` | `ConfigItemOptionPo` | `config_item_code`, `option_code` | UK(`config_item_code`,`option_code`) |
+| `config_item_mapping` | `ConfigItemMappingPo` | `config_item_code`, `source_value`, `target_value` | — |
+
+#### 物理车域（5 张）
+| 表名 | PO 类 | 关键列 | 唯一约束 | 备注 |
+|------|------|--------|----------|------|
+| `veh_basic_info` | `VehBasicInfoPo` | `vin`, `manufacturer_code`, `brand_code`, `platform_code`, `series_code`, `model_code`, `base_model_code`, `build_config_code`, `order_num` | UK(`vin`) | 车辆主档 |
+| `veh_detail_info` | `VehDetailInfoPo` | `vin`, 30+ 详细字段 | UK(`vin`) | EOL 解析时填充 |
+| `veh_preset_owner` | `VehPresetOwnerPo` | `vin`, `mobile`, `name` | UK(`vin`) | 预设车主（当前 `checkVehiclePresetOwner` 注释，本期不消费） |
+| `vehicle_config` | `VehicleConfigPo` | `vin`, `version` | UK(`vin`,`version`) | 车辆配置版本 |
+| `vehicle_config_item` | `VehicleConfigItemPo` | `vin`, `version`, `config_item_code`, `value` | UK(`vin`,`version`,`config_item_code`) | 车辆配置项 |
+
+#### 零件设备供应商域（5 张）
+| 表名 | PO 类 | 关键列 | 唯一约束 |
+|------|------|--------|----------|
+| `part` | `PartPo` | `pn`, `name`, `type`, `device_code`, `supplier_code`, `software` | UK(`pn`) |
+| `device` | `DevicePo` | `code`, `name`, `device_item`, `software` | UK(`code`) |
+| `supplier` | `SupplierPo` | `code`, `name` | UK(`code`) |
+| `vehicle_part` | `VehiclePartPo` | `vin`, `pn`, `sn`, `device_code`, `device_item`, `part_state`, `bind_org`, `bind_time`, `extra` | UK(`pn`,`sn`) |
+| `vehicle_part_history` | `VehiclePartHistoryPo` | 同 `vehicle_part` + `change_time` | — |
+
+#### 生命周期域（2 张）
+| 表名 | PO 类 | 关键列 | 唯一约束 | 备注 |
+|------|------|--------|----------|------|
+| `veh_lifecycle` | `VehLifecyclePo` | `vin` | UK(`vin`) | 生命周期主表（聚合） |
+| （生命周期节点） | （隐含在 `veh_lifecycle` 关联或独立表） | `vin`, `node_code`, `reach_time` | UK(`vin`,`node_code`) | 单节点最多写入一次（首次申请语义） |
+
+> 注：`VehLifecycleRepository` 提供 `physicalDeleteByVin(vin)`；节点写入通过 `VehicleLifecycleNodeRepository.save()`。
+
+#### 导入域（1 张）
+| 表名 | PO 类 | 关键列 | 唯一约束 |
+|------|------|--------|----------|
+| `veh_import_data` | `VehImportDataPo` | `batch_num`, `type`, `version`, `data`(JSON), `handle` | UK(`batch_num`) |
+
+#### Qrcode 持久化现状
+
+二维码当前由领域聚合 `Qrcode` 持久化，存储位置由 `QrcodeRepository` 接口抽象、`infrastructure/persistence/repository/QrcodeRepositoryImpl` 决定（当前实现走 `infrastructure/cache/CacheService` 的 Redis 缓存）。Redis 仅作为 Qrcode 聚合本身的存储载体，**未**用于二维码过期 TTL 检测（参见 §5 O9 已知缺陷）。
+
+### 3.2 领域模型
+
+#### 聚合根（Aggregate）
+- **`Vehicle`**（`domain/model/aggregate/Vehicle.java`）：物理车辆根聚合
+  - 内含：`VehicleBasicInfo` + `VehicleDetail` + `VehiclePresetOwner` + 关联 `VehicleConfig` + 关联 `VehiclePart` 列表
+  - 行为：`bindOrder(orderNum)`、`isActive()`（**当前硬编码 `return true`**，参见 §5 O6）
+- **`Qrcode`**（`domain/model/aggregate/Qrcode.java`）：二维码根聚合
+  - 字段：`vin`, `sn`, `qrcode`, `type`, `qrcodeState`
+  - 行为：`init(vin,sn)`、`polling()`（**当前为空实现**，参见 §5 O9）、`validate(qrcode)`、`confirm(qrcode)`
+  - 工厂：`QrcodeFactory.buildQrcode(type, vin, sn)`
+
+#### 实体（Entity，21 个）
+按 §3.1 表清单一一对应，关键实体：`Brand` / `Series` / `Platform` / `Model` / `BaseModel` / `BaseModelFeatureCode` / `BuildConfig` / `BuildConfigFeatureCode` / `FeatureFamily` / `FeatureCode` / `Manufacturer` / `ConfigItem` / `ConfigItemOption` / `ConfigItemMapping` / `VehicleBasicInfo` / `VehicleDetail` / `VehiclePresetOwner` / `VehicleConfig` / `VehicleConfigItem` / `VehiclePart` / `VehiclePartHistory` / `Part` / `Device` / `Supplier` / `VehicleLifecycle` / `VehicleLifecycleNode` / `VehicleImportData`
+
+#### 值对象（Value Object）
+- **`VehicleLifecycleNodeEnum`**：23 个节点（包含拼写错误 `VEHICLE_INVoICING`，参见 §5 O10 已知缺陷）
+- **`VehiclePartState`**：`0=作废 / 1=在用` 等
+- **`QrcodeState`**（`edd-vmd-api`）：`INITIALIZED / SCANNED / CONFIRMED / EXPIRED`
+- **`QrcodeType`**（`edd-vmd-api`）：`VEHICLE_ACTIVE(timeout=1800)`
+- **`MnoType`**：SIM 卡运营商枚举（`CMCC` / `CTCC` / `CUCC` 等，由 SIM 解析器使用）
+- **`DeviceItem`**：设备项类型（`TBOX` / `CCP` / `IDCM` / `BTM` 等）
+
+### 3.3 跨层 DTO 一览
+
+| 层 | 包路径 | 数量 | 命名规范 |
+|----|--------|------|----------|
+| Adapter | `adapter/web/vo/request` | 27 | `*Request.java` |
+| Adapter | `adapter/web/vo/response` | 27 | `*Response.java` |
+| Application | `application/dto/cmd` | 24 | `*Cmd.java`（写入命令） |
+| Application | `application/dto/query` | 19 | `*Query.java`（查询条件） |
+| Application | `application/dto/result` | 26 | `*Dto.java`（领域→应用结果） |
+| API | `edd-vmd-api/vo/response` | 7 | `*ExResponse / *Response.java`（Feign 出参） |
+| API | `edd-vmd-api/vo/request` | 2 | `*ExRequest.java`（Feign 入参） |
+
+### 3.4 Flyway 迁移版本
+
+| 版本 | 文件 | 说明 |
+|------|------|------|
+| V0 | `V0__Baseline.sql` | 基线（23 张表 + 索引 + 默认数据） |
+| V1 | `V1__BuildConfig_feature_code_migration.sql` | 生产配置特征值迁移 |
+| V2 | `V2__Series_brand_code_migration.sql` | 车系冗余 brand_code |
+
+## 4. Core Flows
+
+### 4.1 F1 - MPT 维护产品树（删除前置依赖检查）
+
+```mermaid
+sequenceDiagram
+    participant U as Mpt-User
+    participant C as Mpt*Controller
+    participant A as *AppService
+    participant DR as 当前域 Repository
+    participant CR as 子域 Repository
+
+    U->>C: DELETE /api/mpt/<resource>/v1/{ids}
+    C->>A: deleteByIds(ids)
+    loop 对每个 id
+        A->>DR: getById(id)
+        DR-->>A: entity
+        A->>CR: countByParentCode(entity.code)
+        CR-->>A: count
+        alt count > 0
+            A-->>C: throw "该<父>下存在<子>"
+            C-->>U: ApiResponse.fail(message)
+        else count == 0
+            A->>DR: deleteById(id)
+        end
+    end
+    A-->>C: success
+    C-->>U: ApiResponse.ok()
+```
+
+**对应 US**：US-001 ~ US-009、US-014 ~ US-016。
+
+### 4.2 F2 - 导入数据解析（动态 SPI 选择解析器）
+
+```mermaid
+sequenceDiagram
+    participant U as Mpt-User
+    participant C as MptVehicleImportDataController
+    participant A as VehicleImportDataAppService
+    participant CTX as ApplicationContext
+    participant P as <type>DataParserV<version>
+    participant R as VehImportDataRepository
+
+    U->>C: POST /api/mpt/vehicleImportData/v1<br/>{batchNum,type,version,data}
+    C->>A: importData(cmd)
+    A->>R: existsByBatchNum(batchNum)
+    R-->>A: false
+    A->>R: save(record handle=false)
+    A->>CTX: getBean("<type>DataParserV<version>")
+    alt Bean 不存在
+        CTX-->>A: NoSuchBeanDefinitionException
+        A->>A: log.warn("解析器不存在")
+        A-->>C: ApiResponse.fail
+    else
+        CTX-->>A: parser
+        A->>P: parse(batchNum, data)
+        P->>P: 校验 ITEM 必填字段<br/>逐条入库 / 调下游 / 发事件
+        P-->>A: result
+        A->>R: update(record handle=true)
+    end
+    A-->>C: success
+    C-->>U: ApiResponse.ok()
+```
+
+**对应 US**：US-018 ~ US-025。
+
+### 4.3 F3 - EOL 解析联动 TSP/OTA/IDK + 生命周期
+
+```mermaid
+sequenceDiagram
+    participant P as EolDataParserV1_0
+    participant V as VehicleAppService
+    participant L as VehicleLifecycleAppService
+    participant VP as VehiclePartAppService
+    participant T as TSP Feign
+    participant O as OTA Feign
+    participant E as VehiclePublish
+
+    Note over P: 对每条 ITEM
+    alt VIN 不存在
+        P->>V: createVehicle(vin, basicInfo)
+        V->>E: produce(vin) → VehicleProduceEvent
+    end
+    P->>V: updateDetailInfo(vin, 30+字段)
+    P->>P: eolDate = item.EOL_DATE ?? Instant.now()
+    alt 首次 EOL（vehicle.eolTime == null）
+        P->>E: eol(vin, eolDate) → VehicleEolEvent
+    end
+    alt CERT_DATE != null
+        P->>L: recordCertificateNode(vin, certDate)
+    end
+    loop PARTS 数组
+        alt part.VIN != 外层 VIN
+            P->>P: log.warn("跳过")
+        else
+            P->>VP: bindVehiclePart(vin, part, "MES")
+            alt deviceItem == TBOX
+                P->>T: tspVehicleNetworkService.create()<br/>tspVehicleTboxService.bind()
+            else deviceItem == CCP
+                P->>T: tspVehicleCcpService.bind()
+            else deviceItem == IDCM
+                P->>T: tspVehicleIdcmService.bind()
+            end
+        end
+    end
+    P->>O: otaVehiclePartService.saveVehicleParts(vin, "车辆下线")
+```
+
+**事件订阅副作用**：
+- `VehicleLifecycleSubscribe.onProduce(event)` → `recordProduceNode(vin)`
+- `VehicleLifecycleSubscribe.onEol(event)` → `recordEolNode(vin, event.eolTime)`
+- `VehicleSkSubscribe.onProduce(event)` → **当前注释，不生效**（D12 / O7）
+
+**对应 US**：US-019 ~ US-020、US-026。
+
+### 4.4 F4 - 二维码扫码激活闭环（现状）
+
+```mermaid
+sequenceDiagram
+    participant I as IDCM 车机
+    participant IC as IdcmQrcodeController
+    participant Q as QrcodeAppService
+    participant V as VehicleAppService
+    participant QR as QrcodeRepository
+    participant M as Mobile App
+    participant MC as MobileQrcodeController
+    participant L as VehicleLifecycleAppService
+    participant E as QrcodePublish
+
+    Note over I,QR: 阶段 1：生成二维码
+    I->>IC: POST /api/idcm/qrcode/v1/active<br/>X-VIN, X-SN
+    IC->>Q: generateActiveQrcode(vin, sn)
+    Q->>V: vehicle.isActive()
+    Note over V: 当前硬编码 return true（已知缺陷 O6）<br/>所有 VIN 都被判定为已激活
+    V-->>Q: true
+    Q-->>IC: throw VehicleHasActivatedException
+    IC-->>I: 400 ApiResponse.fail
+
+    Note over I,QR: 阶段 2：车机轮询状态（假设阶段 1 通过）
+    loop 车机轮询
+        I->>IC: GET /api/idcm/qrcode/v1/active/{qrcode}/state
+        IC->>Q: pollingQrcodeState(qrcode, sn)
+        Q->>QR: getByQrcode(qrcode)
+        QR-->>Q: qrcode 聚合
+        Q->>Q: qrcode.polling()
+        Note over Q: 当前空实现（已知缺陷 O9）<br/>无过期检测
+        Q-->>IC: state
+    end
+
+    Note over M,E: 阶段 3：移动端扫描验证
+    M->>MC: POST /api/mobile/qrcode/v1/validate<br/>{qrcode}
+    MC->>Q: validate(qrcode, accountId)
+    Q->>QR: getByQrcode(qrcode)
+    Q->>Q: qrcode.validate(qrcode)<br/>状态机 INITIALIZED → SCANNED
+    Q->>QR: save(qrcode)
+    Q->>E: validate(vin, accountId, type) → QrcodeValidateEvent
+    Note over E: VehicleAppService.checkVehiclePresetOwner<br/>当前注释（O3）
+    E-->>MC: success
+    MC-->>M: 200 OK
+
+    Note over M,E: 阶段 4：移动端确认激活
+    M->>MC: POST /api/mobile/qrcode/v1/confirm<br/>{qrcode}
+    MC->>Q: confirm(qrcode, accountId)
+    Q->>QR: getByQrcode(qrcode)
+    Q->>Q: qrcode.confirm(qrcode)<br/>状态机 SCANNED → CONFIRMED
+    Q->>QR: save(qrcode)
+    Q->>E: confirm(vin, type) → QrcodeConfirmEvent
+    E->>L: recordVehicleActiveNode(vin)
+    L->>L: 写入 VEHICLE_ACTIVE 生命周期节点
+```
+
+**对应 US**：US-028 ~ US-029、US-026。
+
+### 4.5 F5 - Service 端 Feign 调用链路
+
+```mermaid
+sequenceDiagram
+    participant Caller as 下游服务
+    participant API as edd-vmd-api<br/>VmdVehicleService Feign
+    participant FF as VmdVehicleServiceFallbackFactory
+    participant SC as ServiceVehicleController
+    participant VAS as VehicleAppService
+    participant VR as VehicleRepository
+
+    Caller->>API: getByVin(vin)
+    alt 网络/服务正常
+        API->>SC: GET /api/service/vehicle/v1/{vin}
+        SC->>VAS: getByVin(vin)
+        VAS->>VR: getByVin(vin)
+        alt VIN 存在
+            VR-->>VAS: Vehicle 聚合
+            VAS-->>SC: Vehicle
+            SC-->>API: ApiResponse.ok(VehicleExResponse)
+            API-->>Caller: VehicleExResponse
+        else VIN 不存在（D10 决议）
+            VR-->>VAS: null
+            VAS-->>SC: null
+            SC-->>API: ApiResponse.ok(null)
+            API-->>Caller: null
+        end
+    else Hystrix/超时熔断
+        API->>FF: create(throwable)
+        FF-->>Caller: VmdVehicleService 兜底实现<br/>所有方法返回 null / 空集合
+    end
+```
+
+**对应 US**：US-011、US-012、US-014（pn 查询）、US-015（code 查询）、US-027、US-030、US-031。
+
+### 4.6 F6 - 内部事件订阅链路总览
+
+```mermaid
+graph LR
+    subgraph "Publisher（应用层）"
+        VPub[VehiclePublish<br/>produce/eol]
+        QPub[QrcodePublish<br/>validate/confirm]
+    end
+
+    subgraph "Event"
+        E1[VehicleProduceEvent]
+        E2[VehicleEolEvent]
+        E3[QrcodeValidateEvent]
+        E4[QrcodeConfirmEvent]
+    end
+
+    subgraph "Subscriber"
+        S1[VehicleLifecycleSubscribe<br/>onProduce → PRODUCE 节点<br/>onEol → EOL 节点<br/>onQrcodeConfirm → VEHICLE_ACTIVE 节点]
+        S2["VehicleSkSubscribe<br/>onProduce → IMMO_SK 节点<br/>(整体注释，O7)"]
+    end
+
+    VPub --> E1
+    VPub --> E2
+    QPub --> E3
+    QPub --> E4
+
+    E1 --> S1
+    E1 -.x.-> S2
+    E2 --> S1
+    E3 --> S1
+    E4 --> S1
+```
+
+**对应 US**：US-026、US-019（PRODUCE 事件）、US-020（EOL 事件）、US-029（QrcodeConfirm 事件）。
+
+## 5. API Contracts
+
+> 颗粒度策略：MPT/IDCM/Mobile 给完整 schema（method + path + 权限 + 关键字段），Service 端因 `edd-vmd-api` 是契约源，仅给签名 + 错误码 + Fallback 行为。
+
+### 5.1 MPT 端（`/api/mpt/**`，权限点前缀 `completeVehicle:` 或 `iov:configCenter:`）
+
+#### 5.1.1 Brand `MptBrandController`（→ US-001）
+| Method | Path | Permission | Request | Response |
+|--------|------|-----------|---------|----------|
+| GET | `/api/mpt/brand/v1/list` | `completeVehicle:product:brand:list` | `BrandRequest`（code/name/beginTime/endTime） | `PageResult<BrandResponse>` |
+| GET | `/api/mpt/brand/v1/listAll` | `completeVehicle:product:brand:list` | — | `List<BrandResponse>` |
+| GET | `/api/mpt/brand/v1/{brandId}` | `completeVehicle:product:brand:query` | — | `BrandResponse` |
+| POST | `/api/mpt/brand/v1` | `completeVehicle:product:brand:add` | `BrandRequest` | `ApiResponse<Long>` |
+| PUT | `/api/mpt/brand/v1` | `completeVehicle:product:brand:edit` | `BrandRequest` | `ApiResponse<Boolean>` |
+| DELETE | `/api/mpt/brand/v1/{brandIds}` | `completeVehicle:product:brand:remove` | path `Long[]` | `ApiResponse<Boolean>` |
+| POST | `/api/mpt/brand/v1/export` | `completeVehicle:product:brand:export` | `BrandRequest` | `Excel/CSV stream`（O5：未实现，仅日志） |
+
+错误：`code 已存在` / `该品牌下存在车系` / `该品牌下存在车辆`
+
+#### 5.1.2 Series `MptSeriesController`（→ US-002）
+完整 7 端点同 5.1.1 模式，权限前缀 `completeVehicle:product:series:*`，**额外**：
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/mpt/series/v1/listByBrandCode` | 入参 `brandCode`，返回该品牌下全部车系（不分页） |
+
+错误：`code 已存在` / `该车系下存在车型` / `该车系下存在车辆`
+
+#### 5.1.3 Model `MptModelController`（→ US-003）
+完整 7 端点 + 额外：
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/mpt/model/v1/listByPlatformCodeAndSeriesCode` | 入参 `platformCode`,`seriesCode`，返回交集 |
+
+错误：`code 已存在` / `该车型下存在基础车型` / `该车型下存在车辆`
+
+#### 5.1.4 BaseModel `MptBaseModelController`（→ US-004）
+完整 7 端点 + 特征值嵌套子资源：
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/mpt/baseModel/v1/listByPlatformCodeAndSeriesCodeAndModelCode` | 任意三参数组合查询 |
+| GET | `/api/mpt/baseModel/v1/{baseModelCode}/featureCode/list` | 查询基础车型下特征值 |
+| POST | `/api/mpt/baseModel/v1/{baseModelCode}/featureCode` | 新增特征值 |
+| PUT | `/api/mpt/baseModel/v1/{baseModelCode}/featureCode` | 修改特征值 |
+| DELETE | `/api/mpt/baseModel/v1/{baseModelCode}/featureCode/{ids}` | 删除特征值 |
+
+错误：`基础车型特征值已存在`（同 familyCode） / `该基础车型下存在生产配置/车辆`
+
+#### 5.1.5 BuildConfig `MptBuildConfigController`（→ US-005）
+完整 7 端点 + 子资源同 5.1.4 模式：
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/mpt/buildConfig/v1/listByBaseModelCode/{baseModelCode}` | 该基础车型下全部生产配置 |
+| GET | `/api/mpt/buildConfig/v1/{buildConfigCode}/featureCode/list` | 配置下特征值列表 |
+| POST | `/api/mpt/buildConfig/v1/{buildConfigCode}/featureCode` | 新增特征值 |
+| PUT | `/api/mpt/buildConfig/v1/{buildConfigCode}/featureCode` | 修改特征值 |
+| DELETE | `/api/mpt/buildConfig/v1/{buildConfigCode}/featureCode/{ids}` | 删除 |
+
+错误：`生产配置特征值已存在` / `该生产配置下存在车辆`
+
+#### 5.1.6 Platform `MptPlatformController`（→ US-006）
+完整 7 端点 + `GET /listAll`。错误：`code 已存在` / `该平台下存在车系/车辆`。
+
+#### 5.1.7 Manufacturer `MptManufacturerController`（→ US-007）
+完整 7 端点。错误：`code 已存在` / `该生产厂商下存在车辆`。
+
+#### 5.1.8 FeatureFamily `MptFeatureFamilyController`（→ US-008）
+完整 7 端点 + 子资源：
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/mpt/featureFamily/v1/listAllFeatureCode` | 入参 `familyCode`，返回该族下全部特征值（不分页） |
+| POST | `/api/mpt/featureFamily/v1/{familyCode}/featureCode` | 新增特征值 |
+| PUT | `/api/mpt/featureFamily/v1/{familyCode}/featureCode` | 修改特征值 |
+| DELETE | `/api/mpt/featureFamily/v1/{familyCode}/featureCode/{ids}` | 删除特征值 |
+
+错误：`特征族 code 已存在` / `特征值 code 已存在`
+
+#### 5.1.9 ConfigItem `MptConfigItemController`（→ US-009）
+完整 7 端点 + 嵌套 Option / Mapping 子资源（CRUD ×2 = 8 端点）：
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/mpt/configItem/v1/listAll` | 全部配置项 |
+| `*` | `/api/mpt/configItem/v1/{configItemCode}/option/**` | 枚举值 CRUD |
+| `*` | `/api/mpt/configItem/v1/{configItemCode}/mapping/**` | 上下游映射 CRUD |
+
+#### 5.1.10 Vehicle `MptVehicleController`（→ US-010）
+| Method | Path | Permission | Description |
+|--------|------|-----------|-------------|
+| GET | `/api/mpt/vehicle/v1/list` | `completeVehicle:vehicle:vehicle:list` | 分页：`vin`(模糊)/`buildConfigCode`/时间窗 |
+| GET | `/api/mpt/vehicle/v1/vin/{vin}` | `completeVehicle:vehicle:vehicle:query` | 完整 `Vehicle` 聚合 |
+| DELETE | `/api/mpt/vehicle/v1/{ids}` | `completeVehicle:vehicle:vehicle:remove` | 联动删除 lifecycle |
+| POST | `/api/mpt/vehicle/v1/export` | `completeVehicle:vehicle:vehicle:export` | （O5：未实现） |
+
+#### 5.1.11 VehicleConfig `MptVehicleConfigController`（→ US-013）
+| Method | Path | Permission |
+|--------|------|-----------|
+| GET | `/api/mpt/vehicleConfig/v1/list` | `iov:configCenter:vehicleConfig:list` |
+| GET | `/api/mpt/vehicleConfig/v1/{vin}/configItem/list` | `iov:configCenter:vehicleConfig:query` |
+| POST | `/api/mpt/vehicleConfig/v1/export` | `iov:configCenter:vehicleConfig:export` |
+
+> 注：当前不暴露 add/edit（O8）。
+
+#### 5.1.12 Part `MptPartController`（→ US-014）
+完整 7 端点。过滤参数：`key/pn/name/type/deviceCode`。错误：`pn 已存在`。
+
+#### 5.1.13 Device `MptDeviceController`（→ US-015）
+完整 7 端点 + `GET /listAll` + `GET /listAllDeviceItem`（返回 `DeviceItem` 枚举）。
+
+#### 5.1.14 Supplier `MptSupplierController`（→ US-016）
+完整 7 端点。错误：`code 已存在`。
+
+#### 5.1.15 VehiclePart `MptVehiclePartController`（→ US-017）
+| Method | Path | Permission | 说明 |
+|--------|------|-----------|------|
+| GET | `/api/mpt/vehiclePart/v1/list` | `completeVehicle:vehicle:vehiclePart:list` | 分页 vin/pn/时间窗 |
+| GET | `/api/mpt/vehiclePart/v1/{id}` | `:query` | — |
+| POST | `/api/mpt/vehiclePart/v1` | `:add` | 当前未对 `vin` 做存在性校验（参见 §5 O11） |
+| PUT | `/api/mpt/vehiclePart/v1` | `:edit` | 同上 |
+| DELETE | `/api/mpt/vehiclePart/v1/{ids}` | `:remove` | — |
+| POST | `/api/mpt/vehiclePart/v1/export` | `:export` | （O5） |
+
+错误：`车辆零件已存在`(pn,sn)
+
+#### 5.1.16 VehicleImportData `MptVehicleImportDataController`（→ US-018）
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/mpt/vehicleImportData/v1/list` | 分页：`batchNum/type/version/handle` |
+| GET | `/api/mpt/vehicleImportData/v1/{id}` | — |
+| POST | `/api/mpt/vehicleImportData/v1` | 提交批次（自动选择解析器） |
+| DELETE | `/api/mpt/vehicleImportData/v1/{ids}` | — |
+
+错误：`批次号已存在` / `解析器不存在` / `解析异常`
+
+### 5.2 IDCM 端（`/api/idcm/**`，请求头 `X-VIN`/`X-SN`）
+
+#### `IdcmQrcodeController`（→ US-028）
+| Method | Path | Description | Errors |
+|--------|------|-------------|--------|
+| POST | `/api/idcm/qrcode/v1/active` | 生成二维码（当前 `Vehicle.isActive()` 恒为 true，所有调用都会抛 `VehicleHasActivatedException`，参见 §5 O6） | `VehicleHasActivatedException` |
+| GET | `/api/idcm/qrcode/v1/active/{qrcode}/state` | 轮询状态（当前 `Qrcode.polling()` 为空实现，无过期检测，参见 §5 O9） | `QrcodeNotExistException` |
+
+Response：`QrcodeResponse{qrcode, state}`
+
+### 5.3 Mobile 端（`/api/mobile/**`，账号通过 `SecurityUtils.getUserId()` 获取）
+
+#### `MobileQrcodeController`（→ US-029）
+| Method | Path | Request | Description | Errors |
+|--------|------|---------|-------------|--------|
+| POST | `/api/mobile/qrcode/v1/validate` | `QrcodeRequest{qrcode}` | 扫描验证 → SCANNED + 触发 `QrcodeValidateEvent` | `QrcodeNotExistException` / `QrcodeHasUsedException` / `QrcodeHasExpiredException` / `QrcodeInvalidException` |
+| POST | `/api/mobile/qrcode/v1/confirm` | `QrcodeRequest{qrcode}` | 确认 → CONFIRMED + 触发 `QrcodeConfirmEvent` → 写 `VEHICLE_ACTIVE` 节点 | 同上 |
+
+### 5.4 Service 端（`edd-vmd-api`，Feign 契约）
+
+> 完整签名以 `edd-vmd-api/src/main/java/.../api/service/Vmd*Service.java` 为准；本节列契约清单 + 错误码 + Fallback 行为。
+
+#### 5.4.1 `VmdVehicleService`（→ US-011/US-012）
+- `VehicleExResponse getByVin(@PathVariable String vin)`
+- `void bindOrder(@PathVariable String vin, @RequestBody VehicleOrderExRequest req)`
+
+**Fallback 规范**：`VmdVehicleServiceFallbackFactory` → `getByVin` 返回 `null`；`bindOrder` 不抛异常但记录熔断日志。
+
+**错误码**：`VehicleHasBindOrderException`（业务异常，不进 fallback，直接抛回 caller）。
+
+#### 5.4.2 `VmdVehicleLifecycleService`（→ US-027）
+8 个 `recordFirstApply*Node` 端点（TBOX_CERT / TBOX_COMM_SK / CCP_CERT / CCP_COMM_SK / IDCM_CERT / IDCM_COMM_SK / ADCM_CERT / ADCM_COMM_SK）。
+
+**Fallback**：所有方法 no-op + log。
+
+#### 5.4.3 `VmdPartService`（→ US-014）
+- `PartExResponse getByPn(@PathVariable String pn)`
+- `List<PartExResponse> listAllFota(@RequestParam Boolean software)`
+
+**Fallback**：返回 `null` / 空集合。
+
+#### 5.4.4 `VmdDeviceService`（→ US-015）
+- `DeviceExResponse getByCode(@PathVariable String code)`
+- `List<DeviceExResponse> listAllFota()`
+
+**Fallback**：同上。
+
+#### 5.4.5 `VmdVehicleModelConfigService`（→ US-031）
+- `String getBuildConfigCodeByFeatureCodes(@RequestParam Map<String,String> featureCodes)`
+- `List<VmdBuildConfigResponse> listBuildConfigByBaseModelCode(@PathVariable String baseModelCode)`
+- `VmdBuildConfigResponse getBuildConfig(@PathVariable String buildConfigCode)`
+
+**Fallback**：`null` / 空集合；`getBuildConfig` 在 `seriesCode` 缺失时省略 `brandCode`（不视为错误，US-031 验收要求）。
+
+### 5.5 错误码总表
+
+| 异常类 | HTTP | 触发场景 | 用户消息 |
+|--------|------|---------|---------|
+| `VmdBaseException` | 500 | 基类 | — |
+| `VehicleNotExistException` | 400 | VIN 不存在 | `车辆不存在` |
+| `VehicleHasBindOrderException` | 400 | 重复绑定订单 | `车辆已绑定订单` |
+| `VehicleHasActivatedException` | 400 | 已激活生成二维码（当前因 `isActive()` 恒为 true 而恒触发，参见 §5 O6） | `车辆已激活` |
+| `VehicleImportDataException` | 400 | 导入解析失败 | `批次<batchNum>解析异常: <reason>` |
+| `VehiclePresetOwnerNotMatchException` | 400 | 扫码账号不匹配预设车主（O3 当前注释） | — |
+| `VehicleWithoutPresetOwnerException` | 400 | 无预设车主（O3 当前注释） | — |
+| `QrcodeNotExistException` | 400 | 二维码不存在 | `二维码不存在` |
+| `QrcodeHasUsedException` | 400 | 已 CONFIRMED | `二维码已使用` |
+| `QrcodeHasExpiredException` | 400 | EXPIRED 状态 | `二维码已过期` |
+| `QrcodeInvalidException` | 400 | qrcode 字段不匹配 | `二维码无效` |
+| `PartNotExistException` | 400 | PN 不存在 | `零件不存在` |
+| `PartNotAllowBindException` | 400 | 零件不允许绑定 | — |
+
+## 6. Coverage Mapping
+
+| US-ID | Design Section | Note |
+|-------|----------------|------|
+| US-001 Brand | §3.1 产品树 / §4.1 F1 / §5.1.1 | 完整 CRUD + 删除前置依赖 |
+| US-002 Series | §3.1 产品树 / §4.1 F1 / §5.1.2 | 含 `listByBrandCode` |
+| US-003 Model | §3.1 产品树 / §4.1 F1 / §5.1.3 | 含平台+车系联合查询 |
+| US-004 BaseModel + 特征值 | §3.1 产品树 / §4.1 F1 / §5.1.4 | 含特征值嵌套子资源 |
+| US-005 BuildConfig + 特征值 | §3.1 产品树 / §4.1 F1 / §5.1.5 | 含特征值嵌套子资源 |
+| US-006 Platform | §3.1 产品树 / §4.1 F1 / §5.1.6 | + listAll |
+| US-007 Manufacturer | §3.1 产品树 / §4.1 F1 / §5.1.7 | — |
+| US-008 FeatureFamily + Code | §3.1 产品树 / §4.1 F1 / §5.1.8 | 含族下特征值 listAll |
+| US-009 ConfigItem + Option + Mapping | §3.1 配置项 / §4.1 F1 / §5.1.9 | 嵌套子资源 |
+| US-010 Vehicle CRUD（MPT） | §3.1 物理车 / §3.2 Vehicle 聚合 / §5.1.10 | 删除联动 lifecycle |
+| US-011 Vehicle 内部查询 | §3.2 Vehicle / §4.5 F5 / §5.4.1 / D10 | VIN 不存在返回 null（现状契约） |
+| US-012 Vehicle 订单绑定 | §3.2 Vehicle.bindOrder / §5.4.1 | + ORDER_BIND 节点 |
+| US-013 VehicleConfig | §3.1 物理车 / §5.1.11 | 仅查询/导出（O8） |
+| US-014 Part | §3.1 零件 / §5.1.12 / §5.4.3 | MPT + Service 双暴露 |
+| US-015 Device | §3.1 零件 / §5.1.13 / §5.4.4 | MPT + Service 双暴露 |
+| US-016 Supplier | §3.1 零件 / §5.1.14 | — |
+| US-017 VehiclePart | §3.1 零件 / §5.1.15 | 当前未做 VIN 校验（O11 已知缺陷） |
+| US-018 VehicleImportData | §4.2 F2 / §5.1.16 | SPI 解析器调度 |
+| US-019 PRODUCE 解析器 | §4.2 F2 / §3.2 VehiclePublish.produce / §4.6 F6 | 触发 VehicleProduceEvent |
+| US-020 EOL 解析器 | §4.3 F3 / §4.6 F6 | 联动 TSP/OTA + 详细字段入库 |
+| US-021 BTM 解析器 | §4.2 F2 / §3.1 VehiclePart | 调 IDK |
+| US-022 TBOX 解析器 | §4.2 F2 / §3.1 VehiclePart | 调 TSP |
+| US-023 CCP 解析器 | §4.2 F2 / §3.1 VehiclePart | 调 TSP |
+| US-024 IDCM 解析器 | §4.2 F2 / §3.1 VehiclePart | 调 TSP |
+| US-025 SIM 解析器 | §4.2 F2 / §3.2 MnoType | 调 TSP |
+| US-026 VehicleLifecycle | §3.2 23 个枚举 / §4.6 F6 | `VEHICLE_INVoICING` 拼写错误（O10）；IMMO_SK 写入暂不生效（O7） |
+| US-027 服务端记录证书/密钥节点 | §5.4.2 8 端点 | + Fallback no-op |
+| US-028 IDCM 二维码生成/轮询 | §3.2 Qrcode 聚合 / §4.4 F4 / §5.2 / D8 / D11 | `isActive()` 恒 true（O6）；`polling()` 空实现（O9） |
+| US-029 Mobile 二维码验证/确认 | §4.4 F4 / §5.3 / §4.6 F6 | + QrcodeValidateEvent / QrcodeConfirmEvent |
+| US-030 5 个 Vmd*Service Feign 契约 | §1.2 模块依赖 / §5.4 全 5 接口 / §4.5 F5 | + FallbackFactory ×5 |
+| US-031 反查生产配置 | §5.4.5 / §3.1 BuildConfig | 任意特征值组合查询 |
+
+## 7. Known Defects & Technical Debt
+
+> 本 spec 为代码现状的逆向基线，本节描述代码中发现但未规定修复方式的已知缺陷与技术债。任何修复必须走 SPEC_GUIDE §6 变更管理（新建 CR）。
+
+| ID | 位置 | 现状 | 影响 |
+|----|------|------|------|
+| TD-1 | `domain/model/aggregate/Vehicle.java:98` `isActive()` | 方法体硬编码 `return true` | 所有 VIN 调用 `IdcmQrcodeController.POST /active` 都被判定为已激活并抛 `VehicleHasActivatedException`，激活闭环跑不通 |
+| TD-2 | `domain/model/aggregate/Qrcode.java:64` `polling()` | 方法体仅含注释"由于 createTime 已移除，polling 逻辑需依赖基础设施层或重新设计，此处暂时移除超时逻辑，待后续完善" | 二维码无过期检测；`QrcodeType.timeout=1800` 字段定义但未消费 |
+| TD-3 | `domain/model/valueobject/VehicleLifecycleNodeEnum.java:50` | 枚举值名 `VEHICLE_INVoICING`（小写 `o`） | 拼写错误；grep 验证当前无消费方，DB 中也无该值实例 |
+| TD-4 | `application/event/subscribe/VehicleSkSubscribe.java` | 整个类 `ExSkService` 字段、import、`onVehicleProduceEvent` 方法体均被注释 | `IMMO_SK` 节点写入触发器永不执行；该节点定义为死分支 |
+| TD-5 | `application/service/VehicleAppService.java` `checkVehiclePresetOwner` | 方法实现被注释（依赖未启用的 `ExAccountService`） | `QrcodeValidateEvent` 触发后预设车主校验跳过 |
+| TD-6 | `adapter/web/controller/mpt/MptVehiclePartController.java` add/edit | 未对 `vin` 做存在性校验 | 可创建无主车辆零件记录（脏数据风险） |
+| TD-7 | 全部 `*Controller.export()` | 仅有 `@Log` 注解和日志，无 Excel/CSV 流响应 | 导出端点不可用（O5） |
+| TD-8 | `adapter/web/controller/mpt/MptVehicleConfigController` | 仅 list / 查询配置项 / export，无 add / edit | 车辆配置无法通过 MPT 写入（O8） |
+
+## 8. Open Questions
+
+无（本 spec 为代码现状基线，所有已识别歧义与未来改造均归类至 §7 Known Defects 或 requirements §5 Out of Scope）。
+
+## 9. Changelog
+
+| Date | Change ID | Type | Description |
+|------|-----------|------|-------------|
+| 2026-05-23 | CR-001 | Added | 基于 requirements CR-001/CR-002 产出 design 首版（含改造意图） |
+| 2026-05-23 | CR-002 | Modified | **回退首版中夹带的"未来改造"内容，回归纯逆向基线**：D8/D11/D12 改写为现状描述（不规定修复方式）；§3.1 移除 Redis qrcode key 协议；§3.4 移除 V3 迁移；§3.2 Vehicle/Qrcode 聚合行为标注当前缺陷而非改造方案；§4.4 F4 序列图改为反映 `isActive()` 恒 true、`polling()` 空实现的现状；§5.1.15 / §5.2 移除 OQ 决议改造标注；§7 由"Impact Analysis"改写为"Known Defects & Technical Debt"（8 项 TD）；§8 Open Questions 清空。本 spec 自此为代码现状的正本 |
