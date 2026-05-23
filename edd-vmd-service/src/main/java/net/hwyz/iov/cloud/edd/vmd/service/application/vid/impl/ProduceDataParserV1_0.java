@@ -6,6 +6,7 @@ import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ImportResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.publish.VehiclePublish;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParser;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParserRegistry;
@@ -46,40 +47,54 @@ public class ProduceDataParserV1_0 extends BaseParser implements ImportDataParse
     }
 
     @Override
-    public void parse(String batchNum, JSONObject dataJson) {
+    public ImportResult parse(String batchNum, JSONObject dataJson) {
         JSONObject data = getData(dataJson);
         JSONArray items = data.getJSONArray("ITEMS");
-        int vehicleInvalidCount = 0;
+        int totalCount = items.size();
+        int successCount = 0;
+        int failureCount = 0;
+        int invalidCount = 0;
         for (Object item : items) {
             JSONObject itemJson = JSONUtil.parseObj(item);
             String vin = itemJson.getStr("VIN");
             if (StrUtil.isBlank(vin)) {
-                vehicleInvalidCount++;
+                invalidCount++;
                 continue;
             }
-            VehicleBasicInfo vehicleBasicInfo = vehBasicInfoRepository.selectByVin(vin);
-            if (ObjUtil.isNull(vehicleBasicInfo)) {
-                vehicleBasicInfo = VehicleBasicInfo.builder()
-                        .vin(vin)
-                        .build();
+            try {
+                VehicleBasicInfo vehicleBasicInfo = vehBasicInfoRepository.selectByVin(vin);
+                if (ObjUtil.isNull(vehicleBasicInfo)) {
+                    vehicleBasicInfo = VehicleBasicInfo.builder()
+                            .vin(vin)
+                            .build();
+                }
+                handleVehicleInfo(itemJson, vehicleBasicInfo, "MANUFACTURER", "manufacturerCode", "工厂数据", batchNum, vin);
+                handleVehicleInfo(itemJson, vehicleBasicInfo, "BRAND", "brandCode", "品牌数据", batchNum, vin);
+                handleVehicleInfo(itemJson, vehicleBasicInfo, "PLATFORM", "platformCode", "平台数据", batchNum, vin);
+                handleVehicleInfo(itemJson, vehicleBasicInfo, "SERIES", "seriesCode", "车系数据", batchNum, vin);
+                handleVehicleInfo(itemJson, vehicleBasicInfo, "MODEL", "modelCode", "车型数据", batchNum, vin);
+                handleVehicleInfo(itemJson, vehicleBasicInfo, "BASE_MODEL", "baseModelCode", "基础车型数据", batchNum, vin);
+                handleVehicleInfo(itemJson, vehicleBasicInfo, "BUILD_CONFIG", "buildConfigCode", "生产配置数据", batchNum, vin);
+                if (ObjUtil.isNull(vehicleBasicInfo.getId())) {
+                    vehBasicInfoRepository.insert(vehicleBasicInfo);
+                } else {
+                    vehBasicInfoRepository.update(vehicleBasicInfo);
+                }
+                vehiclePublish.produce(vin);
+                successCount++;
+            } catch (Exception e) {
+                failureCount++;
+                log.warn("车辆生产导入数据批次号[{}]车辆[{}]处理失败: {}", batchNum, vin, e.getMessage());
             }
-            handleVehicleInfo(itemJson, vehicleBasicInfo, "MANUFACTURER", "manufacturerCode", "工厂数据", batchNum, vin);
-            handleVehicleInfo(itemJson, vehicleBasicInfo, "BRAND", "brandCode", "品牌数据", batchNum, vin);
-            handleVehicleInfo(itemJson, vehicleBasicInfo, "PLATFORM", "platformCode", "平台数据", batchNum, vin);
-            handleVehicleInfo(itemJson, vehicleBasicInfo, "SERIES", "seriesCode", "车系数据", batchNum, vin);
-            handleVehicleInfo(itemJson, vehicleBasicInfo, "MODEL", "modelCode", "车型数据", batchNum, vin);
-            handleVehicleInfo(itemJson, vehicleBasicInfo, "BASE_MODEL", "baseModelCode", "基础车型数据", batchNum, vin);
-            handleVehicleInfo(itemJson, vehicleBasicInfo, "BUILD_CONFIG", "buildConfigCode", "生产配置数据", batchNum, vin);
-            if (ObjUtil.isNull(vehicleBasicInfo.getId())) {
-                vehBasicInfoRepository.insert(vehicleBasicInfo);
-            } else {
-                vehBasicInfoRepository.update(vehicleBasicInfo);
-            }
-            // 发布事件
-            vehiclePublish.produce(vin);
         }
-        if (vehicleInvalidCount > 0) {
-            log.warn("车辆生产导入数据批次号[{}]存在无效车辆数据[{}]", batchNum, vehicleInvalidCount);
+        if (invalidCount > 0) {
+            log.warn("车辆生产导入数据批次号[{}]存在无效车辆数据[{}]", batchNum, invalidCount);
         }
+        return ImportResult.builder()
+                .totalCount(totalCount)
+                .successCount(successCount)
+                .failureCount(failureCount)
+                .invalidCount(invalidCount)
+                .build();
     }
 }

@@ -6,6 +6,7 @@ import cn.hutool.json.JSONUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.VehicleImportDataAssembler;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ImportResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.VehicleImportDataDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.VehicleImportDataQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParser;
@@ -69,20 +70,22 @@ public class VehicleImportDataAppService {
      * 解析车辆导入数据
      *
      * @param batchNum 批次号
+     * @return 导入处理结果
      */
-    public void parseVehicleImportData(String batchNum) {
+    public ImportResult parseVehicleImportData(String batchNum) {
         VehicleImportData vehicleImportData = vehImportDataRepository.selectByBatchNum(batchNum);
         if (ObjUtil.isNull(vehicleImportData)) {
             log.warn("批次号[{}]对应的导入数据不存在", batchNum);
-            return;
+            return ImportResult.builder().build();
         }
         String type = vehicleImportData.getType();
         String version = vehicleImportData.getVersion();
         ImportDataParser importDataParser = parserRegistry.getParser(type, version);
         JSONObject dataJson = JSONUtil.parseObj(vehicleImportData.getData());
-        importDataParser.parse(batchNum, dataJson);
+        ImportResult result = importDataParser.parse(batchNum, dataJson);
         vehicleImportData.setHandle(true);
         vehImportDataRepository.update(vehicleImportData);
+        return result;
     }
 
     /**

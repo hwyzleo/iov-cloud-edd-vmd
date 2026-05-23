@@ -6,6 +6,7 @@ import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ImportResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParser;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParserRegistry;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.VehicleImportDataException;
@@ -50,7 +51,7 @@ public class SimDataParserV1_0 extends BaseParser implements ImportDataParser {
     }
 
     @Override
-    public void parse(String batchNum, JSONObject dataJson) {
+    public ImportResult parse(String batchNum, JSONObject dataJson) {
         JSONObject data = getData(dataJson);
         String mno = data.getStr("MNO");
         if (StrUtil.isBlank(mno)) {
@@ -65,22 +66,30 @@ public class SimDataParserV1_0 extends BaseParser implements ImportDataParser {
         req.setMnoType(mnoType);
         List<SimVo> simList = new ArrayList<>();
         JSONArray items = data.getJSONArray("ITEMS");
-        int simInvalidCount = 0;
+        int totalCount = items.size();
+        int invalidCount = 0;
         for (Object item : items) {
             JSONObject itemJson = JSONUtil.parseObj(item);
             String iccid = itemJson.getStr("ICCID");
             String imsi = itemJson.getStr("IMSI");
             String msisdn = itemJson.getStr("MSISDN");
             if (StrUtil.isBlank(iccid) && StrUtil.isBlank(imsi) && StrUtil.isBlank(msisdn)) {
-                simInvalidCount++;
+                invalidCount++;
                 continue;
             }
             simList.add(SimVo.builder().iccid(iccid).imsi(imsi).msisdn(msisdn).build());
         }
-        if (simInvalidCount > 0) {
-            log.warn("SIM卡导入数据批次号[{}]存在无效SIM卡数据[{}]", batchNum, simInvalidCount);
+        if (invalidCount > 0) {
+            log.warn("SIM卡导入数据批次号[{}]存在无效SIM卡数据[{}]", batchNum, invalidCount);
         }
+        int successCount = simList.size();
         req.setSimList(simList);
         tspSimService.batchImport(req);
+        return ImportResult.builder()
+                .totalCount(totalCount)
+                .successCount(successCount)
+                .failureCount(0)
+                .invalidCount(invalidCount)
+                .build();
     }
 }

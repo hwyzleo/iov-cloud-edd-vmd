@@ -4,9 +4,11 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.VehicleImportDataRequest;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.ImportResultResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.VehicleImportDataResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.MptVehicleImportDataAssembler;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.VehicleImportDataCmd;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ImportResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.VehicleImportDataDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.VehicleImportDataQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleImportDataAppService;
@@ -94,7 +96,7 @@ public class MptVehicleImportDataController extends BaseController {
     @Log(title = "车辆导入数据管理", businessType = BusinessType.INSERT)
     @RequiresPermissions("completeVehicle:vehicle:importData:add")
     @PostMapping
-    public ApiResponse<Void> add(@Validated @RequestBody VehicleImportDataRequest vehicleImportData) {
+    public ApiResponse<ImportResultResponse> add(@Validated @RequestBody VehicleImportDataRequest vehicleImportData) {
         log.info("管理后台用户[{}]新增车辆导入数据[{}]", SecurityContextHolder.getUserName(), vehicleImportData.getBatchNum());
         if (!vehicleImportDataAppService.checkBatchNumUnique(vehicleImportData.getId(), vehicleImportData.getBatchNum())) {
             return ApiResponse.fail("新增车辆导入数据'" + vehicleImportData.getBatchNum() + "'失败，批次号已存在");
@@ -104,12 +106,18 @@ public class MptVehicleImportDataController extends BaseController {
             return ApiResponse.fail("操作失败");
         }
         try {
-            vehicleImportDataAppService.parseVehicleImportData(vehicleImportData.getBatchNum());
+            ImportResult result = vehicleImportDataAppService.parseVehicleImportData(vehicleImportData.getBatchNum());
+            ImportResultResponse response = ImportResultResponse.builder()
+                    .totalCount(result.getTotalCount())
+                    .successCount(result.getSuccessCount())
+                    .failureCount(result.getFailureCount())
+                    .invalidCount(result.getInvalidCount())
+                    .build();
+            return ApiResponse.ok(response);
         } catch (Exception e) {
             log.error("车辆导入数据[{}]解析异常", vehicleImportData.getBatchNum(), e);
             return ApiResponse.fail("车辆导入数据'" + vehicleImportData.getBatchNum() + "'解析异常");
         }
-        return ApiResponse.ok();
     }
 
     /**
@@ -121,7 +129,7 @@ public class MptVehicleImportDataController extends BaseController {
     @Log(title = "车辆导入数据管理", businessType = BusinessType.UPDATE)
     @RequiresPermissions("completeVehicle:vehicle:importData:edit")
     @PutMapping
-    public ApiResponse<Void> edit(@Validated @RequestBody VehicleImportDataRequest vehicleImportData) {
+    public ApiResponse<ImportResultResponse> edit(@Validated @RequestBody VehicleImportDataRequest vehicleImportData) {
         log.info("管理后台用户[{}]修改保存车辆导入数据[{}]", SecurityContextHolder.getUserName(), vehicleImportData.getBatchNum());
         if (!vehicleImportDataAppService.checkBatchNumUnique(vehicleImportData.getId(), vehicleImportData.getBatchNum())) {
             return ApiResponse.fail("修改保存车辆导入数据'" + vehicleImportData.getBatchNum() + "'失败，批次号已存在");
@@ -131,12 +139,18 @@ public class MptVehicleImportDataController extends BaseController {
             return ApiResponse.fail("操作失败");
         }
         try {
-            vehicleImportDataAppService.parseVehicleImportData(vehicleImportData.getBatchNum());
+            ImportResult result = vehicleImportDataAppService.parseVehicleImportData(vehicleImportData.getBatchNum());
+            ImportResultResponse response = ImportResultResponse.builder()
+                    .totalCount(result.getTotalCount())
+                    .successCount(result.getSuccessCount())
+                    .failureCount(result.getFailureCount())
+                    .invalidCount(result.getInvalidCount())
+                    .build();
+            return ApiResponse.ok(response);
         } catch (Exception e) {
             log.error("车辆导入数据[{}]解析异常", vehicleImportData.getBatchNum(), e);
             return ApiResponse.fail("车辆导入数据'" + vehicleImportData.getBatchNum() + "'解析异常");
         }
-        return ApiResponse.ok();
     }
 
     /**

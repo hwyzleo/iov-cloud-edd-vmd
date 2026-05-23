@@ -1,6 +1,7 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.vid;
 
 import cn.hutool.json.JSONObject;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ImportResult;
 
 /**
  * 导入数据解析器
@@ -28,7 +29,8 @@ public interface ImportDataParser {
      *
      * @param batchNum 批次号
      * @param dataJson 数据JSON
+     * @return 导入处理结果
      */
-    void parse(String batchNum, JSONObject dataJson);
+    ImportResult parse(String batchNum, JSONObject dataJson);
 
 }

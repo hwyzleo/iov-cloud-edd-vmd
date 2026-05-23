@@ -5,6 +5,7 @@ import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ImportResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParser;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParserRegistry;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehiclePart;
@@ -51,14 +52,15 @@ public class IdcmDataParserV1_0 extends BaseParser implements ImportDataParser {
     }
 
     @Override
-    public void parse(String batchNum, JSONObject dataJson) {
+    public ImportResult parse(String batchNum, JSONObject dataJson) {
         String supplier = getSupplier(dataJson);
         if (StrUtil.isBlank(supplier)) {
             log.warn("信息娱乐模块导入数据批次号[{}]供应商代码为空", batchNum);
         }
         JSONObject data = getData(dataJson);
         JSONArray items = data.getJSONArray("ITEMS");
-        int idcmInvalidCount = 0;
+        int totalCount = items.size();
+        int invalidCount = 0;
         BatchImportIdcmRequest request = new BatchImportIdcmRequest();
         request.setBatchNum(batchNum);
         request.setSupplierCode(supplier);
@@ -71,7 +73,7 @@ public class IdcmDataParserV1_0 extends BaseParser implements ImportDataParser {
             String hsm = itemJson.getStr("HSM");
             String mac = itemJson.getStr("MAC");
             if (StrUtil.isBlank(sn)) {
-                idcmInvalidCount++;
+                invalidCount++;
                 continue;
             }
             Map<String, Object> extra = new HashMap<>(2);
@@ -93,11 +95,18 @@ public class IdcmDataParserV1_0 extends BaseParser implements ImportDataParser {
                     .mac(mac)
                     .build());
         }
-        if (idcmInvalidCount > 0) {
-            log.warn("信息娱乐模块导入数据批次号[{}]存在无效信息娱乐模块数据[{}]", batchNum, idcmInvalidCount);
+        if (invalidCount > 0) {
+            log.warn("信息娱乐模块导入数据批次号[{}]存在无效信息娱乐模块数据[{}]", batchNum, invalidCount);
         }
+        int successCount = idcmList.size();
         createVehiclePart(vehiclePartList);
         request.setIdcmList(idcmList);
         tspIdcmInfoService.batchImport(request);
+        return ImportResult.builder()
+                .totalCount(totalCount)
+                .successCount(successCount)
+                .failureCount(0)
+                .invalidCount(invalidCount)
+                .build();
     }
 }

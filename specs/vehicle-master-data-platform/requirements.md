@@ -187,6 +187,7 @@
 - WHEN 提交导入数据 IF `batchNum` 已存在（不含自身 ID）THEN THE SYSTEM SHALL 返回"批次号已存在"。
 - WHEN 解析时 THE SYSTEM SHALL 通过 `ImportDataParserRegistry.getParser(type, version)` 类型安全获取解析器；解析器不存在时 SHALL 抛出 `ParserNotFoundException`（`VmdErrorCode.PARSER_NOT_FOUND`，错误码 `202013`），由框架统一异常处理链路捕获返回前端明确错误信息。
 - WHEN 解析成功 THE SYSTEM SHALL 将 `VehicleImportData.handle` 置为 true 并 update。
+- WHEN 解析完成 THE SYSTEM SHALL 在 Response 中返回结构化的处理摘要（`ImportResultResponse`），包含 `totalCount`（总记录数）、`successCount`（成功记录数）、`failureCount`（失败记录数）、`invalidCount`（无效记录数），使运营人员可对账。
 - IF 解析过程中抛异常 THEN THE SYSTEM SHALL 在 Controller 层返回 `ApiResponse.fail("车辆导入数据'<batchNum>'解析异常")` 但 import 数据 record 仍保留供重试。
 
 #### US-019: PRODUCE 解析器（V1.0）
@@ -196,6 +197,7 @@
 - WHEN 解析每条 ITEM IF `VIN` 为空 THEN THE SYSTEM SHALL 计入无效计数并跳过该条；批次结束后 SHALL 对无效计数 > 0 的情况输出 `WARN` 日志。
 - WHEN VIN 已存在 THE SYSTEM SHALL 更新 `manufacturerCode/brandCode/platformCode/seriesCode/modelCode/baseModelCode/buildConfigCode` 七项；不存在则新建。
 - WHEN 一条记录处理完成 THE SYSTEM SHALL 通过 `VehiclePublish.produce(vin)` 发布 `VehicleProduceEvent`。
+- WHEN 解析完成 THE SYSTEM SHALL 返回 `ImportResult`，包含 `totalCount/successCount/failureCount/invalidCount` 四项计数。IF 单条处理异常 THEN THE SYSTEM SHALL 计入 `failureCount` 并继续处理下一条。
 
 #### US-020: EOL 解析器（V1.0）
 **As a** System, **I want** 解析车辆下线数据, **so that** 完成 30+ 详细字段入库、绑定零部件、调用 TSP/OTA 下游、记录合格证节点、触发 EOL/PRODUCE 事件。
@@ -212,6 +214,7 @@
 - THE SYSTEM SHALL 通过 `VehicleEolTspOtaSubscribe` 异步订阅 `VehicleEolPartBoundEvent`，在订阅者中完成 TSP/OTA 下游调用：TBOX → `tspVehicleNetworkService.create()`（仅 `ICCID1` 非空时）+ `tspVehicleTboxService.bind()`；CCP → `tspVehicleCcpService.bind()`；IDCM → `tspVehicleIdcmService.bind()`；全量零件 → `otaVehiclePartService.saveVehicleParts(vin, "车辆下线")`。
 - IF 订阅者调用下游服务失败 THEN THE SYSTEM SHALL 记录 `WARN` 日志，不影响 EOL 解析主流程的成功返回。
 - THE SYSTEM SHALL 通过 `vehiclePartAppService.bindVehiclePart()` 绑定零件，`bindOrg="MES"`。
+- WHEN 解析完成 THE SYSTEM SHALL 返回 `ImportResult`，包含 `totalCount/successCount/failureCount/invalidCount` 四项计数。IF 单条处理异常 THEN THE SYSTEM SHALL 计入 `failureCount` 并继续处理下一条。
 
 #### US-021: BTM 解析器（V1.0）
 **As a** System, **I want** 解析蓝牙模块数据, **so that** 入库车辆零件并通知 IDK 服务批量导入。
@@ -221,6 +224,7 @@
 - THE SYSTEM SHALL 将 `HSM/MAC` 序列化进 `extra` JSON。
 - THE SYSTEM SHALL 创建 `VehiclePart`（`deviceCode="BTM_M"`, `deviceItem=BTM`）。
 - THE SYSTEM SHALL 调用 `idkBtmInfoService.batchImport()` 同步至 IDK。
+- WHEN 解析完成 THE SYSTEM SHALL 返回 `ImportResult`，包含 `totalCount/successCount/failureCount/invalidCount` 四项计数。
 
 #### US-022: TBOX 解析器（V1.0）
 **As a** System, **I want** 解析车联终端数据。
@@ -229,6 +233,7 @@
 - WHEN 解析 ITEM IF `pn` 为空 OR `sn` 为空 OR `iccid1`/`iccid2` 都为空 THEN THE SYSTEM SHALL 计入无效计数并跳过。
 - THE SYSTEM SHALL 将 `IMEI/ICCID1/ICCID2/HSM` 序列化进 `extra`。
 - THE SYSTEM SHALL 调用 `tspTboxInfoService.batchImport()`。
+- WHEN 解析完成 THE SYSTEM SHALL 返回 `ImportResult`，包含 `totalCount/successCount/failureCount/invalidCount` 四项计数。
 
 #### US-023: CCP 解析器（V1.0）
 **As a** System, **I want** 解析中央计算平台数据。
@@ -237,6 +242,7 @@
 - WHEN 解析 ITEM IF `pn` 为空 OR `sn` 为空 THEN THE SYSTEM SHALL 计入无效计数并跳过。
 - THE SYSTEM SHALL 将 `HSM` 序列化进 `extra`。
 - THE SYSTEM SHALL 调用 `tspCcpInfoService.batchImport()`。
+- WHEN 解析完成 THE SYSTEM SHALL 返回 `ImportResult`，包含 `totalCount/successCount/failureCount/invalidCount` 四项计数。
 
 #### US-024: IDCM 解析器（V1.0）
 **As a** System, **I want** 解析信息娱乐模块数据。
@@ -245,6 +251,7 @@
 - WHEN 解析 ITEM IF `sn` 为空 THEN THE SYSTEM SHALL 计入无效计数并跳过。
 - THE SYSTEM SHALL 将 `HSM/MAC` 序列化进 `extra`。
 - THE SYSTEM SHALL 调用 `tspIdcmInfoService.batchImport()`。
+- WHEN 解析完成 THE SYSTEM SHALL 返回 `ImportResult`，包含 `totalCount/successCount/failureCount/invalidCount` 四项计数。
 
 #### US-025: SIM 解析器（V1.0）
 **As a** System, **I want** 解析 SIM 卡数据。
@@ -254,6 +261,7 @@
 - IF `MNO` 不能解析为 `MnoType` 枚举值 THEN THE SYSTEM SHALL 抛 `VehicleImportDataException(batchNum, "SIM卡导入数据运营商[<mno>]未识别")`。
 - WHEN ITEM `iccid/imsi/msisdn` 三者全空 THE SYSTEM SHALL 计入无效计数并跳过。
 - THE SYSTEM SHALL 调用 `tspSimService.batchImport()`。
+- WHEN 解析完成 THE SYSTEM SHALL 返回 `ImportResult`，包含 `totalCount/successCount/failureCount/invalidCount` 四项计数。
 
 ### 3.8 车辆生命周期记录域
 
@@ -349,4 +357,5 @@
 | 2026-05-23 | CR-004 | Removed | **移除 US-028/US-029 车机+移动端二维码激活闭环**：该功能与 VMD 核心职责（车辆主数据管理）相关性不大，整体移除 §3.9 章节、G4 目标、N4 非目标、O1/O6/O9 Out of Scope 条目；对应代码（Qrcode 聚合、IDCM/Mobile 控制器、相关事件/异常/DTO）同步清除 |
 | 2026-05-23 | CR-005 | Modified | **US-020 EOL 解析器改事件驱动**：将 TSP/OTA 同步 Feign 调用改为发布 `VehicleEolPartBoundEvent` 事件 + 异步订阅者处理，解除 VMD↔TSP/OTA 同步耦合，提升 EOL 解析可用性 |
 | 2026-05-23 | CR-006 | Modified | **US-011 VIN 不存在改为抛异常（fail-fast）**：回退 CR-002/CR-003 中"VIN 不存在返回 null"的既定契约，改为抛出 `VehicleNotExistException`（`VmdErrorCode.VEHICLE_NOT_EXIST`，错误码 `202001`）；同时 `VmdBaseException` 基类从 `BaseException`（int code）改为继承 `BusinessException`（ErrorCode 接口），统一纳入 `GlobalExceptionHandler` 的 `BusinessException` 捕获链路；新增 `VmdErrorCode` 枚举集中管理 VMD 模块错误码；`VmdVehicleServiceFallbackFactory.getByVin` 改为抛 `RuntimeException` 而非返回 null |
+| 2026-05-23 | CR-009 | Modified | **US-018~025 批量导入返回结构化处理摘要**：`ImportDataParser.parse()` 返回类型从 `void` 改为 `ImportResult`（含 `totalCount/successCount/failureCount/invalidCount`）；所有 7 个解析器（PRODUCE/EOL/BTM/TBOX/CCP/IDCM/SIM）实现计数回传；`MptVehicleImportDataController.add/edit` 响应从 `ApiResponse<Void>` 改为 `ApiResponse<ImportResultResponse>`，运营人员可对账 |
 
