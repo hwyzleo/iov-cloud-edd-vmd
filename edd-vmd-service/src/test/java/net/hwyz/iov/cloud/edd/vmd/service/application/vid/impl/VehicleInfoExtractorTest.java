@@ -57,7 +57,7 @@ class VehicleInfoExtractorTest {
     }
 
     @Test
-    void extractBasicInfo_existingVehicle_updatesFields() {
+    void extractBasicInfo_existingVehicle_preservesExistingFields() {
         VehicleBasicInfo existing = VehicleBasicInfo.builder()
                 .id(1L)
                 .vin(VIN)
