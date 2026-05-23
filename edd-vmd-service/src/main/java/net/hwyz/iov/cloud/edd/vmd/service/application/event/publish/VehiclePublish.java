@@ -3,11 +3,13 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.event.publish;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.VehicleEolEvent;
+import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.VehicleEolPartBoundEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.VehicleProduceEvent;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
+import java.util.List;
 
 /**
  * 车辆事件发布类
@@ -40,6 +42,17 @@ public class VehiclePublish {
     public void eol(String vin, Instant eolTime) {
         log.info("发布车辆[{}]下线事件", vin);
         ctx.publishEvent(new VehicleEolEvent(vin, eolTime));
+    }
+
+    /**
+     * 车辆下线零件绑定完成
+     *
+     * @param vin   车架号
+     * @param parts 零件元数据列表
+     */
+    public void eolPartBound(String vin, List<VehicleEolPartBoundEvent.PartMeta> parts) {
+        log.info("发布车辆[{}]下线零件绑定事件，零件数[{}]", vin, parts.size());
+        ctx.publishEvent(new VehicleEolPartBoundEvent(vin, parts));
     }
 
 }

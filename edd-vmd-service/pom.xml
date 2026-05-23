@@ -69,6 +69,12 @@
             <groupId>net.hwyz.iov.cloud.framework</groupId>
             <artifactId>framework-redis-starter</artifactId>
         </dependency>
+
+        <!-- 框架: Kafka（为未来事件总线迁移预留） -->
+        <dependency>
+            <groupId>net.hwyz.iov.cloud.framework</groupId>
+            <artifactId>framework-kafka-starter</artifactId>
+        </dependency>
     </dependencies>
 
 </project>

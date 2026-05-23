@@ -8,6 +8,7 @@ import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.VehicleEolPartBoundEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.publish.VehiclePublish;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.DeviceAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleAppService;
@@ -19,19 +20,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleBasicInfo;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleDetail;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehiclePart;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
-import net.hwyz.iov.cloud.framework.common.enums.DeviceItem;
 import net.hwyz.iov.cloud.framework.common.util.StrUtil;
-import net.hwyz.iov.cloud.iov.ota.api.service.OtaVehiclePartService;
-import net.hwyz.iov.cloud.iov.ota.api.vo.VehiclePartExService;
-import net.hwyz.iov.cloud.iov.ota.api.vo.request.SaveVehiclePartsRequest;
-import net.hwyz.iov.cloud.iov.tsp.api.service.TspVehicleCcpService;
-import net.hwyz.iov.cloud.iov.tsp.api.service.TspVehicleIdcmService;
-import net.hwyz.iov.cloud.iov.tsp.api.service.TspVehicleNetworkService;
-import net.hwyz.iov.cloud.iov.tsp.api.service.TspVehicleTboxService;
-import net.hwyz.iov.cloud.iov.tsp.api.vo.VehicleCcpVo;
-import net.hwyz.iov.cloud.iov.tsp.api.vo.VehicleIdcmVo;
-import net.hwyz.iov.cloud.iov.tsp.api.vo.VehicleNetworkVo;
-import net.hwyz.iov.cloud.iov.tsp.api.vo.VehicleTboxVo;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
@@ -54,12 +43,7 @@ public class EolDataParserV1_0 extends BaseParser implements ImportDataParser {
     private final VehBasicInfoRepository vehBasicInfoRepository;
     private final DeviceAppService deviceAppService;
     private final VehicleAppService vehicleAppService;
-    private final TspVehicleCcpService tspVehicleCcpService;
-    private final OtaVehiclePartService otaVehiclePartService;
-    private final TspVehicleTboxService tspVehicleTboxService;
-    private final TspVehicleIdcmService tspVehicleIdcmService;
     private final VehiclePartAppService vehiclePartAppService;
-    private final TspVehicleNetworkService tspVehicleNetworkService;
     private final VehicleLifecycleAppService vehicleLifecycleAppService;
 
     @Override
@@ -152,10 +136,7 @@ public class EolDataParserV1_0 extends BaseParser implements ImportDataParser {
                 }
             }
             JSONArray parts = itemJson.getJSONArray("PARTS");
-            SaveVehiclePartsRequest request = new SaveVehiclePartsRequest();
-            request.setVin(vin);
-            request.setRemark("车辆下线");
-            List<VehiclePartExService> vehiclePartList = new ArrayList<>();
+            List<VehicleEolPartBoundEvent.PartMeta> partMetaList = new ArrayList<>();
             for (Object part : parts) {
                 JSONObject partJson = JSONUtil.parseObj(part);
                 String deviceCode = partJson.getStr("DEVICE_CODE");
@@ -177,29 +158,23 @@ public class EolDataParserV1_0 extends BaseParser implements ImportDataParser {
                 String softwareVersion = partJson.getStr("SOFTWARE_VERSION");
                 String hardwarePn = partJson.getStr("HARDWARE_PN");
                 String softwarePn = partJson.getStr("SOFTWARE_PN");
+                String iccid1 = partJson.getStr("ICCID1");
+                String iccid2 = partJson.getStr("ICCID2");
                 if (ObjUtil.isNull(device)) {
                     log.warn("车辆导入数据批次号[{}]车架号[{}]设备[{}]异常", batchNum, vin, deviceCode);
                 }
-                vehiclePartList.add(VehiclePartExService.builder()
-                        .sn(sn)
-                        .pn(pn)
-                        .deviceCode(deviceCode)
-                        .deviceItem(device != null ? device.getDeviceItem() : null)
-                        .supplierCode(supplierCode)
-                        .batchNum(batchNum)
-                        .configWord(configWord)
-                        .hardwareVer(hardwareVersion)
-                        .softwareVer(softwareVersion)
-                        .hardwarePn(hardwarePn)
-                        .softwarePn(softwarePn)
-                        .build());
+                String deviceItem = device != null ? device.getDeviceItem() : null;
+                partMetaList.add(new VehicleEolPartBoundEvent.PartMeta(
+                        sn, pn, deviceCode, deviceItem, supplierCode, batchNum,
+                        configWord, hardwareVersion, softwareVersion, hardwarePn, softwarePn,
+                        iccid1, iccid2));
                 try {
                     vehiclePartAppService.bindVehiclePart(VehiclePart.builder()
                             .pn(pn)
                             .sn(sn)
                             .vin(vin)
                             .deviceCode(deviceCode)
-                            .deviceItem(device != null ? device.getDeviceItem() : null)
+                            .deviceItem(deviceItem)
                             .supplierCode(supplierCode)
                             .batchNum(batchNum)
                             .configWord(configWord)
@@ -212,27 +187,11 @@ public class EolDataParserV1_0 extends BaseParser implements ImportDataParser {
                 } catch (Exception e) {
                     log.warn("车辆导入数据批次号[{}]车架号[{}]零部件[{}]绑定异常", batchNum, vin, deviceCode, e);
                 }
-                if (device != null && DeviceItem.TBOX.name().equalsIgnoreCase(device.getDeviceItem())) {
-                    String iccid1 = partJson.getStr("ICCID1");
-                    String iccid2 = partJson.getStr("ICCID2");
-                    if (StrUtil.isNotBlank(iccid1)) {
-                        tspVehicleNetworkService.create(VehicleNetworkVo.builder()
-                                .vin(vin)
-                                .iccid1(iccid1)
-                                .iccid2(iccid2)
-                                .build());
-                    }
-                    tspVehicleTboxService.bind(VehicleTboxVo.builder().vin(vin).sn(sn).build());
-                }
-                if (device != null && DeviceItem.CCP.name().equalsIgnoreCase(device.getDeviceItem())) {
-                    tspVehicleCcpService.bind(VehicleCcpVo.builder().vin(vin).sn(sn).build());
-                }
-                if (device != null && DeviceItem.IDCM.name().equalsIgnoreCase(device.getDeviceItem())) {
-                    tspVehicleIdcmService.bind(VehicleIdcmVo.builder().vin(vin).sn(sn).build());
-                }
             }
-            request.setVehiclePartList(vehiclePartList);
-            otaVehiclePartService.saveVehicleParts(vin, request);
+            // 发布零件绑定事件，由异步订阅者通知 TSP/OTA
+            if (!partMetaList.isEmpty()) {
+                vehiclePublish.eolPartBound(vin, partMetaList);
+            }
         }
         if (vehicleInvalidCount > 0) {
             log.warn("车辆生产导入数据批次号[{}]存在无效车辆数据[{}]", batchNum, vehicleInvalidCount);

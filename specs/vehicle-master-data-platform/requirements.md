@@ -208,10 +208,9 @@
 - THE SYSTEM SHALL 入库以下详细字段：`PRODUCTION_ORDER/MATNR/PROJECT/SALES_AREA/BODY_TYPE/CONFIG_LEVEL/MODEL_YEAR/STEERING_POSITION/INTERIOR_STYLE/EXTERIOR_COLOR/DRIVE_TYPE/WHEEL/TIRE/SEAT_TYPE/ASSISTED_DRIVING/ETC_SYSTEM/REAR_TOW_BAR/ENGINE_NO/ENGINE_TYPE/FRONT_DRIVE_MOTOR_NO/FRONT_DRIVE_MOTOR_TYPE/REAR_DRIVE_MOTOR_NO/REAR_DRIVE_MOTOR_TYPE/GENERATOR_NO/GENERATOR_TYPE/POWER_BATTERY_PACK_NO/POWER_BATTERY_TYPE/POWER_BATTERY_FACTORY`。
 - WHEN `CERT_DATE` 非空 THE SYSTEM SHALL 调用 `vehicleLifecycleAppService.recordCertificateNode(vin, certDate)`。
 - WHEN 解析 `PARTS` 数组 IF 元素 `VIN` 与外层 `VIN` 不一致 THEN THE SYSTEM SHALL 输出 `WARN` 并跳过该零件。
-- WHEN 零件设备项为 TBOX THE SYSTEM SHALL 调用 `tspVehicleNetworkService.create()`（仅在 `ICCID1` 非空时）+ `tspVehicleTboxService.bind()`。
-- WHEN 零件设备项为 CCP THE SYSTEM SHALL 调用 `tspVehicleCcpService.bind()`。
-- WHEN 零件设备项为 IDCM THE SYSTEM SHALL 调用 `tspVehicleIdcmService.bind()`。
-- THE SYSTEM SHALL 调用 `otaVehiclePartService.saveVehicleParts(vin, request)` 同步零件列表到 OTA 服务，`remark` 固定为 "车辆下线"。
+- WHEN 零件绑定完成 THE SYSTEM SHALL 发布 `VehicleEolPartBoundEvent` 事件（携带 `vin` + 零件列表 + 各零件的设备项/SN/ICCID 等元数据）。
+- THE SYSTEM SHALL 通过 `VehicleEolTspOtaSubscribe` 异步订阅 `VehicleEolPartBoundEvent`，在订阅者中完成 TSP/OTA 下游调用：TBOX → `tspVehicleNetworkService.create()`（仅 `ICCID1` 非空时）+ `tspVehicleTboxService.bind()`；CCP → `tspVehicleCcpService.bind()`；IDCM → `tspVehicleIdcmService.bind()`；全量零件 → `otaVehiclePartService.saveVehicleParts(vin, "车辆下线")`。
+- IF 订阅者调用下游服务失败 THEN THE SYSTEM SHALL 记录 `WARN` 日志，不影响 EOL 解析主流程的成功返回。
 - THE SYSTEM SHALL 通过 `vehiclePartAppService.bindVehiclePart()` 绑定零件，`bindOrg="MES"`。
 
 #### US-021: BTM 解析器（V1.0）
@@ -348,4 +347,5 @@
 | 2026-05-23 | CR-002 | Modified | OQ-1/2/3/4/5/6 决议落地：US-011 锁定 VIN 不存在返回 null（不抛异常）；§5 移除 O6；§7 Open Questions 已全部决议，章节删除 |
 | 2026-05-23 | CR-003 | Modified | **回退 CR-002 中夹带的"未来改造"意图，回归纯逆向基线**：移除 US-017 VIN 校验、US-026 V3 迁移与 IMMO_SK 改造；这些改造意图改为以"已知缺陷"形式记录于 §5 Out of Scope；US-011（VIN 不存在返回 null）保留为现状契约。本 spec 自此为"代码现状的正本"，未来任何改造一律走新 CR 单独立项 |
 | 2026-05-23 | CR-004 | Removed | **移除 US-028/US-029 车机+移动端二维码激活闭环**：该功能与 VMD 核心职责（车辆主数据管理）相关性不大，整体移除 §3.9 章节、G4 目标、N4 非目标、O1/O6/O9 Out of Scope 条目；对应代码（Qrcode 聚合、IDCM/Mobile 控制器、相关事件/异常/DTO）同步清除 |
+| 2026-05-23 | CR-005 | Modified | **US-020 EOL 解析器改事件驱动**：将 TSP/OTA 同步 Feign 调用改为发布 `VehicleEolPartBoundEvent` 事件 + 异步订阅者处理，解除 VMD↔TSP/OTA 同步耦合，提升 EOL 解析可用性 |
 

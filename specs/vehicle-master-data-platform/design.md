@@ -126,7 +126,7 @@ graph TB
 | D4 | 跨层对象转换 | MapStruct（编译期生成） | BeanUtils / 手写 | 编译期检查 + 零反射，已在 `application/assembler` 与 `infrastructure/persistence/converter` 全面使用 |
 | D5 | 架构模式 | DDD 四层 + 仓储模式 | 贫血三层（Controller/Service/DAO） | PROJECT_GUIDE 硬性要求；聚合 `Vehicle`/`Qrcode` 自带行为（如 `bindOrder`、`validate`、`confirm`），避免逻辑下沉到 Service |
 | D6 | 分页策略 | PageHelper `startPage()` + `getPageResult()`，下沉 SQL `LIMIT` | `findAll()` + 内存分页 / 自写 OFFSET | PROJECT_GUIDE 反向模式禁止内存分页；MPT 列表需稳定性能 |
-| D7 | 域内事件分发 | Spring `ApplicationEventPublisher`（同进程同步） | Kafka 跨进程异步 | 当前事件链路均在 edd-vmd 内部（PRODUCE→Lifecycle / EOL→Lifecycle / QrcodeConfirm→Active），同步确保事务一致性；跨域事件由 AppService 显式调用下游 Feign 而非事件总线 |
+| D7 | 域内事件分发 | Spring `ApplicationEventPublisher`（同进程） | Kafka 跨进程异步 | 当前事件链路均在 edd-vmd 内部；生命周期节点写入（PRODUCE/EOL）使用同步 `@EventListener` 确保事务一致性；**EOL 解析器对 TSP/OTA 的下游调用通过 `VehicleEolPartBoundEvent` + `@Async @EventListener` 异步解耦**，下游不可用时不阻塞 EOL 主流程；未来可平滑迁移至 Kafka |
 | D8 | 二维码过期机制 | **当前为空实现（已知缺陷，对应 §5 O9）**；`Qrcode.polling()` 方法体仅含注释 "由于 createTime 已移除，polling 逻辑需依赖基础设施层或重新设计，此处暂时移除超时逻辑，待后续完善"；`QrcodeType.VEHICLE_ACTIVE.timeout=1800` 字段已在 `edd-vmd-api` 定义但未被消费 | ① Redis TTL（Key 自动过期） ② 数据库定时扫表 ③ Qrcode 表加 `expireTime` 列 | Rationale：本 spec 为代码现状基线，仅记录缺陷形态，不规定修复方式。备选项均不在当前代码中体现 |
 | D9 | 导入解析器 SPI | Spring Bean Name 命名约定 + `applicationContext.getBean("<type>DataParserV<version>")` | ① ServiceLoader ② 显式注册表 ③ 策略枚举 | 已存在 7 个解析器（`produceDataParserV1.0` 等）；新增解析器只需注册 Bean，零侵入；命名约定支持版本切换（V2.0 时不破坏 V1.0） |
 | D10 | Feign 契约策略（**OQ-2 决议**） | 强类型 DTO + `*FallbackFactory` + VIN 不存在返回 `null` | 抛 `VehicleNotExistException` / 返回 `Optional<T>` | **决议保持现状**：抛异常会破坏所有现有下游调用方；`Optional` 类型在 Feign 跨进程 JSON 序列化中不被原生支持；下游通过 fallback + null 检查实现降级 |
@@ -294,7 +294,7 @@ sequenceDiagram
 
 **对应 US**：US-018 ~ US-025。
 
-### 4.3 F3 - EOL 解析联动 TSP/OTA/IDK + 生命周期
+### 4.3 F3 - EOL 解析联动生命周期 + 发布零件绑定事件
 
 ```mermaid
 sequenceDiagram
@@ -302,8 +302,6 @@ sequenceDiagram
     participant V as VehicleAppService
     participant L as VehicleLifecycleAppService
     participant VP as VehiclePartAppService
-    participant T as TSP Feign
-    participant O as OTA Feign
     participant E as VehiclePublish
 
     Note over P: 对每条 ITEM
@@ -324,16 +322,30 @@ sequenceDiagram
             P->>P: log.warn("跳过")
         else
             P->>VP: bindVehiclePart(vin, part, "MES")
-            alt deviceItem == TBOX
-                P->>T: tspVehicleNetworkService.create()<br/>tspVehicleTboxService.bind()
-            else deviceItem == CCP
-                P->>T: tspVehicleCcpService.bind()
-            else deviceItem == IDCM
-                P->>T: tspVehicleIdcmService.bind()
-            end
         end
     end
-    P->>O: otaVehiclePartService.saveVehicleParts(vin, "车辆下线")
+    P->>E: eolPartBound(vin, partList) → VehicleEolPartBoundEvent
+```
+
+**异步订阅者（VehicleEolTspOtaSubscribe）**：
+```mermaid
+sequenceDiagram
+    participant S as VehicleEolTspOtaSubscribe
+    participant T as TSP Feign
+    participant O as OTA Feign
+
+    Note over S: @Async @EventListener(VehicleEolPartBoundEvent)
+    loop event.parts
+        alt deviceItem == TBOX && ICCID1 非空
+            S->>T: tspVehicleNetworkService.create()
+            S->>T: tspVehicleTboxService.bind()
+        else deviceItem == CCP
+            S->>T: tspVehicleCcpService.bind()
+        else deviceItem == IDCM
+            S->>T: tspVehicleIdcmService.bind()
+        end
+    end
+    S->>O: otaVehiclePartService.saveVehicleParts(vin, "车辆下线")
 ```
 
 **事件订阅副作用**：
@@ -383,28 +395,32 @@ sequenceDiagram
 ```mermaid
 graph LR
     subgraph "Publisher（应用层）"
-        VPub[VehiclePublish<br/>produce/eol]
+        VPub[VehiclePublish<br/>produce/eol/eolPartBound]
     end
 
     subgraph "Event"
         E1[VehicleProduceEvent]
         E2[VehicleEolEvent]
+        E3[VehicleEolPartBoundEvent]
     end
 
     subgraph "Subscriber"
         S1[VehicleLifecycleSubscribe<br/>onProduce → PRODUCE 节点<br/>onEol → EOL 节点]
         S2["VehicleSkSubscribe<br/>onProduce → IMMO_SK 节点<br/>(整体注释，O7)"]
+        S3[VehicleEolTspOtaSubscribe<br/>@Async onEolPartBound<br/>→ TSP bind + OTA sync]
     end
 
     VPub --> E1
     VPub --> E2
+    VPub --> E3
 
     E1 --> S1
     E1 -.x.-> S2
     E2 --> S1
+    E3 --> S3
 ```
 
-**对应 US**：US-026、US-019（PRODUCE 事件）、US-020（EOL 事件）。
+**对应 US**：US-026、US-019（PRODUCE 事件）、US-020（EOL 事件 + 零件绑定事件）。
 
 ## 5. API Contracts
 
@@ -642,3 +658,4 @@ graph LR
 | 2026-05-23 | CR-001 | Added | 基于 requirements CR-001/CR-002 产出 design 首版（含改造意图） |
 | 2026-05-23 | CR-002 | Modified | **回退首版中夹带的"未来改造"内容，回归纯逆向基线**：D8/D11/D12 改写为现状描述（不规定修复方式）；§3.4 移除 V3 迁移；§3.2 Vehicle 聚合行为标注当前缺陷而非改造方案；§5.1.15 移除 OQ 决议改造标注；§7 由"Impact Analysis"改写为"Known Defects & Technical Debt"；§8 Open Questions 清空。本 spec 自此为代码现状的正本 |
 | 2026-05-23 | CR-003 | Removed | **移除 US-028/US-029 车机+移动端二维码激活闭环**：移除 §3.2 Qrcode 聚合、§4.4 F4 序列图、§5.2 IDCM 端、§5.3 Mobile 端、§5.5 错误码表中 Qrcode 相关条目、§6 Coverage Mapping US-028/US-029 行、§7 TD-1/TD-2/TD-5；§4.5 F5 事件订阅图移除 QrcodePublish/QrcodeValidateEvent/QrcodeConfirmEvent |
+| 2026-05-23 | CR-004 | Modified | **US-020 EOL 解析器改事件驱动**：D7 决策更新（EOL 对 TSP/OTA 调用改为 `@Async @EventListener`）；§4.3 F3 时序图重构（EOL parser 只负责数据入库 + 发布 `VehicleEolPartBoundEvent`，TSP/OTA 调用移至 `VehicleEolTspOtaSubscribe`）；§4.5 F5 事件图新增 `VehicleEolPartBoundEvent` 及其订阅者 |
