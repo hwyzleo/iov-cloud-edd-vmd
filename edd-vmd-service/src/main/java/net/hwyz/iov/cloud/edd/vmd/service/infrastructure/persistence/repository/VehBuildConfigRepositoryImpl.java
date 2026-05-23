@@ -93,7 +93,7 @@ public class VehBuildConfigRepositoryImpl implements VehBuildConfigRepository {
     }
 
     @Override
-    public String selectBuildConfigCodeByFeatureCodeMap(Map<String, String> featureCodeMap) {
+    public List<String> selectBuildConfigCodeByFeatureCodeMap(Map<String, String> featureCodeMap) {
         Map<String, Object> params = new java.util.HashMap<>();
         params.put("featureCodeMap", featureCodeMap);
         params.put("familyCount", featureCodeMap.size());
