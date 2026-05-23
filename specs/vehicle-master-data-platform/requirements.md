@@ -5,34 +5,29 @@
 
 ## 1. Overview
 
-`edd-vmd`（车辆主数据 / Vehicle Master Data）是开源车联网（OpenIOV）云端企业数字底座的核心微服务，沉淀从产品定义（品牌→车系→车型→基础车型→生产配置）到物理实例（车辆→零件→设备）再到生命周期事件（生产→密钥→证书→下线→合格证→订单→PDI→激活→交付）的完整车辆主数据，并对外提供管理后台运营能力、车机/移动端激活闭环能力，以及供下游微服务消费的内部 RPC 契约。
+`edd-vmd`（车辆主数据 / Vehicle Master Data）是开源车联网（OpenIOV）云端企业数字底座的核心微服务，沉淀从产品定义（品牌→车系→车型→基础车型→生产配置）到物理实例（车辆→零件→设备）再到生命周期事件（生产→密钥→证书→下线→合格证→订单→PDI→交付）的完整车辆主数据，并对外提供管理后台运营能力，以及供下游微服务消费的内部 RPC 契约。
 
 ## 2. Background & Goals
 
 ### 背景
 - 车联网平台需要一份"车辆"的权威事实来源（VIN→车系车型→零件设备→各阶段时间戳），其他业务域（TSP、OTA、IDK、安全密钥、订单）以此为锚点开展自身业务。
 - 整车生产、下线、密钥、零部件四类离线数据来自 MES/SIM 供应商/Tier1 供应商，需要异步导入并触发跨域事件。
-- 车机端（IDCM）+ 移动端 App 需要"扫码激活"闭环，必须由车辆主数据服务收口"激活态"以驱动生命周期。
 
 ### 目标（Goals）
 - G1：成为车辆全要素主数据（产品树、物理车、零件设备、生命周期）的 SSOT。
 - G2：通过统一 Feign 契约（`Vmd*Service`）对外暴露车辆/零件/设备/车型配置/生命周期五类能力。
 - G3：支持 6 类（PRODUCE/EOL/BTM/CCP/IDCM/TBOX/SIM）批量数据导入并下钻到 TSP/OTA/IDK 等下游服务。
-- G4：实现车机+移动端二维码"生成→扫描→确认"激活闭环，并基于事件机制驱动生命周期节点落库。
-- G5：对管理后台提供完整 CRUD + 鉴权（`completeVehicle:*` / `iov:configCenter:*` 权限点）能力。
+- G4：对管理后台提供完整 CRUD + 鉴权（`completeVehicle:*` / `iov:configCenter:*` 权限点）能力。
 
 ### 非目标（Non-Goals，本期不做）
 - N1：不替代账号服务（`ExAccountService`）做用户身份/手机号实名核验。
 - N2：不替代安全密钥服务（`ExSkService`）执行 IMMO_SK 的实际生成。
 - N3：不实现 V2.0+ 解析器（当前仅 V1.0）。
-- N4：不实现 `QrcodeType.VEHICLE_ACTIVE` 之外的二维码类型场景。
 
 ## 3. User Stories
 
 > 角色定义（贯穿全文）：
 > - **Mpt-User**：管理后台运营/工程师，持有 `completeVehicle:*` 或 `iov:configCenter:*` 权限点。
-> - **Idcm-Client**：车机端（IDCM）调用方，请求头 `X-VIN`、`X-SN`。
-> - **Mobile-User**：移动端 App 当前登录账号（通过 `SecurityUtils.getUserId()` 获取）。
 > - **Service-Caller**：内部微服务（OTA/TSP/账号/订单等）通过 Feign 调用方。
 > - **System**：`edd-vmd` 自身后台异步流程。
 
@@ -284,34 +279,7 @@
 - WHEN 调用 SHALL 写入对应 `VehicleLifecycleNodeEnum`，`reachTime=Instant.now()`。
 - THE SYSTEM SHALL 通过 `VmdVehicleLifecycleServiceFallbackFactory` 提供 fallback。
 
-### 3.9 车辆激活二维码域
-
-#### US-028: 车机端生成 / 轮询激活二维码
-**As an** Idcm-Client, **I want** 通过 `POST /api/idcm/qrcode/v1/active`（请求头 `X-VIN`、`X-SN`）和 `GET /api/idcm/qrcode/v1/active/{qrcode}/state` 生成与轮询二维码状态, **so that** 车机端可展示二维码并感知扫描/确认结果。
-
-**Acceptance Criteria**:
-- WHEN 生成二维码 IF 该 VIN 已激活（`Vehicle.isActive() == true`）THEN THE SYSTEM SHALL 抛 `VehicleHasActivatedException(vin)`。
-  > **已知缺陷**：`Vehicle.isActive()` 当前实现恒为 `return true`，导致所有 VIN 调用本端点都会被判定为已激活并抛异常。激活的真实判定规则未在代码中实现。
-- WHEN 生成二维码 THE SYSTEM SHALL 通过 `QrcodeFactory.buildQrcode(VEHICLE_ACTIVE, vin, sn)` 创建 `Qrcode` 聚合，初始 `qrcodeState=INITIALIZED`。
-- WHEN 查询二维码状态 IF `qrcode` 不存在 THEN THE SYSTEM SHALL 抛 `QrcodeNotExistException(qrcode)`。
-- WHEN 查询二维码状态 IF 传入的 `sn` 与原 `sn` 不一致 THEN THE SYSTEM SHALL 输出 `WARN` 但不阻断。
-- THE SYSTEM SHALL 在每次查询后调用 `qrcode.polling()`。
-  > **已知缺陷**：`Qrcode.polling()` 当前为空实现（注释为"由于 createTime 已移除，polling 逻辑需依赖基础设施层或重新设计，此处暂时移除超时逻辑，待后续完善"），过期检测目前缺位；`QrcodeType.VEHICLE_ACTIVE.timeout=1800` 字段已定义但未被消费。
-
-#### US-029: 移动端验证 / 确认二维码
-**As a** Mobile-User, **I want** 通过 `POST /api/mobile/qrcode/v1/validate`（Body=`QrcodeRequest`）扫描验证、`POST /api/mobile/qrcode/v1/confirm` 确认, **so that** 完成"扫码 → 确认 → 激活"闭环。
-
-**Acceptance Criteria**:
-- THE SYSTEM SHALL 通过 `SecurityUtils.getUserId()` 获取当前账号 ID 作为 `accountId`。
-- WHEN `validate` IF `qrcodeState==CONFIRMED` THEN THE SYSTEM SHALL 抛 `QrcodeHasUsedException`。
-- WHEN `validate` IF `qrcodeState==EXPIRED` THEN THE SYSTEM SHALL 抛 `QrcodeHasExpiredException`。
-- WHEN `validate` IF 传入的 `qrcode` 与持久化的 `qrcode`（大小写不敏感）不一致 THEN THE SYSTEM SHALL 抛 `QrcodeInvalidException`。
-- WHEN `validate` 成功 THE SYSTEM SHALL 将 `qrcodeState=SCANNED` 并通过 `QrcodePublish.validate()` 发布 `QrcodeValidateEvent`。
-- WHEN `confirm` 成功 THE SYSTEM SHALL 将 `qrcodeState=CONFIRMED` 并通过 `QrcodePublish.confirm()` 发布 `QrcodeConfirmEvent`，进而触发 `VehicleLifecycleAppService.recordVehicleActiveNode(vin)`。
-- WHEN 触发 `QrcodeValidateEvent`（type=VEHICLE_ACTIVE）THE SYSTEM SHALL 调用 `VehicleAppService.checkVehiclePresetOwner(vin, accountId)`。
-  > 当前 `checkVehiclePresetOwner` 实现被注释（依赖 `ExAccountService`），见 §5 O3。
-
-### 3.10 对外 RPC 服务域
+### 3.9 对外 RPC 服务域
 
 #### US-030: 车辆/零件/设备/生命周期/车型配置 Feign 契约稳定性
 **As a** Service-Caller, **I want** 引入 `edd-vmd-api`（5 个 `Vmd*Service` 接口）后即可通过 OpenFeign 调用全部对外能力, **so that** 跨服务调用统一收口在 API 模块。
@@ -363,23 +331,21 @@
 
 ## 5. Out of Scope
 
-- O1：`QrcodeType` 中除 `VEHICLE_ACTIVE` 之外的二维码业务（枚举仅定义一个值）。
-- O2：解析器 V2.0+。当前所有解析器均为 V1.0；新版本需走 §6 变更流程。
-- O3：账号/手机号实名核验（`ExAccountService` 集成被注释）；预设车主校验暂跳过。
-- O4：IMMO_SK 安全密钥生成（`ExSkService` 集成被注释）；`recordGenerateVehicleSkNode` 当前依赖未启用的事件链路。
-- O5：MPT 导出（Export）端点目前仅有 `@Log` 注解和日志，未实现 Excel/CSV 文件流；不在本 spec 必要交付内（如需启用，走 CR）。
-- O6：领域聚合 `Vehicle.isActive()` 当前实现恒返回 `true`（**已知缺陷**），具体激活判定规则未在代码中实现；本 spec 仅记录现状，不规定修复方式。
-- O7：物联网终端密钥真正颁发流程（VMD 仅记录"首次申请"节点，不参与密钥颁发）；`VehicleSkSubscribe` 整体注释、IMMO_SK 节点写入逻辑当前不生效。
-- O8：车辆配置（VehicleConfig）的写入流程（当前 MPT 仅暴露查询/导出，不暴露 add/edit）。
-- O9：`Qrcode.polling()` 过期检测当前为空实现（**已知缺陷**）；`QrcodeType.timeout` 字段已定义但未被消费；本 spec 仅记录现状。
-- O10：`VehicleLifecycleNodeEnum.VEHICLE_INVoICING` 为拼写错误（应为 `VEHICLE_INVOICING`，**已知缺陷**）；本 spec 仅记录现状。
-- O11：`MptVehiclePartController.add/edit` 当前未对 `vin` 执行存在性校验，可能产生脏数据（**已知缺陷**）；本 spec 仅记录现状。
+- O1：解析器 V2.0+。当前所有解析器均为 V1.0；新版本需走 §6 变更流程。
+- O2：账号/手机号实名核验（`ExAccountService` 集成被注释）；预设车主校验暂跳过。
+- O3：IMMO_SK 安全密钥生成（`ExSkService` 集成被注释）；`recordGenerateVehicleSkNode` 当前依赖未启用的事件链路。
+- O4：MPT 导出（Export）端点目前仅有 `@Log` 注解和日志，未实现 Excel/CSV 文件流；不在本 spec 必要交付内（如需启用，走 CR）。
+- O5：物联网终端密钥真正颁发流程（VMD 仅记录"首次申请"节点，不参与密钥颁发）；`VehicleSkSubscribe` 整体注释、IMMO_SK 节点写入逻辑当前不生效。
+- O6：车辆配置（VehicleConfig）的写入流程（当前 MPT 仅暴露查询/导出，不暴露 add/edit）。
+- O7：`VehicleLifecycleNodeEnum.VEHICLE_INVoICING` 为拼写错误（应为 `VEHICLE_INVOICING`，**已知缺陷**）；本 spec 仅记录现状。
+- O8：`MptVehiclePartController.add/edit` 当前未对 `vin` 执行存在性校验，可能产生脏数据（**已知缺陷**）；本 spec 仅记录现状。
 
 ## 6. Changelog
 
 | Date | Change ID | Type | Description |
 |------|-----------|------|-------------|
 | 2026-05-23 | CR-001 | Added | 基于现有代码 + graphify 知识图谱逆向生成首版 requirements，覆盖 31 个 US，10 个能力域 |
-| 2026-05-23 | CR-002 | Modified | OQ-1/2/3/4/5/6 决议落地：US-028 `isActive()` 改为基于 `VEHICLE_ACTIVE` 生命周期节点判定；US-011 锁定 VIN 不存在返回 null（不抛异常）；US-028 二维码过期机制改走 Redis TTL；US-026 修复 `VEHICLE_INVoICING` 拼写并补 `V3__Fix_invoicing_typo.sql`；US-026 明确 `IMMO_SK` 写入暂不生效（O7）；US-017 新增 VIN 存在性强校验；§4 依赖补 Redis；§5 移除 O6；§7 Open Questions 已全部决议，章节删除 |
-| 2026-05-23 | CR-003 | Modified | **回退 CR-002 中夹带的"未来改造"意图，回归纯逆向基线**：移除 US-017 VIN 校验、US-026 V3 迁移与 IMMO_SK 改造、US-028 `isActive()` 重写与 Redis TTL；这些改造意图改为以"已知缺陷"形式记录于 §5 Out of Scope（O6/O9/O10/O11）；§4 依赖移除 Redis 二维码 TTL 用途说明；US-011（VIN 不存在返回 null）保留为现状契约。本 spec 自此为"代码现状的正本"，未来任何改造一律走新 CR 单独立项 |
+| 2026-05-23 | CR-002 | Modified | OQ-1/2/3/4/5/6 决议落地：US-011 锁定 VIN 不存在返回 null（不抛异常）；§5 移除 O6；§7 Open Questions 已全部决议，章节删除 |
+| 2026-05-23 | CR-003 | Modified | **回退 CR-002 中夹带的"未来改造"意图，回归纯逆向基线**：移除 US-017 VIN 校验、US-026 V3 迁移与 IMMO_SK 改造；这些改造意图改为以"已知缺陷"形式记录于 §5 Out of Scope；US-011（VIN 不存在返回 null）保留为现状契约。本 spec 自此为"代码现状的正本"，未来任何改造一律走新 CR 单独立项 |
+| 2026-05-23 | CR-004 | Removed | **移除 US-028/US-029 车机+移动端二维码激活闭环**：该功能与 VMD 核心职责（车辆主数据管理）相关性不大，整体移除 §3.9 章节、G4 目标、N4 非目标、O1/O6/O9 Out of Scope 条目；对应代码（Qrcode 聚合、IDCM/Mobile 控制器、相关事件/异常/DTO）同步清除 |
 

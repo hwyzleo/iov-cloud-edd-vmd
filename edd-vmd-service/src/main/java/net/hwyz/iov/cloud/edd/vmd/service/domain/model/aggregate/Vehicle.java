@@ -91,15 +91,6 @@ public class Vehicle extends BaseDo<String> implements DomainObj<Vehicle> {
     }
 
     /**
-     * 车辆是否已激活
-     *
-     * @return true:已激活, false:未激活
-     */
-    public boolean isActive() {
-        return true;
-    }
-
-    /**
      * 绑定订单
      *
      * @param orderNum 订单号

@@ -11,8 +11,6 @@
 graph LR
     subgraph "上游调用方"
         MPT[Mpt 后台<br/>completeVehicle:* / iov:configCenter:*]
-        IDCM[IDCM 车机端<br/>X-VIN / X-SN]
-        APP[移动端 App<br/>SecurityUtils.getUserId]
         TSP_C[TSP 服务<br/>记录证书/密钥节点]
         OTH_C[其他下游<br/>OTA/订单/账号 等]
     end
@@ -34,13 +32,11 @@ graph LR
 
     subgraph "基础设施"
         MYSQL[(MySQL 8<br/>Flyway 管理)]
-        REDIS[(Redis<br/>二维码 TTL)]
+        REDIS[(Redis<br/>缓存)]
         NACOS[(Nacos<br/>注册 + 配置)]
     end
 
     MPT --> GW
-    IDCM --> GW
-    APP --> GW
     GW --> SVC
     TSP_C -.Feign.-> API
     OTH_C -.Feign.-> API
@@ -196,20 +192,12 @@ graph TB
 |------|------|--------|----------|
 | `veh_import_data` | `VehImportDataPo` | `batch_num`, `type`, `version`, `data`(JSON), `handle` | UK(`batch_num`) |
 
-#### Qrcode 持久化现状
-
-二维码当前由领域聚合 `Qrcode` 持久化，存储位置由 `QrcodeRepository` 接口抽象、`infrastructure/persistence/repository/QrcodeRepositoryImpl` 决定（当前实现走 `infrastructure/cache/CacheService` 的 Redis 缓存）。Redis 仅作为 Qrcode 聚合本身的存储载体，**未**用于二维码过期 TTL 检测（参见 §5 O9 已知缺陷）。
-
 ### 3.2 领域模型
 
 #### 聚合根（Aggregate）
 - **`Vehicle`**（`domain/model/aggregate/Vehicle.java`）：物理车辆根聚合
   - 内含：`VehicleBasicInfo` + `VehicleDetail` + `VehiclePresetOwner` + 关联 `VehicleConfig` + 关联 `VehiclePart` 列表
-  - 行为：`bindOrder(orderNum)`、`isActive()`（**当前硬编码 `return true`**，参见 §5 O6）
-- **`Qrcode`**（`domain/model/aggregate/Qrcode.java`）：二维码根聚合
-  - 字段：`vin`, `sn`, `qrcode`, `type`, `qrcodeState`
-  - 行为：`init(vin,sn)`、`polling()`（**当前为空实现**，参见 §5 O9）、`validate(qrcode)`、`confirm(qrcode)`
-  - 工厂：`QrcodeFactory.buildQrcode(type, vin, sn)`
+  - 行为：`bindOrder(orderNum)`
 
 #### 实体（Entity，21 个）
 按 §3.1 表清单一一对应，关键实体：`Brand` / `Series` / `Platform` / `Model` / `BaseModel` / `BaseModelFeatureCode` / `BuildConfig` / `BuildConfigFeatureCode` / `FeatureFamily` / `FeatureCode` / `Manufacturer` / `ConfigItem` / `ConfigItemOption` / `ConfigItemMapping` / `VehicleBasicInfo` / `VehicleDetail` / `VehiclePresetOwner` / `VehicleConfig` / `VehicleConfigItem` / `VehiclePart` / `VehiclePartHistory` / `Part` / `Device` / `Supplier` / `VehicleLifecycle` / `VehicleLifecycleNode` / `VehicleImportData`
@@ -217,8 +205,6 @@ graph TB
 #### 值对象（Value Object）
 - **`VehicleLifecycleNodeEnum`**：23 个节点（包含拼写错误 `VEHICLE_INVoICING`，参见 §5 O10 已知缺陷）
 - **`VehiclePartState`**：`0=作废 / 1=在用` 等
-- **`QrcodeState`**（`edd-vmd-api`）：`INITIALIZED / SCANNED / CONFIRMED / EXPIRED`
-- **`QrcodeType`**（`edd-vmd-api`）：`VEHICLE_ACTIVE(timeout=1800)`
 - **`MnoType`**：SIM 卡运营商枚举（`CMCC` / `CTCC` / `CUCC` 等，由 SIM 解析器使用）
 - **`DeviceItem`**：设备项类型（`TBOX` / `CCP` / `IDCM` / `BTM` 等）
 
@@ -357,65 +343,7 @@ sequenceDiagram
 
 **对应 US**：US-019 ~ US-020、US-026。
 
-### 4.4 F4 - 二维码扫码激活闭环（现状）
-
-```mermaid
-sequenceDiagram
-    participant I as IDCM 车机
-    participant IC as IdcmQrcodeController
-    participant Q as QrcodeAppService
-    participant V as VehicleAppService
-    participant QR as QrcodeRepository
-    participant M as Mobile App
-    participant MC as MobileQrcodeController
-    participant L as VehicleLifecycleAppService
-    participant E as QrcodePublish
-
-    Note over I,QR: 阶段 1：生成二维码
-    I->>IC: POST /api/idcm/qrcode/v1/active<br/>X-VIN, X-SN
-    IC->>Q: generateActiveQrcode(vin, sn)
-    Q->>V: vehicle.isActive()
-    Note over V: 当前硬编码 return true（已知缺陷 O6）<br/>所有 VIN 都被判定为已激活
-    V-->>Q: true
-    Q-->>IC: throw VehicleHasActivatedException
-    IC-->>I: 400 ApiResponse.fail
-
-    Note over I,QR: 阶段 2：车机轮询状态（假设阶段 1 通过）
-    loop 车机轮询
-        I->>IC: GET /api/idcm/qrcode/v1/active/{qrcode}/state
-        IC->>Q: pollingQrcodeState(qrcode, sn)
-        Q->>QR: getByQrcode(qrcode)
-        QR-->>Q: qrcode 聚合
-        Q->>Q: qrcode.polling()
-        Note over Q: 当前空实现（已知缺陷 O9）<br/>无过期检测
-        Q-->>IC: state
-    end
-
-    Note over M,E: 阶段 3：移动端扫描验证
-    M->>MC: POST /api/mobile/qrcode/v1/validate<br/>{qrcode}
-    MC->>Q: validate(qrcode, accountId)
-    Q->>QR: getByQrcode(qrcode)
-    Q->>Q: qrcode.validate(qrcode)<br/>状态机 INITIALIZED → SCANNED
-    Q->>QR: save(qrcode)
-    Q->>E: validate(vin, accountId, type) → QrcodeValidateEvent
-    Note over E: VehicleAppService.checkVehiclePresetOwner<br/>当前注释（O3）
-    E-->>MC: success
-    MC-->>M: 200 OK
-
-    Note over M,E: 阶段 4：移动端确认激活
-    M->>MC: POST /api/mobile/qrcode/v1/confirm<br/>{qrcode}
-    MC->>Q: confirm(qrcode, accountId)
-    Q->>QR: getByQrcode(qrcode)
-    Q->>Q: qrcode.confirm(qrcode)<br/>状态机 SCANNED → CONFIRMED
-    Q->>QR: save(qrcode)
-    Q->>E: confirm(vin, type) → QrcodeConfirmEvent
-    E->>L: recordVehicleActiveNode(vin)
-    L->>L: 写入 VEHICLE_ACTIVE 生命周期节点
-```
-
-**对应 US**：US-028 ~ US-029、US-026。
-
-### 4.5 F5 - Service 端 Feign 调用链路
+### 4.4 F4 - Service 端 Feign 调用链路
 
 ```mermaid
 sequenceDiagram
@@ -450,44 +378,37 @@ sequenceDiagram
 
 **对应 US**：US-011、US-012、US-014（pn 查询）、US-015（code 查询）、US-027、US-030、US-031。
 
-### 4.6 F6 - 内部事件订阅链路总览
+### 4.5 F5 - 内部事件订阅链路总览
 
 ```mermaid
 graph LR
     subgraph "Publisher（应用层）"
         VPub[VehiclePublish<br/>produce/eol]
-        QPub[QrcodePublish<br/>validate/confirm]
     end
 
     subgraph "Event"
         E1[VehicleProduceEvent]
         E2[VehicleEolEvent]
-        E3[QrcodeValidateEvent]
-        E4[QrcodeConfirmEvent]
     end
 
     subgraph "Subscriber"
-        S1[VehicleLifecycleSubscribe<br/>onProduce → PRODUCE 节点<br/>onEol → EOL 节点<br/>onQrcodeConfirm → VEHICLE_ACTIVE 节点]
+        S1[VehicleLifecycleSubscribe<br/>onProduce → PRODUCE 节点<br/>onEol → EOL 节点]
         S2["VehicleSkSubscribe<br/>onProduce → IMMO_SK 节点<br/>(整体注释，O7)"]
     end
 
     VPub --> E1
     VPub --> E2
-    QPub --> E3
-    QPub --> E4
 
     E1 --> S1
     E1 -.x.-> S2
     E2 --> S1
-    E3 --> S1
-    E4 --> S1
 ```
 
-**对应 US**：US-026、US-019（PRODUCE 事件）、US-020（EOL 事件）、US-029（QrcodeConfirm 事件）。
+**对应 US**：US-026、US-019（PRODUCE 事件）、US-020（EOL 事件）。
 
 ## 5. API Contracts
 
-> 颗粒度策略：MPT/IDCM/Mobile 给完整 schema（method + path + 权限 + 关键字段），Service 端因 `edd-vmd-api` 是契约源，仅给签名 + 错误码 + Fallback 行为。
+> 颗粒度策略：MPT 给完整 schema（method + path + 权限 + 关键字段），Service 端因 `edd-vmd-api` 是契约源，仅给签名 + 错误码 + Fallback 行为。
 
 ### 5.1 MPT 端（`/api/mpt/**`，权限点前缀 `completeVehicle:` 或 `iov:configCenter:`）
 
@@ -617,29 +538,11 @@ graph LR
 
 错误：`批次号已存在` / `解析器不存在` / `解析异常`
 
-### 5.2 IDCM 端（`/api/idcm/**`，请求头 `X-VIN`/`X-SN`）
-
-#### `IdcmQrcodeController`（→ US-028）
-| Method | Path | Description | Errors |
-|--------|------|-------------|--------|
-| POST | `/api/idcm/qrcode/v1/active` | 生成二维码（当前 `Vehicle.isActive()` 恒为 true，所有调用都会抛 `VehicleHasActivatedException`，参见 §5 O6） | `VehicleHasActivatedException` |
-| GET | `/api/idcm/qrcode/v1/active/{qrcode}/state` | 轮询状态（当前 `Qrcode.polling()` 为空实现，无过期检测，参见 §5 O9） | `QrcodeNotExistException` |
-
-Response：`QrcodeResponse{qrcode, state}`
-
-### 5.3 Mobile 端（`/api/mobile/**`，账号通过 `SecurityUtils.getUserId()` 获取）
-
-#### `MobileQrcodeController`（→ US-029）
-| Method | Path | Request | Description | Errors |
-|--------|------|---------|-------------|--------|
-| POST | `/api/mobile/qrcode/v1/validate` | `QrcodeRequest{qrcode}` | 扫描验证 → SCANNED + 触发 `QrcodeValidateEvent` | `QrcodeNotExistException` / `QrcodeHasUsedException` / `QrcodeHasExpiredException` / `QrcodeInvalidException` |
-| POST | `/api/mobile/qrcode/v1/confirm` | `QrcodeRequest{qrcode}` | 确认 → CONFIRMED + 触发 `QrcodeConfirmEvent` → 写 `VEHICLE_ACTIVE` 节点 | 同上 |
-
-### 5.4 Service 端（`edd-vmd-api`，Feign 契约）
+### 5.2 Service 端（`edd-vmd-api`，Feign 契约）
 
 > 完整签名以 `edd-vmd-api/src/main/java/.../api/service/Vmd*Service.java` 为准；本节列契约清单 + 错误码 + Fallback 行为。
 
-#### 5.4.1 `VmdVehicleService`（→ US-011/US-012）
+#### 5.2.1 `VmdVehicleService`（→ US-011/US-012）
 - `VehicleExResponse getByVin(@PathVariable String vin)`
 - `void bindOrder(@PathVariable String vin, @RequestBody VehicleOrderExRequest req)`
 
@@ -647,45 +550,38 @@ Response：`QrcodeResponse{qrcode, state}`
 
 **错误码**：`VehicleHasBindOrderException`（业务异常，不进 fallback，直接抛回 caller）。
 
-#### 5.4.2 `VmdVehicleLifecycleService`（→ US-027）
+#### 5.2.2 `VmdVehicleLifecycleService`（→ US-027）
 8 个 `recordFirstApply*Node` 端点（TBOX_CERT / TBOX_COMM_SK / CCP_CERT / CCP_COMM_SK / IDCM_CERT / IDCM_COMM_SK / ADCM_CERT / ADCM_COMM_SK）。
 
 **Fallback**：所有方法 no-op + log。
 
-#### 5.4.3 `VmdPartService`（→ US-014）
+#### 5.2.3 `VmdPartService`（→ US-014）
 - `PartExResponse getByPn(@PathVariable String pn)`
 - `List<PartExResponse> listAllFota(@RequestParam Boolean software)`
 
 **Fallback**：返回 `null` / 空集合。
 
-#### 5.4.4 `VmdDeviceService`（→ US-015）
+#### 5.2.4 `VmdDeviceService`（→ US-015）
 - `DeviceExResponse getByCode(@PathVariable String code)`
 - `List<DeviceExResponse> listAllFota()`
 
 **Fallback**：同上。
 
-#### 5.4.5 `VmdVehicleModelConfigService`（→ US-031）
+#### 5.2.5 `VmdVehicleModelConfigService`（→ US-031）
 - `String getBuildConfigCodeByFeatureCodes(@RequestParam Map<String,String> featureCodes)`
 - `List<VmdBuildConfigResponse> listBuildConfigByBaseModelCode(@PathVariable String baseModelCode)`
 - `VmdBuildConfigResponse getBuildConfig(@PathVariable String buildConfigCode)`
 
 **Fallback**：`null` / 空集合；`getBuildConfig` 在 `seriesCode` 缺失时省略 `brandCode`（不视为错误，US-031 验收要求）。
 
-### 5.5 错误码总表
+### 5.3 错误码总表
 
 | 异常类 | HTTP | 触发场景 | 用户消息 |
 |--------|------|---------|---------|
 | `VmdBaseException` | 500 | 基类 | — |
 | `VehicleNotExistException` | 400 | VIN 不存在 | `车辆不存在` |
 | `VehicleHasBindOrderException` | 400 | 重复绑定订单 | `车辆已绑定订单` |
-| `VehicleHasActivatedException` | 400 | 已激活生成二维码（当前因 `isActive()` 恒为 true 而恒触发，参见 §5 O6） | `车辆已激活` |
 | `VehicleImportDataException` | 400 | 导入解析失败 | `批次<batchNum>解析异常: <reason>` |
-| `VehiclePresetOwnerNotMatchException` | 400 | 扫码账号不匹配预设车主（O3 当前注释） | — |
-| `VehicleWithoutPresetOwnerException` | 400 | 无预设车主（O3 当前注释） | — |
-| `QrcodeNotExistException` | 400 | 二维码不存在 | `二维码不存在` |
-| `QrcodeHasUsedException` | 400 | 已 CONFIRMED | `二维码已使用` |
-| `QrcodeHasExpiredException` | 400 | EXPIRED 状态 | `二维码已过期` |
-| `QrcodeInvalidException` | 400 | qrcode 字段不匹配 | `二维码无效` |
 | `PartNotExistException` | 400 | PN 不存在 | `零件不存在` |
 | `PartNotAllowBindException` | 400 | 零件不允许绑定 | — |
 
@@ -703,27 +599,25 @@ Response：`QrcodeResponse{qrcode, state}`
 | US-008 FeatureFamily + Code | §3.1 产品树 / §4.1 F1 / §5.1.8 | 含族下特征值 listAll |
 | US-009 ConfigItem + Option + Mapping | §3.1 配置项 / §4.1 F1 / §5.1.9 | 嵌套子资源 |
 | US-010 Vehicle CRUD（MPT） | §3.1 物理车 / §3.2 Vehicle 聚合 / §5.1.10 | 删除联动 lifecycle |
-| US-011 Vehicle 内部查询 | §3.2 Vehicle / §4.5 F5 / §5.4.1 / D10 | VIN 不存在返回 null（现状契约） |
-| US-012 Vehicle 订单绑定 | §3.2 Vehicle.bindOrder / §5.4.1 | + ORDER_BIND 节点 |
+| US-011 Vehicle 内部查询 | §3.2 Vehicle / §4.4 F4 / §5.2.1 / D10 | VIN 不存在返回 null（现状契约） |
+| US-012 Vehicle 订单绑定 | §3.2 Vehicle.bindOrder / §5.2.1 | + ORDER_BIND 节点 |
 | US-013 VehicleConfig | §3.1 物理车 / §5.1.11 | 仅查询/导出（O8） |
-| US-014 Part | §3.1 零件 / §5.1.12 / §5.4.3 | MPT + Service 双暴露 |
-| US-015 Device | §3.1 零件 / §5.1.13 / §5.4.4 | MPT + Service 双暴露 |
+| US-014 Part | §3.1 零件 / §5.1.12 / §5.2.3 | MPT + Service 双暴露 |
+| US-015 Device | §3.1 零件 / §5.1.13 / §5.2.4 | MPT + Service 双暴露 |
 | US-016 Supplier | §3.1 零件 / §5.1.14 | — |
 | US-017 VehiclePart | §3.1 零件 / §5.1.15 | 当前未做 VIN 校验（O11 已知缺陷） |
 | US-018 VehicleImportData | §4.2 F2 / §5.1.16 | SPI 解析器调度 |
-| US-019 PRODUCE 解析器 | §4.2 F2 / §3.2 VehiclePublish.produce / §4.6 F6 | 触发 VehicleProduceEvent |
-| US-020 EOL 解析器 | §4.3 F3 / §4.6 F6 | 联动 TSP/OTA + 详细字段入库 |
+| US-019 PRODUCE 解析器 | §4.2 F2 / §3.2 VehiclePublish.produce / §4.5 F5 | 触发 VehicleProduceEvent |
+| US-020 EOL 解析器 | §4.3 F3 / §4.5 F5 | 联动 TSP/OTA + 详细字段入库 |
 | US-021 BTM 解析器 | §4.2 F2 / §3.1 VehiclePart | 调 IDK |
 | US-022 TBOX 解析器 | §4.2 F2 / §3.1 VehiclePart | 调 TSP |
 | US-023 CCP 解析器 | §4.2 F2 / §3.1 VehiclePart | 调 TSP |
 | US-024 IDCM 解析器 | §4.2 F2 / §3.1 VehiclePart | 调 TSP |
 | US-025 SIM 解析器 | §4.2 F2 / §3.2 MnoType | 调 TSP |
-| US-026 VehicleLifecycle | §3.2 23 个枚举 / §4.6 F6 | `VEHICLE_INVoICING` 拼写错误（O10）；IMMO_SK 写入暂不生效（O7） |
-| US-027 服务端记录证书/密钥节点 | §5.4.2 8 端点 | + Fallback no-op |
-| US-028 IDCM 二维码生成/轮询 | §3.2 Qrcode 聚合 / §4.4 F4 / §5.2 / D8 / D11 | `isActive()` 恒 true（O6）；`polling()` 空实现（O9） |
-| US-029 Mobile 二维码验证/确认 | §4.4 F4 / §5.3 / §4.6 F6 | + QrcodeValidateEvent / QrcodeConfirmEvent |
-| US-030 5 个 Vmd*Service Feign 契约 | §1.2 模块依赖 / §5.4 全 5 接口 / §4.5 F5 | + FallbackFactory ×5 |
-| US-031 反查生产配置 | §5.4.5 / §3.1 BuildConfig | 任意特征值组合查询 |
+| US-026 VehicleLifecycle | §3.2 23 个枚举 / §4.5 F5 | `VEHICLE_INVoICING` 拼写错误（O10）；IMMO_SK 写入暂不生效（O7） |
+| US-027 服务端记录证书/密钥节点 | §5.2.2 8 端点 | + Fallback no-op |
+| US-030 5 个 Vmd*Service Feign 契约 | §1.2 模块依赖 / §5.2 全 5 接口 / §4.4 F4 | + FallbackFactory ×5 |
+| US-031 反查生产配置 | §5.2.5 / §3.1 BuildConfig | 任意特征值组合查询 |
 
 ## 7. Known Defects & Technical Debt
 
@@ -731,14 +625,11 @@ Response：`QrcodeResponse{qrcode, state}`
 
 | ID | 位置 | 现状 | 影响 |
 |----|------|------|------|
-| TD-1 | `domain/model/aggregate/Vehicle.java:98` `isActive()` | 方法体硬编码 `return true` | 所有 VIN 调用 `IdcmQrcodeController.POST /active` 都被判定为已激活并抛 `VehicleHasActivatedException`，激活闭环跑不通 |
-| TD-2 | `domain/model/aggregate/Qrcode.java:64` `polling()` | 方法体仅含注释"由于 createTime 已移除，polling 逻辑需依赖基础设施层或重新设计，此处暂时移除超时逻辑，待后续完善" | 二维码无过期检测；`QrcodeType.timeout=1800` 字段定义但未消费 |
-| TD-3 | `domain/model/valueobject/VehicleLifecycleNodeEnum.java:50` | 枚举值名 `VEHICLE_INVoICING`（小写 `o`） | 拼写错误；grep 验证当前无消费方，DB 中也无该值实例 |
-| TD-4 | `application/event/subscribe/VehicleSkSubscribe.java` | 整个类 `ExSkService` 字段、import、`onVehicleProduceEvent` 方法体均被注释 | `IMMO_SK` 节点写入触发器永不执行；该节点定义为死分支 |
-| TD-5 | `application/service/VehicleAppService.java` `checkVehiclePresetOwner` | 方法实现被注释（依赖未启用的 `ExAccountService`） | `QrcodeValidateEvent` 触发后预设车主校验跳过 |
-| TD-6 | `adapter/web/controller/mpt/MptVehiclePartController.java` add/edit | 未对 `vin` 做存在性校验 | 可创建无主车辆零件记录（脏数据风险） |
-| TD-7 | 全部 `*Controller.export()` | 仅有 `@Log` 注解和日志，无 Excel/CSV 流响应 | 导出端点不可用（O5） |
-| TD-8 | `adapter/web/controller/mpt/MptVehicleConfigController` | 仅 list / 查询配置项 / export，无 add / edit | 车辆配置无法通过 MPT 写入（O8） |
+| TD-1 | `domain/model/valueobject/VehicleLifecycleNodeEnum.java:50` | 枚举值名 `VEHICLE_INVoICING`（小写 `o`） | 拼写错误；grep 验证当前无消费方，DB 中也无该值实例 |
+| TD-2 | `application/event/subscribe/VehicleSkSubscribe.java` | 整个类 `ExSkService` 字段、import、`onVehicleProduceEvent` 方法体均被注释 | `IMMO_SK` 节点写入触发器永不执行；该节点定义为死分支 |
+| TD-3 | `adapter/web/controller/mpt/MptVehiclePartController.java` add/edit | 未对 `vin` 做存在性校验 | 可创建无主车辆零件记录（脏数据风险） |
+| TD-4 | 全部 `*Controller.export()` | 仅有 `@Log` 注解和日志，无 Excel/CSV 流响应 | 导出端点不可用（O5） |
+| TD-5 | `adapter/web/controller/mpt/MptVehicleConfigController` | 仅 list / 查询配置项 / export，无 add / edit | 车辆配置无法通过 MPT 写入（O8） |
 
 ## 8. Open Questions
 
@@ -749,4 +640,5 @@ Response：`QrcodeResponse{qrcode, state}`
 | Date | Change ID | Type | Description |
 |------|-----------|------|-------------|
 | 2026-05-23 | CR-001 | Added | 基于 requirements CR-001/CR-002 产出 design 首版（含改造意图） |
-| 2026-05-23 | CR-002 | Modified | **回退首版中夹带的"未来改造"内容，回归纯逆向基线**：D8/D11/D12 改写为现状描述（不规定修复方式）；§3.1 移除 Redis qrcode key 协议；§3.4 移除 V3 迁移；§3.2 Vehicle/Qrcode 聚合行为标注当前缺陷而非改造方案；§4.4 F4 序列图改为反映 `isActive()` 恒 true、`polling()` 空实现的现状；§5.1.15 / §5.2 移除 OQ 决议改造标注；§7 由"Impact Analysis"改写为"Known Defects & Technical Debt"（8 项 TD）；§8 Open Questions 清空。本 spec 自此为代码现状的正本 |
+| 2026-05-23 | CR-002 | Modified | **回退首版中夹带的"未来改造"内容，回归纯逆向基线**：D8/D11/D12 改写为现状描述（不规定修复方式）；§3.4 移除 V3 迁移；§3.2 Vehicle 聚合行为标注当前缺陷而非改造方案；§5.1.15 移除 OQ 决议改造标注；§7 由"Impact Analysis"改写为"Known Defects & Technical Debt"；§8 Open Questions 清空。本 spec 自此为代码现状的正本 |
+| 2026-05-23 | CR-003 | Removed | **移除 US-028/US-029 车机+移动端二维码激活闭环**：移除 §3.2 Qrcode 聚合、§4.4 F4 序列图、§5.2 IDCM 端、§5.3 Mobile 端、§5.5 错误码表中 Qrcode 相关条目、§6 Coverage Mapping US-028/US-029 行、§7 TD-1/TD-2/TD-5；§4.5 F5 事件订阅图移除 QrcodePublish/QrcodeValidateEvent/QrcodeConfirmEvent |
