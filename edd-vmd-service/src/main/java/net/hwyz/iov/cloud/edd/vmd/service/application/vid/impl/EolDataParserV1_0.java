@@ -1,6 +1,5 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.vid.impl;
 
-import cn.hutool.core.date.DateTime;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.json.JSONArray;
@@ -10,27 +9,24 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.VehicleEolPartBoundEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.publish.VehiclePublish;
-import net.hwyz.iov.cloud.edd.vmd.service.application.service.DeviceAppService;
-import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleLifecycleAppService;
-import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehiclePartAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParser;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Device;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleBasicInfo;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleDetail;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehiclePart;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
 import net.hwyz.iov.cloud.framework.common.util.StrUtil;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
  * 车辆下线数据解析器V1.0
+ * <p>
+ * 薄编排层：提取 → 持久化 → 事件 → 零件绑定 → 事件。
+ * 具体逻辑委托给 {@link VehicleInfoExtractor}、{@link VehicleInfoPersister}、{@link VehiclePartBinder}。
  *
  * @author hwyz_leo
  */
@@ -41,9 +37,9 @@ public class EolDataParserV1_0 extends BaseParser implements ImportDataParser {
 
     private final VehiclePublish vehiclePublish;
     private final VehBasicInfoRepository vehBasicInfoRepository;
-    private final DeviceAppService deviceAppService;
-    private final VehicleAppService vehicleAppService;
-    private final VehiclePartAppService vehiclePartAppService;
+    private final VehicleInfoExtractor vehicleInfoExtractor;
+    private final VehicleInfoPersister vehicleInfoPersister;
+    private final VehiclePartBinder vehiclePartBinder;
     private final VehicleLifecycleAppService vehicleLifecycleAppService;
 
     @Override
@@ -58,137 +54,43 @@ public class EolDataParserV1_0 extends BaseParser implements ImportDataParser {
                 vehicleInvalidCount++;
                 continue;
             }
-            VehicleBasicInfo vehicleBasicInfo = vehBasicInfoRepository.selectByVin(vin);
-            Map<String, VehicleDetail> vehicleDetailMap = vehBasicInfoRepository.selectDetailByVin(vin).stream()
+            // 1. 提取
+            VehicleBasicInfo existingInfo = vehBasicInfoRepository.selectByVin(vin);
+            Map<String, VehicleDetail> existingDetailMap = vehBasicInfoRepository.selectDetailByVin(vin).stream()
                     .collect(Collectors.toMap(VehicleDetail::getType, v -> v));
-            if (ObjUtil.isNull(vehicleBasicInfo)) {
-                vehicleBasicInfo = VehicleBasicInfo.builder()
-                        .vin(vin)
-                        .build();
+
+            VehicleBasicInfo basicInfo = vehicleInfoExtractor.extractBasicInfo(itemJson, existingInfo, batchNum, vin);
+            List<VehicleDetail> details = vehicleInfoExtractor.extractDetails(itemJson, existingDetailMap, batchNum, vin);
+            Instant eolDate = vehicleInfoExtractor.extractEolDate(itemJson);
+
+            boolean firstEol = ObjUtil.isNull(basicInfo.getEolTime());
+            if (firstEol) {
+                basicInfo.setEolTime(eolDate);
             }
-            handleVehicleInfo(itemJson, vehicleBasicInfo, "MANUFACTURER", "manufacturerCode", "工厂数据", batchNum, vin);
-            handleVehicleInfo(itemJson, vehicleBasicInfo, "BRAND", "brandCode", "品牌数据", batchNum, vin);
-            handleVehicleInfo(itemJson, vehicleBasicInfo, "PLATFORM", "platformCode", "平台数据", batchNum, vin);
-            handleVehicleInfo(itemJson, vehicleBasicInfo, "SERIES", "seriesCode", "车系数据", batchNum, vin);
-            handleVehicleInfo(itemJson, vehicleBasicInfo, "MODEL", "modelCode", "车型数据", batchNum, vin);
-            handleVehicleInfo(itemJson, vehicleBasicInfo, "BASE_MODEL", "baseModelCode", "基础车型数据", batchNum, vin);
-            handleVehicleInfo(itemJson, vehicleBasicInfo, "BUILD_CONFIG", "buildConfigCode", "生产配置数据", batchNum, vin);
-            handleVehicleInfo(itemJson, vehicleBasicInfo, "VEHICLE_BASE_VERSION", "vehicleBaseVersion", "车辆基线版本", batchNum, vin);
-            String eolDateStr = itemJson.getStr("EOL_DATE");
-            Instant eolDate;
-            boolean firstEol = false;
-            if (StrUtil.isNotBlank(eolDateStr)) {
-                eolDate = DateUtil.parse(eolDateStr, "yyyyMMdd").toInstant();
-            } else {
-                eolDate = Instant.now();
-            }
-            if (ObjUtil.isNull(vehicleBasicInfo.getEolTime())) {
-                vehicleBasicInfo.setEolTime(eolDate);
-                firstEol = true;
-            }
-            handleVehicleDetail(itemJson, vehicleDetailMap, "PRODUCTION_ORDER", "生产订单", batchNum, vin);
-            handleVehicleDetail(itemJson, vehicleDetailMap, "MATNR", "整车物料编码", batchNum, vin);
-            handleVehicleDetail(itemJson, vehicleDetailMap, "PROJECT", "车型项目", batchNum, vin);
-            handleVehicleDetail(itemJson, vehicleDetailMap, "SALES_AREA", "销售区域", batchNum, vin);
-            handleVehicleDetail(itemJson, vehicleDetailMap, "BODY_TYPE", "车身形式", batchNum, vin);
-            handleVehicleDetail(itemJson, vehicleDetailMap, "CONFIG_LEVEL", "配置等级", batchNum, vin);
-            handleVehicleDetail(itemJson, vehicleDetailMap, "MODEL_YEAR", "车型年份", batchNum, vin);
-            handleVehicleDetail(itemJson, vehicleDetailMap, "STEERING_POSITION", "左右舵", batchNum, vin);
-            handleVehicleDetail(itemJson, vehicleDetailMap, "INTERIOR_STYLE", "内饰风格", batchNum, vin);
-            handleVehicleDetail(itemJson, vehicleDetailMap, "EXTERIOR_COLOR", "外饰颜色", batchNum, vin);
-            handleVehicleDetail(itemJson, vehicleDetailMap, "DRIVE_TYPE", "驾驶形式", batchNum, vin);
-            handleVehicleDetail(itemJson, vehicleDetailMap, "WHEEL", "轮毂", batchNum, vin);
-            handleVehicleDetail(itemJson, vehicleDetailMap, "TIRE", "轮胎", batchNum, vin);
-            handleVehicleDetail(itemJson, vehicleDetailMap, "SEAT_TYPE", "座椅类型", batchNum, vin);
-            handleVehicleDetail(itemJson, vehicleDetailMap, "ASSISTED_DRIVING", "辅助驾驶", batchNum, vin);
-            handleVehicleDetail(itemJson, vehicleDetailMap, "ETC_SYSTEM", "ETC系统", batchNum, vin);
-            handleVehicleDetail(itemJson, vehicleDetailMap, "REAR_TOW_BAR", "后牵引杆", batchNum, vin);
-            handleVehicleDetail(itemJson, vehicleDetailMap, "ENGINE_NO", "发动机编码", batchNum, vin);
-            handleVehicleDetail(itemJson, vehicleDetailMap, "ENGINE_TYPE", "发动机类型", batchNum, vin);
-            handleVehicleDetail(itemJson, vehicleDetailMap, "FRONT_DRIVE_MOTOR_NO", "前驱电机编码", batchNum, vin);
-            handleVehicleDetail(itemJson, vehicleDetailMap, "FRONT_DRIVE_MOTOR_TYPE", "前驱电机类型", batchNum, vin);
-            handleVehicleDetail(itemJson, vehicleDetailMap, "REAR_DRIVE_MOTOR_NO", "后驱电机编码", batchNum, vin);
-            handleVehicleDetail(itemJson, vehicleDetailMap, "REAR_DRIVE_MOTOR_TYPE", "后驱电机类型", batchNum, vin);
-            handleVehicleDetail(itemJson, vehicleDetailMap, "GENERATOR_NO", "发电机编码", batchNum, vin);
-            handleVehicleDetail(itemJson, vehicleDetailMap, "GENERATOR_TYPE", "发电机类型", batchNum, vin);
-            handleVehicleDetail(itemJson, vehicleDetailMap, "POWER_BATTERY_PACK_NO", "动力电池包编码", batchNum, vin);
-            handleVehicleDetail(itemJson, vehicleDetailMap, "POWER_BATTERY_TYPE", "动力电池类型", batchNum, vin);
-            handleVehicleDetail(itemJson, vehicleDetailMap, "POWER_BATTERY_FACTORY", "动力电池厂商", batchNum, vin);
-            if (ObjUtil.isNull(vehicleBasicInfo.getId())) {
-                vehBasicInfoRepository.insert(vehicleBasicInfo);
-                // 如果车辆是新生成，则补发车辆生产事件
+
+            // 2. 持久化
+            boolean isNewVehicle = vehicleInfoPersister.persist(basicInfo, details);
+
+            // 3. 发布车辆事件
+            if (isNewVehicle) {
                 vehiclePublish.produce(vin);
-            } else {
-                vehBasicInfoRepository.update(vehicleBasicInfo);
-            }
-            List<VehicleDetail> needInsertDetailList = vehicleDetailMap.values().stream().filter(doObj -> doObj.getId() == null).toList();
-            if (!needInsertDetailList.isEmpty()) {
-                vehBasicInfoRepository.batchInsertDetail(needInsertDetailList);
             }
             if (firstEol) {
                 vehiclePublish.eol(vin, eolDate);
             }
-            String certDateStr = itemJson.getStr("CERT_DATE");
+
+            // 4. 合格证节点
+            String certDateStr = vehicleInfoExtractor.extractCertDateStr(itemJson);
             if (StrUtil.isNotBlank(certDateStr)) {
-                DateTime certDate = DateUtil.parse(certDateStr, "yyyyMMdd");
+                var certDate = DateUtil.parse(certDateStr, "yyyyMMdd");
                 if (ObjUtil.isNotNull(certDate)) {
                     vehicleLifecycleAppService.recordCertificateNode(vin, certDate);
                 }
             }
+
+            // 5. 零件绑定
             JSONArray parts = itemJson.getJSONArray("PARTS");
-            List<VehicleEolPartBoundEvent.PartMeta> partMetaList = new ArrayList<>();
-            for (Object part : parts) {
-                JSONObject partJson = JSONUtil.parseObj(part);
-                String deviceCode = partJson.getStr("DEVICE_CODE");
-                if (StrUtil.isBlank(deviceCode)) {
-                    log.warn("车辆导入数据批次号[{}]车架号[{}]设备[{}]为空", batchNum, vin, deviceCode);
-                    continue;
-                }
-                String partVin = partJson.getStr("VIN");
-                if (!vin.equalsIgnoreCase(partVin)) {
-                    log.warn("车辆导入数据批次号[{}]车架号[{}]设备[{}]车架号[{}]不一致", batchNum, vin, deviceCode, partVin);
-                    continue;
-                }
-                String pn = partJson.getStr("PART_NO");
-                String sn = partJson.getStr("PART_SN");
-                Device device = deviceAppService.getDeviceByCode(deviceCode);
-                String supplierCode = partJson.getStr("SUPPLIER_CODE");
-                String configWord = partJson.getStr("CONFIG_WORD");
-                String hardwareVersion = partJson.getStr("HARDWARE_VERSION");
-                String softwareVersion = partJson.getStr("SOFTWARE_VERSION");
-                String hardwarePn = partJson.getStr("HARDWARE_PN");
-                String softwarePn = partJson.getStr("SOFTWARE_PN");
-                String iccid1 = partJson.getStr("ICCID1");
-                String iccid2 = partJson.getStr("ICCID2");
-                if (ObjUtil.isNull(device)) {
-                    log.warn("车辆导入数据批次号[{}]车架号[{}]设备[{}]异常", batchNum, vin, deviceCode);
-                }
-                String deviceItem = device != null ? device.getDeviceItem() : null;
-                partMetaList.add(new VehicleEolPartBoundEvent.PartMeta(
-                        sn, pn, deviceCode, deviceItem, supplierCode, batchNum,
-                        configWord, hardwareVersion, softwareVersion, hardwarePn, softwarePn,
-                        iccid1, iccid2));
-                try {
-                    vehiclePartAppService.bindVehiclePart(VehiclePart.builder()
-                            .pn(pn)
-                            .sn(sn)
-                            .vin(vin)
-                            .deviceCode(deviceCode)
-                            .deviceItem(deviceItem)
-                            .supplierCode(supplierCode)
-                            .batchNum(batchNum)
-                            .configWord(configWord)
-                            .hardwareVer(hardwareVersion)
-                            .softwareVer(softwareVersion)
-                            .hardwarePn(hardwarePn)
-                            .softwarePn(softwarePn)
-                            .bindOrg("MES")
-                            .build());
-                } catch (Exception e) {
-                    log.warn("车辆导入数据批次号[{}]车架号[{}]零部件[{}]绑定异常", batchNum, vin, deviceCode, e);
-                }
-            }
-            // 发布零件绑定事件，由异步订阅者通知 TSP/OTA
+            List<VehicleEolPartBoundEvent.PartMeta> partMetaList = vehiclePartBinder.bindParts(parts, vin, batchNum);
             if (!partMetaList.isEmpty()) {
                 vehiclePublish.eolPartBound(vin, partMetaList);
             }
