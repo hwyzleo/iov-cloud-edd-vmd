@@ -11,7 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 public class VehicleNotExistException extends VmdBaseException {
 
     public VehicleNotExistException(String vin) {
-        super(ERROR_CODE_VEHICLE_NOT_EXIST);
+        super(VmdErrorCode.VEHICLE_NOT_EXIST);
         log.warn("车辆[{}]不存在", vin);
     }
 

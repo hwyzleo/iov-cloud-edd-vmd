@@ -124,7 +124,7 @@
 **Acceptance Criteria**:
 - THE SYSTEM SHALL 通过 `GET /api/service/vehicle/v1/{vin}` 路径暴露此能力。
 - THE SYSTEM SHALL 通过 `VmdVehicleServiceFallbackFactory` 提供 fallback 兜底。
-- IF VIN 不存在 THEN THE SYSTEM SHALL 在 `ApiResponse.data` 中返回 `null`（不抛异常），由 Feign 调用方自行判空。此为既定契约（保留现状以避免破坏既有下游调用），不再视为 Open Question。
+- IF VIN 不存在 THEN THE SYSTEM SHALL 抛出 `VehicleNotExistException`（错误码 `VmdErrorCode.VEHICLE_NOT_EXIST`，即 `202001`），由 `GlobalExceptionHandler` 统一捕获并返回 `ApiResponse.fail`（`code=202001, message=车辆不存在`）。此设计遵循 fail-fast 原则，下游调用方可通过统一异常处理感知"VIN 不存在"与"服务故障"的区别。
 
 #### US-012: 车辆订单绑定
 **As a** Service-Caller, **I want** 通过 `POST /api/service/vehicle/v1/{vin}/action/bindOrder`（Body=`VehicleOrderExRequest`）绑定订单, **so that** 推进车辆生命周期到 `ORDER_BIND` 节点。
@@ -344,8 +344,9 @@
 | Date | Change ID | Type | Description |
 |------|-----------|------|-------------|
 | 2026-05-23 | CR-001 | Added | 基于现有代码 + graphify 知识图谱逆向生成首版 requirements，覆盖 31 个 US，10 个能力域 |
-| 2026-05-23 | CR-002 | Modified | OQ-1/2/3/4/5/6 决议落地：US-011 锁定 VIN 不存在返回 null（不抛异常）；§5 移除 O6；§7 Open Questions 已全部决议，章节删除 |
-| 2026-05-23 | CR-003 | Modified | **回退 CR-002 中夹带的"未来改造"意图，回归纯逆向基线**：移除 US-017 VIN 校验、US-026 V3 迁移与 IMMO_SK 改造；这些改造意图改为以"已知缺陷"形式记录于 §5 Out of Scope；US-011（VIN 不存在返回 null）保留为现状契约。本 spec 自此为"代码现状的正本"，未来任何改造一律走新 CR 单独立项 |
+| 2026-05-23 | CR-002 | Modified | OQ-1/2/3/4/5/6 决议落地：US-011 锁定 VIN 不存在返回 null（不抛异常）（**已被 CR-006 回退**）；§5 移除 O6；§7 Open Questions 已全部决议，章节删除 |
+| 2026-05-23 | CR-003 | Modified | **回退 CR-002 中夹带的"未来改造"意图，回归纯逆向基线**：移除 US-017 VIN 校验、US-026 V3 迁移与 IMMO_SK 改造；这些改造意图改为以"已知缺陷"形式记录于 §5 Out of Scope；US-011（VIN 不存在返回 null）保留为现状契约（**已被 CR-006 回退**）。本 spec 自此为"代码现状的正本"，未来任何改造一律走新 CR 单独立项 |
 | 2026-05-23 | CR-004 | Removed | **移除 US-028/US-029 车机+移动端二维码激活闭环**：该功能与 VMD 核心职责（车辆主数据管理）相关性不大，整体移除 §3.9 章节、G4 目标、N4 非目标、O1/O6/O9 Out of Scope 条目；对应代码（Qrcode 聚合、IDCM/Mobile 控制器、相关事件/异常/DTO）同步清除 |
 | 2026-05-23 | CR-005 | Modified | **US-020 EOL 解析器改事件驱动**：将 TSP/OTA 同步 Feign 调用改为发布 `VehicleEolPartBoundEvent` 事件 + 异步订阅者处理，解除 VMD↔TSP/OTA 同步耦合，提升 EOL 解析可用性 |
+| 2026-05-23 | CR-006 | Modified | **US-011 VIN 不存在改为抛异常（fail-fast）**：回退 CR-002/CR-003 中"VIN 不存在返回 null"的既定契约，改为抛出 `VehicleNotExistException`（`VmdErrorCode.VEHICLE_NOT_EXIST`，错误码 `202001`）；同时 `VmdBaseException` 基类从 `BaseException`（int code）改为继承 `BusinessException`（ErrorCode 接口），统一纳入 `GlobalExceptionHandler` 的 `BusinessException` 捕获链路；新增 `VmdErrorCode` 枚举集中管理 VMD 模块错误码；`VmdVehicleServiceFallbackFactory.getByVin` 改为抛 `RuntimeException` 而非返回 null |
 

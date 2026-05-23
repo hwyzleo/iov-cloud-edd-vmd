@@ -11,7 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 public class VehicleImportDataException extends VmdBaseException {
 
     public VehicleImportDataException(String batchNum, String reason) {
-        super(ERROR_CODE_VEHICLE_IMPORT_DATA_EXCEPTION);
+        super(VmdErrorCode.VEHICLE_IMPORT_DATA_EXCEPTION);
         log.error("车辆导入数据[{}]异常[{}]", batchNum, reason);
     }
 

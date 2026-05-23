@@ -129,7 +129,7 @@ graph TB
 | D7 | 域内事件分发 | Spring `ApplicationEventPublisher`（同进程） | Kafka 跨进程异步 | 当前事件链路均在 edd-vmd 内部；生命周期节点写入（PRODUCE/EOL）使用同步 `@EventListener` 确保事务一致性；**EOL 解析器对 TSP/OTA 的下游调用通过 `VehicleEolPartBoundEvent` + `@Async @EventListener` 异步解耦**，下游不可用时不阻塞 EOL 主流程；未来可平滑迁移至 Kafka |
 | D8 | 二维码过期机制 | **当前为空实现（已知缺陷，对应 §5 O9）**；`Qrcode.polling()` 方法体仅含注释 "由于 createTime 已移除，polling 逻辑需依赖基础设施层或重新设计，此处暂时移除超时逻辑，待后续完善"；`QrcodeType.VEHICLE_ACTIVE.timeout=1800` 字段已在 `edd-vmd-api` 定义但未被消费 | ① Redis TTL（Key 自动过期） ② 数据库定时扫表 ③ Qrcode 表加 `expireTime` 列 | Rationale：本 spec 为代码现状基线，仅记录缺陷形态，不规定修复方式。备选项均不在当前代码中体现 |
 | D9 | 导入解析器 SPI | Spring Bean Name 命名约定 + `applicationContext.getBean("<type>DataParserV<version>")` | ① ServiceLoader ② 显式注册表 ③ 策略枚举 | 已存在 7 个解析器（`produceDataParserV1.0` 等）；新增解析器只需注册 Bean，零侵入；命名约定支持版本切换（V2.0 时不破坏 V1.0） |
-| D10 | Feign 契约策略（**OQ-2 决议**） | 强类型 DTO + `*FallbackFactory` + VIN 不存在返回 `null` | 抛 `VehicleNotExistException` / 返回 `Optional<T>` | **决议保持现状**：抛异常会破坏所有现有下游调用方；`Optional` 类型在 Feign 跨进程 JSON 序列化中不被原生支持；下游通过 fallback + null 检查实现降级 |
+| D10 | Feign 契约策略（**CR-006 修订**） | 强类型 DTO + `*FallbackFactory` + VIN 不存在抛 `VehicleNotExistException` | 返回 `null` / 返回 `Optional<T>` | **fail-fast 原则**：VIN 不存在时抛 `VehicleNotExistException`（`VmdErrorCode.VEHICLE_NOT_EXIST`，错误码 `202001`），由 `GlobalExceptionHandler` 统一捕获返回 `ApiResponse.fail`；`VmdBaseException` 继承 `BusinessException` 以纳入框架统一异常处理链路；Fallback 仅处理基础设施故障（网络/超时），此时抛 `RuntimeException` 让调用方感知服务不可用 |
 | D11 | `Vehicle.isActive()` 实现 | **硬编码 `return true`（已知缺陷，对应 §5 O6）**；导致所有 VIN 在 `generateActiveQrcode` 都被判定为已激活并抛 `VehicleHasActivatedException` | ① 查询 `VehicleLifecycleNode` 表是否存在 `VEHICLE_ACTIVE` 节点 ② 通过 qrcode CONFIRMED 判定 ③ 在 `Vehicle` 表加 `active` 状态列 | Rationale：本 spec 为代码现状基线，仅记录缺陷形态。激活的真实判定规则未在当前代码中实现 |
 | D12 | IMMO_SK 死代码现状 | `VehicleSkSubscribe` 类整体注释 + `ExSkService` import 注释 + 事件订阅方法体注释；`recordGenerateVehicleSkNode` 永不被触发 | — | Rationale：本 spec 为代码现状基线，仅记录现状形态（死代码保留），不规定处理方式（删除/恢复/标 Deprecated 等改造均需走单独 CR） |
 
@@ -364,27 +364,28 @@ sequenceDiagram
     participant FF as VmdVehicleServiceFallbackFactory
     participant SC as ServiceVehicleController
     participant VAS as VehicleAppService
-    participant VR as VehicleRepository
+    participant VR as VehBasicInfoRepository
 
     Caller->>API: getByVin(vin)
     alt 网络/服务正常
         API->>SC: GET /api/service/vehicle/v1/{vin}
-        SC->>VAS: getByVin(vin)
-        VAS->>VR: getByVin(vin)
+        SC->>VAS: getVehicleBasicInfoByVin(vin)
+        VAS->>VR: selectByVin(vin)
         alt VIN 存在
-            VR-->>VAS: Vehicle 聚合
-            VAS-->>SC: Vehicle
+            VR-->>VAS: VehicleBasicInfo
+            VAS-->>SC: VehicleBasicInfo
             SC-->>API: ApiResponse.ok(VehicleExResponse)
             API-->>Caller: VehicleExResponse
-        else VIN 不存在（D10 决议）
+        else VIN 不存在（CR-006 fail-fast）
             VR-->>VAS: null
             VAS-->>SC: null
-            SC-->>API: ApiResponse.ok(null)
-            API-->>Caller: null
+            SC->>SC: throw VehicleNotExistException(VmdErrorCode.VEHICLE_NOT_EXIST)
+            SC-->>API: ApiResponse.fail(202001, "车辆不存在")
+            API-->>Caller: 抛出 FeignException（含错误码 202001）
         end
     else Hystrix/超时熔断
         API->>FF: create(throwable)
-        FF-->>Caller: VmdVehicleService 兜底实现<br/>所有方法返回 null / 空集合
+        FF-->>Caller: 抛出 RuntimeException（服务不可用）
     end
 ```
 
@@ -562,9 +563,9 @@ graph LR
 - `VehicleExResponse getByVin(@PathVariable String vin)`
 - `void bindOrder(@PathVariable String vin, @RequestBody VehicleOrderExRequest req)`
 
-**Fallback 规范**：`VmdVehicleServiceFallbackFactory` → `getByVin` 返回 `null`；`bindOrder` 不抛异常但记录熔断日志。
+**Fallback 规范**：`VmdVehicleServiceFallbackFactory` → `getByVin` 抛 `RuntimeException`（服务不可用，让调用方感知故障）；`bindOrder` 不抛异常但记录熔断日志。
 
-**错误码**：`VehicleHasBindOrderException`（业务异常，不进 fallback，直接抛回 caller）。
+**错误码**：`VehicleNotExistException`（`VmdErrorCode.VEHICLE_NOT_EXIST`，错误码 `202001`，VIN 不存在时由 Service 端抛出，通过 `GlobalExceptionHandler` 返回 `ApiResponse.fail`）；`VehicleHasBindOrderException`（`VmdErrorCode.VEHICLE_HAS_BIND_ORDER`，错误码 `202009`，重复绑定订单）。
 
 #### 5.2.2 `VmdVehicleLifecycleService`（→ US-027）
 8 个 `recordFirstApply*Node` 端点（TBOX_CERT / TBOX_COMM_SK / CCP_CERT / CCP_COMM_SK / IDCM_CERT / IDCM_COMM_SK / ADCM_CERT / ADCM_COMM_SK）。
@@ -592,14 +593,15 @@ graph LR
 
 ### 5.3 错误码总表
 
-| 异常类 | HTTP | 触发场景 | 用户消息 |
-|--------|------|---------|---------|
-| `VmdBaseException` | 500 | 基类 | — |
-| `VehicleNotExistException` | 400 | VIN 不存在 | `车辆不存在` |
-| `VehicleHasBindOrderException` | 400 | 重复绑定订单 | `车辆已绑定订单` |
-| `VehicleImportDataException` | 400 | 导入解析失败 | `批次<batchNum>解析异常: <reason>` |
-| `PartNotExistException` | 400 | PN 不存在 | `零件不存在` |
-| `PartNotAllowBindException` | 400 | 零件不允许绑定 | — |
+> VMD 异常体系：`VmdBaseException` → `BusinessException`（`framework-common`），由 `GlobalExceptionHandler` 统一捕获，HTTP 状态码 `200`，响应体为 `ApiResponse.fail(VmdErrorCode, message)`。
+
+| 异常类 | 错误码 | HTTP | 触发场景 | 用户消息 |
+|--------|--------|------|---------|---------|
+| `VehicleNotExistException` | `202001` | 200 | VIN 不存在 | `车辆不存在` |
+| `VehicleHasBindOrderException` | `202009` | 200 | 重复绑定订单 | `车辆已绑定订单` |
+| `VehicleImportDataException` | `202010` | 200 | 导入解析失败 | `车辆导入数据异常` |
+| `PartNotExistException` | `202011` | 200 | PN 不存在 | `零件不存在` |
+| `PartNotAllowBindException` | `202012` | 200 | 零件不允许绑定 | `零件不允许绑定` |
 
 ## 6. Coverage Mapping
 
@@ -615,7 +617,7 @@ graph LR
 | US-008 FeatureFamily + Code | §3.1 产品树 / §4.1 F1 / §5.1.8 | 含族下特征值 listAll |
 | US-009 ConfigItem + Option + Mapping | §3.1 配置项 / §4.1 F1 / §5.1.9 | 嵌套子资源 |
 | US-010 Vehicle CRUD（MPT） | §3.1 物理车 / §3.2 Vehicle 聚合 / §5.1.10 | 删除联动 lifecycle |
-| US-011 Vehicle 内部查询 | §3.2 Vehicle / §4.4 F4 / §5.2.1 / D10 | VIN 不存在返回 null（现状契约） |
+| US-011 Vehicle 内部查询 | §3.2 Vehicle / §4.4 F4 / §5.2.1 / D10 | VIN 不存在抛 `VehicleNotExistException`（fail-fast） |
 | US-012 Vehicle 订单绑定 | §3.2 Vehicle.bindOrder / §5.2.1 | + ORDER_BIND 节点 |
 | US-013 VehicleConfig | §3.1 物理车 / §5.1.11 | 仅查询/导出（O8） |
 | US-014 Part | §3.1 零件 / §5.1.12 / §5.2.3 | MPT + Service 双暴露 |
@@ -659,3 +661,4 @@ graph LR
 | 2026-05-23 | CR-002 | Modified | **回退首版中夹带的"未来改造"内容，回归纯逆向基线**：D8/D11/D12 改写为现状描述（不规定修复方式）；§3.4 移除 V3 迁移；§3.2 Vehicle 聚合行为标注当前缺陷而非改造方案；§5.1.15 移除 OQ 决议改造标注；§7 由"Impact Analysis"改写为"Known Defects & Technical Debt"；§8 Open Questions 清空。本 spec 自此为代码现状的正本 |
 | 2026-05-23 | CR-003 | Removed | **移除 US-028/US-029 车机+移动端二维码激活闭环**：移除 §3.2 Qrcode 聚合、§4.4 F4 序列图、§5.2 IDCM 端、§5.3 Mobile 端、§5.5 错误码表中 Qrcode 相关条目、§6 Coverage Mapping US-028/US-029 行、§7 TD-1/TD-2/TD-5；§4.5 F5 事件订阅图移除 QrcodePublish/QrcodeValidateEvent/QrcodeConfirmEvent |
 | 2026-05-23 | CR-004 | Modified | **US-020 EOL 解析器改事件驱动**：D7 决策更新（EOL 对 TSP/OTA 调用改为 `@Async @EventListener`）；§4.3 F3 时序图重构（EOL parser 只负责数据入库 + 发布 `VehicleEolPartBoundEvent`，TSP/OTA 调用移至 `VehicleEolTspOtaSubscribe`）；§4.5 F5 事件图新增 `VehicleEolPartBoundEvent` 及其订阅者 |
+| 2026-05-23 | CR-006 | Modified | **US-011 VIN 不存在改为抛异常（fail-fast）**：D10 决策从"返回 null"改为"抛 `VehicleNotExistException`"；§4.4 F4 时序图更新（VIN 不存在时 Service 端抛异常 + Fallback 改为抛 RuntimeException）；§5.2.1 Fallback 规范更新；§5.3 错误码总表更新（新增 `VmdErrorCode` 错误码列、HTTP 状态码统一为 200、移除 `VmdBaseException` 基类行）；异常体系重构：`VmdBaseException` 从 `extends BaseException` 改为 `extends BusinessException`，新增 `VmdErrorCode` 枚举 |

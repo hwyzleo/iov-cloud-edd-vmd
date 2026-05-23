@@ -1,11 +1,14 @@
 package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.controller.service;
 
+import cn.hutool.core.util.ObjUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.response.VehicleExResponse;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.request.VehicleOrderExRequest;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.VmdVehicleExServiceAssembler;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleAppService;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.VehicleNotExistException;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleBasicInfo;
 import net.hwyz.iov.cloud.framework.common.bean.ApiResponse;
 import net.hwyz.iov.cloud.framework.web.controller.BaseController;
 import org.springframework.validation.annotation.Validated;
@@ -45,7 +48,11 @@ public class ServiceVehicleController extends BaseController {
     @GetMapping("/{vin}")
     public VehicleExResponse getByVin(@PathVariable String vin) {
         log.info("内部服务请求根据车架号[{}]查询车辆信息", vin);
-        return VmdVehicleExServiceAssembler.INSTANCE.fromDomain(vehicleAppService.getVehicleBasicInfoByVin(vin));
+        VehicleBasicInfo vehicleBasicInfo = vehicleAppService.getVehicleBasicInfoByVin(vin);
+        if (ObjUtil.isNull(vehicleBasicInfo)) {
+            throw new VehicleNotExistException(vin);
+        }
+        return VmdVehicleExServiceAssembler.INSTANCE.fromDomain(vehicleBasicInfo);
     }
 
 }

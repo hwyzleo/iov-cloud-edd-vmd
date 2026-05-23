@@ -27,7 +27,7 @@ public class VmdVehicleServiceFallbackFactory implements FallbackFactory<VmdVehi
             @Override
             public VehicleExResponse getByVin(String vin) {
                 log.error("车辆服务根据车架号[{}]查询车辆信息调用失败", vin, throwable);
-                return null;
+                throw new RuntimeException("车辆服务根据车架号[" + vin + "]查询车辆信息调用失败", throwable);
             }
         };
     }
