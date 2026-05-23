@@ -298,33 +298,40 @@ sequenceDiagram
 
 ```mermaid
 sequenceDiagram
-    participant P as EolDataParserV1_0
-    participant V as VehicleAppService
+    participant P as EolDataParserV1_0<br/>(编排层)
+    participant EX as VehicleInfoExtractor
+    participant PS as VehicleInfoPersister
+    participant PB as VehiclePartBinder
     participant L as VehicleLifecycleAppService
-    participant VP as VehiclePartAppService
     participant E as VehiclePublish
 
     Note over P: 对每条 ITEM
-    alt VIN 不存在
-        P->>V: createVehicle(vin, basicInfo)
-        V->>E: produce(vin) → VehicleProduceEvent
+    P->>EX: extractBasicInfo(itemJson, existing, batchNum, vin)
+    EX-->>P: VehicleBasicInfo
+    P->>EX: extractDetails(itemJson, detailMap, batchNum, vin)
+    EX-->>P: List<VehicleDetail>
+    P->>EX: extractEolDate(itemJson)
+    EX-->>P: Instant eolDate
+    alt 首次 EOL（eolTime == null）
+        P->>P: basicInfo.setEolTime(eolDate)
     end
-    P->>V: updateDetailInfo(vin, 30+字段)
-    P->>P: eolDate = item.EOL_DATE ?? Instant.now()
-    alt 首次 EOL（vehicle.eolTime == null）
+    P->>PS: persist(basicInfo, details)
+    PS-->>P: boolean isNewVehicle
+    alt isNewVehicle
+        P->>E: produce(vin) → VehicleProduceEvent
+    end
+    alt 首次 EOL
         P->>E: eol(vin, eolDate) → VehicleEolEvent
     end
+    P->>EX: extractCertDateStr(itemJson)
     alt CERT_DATE != null
         P->>L: recordCertificateNode(vin, certDate)
     end
-    loop PARTS 数组
-        alt part.VIN != 外层 VIN
-            P->>P: log.warn("跳过")
-        else
-            P->>VP: bindVehiclePart(vin, part, "MES")
-        end
+    P->>PB: bindParts(parts, vin, batchNum)
+    PB-->>P: List<PartMeta>
+    alt partMetaList 非空
+        P->>E: eolPartBound(vin, partMetaList) → VehicleEolPartBoundEvent
     end
-    P->>E: eolPartBound(vin, partList) → VehicleEolPartBoundEvent
 ```
 
 **异步订阅者（VehicleEolTspOtaSubscribe）**：
@@ -662,3 +669,4 @@ graph LR
 | 2026-05-23 | CR-003 | Removed | **移除 US-028/US-029 车机+移动端二维码激活闭环**：移除 §3.2 Qrcode 聚合、§4.4 F4 序列图、§5.2 IDCM 端、§5.3 Mobile 端、§5.5 错误码表中 Qrcode 相关条目、§6 Coverage Mapping US-028/US-029 行、§7 TD-1/TD-2/TD-5；§4.5 F5 事件订阅图移除 QrcodePublish/QrcodeValidateEvent/QrcodeConfirmEvent |
 | 2026-05-23 | CR-004 | Modified | **US-020 EOL 解析器改事件驱动**：D7 决策更新（EOL 对 TSP/OTA 调用改为 `@Async @EventListener`）；§4.3 F3 时序图重构（EOL parser 只负责数据入库 + 发布 `VehicleEolPartBoundEvent`，TSP/OTA 调用移至 `VehicleEolTspOtaSubscribe`）；§4.5 F5 事件图新增 `VehicleEolPartBoundEvent` 及其订阅者 |
 | 2026-05-23 | CR-006 | Modified | **US-011 VIN 不存在改为抛异常（fail-fast）**：D10 决策从"返回 null"改为"抛 `VehicleNotExistException`"；§4.4 F4 时序图更新（VIN 不存在时 Service 端抛异常 + Fallback 改为抛 RuntimeException）；§5.2.1 Fallback 规范更新；§5.3 错误码总表更新（新增 `VmdErrorCode` 错误码列、HTTP 状态码统一为 200、移除 `VmdBaseException` 基类行）；异常体系重构：`VmdBaseException` 从 `extends BaseException` 改为 `extends BusinessException`，新增 `VmdErrorCode` 枚举 |
+| 2026-05-23 | CR-007 | Modified | **US-020 EOL 解析器职责拆分**：将 `EolDataParserV1_0`（200 行上帝对象）拆分为薄编排层（102 行）+ 3 个独立可测试组件：`VehicleInfoExtractor`（字段映射，8 基础信息 + 28 详情）、`VehicleInfoPersister`（insert/update + 批量插入）、`VehiclePartBinder`（零件校验/绑定/PartMeta 构建）；§4.3 F3 时序图重构为编排层委托模式 |
