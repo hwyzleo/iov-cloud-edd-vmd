@@ -6,7 +6,9 @@ import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
 
 import net.hwyz.iov.cloud.framework.common.domain.DomainObj;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import java.time.Instant;
+import java.time.LocalDateTime;
 
 /**
  * 品牌领域对象
@@ -48,5 +50,25 @@ public class Brand implements DomainObj<Brand> {
      * 排序
      */
     private Integer sort;
+
+    /**
+     * 数据来源：MDM=来自MDM系统，MANUAL=本地手动维护
+     */
+    private SourceType source;
+
+    /**
+     * MDM侧实体主键ID
+     */
+    private String externalRefId;
+
+    /**
+     * MDM侧实体版本号
+     */
+    private Long externalVersion;
+
+    /**
+     * 最后一次同步时间
+     */
+    private LocalDateTime lastSyncTime;
 
 }

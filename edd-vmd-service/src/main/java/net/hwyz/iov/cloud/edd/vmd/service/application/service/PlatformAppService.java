@@ -6,7 +6,9 @@ import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.PlatformAssembler;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.PlatformDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.PlatformQuery;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.ProductDataReadOnlyException;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Platform;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehPlatformRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehSeriesRepository;
@@ -119,6 +121,10 @@ public class PlatformAppService {
      */
     public int createPlatform(PlatformCmd platformCmd, String userId) {
         Platform platform = PlatformAssembler.INSTANCE.toDomain(platformCmd);
+        // 检查是否为 MDM 来源数据
+        if (platform.getSource() == SourceType.MDM) {
+            throw new ProductDataReadOnlyException("平台", platform.getCode());
+        }
         return vehPlatformRepository.insert(platform);
     }
 
@@ -130,8 +136,13 @@ public class PlatformAppService {
      * @return 结果
      */
     public int modifyPlatform(PlatformCmd platformCmd, String userId) {
-        Platform platform = PlatformAssembler.INSTANCE.toDomain(platformCmd);
-        return vehPlatformRepository.update(platform);
+        Platform platform = vehPlatformRepository.selectById(platformCmd.getId());
+        // 检查是否为 MDM 来源数据
+        if (platform.getSource() == SourceType.MDM) {
+            throw new ProductDataReadOnlyException("平台", platform.getCode());
+        }
+        Platform updatePlatform = PlatformAssembler.INSTANCE.toDomain(platformCmd);
+        return vehPlatformRepository.update(updatePlatform);
     }
 
     /**
@@ -141,6 +152,13 @@ public class PlatformAppService {
      * @return 结果
      */
     public int deletePlatformByIds(Long[] ids) {
+        // 检查是否为 MDM 来源数据
+        for (Long id : ids) {
+            Platform platform = vehPlatformRepository.selectById(id);
+            if (platform != null && platform.getSource() == SourceType.MDM) {
+                throw new ProductDataReadOnlyException("平台", platform.getCode());
+            }
+        }
         return vehPlatformRepository.batchPhysicalDelete(ids);
     }
 

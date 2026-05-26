@@ -3,6 +3,7 @@ package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.repository
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Brand;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBrandRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter.BrandConverter;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehBrandMapper;
@@ -47,12 +48,27 @@ public class VehBrandRepositoryImpl implements VehBrandRepository {
     }
 
     @Override
+    public Brand selectByExternalRefId(String externalRefId) {
+        return BrandConverter.INSTANCE.toDomain(vehBrandMapper.selectPoByExternalRefId(externalRefId));
+    }
+
+    @Override
+    public long countBySource(SourceType source) {
+        return vehBrandMapper.countPoBySource(source.getValue());
+    }
+
+    @Override
     public int insert(Brand brand) {
         return vehBrandMapper.insertPo(BrandConverter.INSTANCE.fromDomain(brand));
     }
 
     @Override
     public int update(Brand brand) {
+        return vehBrandMapper.updatePo(BrandConverter.INSTANCE.fromDomain(brand));
+    }
+
+    @Override
+    public int updateById(Brand brand) {
         return vehBrandMapper.updatePo(BrandConverter.INSTANCE.fromDomain(brand));
     }
 

@@ -6,7 +6,9 @@ import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.SeriesAssembler;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.SeriesDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.SeriesQuery;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.ProductDataReadOnlyException;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Series;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehModelRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehSeriesRepository;
@@ -120,6 +122,10 @@ public class SeriesAppService {
      */
     public int createSeries(SeriesCmd seriesCmd, String userId) {
         Series series = SeriesAssembler.INSTANCE.toDomain(seriesCmd);
+        // 检查是否为 MDM 来源数据
+        if (series.getSource() == SourceType.MDM) {
+            throw new ProductDataReadOnlyException("车系", series.getCode());
+        }
         return vehSeriesRepository.insert(series);
     }
 
@@ -131,8 +137,13 @@ public class SeriesAppService {
      * @return 结果
      */
     public int modifySeries(SeriesCmd seriesCmd, String userId) {
-        Series series = SeriesAssembler.INSTANCE.toDomain(seriesCmd);
-        return vehSeriesRepository.update(series);
+        Series series = vehSeriesRepository.selectById(seriesCmd.getId());
+        // 检查是否为 MDM 来源数据
+        if (series.getSource() == SourceType.MDM) {
+            throw new ProductDataReadOnlyException("车系", series.getCode());
+        }
+        Series updateSeries = SeriesAssembler.INSTANCE.toDomain(seriesCmd);
+        return vehSeriesRepository.update(updateSeries);
     }
 
     /**
@@ -142,6 +153,13 @@ public class SeriesAppService {
      * @return 结果
      */
     public int deleteSeriesByIds(Long[] ids) {
+        // 检查是否为 MDM 来源数据
+        for (Long id : ids) {
+            Series series = vehSeriesRepository.selectById(id);
+            if (series != null && series.getSource() == SourceType.MDM) {
+                throw new ProductDataReadOnlyException("车系", series.getCode());
+            }
+        }
         return vehSeriesRepository.batchPhysicalDelete(ids);
     }
 

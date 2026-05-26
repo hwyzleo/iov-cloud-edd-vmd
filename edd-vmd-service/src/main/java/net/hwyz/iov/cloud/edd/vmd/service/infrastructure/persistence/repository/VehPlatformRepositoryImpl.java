@@ -3,6 +3,7 @@ package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.repository
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Platform;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehPlatformRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter.PlatformConverter;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehPlatformMapper;
@@ -47,12 +48,27 @@ public class VehPlatformRepositoryImpl implements VehPlatformRepository {
     }
 
     @Override
+    public Platform selectByExternalRefId(String externalRefId) {
+        return PlatformConverter.INSTANCE.toDomain(vehPlatformMapper.selectPoByExternalRefId(externalRefId));
+    }
+
+    @Override
+    public long countBySource(SourceType source) {
+        return vehPlatformMapper.countPoBySource(source.getValue());
+    }
+
+    @Override
     public int insert(Platform platform) {
         return vehPlatformMapper.insertPo(PlatformConverter.INSTANCE.fromDomain(platform));
     }
 
     @Override
     public int update(Platform platform) {
+        return vehPlatformMapper.updatePo(PlatformConverter.INSTANCE.fromDomain(platform));
+    }
+
+    @Override
+    public int updateById(Platform platform) {
         return vehPlatformMapper.updatePo(PlatformConverter.INSTANCE.fromDomain(platform));
     }
 

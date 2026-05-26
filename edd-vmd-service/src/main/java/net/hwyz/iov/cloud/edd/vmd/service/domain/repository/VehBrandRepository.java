@@ -1,6 +1,7 @@
 package net.hwyz.iov.cloud.edd.vmd.service.domain.repository;
 
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Brand;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 
 import java.util.List;
 import java.util.Map;
@@ -45,6 +46,22 @@ public interface VehBrandRepository {
     Brand selectByCode(String code);
 
     /**
+     * 根据MDM外部引用ID查询品牌
+     *
+     * @param externalRefId MDM外部引用ID
+     * @return 品牌
+     */
+    Brand selectByExternalRefId(String externalRefId);
+
+    /**
+     * 根据数据来源统计品牌数量
+     *
+     * @param source 数据来源
+     * @return 数量
+     */
+    long countBySource(SourceType source);
+
+    /**
      * 新增品牌
      *
      * @param brand 品牌
@@ -59,6 +76,14 @@ public interface VehBrandRepository {
      * @return 影响行数
      */
     int update(Brand brand);
+
+    /**
+     * 根据主键ID修改品牌
+     *
+     * @param brand 品牌
+     * @return 影响行数
+     */
+    int updateById(Brand brand);
 
     /**
      * 批量物理删除品牌

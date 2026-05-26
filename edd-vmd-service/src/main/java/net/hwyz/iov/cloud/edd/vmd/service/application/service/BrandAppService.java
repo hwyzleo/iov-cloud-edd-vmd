@@ -7,7 +7,9 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.BrandAssembler;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.BrandCmd;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.BrandQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.BrandDto;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.ProductDataReadOnlyException;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Brand;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBrandRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehSeriesRepository;
@@ -119,6 +121,10 @@ public class BrandAppService {
      */
     public int createBrand(BrandCmd brandCmd, String userId) {
         Brand brand = BrandAssembler.INSTANCE.toDomain(brandCmd);
+        // 检查是否为 MDM 来源数据
+        if (brand.getSource() == SourceType.MDM) {
+            throw new ProductDataReadOnlyException("品牌", brand.getCode());
+        }
         return vehBrandRepository.insert(brand);
     }
 
@@ -130,8 +136,13 @@ public class BrandAppService {
      * @return 结果
      */
     public int modifyBrand(BrandCmd brandCmd, String userId) {
-        Brand brand = BrandAssembler.INSTANCE.toDomain(brandCmd);
-        return vehBrandRepository.update(brand);
+        Brand brand = vehBrandRepository.selectById(brandCmd.getId());
+        // 检查是否为 MDM 来源数据
+        if (brand.getSource() == SourceType.MDM) {
+            throw new ProductDataReadOnlyException("品牌", brand.getCode());
+        }
+        Brand updateBrand = BrandAssembler.INSTANCE.toDomain(brandCmd);
+        return vehBrandRepository.update(updateBrand);
     }
 
     /**
@@ -141,6 +152,13 @@ public class BrandAppService {
      * @return 结果
      */
     public int deleteBrandByIds(Long[] ids) {
+        // 检查是否为 MDM 来源数据
+        for (Long id : ids) {
+            Brand brand = vehBrandRepository.selectById(id);
+            if (brand != null && brand.getSource() == SourceType.MDM) {
+                throw new ProductDataReadOnlyException("品牌", brand.getCode());
+            }
+        }
         return vehBrandRepository.batchPhysicalDelete(ids);
     }
 

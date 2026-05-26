@@ -1,6 +1,7 @@
 package net.hwyz.iov.cloud.edd.vmd.service.domain.repository;
 
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Platform;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 
 import java.util.List;
 import java.util.Map;
@@ -45,6 +46,22 @@ public interface VehPlatformRepository {
     Platform selectByCode(String code);
 
     /**
+     * 根据MDM外部引用ID查询平台
+     *
+     * @param externalRefId MDM外部引用ID
+     * @return 平台
+     */
+    Platform selectByExternalRefId(String externalRefId);
+
+    /**
+     * 根据数据来源统计平台数量
+     *
+     * @param source 数据来源
+     * @return 数量
+     */
+    long countBySource(SourceType source);
+
+    /**
      * 新增平台
      *
      * @param platform 平台
@@ -59,6 +76,14 @@ public interface VehPlatformRepository {
      * @return 影响行数
      */
     int update(Platform platform);
+
+    /**
+     * 根据主键ID修改平台
+     *
+     * @param platform 平台
+     * @return 影响行数
+     */
+    int updateById(Platform platform);
 
     /**
      * 批量物理删除平台

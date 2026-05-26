@@ -18,7 +18,8 @@ public enum VmdErrorCode implements ErrorCode {
     VEHICLE_IMPORT_DATA_EXCEPTION("202010", "车辆导入数据异常"),
     PART_NOT_EXIST("202011", "零件不存在"),
     PART_NOT_ALLOW_BIND("202012", "零件不允许绑定"),
-    PARSER_NOT_FOUND("202013", "导入数据解析器不存在");
+    PARSER_NOT_FOUND("202013", "导入数据解析器不存在"),
+    PRODUCT_DATA_READ_ONLY("202014", "产品数据只读，不允许通过VMD后台修改");
 
     private final String code;
     private final String message;

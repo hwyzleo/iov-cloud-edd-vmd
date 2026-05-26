@@ -3,6 +3,7 @@ package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.repository
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Series;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehSeriesRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter.SeriesConverter;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehSeriesMapper;
@@ -47,12 +48,27 @@ public class VehSeriesRepositoryImpl implements VehSeriesRepository {
     }
 
     @Override
+    public Series selectByExternalRefId(String externalRefId) {
+        return SeriesConverter.INSTANCE.toDomain(vehSeriesMapper.selectPoByExternalRefId(externalRefId));
+    }
+
+    @Override
+    public long countBySource(SourceType source) {
+        return vehSeriesMapper.countPoBySource(source.getValue());
+    }
+
+    @Override
     public int insert(Series series) {
         return vehSeriesMapper.insertPo(SeriesConverter.INSTANCE.fromDomain(series));
     }
 
     @Override
     public int update(Series series) {
+        return vehSeriesMapper.updatePo(SeriesConverter.INSTANCE.fromDomain(series));
+    }
+
+    @Override
+    public int updateById(Series series) {
         return vehSeriesMapper.updatePo(SeriesConverter.INSTANCE.fromDomain(series));
     }
 

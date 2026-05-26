@@ -18,11 +18,13 @@
 - G2：通过统一 Feign 契约（`Vmd*Service`）对外暴露车辆/零件/设备/车型配置/生命周期五类能力。
 - G3：支持 6 类（PRODUCE/EOL/BTM/CCP/IDCM/TBOX/SIM）批量数据导入并下钻到 TSP/OTA/IDK 等下游服务。
 - G4：对管理后台提供完整 CRUD + 鉴权（`completeVehicle:*` / `iov:configCenter:*` 权限点）能力。
+- G5：在产品树（品牌/车系/平台）主数据上，VMD 作为 edd-mdm 的下游消费方，持有本地投影副本。
 
 ### 非目标（Non-Goals，本期不做）
 - N1：不替代账号服务（`ExAccountService`）做用户身份/手机号实名核验。
 - N2：不替代安全密钥服务（`ExSkService`）执行 IMMO_SK 的实际生成。
 - N3：不实现 V2.0+ 解析器（当前仅 V1.0）。
+- N4：不再充当品牌/车系/平台的企业级 SSOT；不实施跨系统主数据治理（Golden Record / 审批工作流 / 数据质量打分）。
 
 ## 3. User Stories
 
@@ -41,6 +43,18 @@
 - WHEN Mpt-User 调用 `POST /api/mpt/brand/v1` 创建品牌 IF `code` 已存在 THEN THE SYSTEM SHALL 返回 `ApiResponse.fail("新增车辆品牌'<code>'失败，车辆品牌代码已存在")`。
 - WHEN Mpt-User 调用 `DELETE /api/mpt/brand/v1/{brandIds}` IF 该品牌下存在车系 OR 该品牌下存在车辆 THEN THE SYSTEM SHALL 拒绝删除并返回对应原因。
 - THE SYSTEM SHALL 校验调用方持有 `completeVehicle:product:brand:list/query/add/edit/remove/export` 权限点；缺权时由 framework-security 统一拦截。
+- WHEN MDM 通过 Kafka 推送 BrandCreated / BrandUpdated / BrandDeleted 事件 THE SYSTEM SHALL upsert 本地副本，并写入 source=MDM / external_ref_id / external_version / last_sync_time。
+- WHEN event.version <= local.external_version THEN THE SYSTEM SHALL 忽略该事件（乱序处理）。
+- IF 记录的 source=MDM THEN THE SYSTEM SHALL 拒绝来自 MPT 的 add / edit / delete 操作并返回明确错误。
+- WHEN MPT 操作 source=MANUAL 的记录 THE SYSTEM SHALL 维持现有 CRUD 行为不变。
+
+#### US-001b: Bootstrap 时从 MDM 全量同步品牌数据
+**As a** System, **I want** Bootstrap 时从 MDM 全量同步品牌数据, **so that** 首次接入或数据丢失后可恢复一致性。
+
+**Acceptance Criteria**:
+- WHEN VMD 启动时检测本地 source=MDM 品牌记录数为 0 THE SYSTEM SHALL 自动调用 MDM 全量快照接口拉取品牌数据并 upsert 本地副本。
+- WHEN Mpt-User 调用 `POST /api/mpt/mdmSync/v1/bootstrap?entity=brand` THE SYSTEM SHALL 调用 MDM 全量快照接口拉取品牌数据并 upsert 本地副本（不删除本地记录）。
+- THE SYSTEM SHALL 在 upsert 时写入 source=MDM / external_ref_id / external_version / last_sync_time。
 
 #### US-002: 维护车系（Series）
 **As a** Mpt-User, **I want** 维护车系并按品牌过滤, **so that** 形成"品牌→车系"产品树。
@@ -49,6 +63,18 @@
 - WHEN Mpt-User 调用 `GET /api/mpt/series/v1/listByBrandCode?brandCode=<x>` THE SYSTEM SHALL 返回该品牌下全部车系（不分页）。
 - WHEN 删除某车系 IF 其下存在车型 OR 存在车辆 THEN THE SYSTEM SHALL 拒绝删除并提示"该车系下存在车型/车辆"。
 - THE SYSTEM SHALL 在车系数据中保存 `brandCode` 冗余字段以支持跨域回查（参见迁移脚本 `V2__Series_brand_code_migration.sql`）。
+- WHEN MDM 通过 Kafka 推送 SeriesCreated / SeriesUpdated / SeriesDeleted 事件 THE SYSTEM SHALL upsert 本地副本，并写入 source=MDM / external_ref_id / external_version / last_sync_time。
+- WHEN event.version <= local.external_version THEN THE SYSTEM SHALL 忽略该事件（乱序处理）。
+- IF 记录的 source=MDM THEN THE SYSTEM SHALL 拒绝来自 MPT 的 add / edit / delete 操作并返回明确错误。
+- WHEN MPT 操作 source=MANUAL 的记录 THE SYSTEM SHALL 维持现有 CRUD 行为不变。
+
+#### US-002b: Bootstrap 时从 MDM 全量同步车系数据
+**As a** System, **I want** Bootstrap 时从 MDM 全量同步车系数据, **so that** 首次接入或数据丢失后可恢复一致性。
+
+**Acceptance Criteria**:
+- WHEN VMD 启动时检测本地 source=MDM 车系记录数为 0 THE SYSTEM SHALL 自动调用 MDM 全量快照接口拉取车系数据并 upsert 本地副本。
+- WHEN Mpt-User 调用 `POST /api/mpt/mdmSync/v1/bootstrap?entity=series` THE SYSTEM SHALL 调用 MDM 全量快照接口拉取车系数据并 upsert 本地副本（不删除本地记录）。
+- THE SYSTEM SHALL 在 upsert 时写入 source=MDM / external_ref_id / external_version / last_sync_time。
 
 #### US-003: 维护车型（Model）
 **As a** Mpt-User, **I want** 维护车型并按"平台+车系"过滤, **so that** 在产品树中精确定位车型层。
@@ -80,6 +106,18 @@
 **Acceptance Criteria**:
 - WHEN 删除某平台 IF 其下存在车系 OR 存在车辆 THEN THE SYSTEM SHALL 拒绝删除。
 - WHEN 创建/修改平台 IF `code` 已存在 THEN THE SYSTEM SHALL 返回唯一性失败。
+- WHEN MDM 通过 Kafka 推送 PlatformCreated / PlatformUpdated / PlatformDeleted 事件 THE SYSTEM SHALL upsert 本地副本，并写入 source=MDM / external_ref_id / external_version / last_sync_time。
+- WHEN event.version <= local.external_version THEN THE SYSTEM SHALL 忽略该事件（乱序处理）。
+- IF 记录的 source=MDM THEN THE SYSTEM SHALL 拒绝来自 MPT 的 add / edit / delete 操作并返回明确错误。
+- WHEN MPT 操作 source=MANUAL 的记录 THE SYSTEM SHALL 维持现有 CRUD 行为不变。
+
+#### US-006b: Bootstrap 时从 MDM 全量同步平台数据
+**As a** System, **I want** Bootstrap 时从 MDM 全量同步平台数据, **so that** 首次接入或数据丢失后可恢复一致性。
+
+**Acceptance Criteria**:
+- WHEN VMD 启动时检测本地 source=MDM 平台记录数为 0 THE SYSTEM SHALL 自动调用 MDM 全量快照接口拉取平台数据并 upsert 本地副本。
+- WHEN Mpt-User 调用 `POST /api/mpt/mdmSync/v1/bootstrap?entity=platform` THE SYSTEM SHALL 调用 MDM 全量快照接口拉取平台数据并 upsert 本地副本（不删除本地记录）。
+- THE SYSTEM SHALL 在 upsert 时写入 source=MDM / external_ref_id / external_version / last_sync_time。
 
 #### US-007: 维护生产厂商（Manufacturer）
 **As a** Mpt-User, **I want** 维护生产厂商, **so that** 每台车辆可追溯到其生产工厂。
@@ -326,6 +364,10 @@
 - **Nacos** 注册 + 配置（namespace 默认 `32c13f29-1aa6-468a-bacb-81be7f437dc9`，可由 `NACOS_NAMESPACE` 覆盖；服务名 `edd-vmd`）。
 - **API 网关**：所有外部访问通过统一网关进入，鉴权/限流/审计在网关层。
 - **审计**：MPT 写操作通过 `@Log(title=..., businessType=...)` 切面落审计日志。
+- **MDM 同步优先级**：品牌 / 车系 / 平台主数据的 SSOT 优先级为 MDM > VMD 本地；MDM 不可达时降级为只读。
+- **MDM 事件消费**：VMD 通过 Kafka 订阅 MDM 事件，事件 payload schema / topic 命名 / partition 策略 / 重试与死信策略由「edd-mdm 接入规范」定义。
+- **MDM 快照接口**：VMD 通过 Feign 调用 MDM 全量快照接口，路径 / 入参 / 出参由「edd-mdm 接入规范」定义。
+- **数据来源标记**：veh_brand / veh_series / veh_platform 三张表新增 source 字段（MDM / MANUAL），source=MDM 的记录禁止通过 MPT 后台修改。
 
 ### 依赖（外部）
 - **TSP 服务**：`TspVehicleCcpService / TspVehicleIdcmService / TspVehicleNetworkService / TspVehicleTboxService / TspCcpInfoService / TspIdcmInfoService / TspTboxInfoService / TspSimService`。
@@ -333,11 +375,15 @@
 - **IDK 服务**：`IdkBtmInfoService`（蓝牙模块批量导入）。
 - **账号服务（已注释）**：`ExAccountService`（预设车主校验，待启用）。
 - **安全密钥服务（已注释）**：`ExSkService`（IMMO_SK 生成，待启用）。
+- **edd-mdm 服务**：Product MDM 子域，提供品牌 / 车系 / 平台主数据的 Kafka 事件推送 + Feign 全量快照接口。详见「edd-mdm 接入规范」。
 
 ### 前置条件
 - Nacos 中已存在共享配置 `application.yaml / mysql.yaml / redis.yaml`。
 - MySQL 数据库已存在并允许 Flyway 在启动时执行 `V0__Baseline.sql / V1__BuildConfig_feature_code_migration.sql / V2__Series_brand_code_migration.sql`。
 - API 网关下游路由已将 `edd-vmd` 注册到正确路径前缀。
+- MDM 已完成首版 Product MDM 子域上线，且 Kafka topic 已开通。
+- MDM Feign 全量快照接口已就绪，VMD 可通过 Feign 调用。
+- VMD 启动时若本地无 source=MDM 数据，需通过 Bootstrap 流程从 MDM 拉全量。
 
 ## 5. Out of Scope
 
@@ -349,6 +395,9 @@
 - O6：车辆配置（VehicleConfig）的写入流程（当前 MPT 仅暴露查询/导出，不暴露 add/edit）。
 - O7：`VehicleLifecycleNodeEnum.VEHICLE_INVoICING` 为拼写错误（应为 `VEHICLE_INVOICING`，**已知缺陷**）；本 spec 仅记录现状。
 - O8：`MptVehiclePartController.add/edit` 当前未对 `vin` 执行存在性校验，可能产生脏数据（**已知缺陷**）；本 spec 仅记录现状。
+- O9：MDM 与 VMD 的具体协议（Kafka topic 命名 / payload 字段映射 / 重试策略 / 死信队列处理）由「edd-mdm 接入规范」单独定义，本 spec 不展开。
+- O10：跨系统 Golden Record 合并能力由 edd-mdm 负责，VMD 不实现。
+- O11：现有数据 source 字段回标为 MDM 的数据治理任务（通过独立 CR 执行对账回标 source='MDM'），本期 spec 不实现。
 
 ## 6. Changelog
 
@@ -361,4 +410,5 @@
 | 2026-05-23 | CR-005 | Modified | **US-020 EOL 解析器改事件驱动**：将 TSP/OTA 同步 Feign 调用改为发布 `VehicleEolPartBoundEvent` 事件 + 异步订阅者处理，解除 VMD↔TSP/OTA 同步耦合，提升 EOL 解析可用性 |
 | 2026-05-23 | CR-006 | Modified | **US-011 VIN 不存在改为抛异常（fail-fast）**：回退 CR-002/CR-003 中"VIN 不存在返回 null"的既定契约，改为抛出 `VehicleNotExistException`（`VmdErrorCode.VEHICLE_NOT_EXIST`，错误码 `202001`）；同时 `VmdBaseException` 基类从 `BaseException`（int code）改为继承 `BusinessException`（ErrorCode 接口），统一纳入 `GlobalExceptionHandler` 的 `BusinessException` 捕获链路；新增 `VmdErrorCode` 枚举集中管理 VMD 模块错误码；`VmdVehicleServiceFallbackFactory.getByVin` 改为抛 `RuntimeException` 而非返回 null |
 | 2026-05-23 | CR-009 | Modified | **US-018~025 批量导入返回结构化处理摘要**：`ImportDataParser.parse()` 返回类型从 `void` 改为 `ImportResult`（含 `totalCount/successCount/failureCount/invalidCount`）；所有 7 个解析器（PRODUCE/EOL/BTM/TBOX/CCP/IDCM/SIM）实现计数回传；`MptVehicleImportDataController.add/edit` 响应从 `ApiResponse<Void>` 改为 `ApiResponse<ImportResultResponse>`，运营人员可对账 |
+| 2026-05-26 | CR-010 | Modified | **品牌/车系/平台主数据 SSOT 上移至 edd-mdm**：VMD 降级为本地投影副本；新增 source / external_ref_id / external_version / last_sync_time 字段；MPT 后台对 source=MDM 记录禁止写操作；新增 Bootstrap 全量同步流程；新增 MDM 事件订阅流程 |
 
