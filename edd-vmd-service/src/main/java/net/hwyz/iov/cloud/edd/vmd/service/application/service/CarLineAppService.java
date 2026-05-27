@@ -29,7 +29,7 @@ import java.util.Map;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class SeriesAppService {
+public class CarLineAppService {
 
     private final VehCarLineRepository vehCarLineRepository;
     private final VehModelRepository vehModelRepository;

@@ -8,7 +8,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.SeriesRequest;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.SeriesResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.CarLineQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.CarLineDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.service.SeriesAppService;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.CarLineAppService;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
 import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
 import net.hwyz.iov.cloud.framework.common.bean.ApiResponse;
@@ -34,7 +34,7 @@ import java.util.List;
 @RequestMapping(value = "/api/mpt/series/v1")
 public class MptSeriesController extends BaseController {
 
-    private final SeriesAppService seriesAppService;
+    private final CarLineAppService carLineAppService;
 
     /**
      * 分页查询车系信息
@@ -54,7 +54,7 @@ public class MptSeriesController extends BaseController {
                 .beginTime(getBeginTime(series))
                 .endTime(getEndTime(series))
                 .build();
-        List<CarLineDto> seriesDtoList = seriesAppService.search(query);
+        List<CarLineDto> seriesDtoList = carLineAppService.search(query);
         return ApiResponse.ok(getPageResult(PageUtil.convert(seriesDtoList, MptSeriesAssembler.INSTANCE::fromDto)));
     }
 
@@ -71,7 +71,7 @@ public class MptSeriesController extends BaseController {
         CarLineQuery query = CarLineQuery.builder()
                 .brandCode(brandCode)
                 .build();
-        List<CarLineDto> seriesDtoList = seriesAppService.search(query);
+        List<CarLineDto> seriesDtoList = carLineAppService.search(query);
         return ApiResponse.ok(MptSeriesAssembler.INSTANCE.fromDtoList(seriesDtoList));
     }
 
@@ -98,7 +98,7 @@ public class MptSeriesController extends BaseController {
     @GetMapping(value = "/{seriesId}")
     public ApiResponse<SeriesResponse> getInfo(@PathVariable Long seriesId) {
         log.info("管理后台用户[{}]根据车系ID[{}]获取车系信息", SecurityContextHolder.getUserName(), seriesId);
-        return ApiResponse.ok(MptSeriesAssembler.INSTANCE.fromDto(seriesAppService.getSeriesById(seriesId)));
+        return ApiResponse.ok(MptSeriesAssembler.INSTANCE.fromDto(carLineAppService.getSeriesById(seriesId)));
     }
 
     /**
@@ -112,10 +112,10 @@ public class MptSeriesController extends BaseController {
     @PostMapping
     public ApiResponse<Void> add(@Validated @RequestBody SeriesRequest series) {
         log.info("管理后台用户[{}]新增车系信息[{}]", SecurityContextHolder.getUserName(), series.getCode());
-        if (!seriesAppService.checkCodeUnique(series.getId(), series.getCode())) {
+        if (!carLineAppService.checkCodeUnique(series.getId(), series.getCode())) {
             return ApiResponse.fail("新增车系'" + series.getCode() + "'失败，车系代码已存在");
         }
-        seriesAppService.createSeries(MptSeriesAssembler.INSTANCE.toCmd(series), SecurityUtils.getUserId().toString());
+        carLineAppService.createSeries(MptSeriesAssembler.INSTANCE.toCmd(series), SecurityUtils.getUserId().toString());
         return ApiResponse.ok();
     }
 
@@ -130,10 +130,10 @@ public class MptSeriesController extends BaseController {
     @PutMapping
     public ApiResponse<Void> edit(@Validated @RequestBody SeriesRequest series) {
         log.info("管理后台用户[{}]修改保存车系信息[{}]", SecurityContextHolder.getUserName(), series.getCode());
-        if (!seriesAppService.checkCodeUnique(series.getId(), series.getCode())) {
+        if (!carLineAppService.checkCodeUnique(series.getId(), series.getCode())) {
             return ApiResponse.fail("修改保存车系'" + series.getCode() + "'失败，车系代码已存在");
         }
-        seriesAppService.modifySeries(MptSeriesAssembler.INSTANCE.toCmd(series), SecurityUtils.getUserId().toString());
+        carLineAppService.modifySeries(MptSeriesAssembler.INSTANCE.toCmd(series), SecurityUtils.getUserId().toString());
         return ApiResponse.ok();
     }
 
@@ -149,14 +149,14 @@ public class MptSeriesController extends BaseController {
     public ApiResponse<Void> remove(@PathVariable Long[] seriesIds) {
         log.info("管理后台用户[{}]删除车系信息[{}]", SecurityContextHolder.getUserName(), seriesIds);
         for (Long seriesId : seriesIds) {
-            if (seriesAppService.checkSeriesModelExist(seriesId)) {
+            if (carLineAppService.checkSeriesModelExist(seriesId)) {
                 return ApiResponse.fail("删除车系'" + seriesId + "'失败，该车系下存在车型");
             }
-            if (seriesAppService.checkSeriesVehicleExist(seriesId)) {
+            if (carLineAppService.checkSeriesVehicleExist(seriesId)) {
                 return ApiResponse.fail("删除车系'" + seriesId + "'失败，该车系下存在车辆");
             }
         }
-        return seriesAppService.deleteSeriesByIds(seriesIds) > 0 ? ApiResponse.ok() : ApiResponse.fail("删除失败");
+        return carLineAppService.deleteSeriesByIds(seriesIds) > 0 ? ApiResponse.ok() : ApiResponse.fail("删除失败");
     }
 
 }

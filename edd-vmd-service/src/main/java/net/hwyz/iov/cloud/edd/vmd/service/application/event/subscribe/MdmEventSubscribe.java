@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmBrandEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmPlatformEvent;
-import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmSeriesEvent;
+import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmCarLineEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.MdmSyncAppService;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -40,7 +40,7 @@ public class MdmEventSubscribe {
      * @param event 车系事件
      */
     @EventListener
-    public void onMdmSeriesEvent(MdmSeriesEvent event) {
+    public void onMdmSeriesEvent(MdmCarLineEvent event) {
         log.info("收到MDM车系事件: type={}, entityId={}, version={}, code={}",
                 event.getEventType(), event.getEntityId(), event.getVersion(), event.getCode());
         mdmSyncAppService.handleSeriesEvent(event);

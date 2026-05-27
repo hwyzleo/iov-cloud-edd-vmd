@@ -7,7 +7,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.ServiceBuildConf
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.BuildConfigDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.BuildConfigFeatureCodeDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.BuildConfigAppService;
-import net.hwyz.iov.cloud.edd.vmd.service.application.service.SeriesAppService;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.CarLineAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleModelConfigAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.CarLine;
 import net.hwyz.iov.cloud.framework.web.controller.BaseController;
@@ -29,7 +29,7 @@ public class ServiceVehicleModelConfigController extends BaseController {
 
     private final VehicleModelConfigAppService vehicleModelConfigAppService;
     private final BuildConfigAppService buildConfigAppService;
-    private final SeriesAppService seriesAppService;
+    private final CarLineAppService carLineAppService;
 
     /**
      * 根据特征族特征值组合得到匹配的生产配置代码
@@ -72,7 +72,7 @@ public class ServiceVehicleModelConfigController extends BaseController {
         response.setFeatureCodes(ServiceBuildConfigAssembler.INSTANCE.toFeatureCodeExResponseList(featureCodeDtoList));
 
         if (buildConfigDto.getSeriesCode() != null) {
-            CarLine carLine = seriesAppService.getSeriesByCode(buildConfigDto.getSeriesCode());
+            CarLine carLine = carLineAppService.getSeriesByCode(buildConfigDto.getSeriesCode());
             if (carLine != null && carLine.getBrandCode() != null) {
                 response.setBrandCode(carLine.getBrandCode());
             }

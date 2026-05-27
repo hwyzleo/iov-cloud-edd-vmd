@@ -4,7 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmBrandEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmPlatformEvent;
-import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmSeriesEvent;
+import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmCarLineEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Brand;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Platform;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.CarLine;
@@ -73,7 +73,7 @@ public class MdmSyncAppService {
      *
      * @param event 车系事件
      */
-    public void handleSeriesEvent(MdmSeriesEvent event) {
+    public void handleSeriesEvent(MdmCarLineEvent event) {
         log.info("处理MDM车系事件: entityId={}, version={}", event.getEntityId(), event.getVersion());
         // 根据 externalRefId 查找本地记录
         CarLine localCarLine = vehCarLineRepository.selectByExternalRefId(event.getEntityId());

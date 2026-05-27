@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
  */
 @Getter
 @Setter
-public class MdmSeriesEvent extends MdmEvent {
+public class MdmCarLineEvent extends MdmEvent {
 
     /**
      * 车系名称
@@ -24,8 +24,8 @@ public class MdmSeriesEvent extends MdmEvent {
      */
     private String brandCode;
 
-    public MdmSeriesEvent(String eventType, String entityId, Long version, String code,
-                          String name, String brandCode, LocalDateTime occurredAt) {
+    public MdmCarLineEvent(String eventType, String entityId, Long version, String code,
+                           String name, String brandCode, LocalDateTime occurredAt) {
         super(eventType, entityId, version, code, occurredAt);
         this.name = name;
         this.brandCode = brandCode;
