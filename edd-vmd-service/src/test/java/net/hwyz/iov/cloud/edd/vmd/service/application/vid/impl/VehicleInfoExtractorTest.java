@@ -49,7 +49,7 @@ class VehicleInfoExtractorTest {
         assertEquals("M001", result.getManufacturerCode());
         assertEquals("B001", result.getBrandCode());
         assertEquals("P001", result.getPlatformCode());
-        assertEquals("S001", result.getSeriesCode());
+        assertEquals("S001", result.getCarLineCode());
         assertEquals("MOD01", result.getModelCode());
         assertEquals("BM01", result.getBaseModelCode());
         assertEquals("BC01", result.getBuildConfigCode());
