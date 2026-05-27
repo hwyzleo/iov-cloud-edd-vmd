@@ -147,10 +147,10 @@ graph TB
 | 表名 | PO 类 | 关键列 | 唯一约束 | 关联 |
 |------|------|--------|----------|------|
 | `veh_brand` | `VehBrandPo` | `code`, `name`, `source`, `external_ref_id`, `external_version`, `last_sync_time` | UK(`code`), UK(`external_ref_id`) | — |
-| `veh_series` | `VehSeriesPo` | `code`, `name`, `brand_code`, `source`, `external_ref_id`, `external_version`, `last_sync_time` | UK(`code`), UK(`external_ref_id`) | → `veh_brand.code`；`brand_code` 在 source=MDM 时由事件 payload 提供，source=MANUAL 时由 MPT 写入 |
+| `veh_carLine` | `VehCarLinePo` | `code`, `name`, `brand_code`, `source`, `external_ref_id`, `external_version`, `last_sync_time` | UK(`code`), UK(`external_ref_id`) | → `veh_brand.code`；`brand_code` 在 source=MDM 时由事件 payload 提供，source=MANUAL 时由 MPT 写入 |
 | `veh_platform` | `VehPlatformPo` | `code`, `name`, `source`, `external_ref_id`, `external_version`, `last_sync_time` | UK(`code`), UK(`external_ref_id`) | — |
-| `veh_model` | `VehModelPo` | `code`, `name`, `platform_code`, `series_code` | UK(`code`) | → `veh_platform.code`, `veh_series.code` |
-| `veh_base_model` | `VehBaseModelPo` | `code`, `name`, `platform_code`, `series_code`, `model_code` | UK(`code`) | → `veh_model.code` |
+| `veh_model` | `VehModelPo` | `code`, `name`, `platform_code`, `carLine_code` | UK(`code`) | → `veh_platform.code`, `veh_carLine.code` |
+| `veh_base_model` | `VehBaseModelPo` | `code`, `name`, `platform_code`, `carLine_code`, `model_code` | UK(`code`) | → `veh_model.code` |
 | `veh_base_model_feature_code` | `VehBaseModelFeatureCodePo` | `base_model_code`, `family_code`, `feature_code` | UK(`base_model_code`,`family_code`) | → `veh_base_model.code`, `veh_feature_family.code`, `veh_feature_code.code` |
 | `veh_build_config` | `VehBuildConfigPo` | `code`, `name`, `base_model_code` | UK(`code`) | → `veh_base_model.code` |
 | `veh_build_config_feature_code` | `VehBuildConfigFeatureCodePo` | `build_config_code`, `family_code`, `feature_code` | UK(`build_config_code`,`family_code`) | → `veh_build_config.code` |
@@ -170,7 +170,7 @@ graph TB
 #### 物理车域（5 张）
 | 表名 | PO 类 | 关键列 | 唯一约束 | 备注 |
 |------|------|--------|----------|------|
-| `veh_basic_info` | `VehBasicInfoPo` | `vin`, `manufacturer_code`, `brand_code`, `platform_code`, `series_code`, `model_code`, `base_model_code`, `build_config_code`, `order_num` | UK(`vin`) | 车辆主档 |
+| `veh_basic_info` | `VehBasicInfoPo` | `vin`, `manufacturer_code`, `brand_code`, `platform_code`, `carLine_code`, `model_code`, `base_model_code`, `build_config_code`, `order_num` | UK(`vin`) | 车辆主档 |
 | `veh_detail_info` | `VehDetailInfoPo` | `vin`, 30+ 详细字段 | UK(`vin`) | EOL 解析时填充 |
 | `veh_preset_owner` | `VehPresetOwnerPo` | `vin`, `mobile`, `name` | UK(`vin`) | 预设车主（当前 `checkVehiclePresetOwner` 注释，本期不消费） |
 | `vehicle_config` | `VehicleConfigPo` | `vin`, `version` | UK(`vin`,`version`) | 车辆配置版本 |
@@ -206,11 +206,11 @@ graph TB
   - 行为：`bindOrder(orderNum)`
 
 #### 实体（Entity，21 个）
-按 §3.1 表清单一一对应，关键实体：`Brand` / `Series` / `Platform` / `Model` / `BaseModel` / `BaseModelFeatureCode` / `BuildConfig` / `BuildConfigFeatureCode` / `FeatureFamily` / `FeatureCode` / `Manufacturer` / `ConfigItem` / `ConfigItemOption` / `ConfigItemMapping` / `VehicleBasicInfo` / `VehicleDetail` / `VehiclePresetOwner` / `VehicleConfig` / `VehicleConfigItem` / `VehiclePart` / `VehiclePartHistory` / `Part` / `Device` / `Supplier` / `VehicleLifecycle` / `VehicleLifecycleNode` / `VehicleImportData`
+按 §3.1 表清单一一对应，关键实体：`Brand` / `CarLine` / `Platform` / `Model` / `BaseModel` / `BaseModelFeatureCode` / `BuildConfig` / `BuildConfigFeatureCode` / `FeatureFamily` / `FeatureCode` / `Manufacturer` / `ConfigItem` / `ConfigItemOption` / `ConfigItemMapping` / `VehicleBasicInfo` / `VehicleDetail` / `VehiclePresetOwner` / `VehicleConfig` / `VehicleConfigItem` / `VehiclePart` / `VehiclePartHistory` / `Part` / `Device` / `Supplier` / `VehicleLifecycle` / `VehicleLifecycleNode` / `VehicleImportData`
 
 #### 值对象（Value Object）
 - **`VehicleLifecycleNodeEnum`**：23 个节点（包含拼写错误 `VEHICLE_INVoICING`，参见 §5 O10 已知缺陷）
-- **`SourceType`**：数据来源枚举（`MDM` / `MANUAL`），用于 Brand / Series / Platform 实体
+- **`SourceType`**：数据来源枚举（`MDM` / `MANUAL`），用于 Brand / CarLine / Platform 实体
 - **`VehiclePartState`**：`0=作废 / 1=在用` 等
 - **`MnoType`**：SIM 卡运营商枚举（`CMCC` / `CTCC` / `CUCC` 等，由 SIM 解析器使用）
 - **`DeviceItem`**：设备项类型（`TBOX` / `CCP` / `IDCM` / `BTM` 等）
@@ -233,7 +233,7 @@ graph TB
 |------|------|------|
 | V0 | `V0__Baseline.sql` | 基线（23 张表 + 索引 + 默认数据） |
 | V1 | `V1__BuildConfig_feature_code_migration.sql` | 生产配置特征值迁移 |
-| V2 | `V2__Series_brand_code_migration.sql` | 车系冗余 brand_code |
+| V2 | `V2__CarLine_brand_code_migration.sql` | 车系冗余 brand_code |
 | V3 | `V3__Add_mdm_source_to_product_tree.sql` | 品牌/车系/平台新增 source / external_ref_id / external_version / last_sync_time 字段 + UK(external_ref_id) + DML 回填 source='MANUAL' |
 
 ## 4. Core Flows
@@ -444,7 +444,7 @@ graph LR
 sequenceDiagram
     participant K as Kafka
     participant S as MdmEventSubscribe
-    participant R as Brand/Series/Platform Repository
+    participant R as Brand/CarLine/Platform Repository
     participant DB as MySQL
 
     K->>S: 消费 MDM 事件（BrandCreated/Updated/Deleted）
@@ -476,14 +476,14 @@ sequenceDiagram
     participant A as MdmSyncAppService
     participant FC as MdmBrandQueryClient / MdmCarLineQueryClient / MdmPlatformQueryClient
     participant MDM as edd-mdm
-    participant R as Brand/Series/Platform Repository
+    participant R as Brand/CarLine/Platform Repository
     participant DB as MySQL
 
     alt 启动时自动
         VMD->>C: ApplicationReadyEvent
         C->>A: bootstrapAll()
     else 手工触发
-        VMD->>C: POST /api/mpt/mdmSync/v1/bootstrap?entity=brand|series|platform|all
+        VMD->>C: POST /api/mpt/mdmSync/v1/bootstrap?entity=brand|carLine|platform|all
         C->>A: bootstrap(entity)
     end
     A->>R: countBySource('MDM')
@@ -525,11 +525,11 @@ sequenceDiagram
 
 > **source=MDM 只读限制**：POST / PUT / DELETE 接口对 source=MDM 记录抛 `ProductDataReadOnlyException`（错误码 `202014`），消息模板 `{entity}'{code}' 来源为 MDM，不允许通过 VMD 后台修改/删除`。
 
-#### 5.1.2 Series `MptSeriesController`（→ US-002）
-完整 7 端点同 5.1.1 模式，权限前缀 `completeVehicle:product:series:*`，**额外**：
+#### 5.1.2 CarLine `MptCarLineController`（→ US-002）
+完整 7 端点同 5.1.1 模式，权限前缀 `completeVehicle:product:carLine:*`，**额外**：
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/mpt/series/v1/listByBrandCode` | 入参 `brandCode`，返回该品牌下全部车系（不分页） |
+| GET | `/api/mpt/carLine/v1/listByBrandCode` | 入参 `brandCode`，返回该品牌下全部车系（不分页） |
 
 错误：`code 已存在` / `该车系下存在车型` / `该车系下存在车辆`
 
@@ -539,7 +539,7 @@ sequenceDiagram
 完整 7 端点 + 额外：
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/mpt/model/v1/listByPlatformCodeAndSeriesCode` | 入参 `platformCode`,`seriesCode`，返回交集 |
+| GET | `/api/mpt/model/v1/listByPlatformCodeAndCarLineCode` | 入参 `platformCode`,`carLineCode`，返回交集 |
 
 错误：`code 已存在` / `该车型下存在基础车型` / `该车型下存在车辆`
 
@@ -547,7 +547,7 @@ sequenceDiagram
 完整 7 端点 + 特征值嵌套子资源：
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/mpt/baseModel/v1/listByPlatformCodeAndSeriesCodeAndModelCode` | 任意三参数组合查询 |
+| GET | `/api/mpt/baseModel/v1/listByPlatformCodeAndCarLineCodeAndModelCode` | 任意三参数组合查询 |
 | GET | `/api/mpt/baseModel/v1/{baseModelCode}/featureCode/list` | 查询基础车型下特征值 |
 | POST | `/api/mpt/baseModel/v1/{baseModelCode}/featureCode` | 新增特征值 |
 | PUT | `/api/mpt/baseModel/v1/{baseModelCode}/featureCode` | 修改特征值 |
@@ -646,7 +646,7 @@ sequenceDiagram
 #### 5.1.17 MdmSync `MptMdmSyncController`（→ US-001b/US-002b/US-006b）
 | Method | Path | Permission | Request | Response |
 |--------|------|-----------|---------|----------|
-| POST | `/api/mpt/mdmSync/v1/bootstrap` | `completeVehicle:mdmSync:bootstrap` | `?entity=brand\|series\|platform\|all` | `ApiResponse<String>` |
+| POST | `/api/mpt/mdmSync/v1/bootstrap` | `completeVehicle:mdmSync:bootstrap` | `?entity=brand\|carLine\|platform\|all` | `ApiResponse<String>` |
 
 **行为**：调用 MDM 全量快照接口拉取指定实体数据并 upsert 本地副本（不删除本地记录）。
 
@@ -691,7 +691,7 @@ sequenceDiagram
 - `List<VmdBuildConfigResponse> listBuildConfigByBaseModelCode(@PathVariable String baseModelCode)`
 - `VmdBuildConfigResponse getBuildConfig(@PathVariable String buildConfigCode)`
 
-**Fallback**：`null` / 空集合；`getBuildConfig` 在 `seriesCode` 缺失时省略 `brandCode`（不视为错误，US-031 验收要求）。
+**Fallback**：`null` / 空集合；`getBuildConfig` 在 `carLineCode` 缺失时省略 `brandCode`（不视为错误，US-031 验收要求）。
 
 ### 5.3 错误码总表
 
@@ -713,8 +713,8 @@ sequenceDiagram
 |-------|----------------|------|
 | US-001 Brand | §3.1 产品树 / §4.1 F1 / §5.1.1 | 完整 CRUD + 删除前置依赖 |
 | US-001b Brand Bootstrap | §3.1 产品树 / §4.7 F7 / §5.1.17 / §5.2.1 | MDM 全量快照同步 |
-| US-002 Series | §3.1 产品树 / §4.1 F1 / §5.1.2 | 含 `listByBrandCode` |
-| US-002b Series Bootstrap | §3.1 产品树 / §4.7 F7 / §5.1.17 / §5.2.1 | MDM 全量快照同步 |
+| US-002 CarLine | §3.1 产品树 / §4.1 F1 / §5.1.2 | 含 `listByBrandCode` |
+| US-002b CarLine Bootstrap | §3.1 产品树 / §4.7 F7 / §5.1.17 / §5.2.1 | MDM 全量快照同步 |
 | US-003 Model | §3.1 产品树 / §4.1 F1 / §5.1.3 | 含平台+车系联合查询 |
 | US-004 BaseModel + 特征值 | §3.1 产品树 / §4.1 F1 / §5.1.4 | 含特征值嵌套子资源 |
 | US-005 BuildConfig + 特征值 | §3.1 产品树 / §4.1 F1 / §5.1.5 | 含特征值嵌套子资源 |

@@ -56,14 +56,14 @@
 - WHEN Mpt-User 调用 `POST /api/mpt/mdmSync/v1/bootstrap?entity=brand` THE SYSTEM SHALL 调用 MDM 全量快照接口拉取品牌数据并 upsert 本地副本（不删除本地记录）。
 - THE SYSTEM SHALL 在 upsert 时写入 source=MDM / external_ref_id / external_version / last_sync_time。
 
-#### US-002: 维护车系（Series）
+#### US-002: 维护车系（CarLine）
 **As a** Mpt-User, **I want** 维护车系并按品牌过滤, **so that** 形成"品牌→车系"产品树。
 
 **Acceptance Criteria**:
-- WHEN Mpt-User 调用 `GET /api/mpt/series/v1/listByBrandCode?brandCode=<x>` THE SYSTEM SHALL 返回该品牌下全部车系（不分页）。
+- WHEN Mpt-User 调用 `GET /api/mpt/carLine/v1/listByBrandCode?brandCode=<x>` THE SYSTEM SHALL 返回该品牌下全部车系（不分页）。
 - WHEN 删除某车系 IF 其下存在车型 OR 存在车辆 THEN THE SYSTEM SHALL 拒绝删除并提示"该车系下存在车型/车辆"。
-- THE SYSTEM SHALL 在车系数据中保存 `brandCode` 冗余字段以支持跨域回查（参见迁移脚本 `V2__Series_brand_code_migration.sql`）。
-- WHEN MDM 通过 Kafka 推送 SeriesCreated / SeriesUpdated / SeriesDeleted 事件 THE SYSTEM SHALL upsert 本地副本，并写入 source=MDM / external_ref_id / external_version / last_sync_time。
+- THE SYSTEM SHALL 在车系数据中保存 `brandCode` 冗余字段以支持跨域回查（参见迁移脚本 `V2__CarLine_brand_code_migration.sql`）。
+- WHEN MDM 通过 Kafka 推送 CarLineCreated / CarLineUpdated / CarLineDeleted 事件 THE SYSTEM SHALL upsert 本地副本，并写入 source=MDM / external_ref_id / external_version / last_sync_time。
 - WHEN event.version <= local.external_version THEN THE SYSTEM SHALL 忽略该事件（乱序处理）。
 - IF 记录的 source=MDM THEN THE SYSTEM SHALL 拒绝来自 MPT 的 add / edit / delete 操作并返回明确错误。
 - WHEN MPT 操作 source=MANUAL 的记录 THE SYSTEM SHALL 维持现有 CRUD 行为不变。
@@ -73,14 +73,14 @@
 
 **Acceptance Criteria**:
 - WHEN VMD 启动时检测本地 source=MDM 车系记录数为 0 THE SYSTEM SHALL 自动调用 MDM 全量快照接口拉取车系数据并 upsert 本地副本。
-- WHEN Mpt-User 调用 `POST /api/mpt/mdmSync/v1/bootstrap?entity=series` THE SYSTEM SHALL 调用 MDM 全量快照接口拉取车系数据并 upsert 本地副本（不删除本地记录）。
+- WHEN Mpt-User 调用 `POST /api/mpt/mdmSync/v1/bootstrap?entity=carLine` THE SYSTEM SHALL 调用 MDM 全量快照接口拉取车系数据并 upsert 本地副本（不删除本地记录）。
 - THE SYSTEM SHALL 在 upsert 时写入 source=MDM / external_ref_id / external_version / last_sync_time。
 
 #### US-003: 维护车型（Model）
 **As a** Mpt-User, **I want** 维护车型并按"平台+车系"过滤, **so that** 在产品树中精确定位车型层。
 
 **Acceptance Criteria**:
-- WHEN 调用 `GET /api/mpt/model/v1/listByPlatformCodeAndSeriesCode` THE SYSTEM SHALL 返回平台+车系交集下的全部车型。
+- WHEN 调用 `GET /api/mpt/model/v1/listByPlatformCodeAndCarLineCode` THE SYSTEM SHALL 返回平台+车系交集下的全部车型。
 - WHEN 删除某车型 IF 其下存在基础车型 OR 存在车辆 THEN THE SYSTEM SHALL 拒绝删除。
 - WHEN 创建/修改车型 IF `code` 已存在（不含自身 ID）THEN THE SYSTEM SHALL 返回唯一性失败。
 
@@ -88,7 +88,7 @@
 **As a** Mpt-User, **I want** 维护基础车型、按"平台+车系+车型"过滤、为基础车型挂特征族特征值, **so that** 形成生产配置上游的完整"车型→基础车型→特征值"骨架。
 
 **Acceptance Criteria**:
-- WHEN 调用 `GET /api/mpt/baseModel/v1/listByPlatformCodeAndSeriesCodeAndModelCode` THE SYSTEM SHALL 支持 `platformCode/seriesCode/modelCode` 三参数任意组合查询。
+- WHEN 调用 `GET /api/mpt/baseModel/v1/listByPlatformCodeAndCarLineCodeAndModelCode` THE SYSTEM SHALL 支持 `platformCode/carLineCode/modelCode` 三参数任意组合查询。
 - WHEN Mpt-User 在基础车型下新增/修改特征值 IF 同一基础车型下同一 `familyCode` 已存在 THEN THE SYSTEM SHALL 返回"基础车型特征值已存在"。
 - WHEN 删除基础车型 IF 其下存在生产配置 OR 存在车辆 THEN THE SYSTEM SHALL 拒绝删除。
 
@@ -233,7 +233,7 @@
 
 **Acceptance Criteria**:
 - WHEN 解析每条 ITEM IF `VIN` 为空 THEN THE SYSTEM SHALL 计入无效计数并跳过该条；批次结束后 SHALL 对无效计数 > 0 的情况输出 `WARN` 日志。
-- WHEN VIN 已存在 THE SYSTEM SHALL 更新 `manufacturerCode/brandCode/platformCode/seriesCode/modelCode/baseModelCode/buildConfigCode` 七项；不存在则新建。
+- WHEN VIN 已存在 THE SYSTEM SHALL 更新 `manufacturerCode/brandCode/platformCode/carLineCode/modelCode/baseModelCode/buildConfigCode` 七项；不存在则新建。
 - WHEN 一条记录处理完成 THE SYSTEM SHALL 通过 `VehiclePublish.produce(vin)` 发布 `VehicleProduceEvent`。
 - WHEN 解析完成 THE SYSTEM SHALL 返回 `ImportResult`，包含 `totalCount/successCount/failureCount/invalidCount` 四项计数。IF 单条处理异常 THEN THE SYSTEM SHALL 计入 `failureCount` 并继续处理下一条。
 
@@ -349,7 +349,7 @@
 **Acceptance Criteria**:
 - THE SYSTEM SHALL 接受 `Map<String,String>` 形式的特征值组合并返回单一生产配置代码。
 - WHEN 调用 `GET /buildConfig/{buildConfigCode}` THE SYSTEM SHALL 返回包含 `featureCodes` 列表 + `brandCode` 的完整 `VmdBuildConfigResponse`。
-- IF `seriesCode` 缺失或对应车系不存在 THEN THE SYSTEM SHALL 在响应中省略 `brandCode`（不视为错误）。
+- IF `carLineCode` 缺失或对应车系不存在 THEN THE SYSTEM SHALL 在响应中省略 `brandCode`（不视为错误）。
 
 ## 4. Constraints & Assumptions
 
@@ -367,7 +367,7 @@
 - **MDM 同步优先级**：品牌 / 车系 / 平台主数据的 SSOT 优先级为 MDM > VMD 本地；MDM 不可达时降级为只读。
 - **MDM 事件消费**：VMD 通过 Kafka 订阅 MDM 事件，事件 payload schema / topic 命名 / partition 策略 / 重试与死信策略由「edd-mdm 接入规范」定义。
 - **MDM 快照接口**：VMD 通过 Feign 调用 MDM 全量快照接口，路径 / 入参 / 出参由「edd-mdm 接入规范」定义。
-- **数据来源标记**：veh_brand / veh_series / veh_platform 三张表新增 source 字段（MDM / MANUAL），source=MDM 的记录禁止通过 MPT 后台修改。
+- **数据来源标记**：veh_brand / veh_carLine / veh_platform 三张表新增 source 字段（MDM / MANUAL），source=MDM 的记录禁止通过 MPT 后台修改。
 
 ### 依赖（外部）
 - **TSP 服务**：`TspVehicleCcpService / TspVehicleIdcmService / TspVehicleNetworkService / TspVehicleTboxService / TspCcpInfoService / TspIdcmInfoService / TspTboxInfoService / TspSimService`。
@@ -379,7 +379,7 @@
 
 ### 前置条件
 - Nacos 中已存在共享配置 `application.yaml / mysql.yaml / redis.yaml`。
-- MySQL 数据库已存在并允许 Flyway 在启动时执行 `V0__Baseline.sql / V1__BuildConfig_feature_code_migration.sql / V2__Series_brand_code_migration.sql`。
+- MySQL 数据库已存在并允许 Flyway 在启动时执行 `V0__Baseline.sql / V1__BuildConfig_feature_code_migration.sql / V2__CarLine_brand_code_migration.sql`。
 - API 网关下游路由已将 `edd-vmd` 注册到正确路径前缀。
 - MDM 已完成首版 Product MDM 子域上线，且 Kafka topic 已开通。
 - MDM Feign 全量快照接口已就绪，VMD 可通过 Feign 调用。
