@@ -76,7 +76,7 @@ public class CarLineAppService {
     public Boolean checkSeriesModelExist(Long seriesId) {
         CarLine carLine = vehCarLineRepository.selectById(seriesId);
         Map<String, Object> map = new HashMap<>();
-        map.put("seriesCode", carLine.getCode());
+        map.put("carLineCode", carLine.getCode());
         return vehModelRepository.countByMap(map) > 0;
     }
 
@@ -89,7 +89,7 @@ public class CarLineAppService {
     public Boolean checkSeriesVehicleExist(Long seriesId) {
         CarLine carLine = vehCarLineRepository.selectById(seriesId);
         Map<String, Object> map = new HashMap<>();
-        map.put("seriesCode", carLine.getCode());
+        map.put("carLineCode", carLine.getCode());
         return vehBasicInfoRepository.countByMap(map) > 0;
     }
 

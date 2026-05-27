@@ -30,7 +30,7 @@ public class WheelRequest extends BaseRequest {
     /**
      * 车系代码
      */
-    private String seriesCode;
+    private String carLineCode;
 
     /**
      * 轮胎轮毂代码

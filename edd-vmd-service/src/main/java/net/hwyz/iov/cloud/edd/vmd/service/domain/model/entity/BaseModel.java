@@ -32,7 +32,7 @@ public class BaseModel implements DomainObj<BaseModel> {
     /**
      * 车系代码
      */
-    private String seriesCode;
+    private String carLineCode;
 
     /**
      * 车型代码

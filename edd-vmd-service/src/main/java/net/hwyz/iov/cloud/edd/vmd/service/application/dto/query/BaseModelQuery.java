@@ -15,7 +15,7 @@ import java.util.Date;
 public class BaseModelQuery {
 
     private String platformCode;
-    private String seriesCode;
+    private String carLineCode;
     private String modelCode;
     private String code;
     private String name;

@@ -13,7 +13,7 @@
         <result column="row_version" property="rowVersion" />
         <result column="row_valid" property="rowValid" />
         <result column="platform_code" property="platformCode" />
-        <result column="series_code" property="seriesCode" />
+        <result column="series_code" property="carLineCode" />
         <result column="model_code" property="modelCode" />
         <result column="code" property="code" />
         <result column="name" property="name" />
@@ -35,7 +35,7 @@
             description, create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
         VALUES (
-            #{id}, #{platformCode}, #{seriesCode}, #{modelCode}, #{code}, #{name}, #{nameEn}, #{enable}, #{sort}, 
+            #{id}, #{platformCode}, #{carLineCode}, #{modelCode}, #{code}, #{name}, #{nameEn}, #{enable}, #{sort}, 
             #{description}, now(), #{createBy}, now(), #{modifyBy}, 1, 1
         )
     </insert>
@@ -49,7 +49,7 @@
         VALUES
         <foreach collection="list" item="item" index="index" separator=",">
         (
-            #{item.id}, #{item.platformCode}, #{item.seriesCode}, #{item.modelCode}, #{item.code}, #{item.name}, #{item.nameEn}, #{item.enable}, #{item.sort}, 
+            #{item.id}, #{item.platformCode}, #{item.carLineCode}, #{item.modelCode}, #{item.code}, #{item.name}, #{item.nameEn}, #{item.enable}, #{item.sort}, 
             #{item.description}, now(), #{item.createBy}, now(), #{item.modifyBy}, 1, 1
         )
         </foreach>
@@ -61,8 +61,8 @@
         <if test="platformCode != null and platformCode != ''">
             t.platform_code = #{platformCode},
         </if>
-        <if test="seriesCode != null and seriesCode != ''">
-            t.series_code = #{seriesCode},
+        <if test="carLineCode != null and carLineCode != ''">
+            t.series_code = #{carLineCode},
         </if>
         <if test="modelCode != null and modelCode != ''">
             t.model_code = #{modelCode},
@@ -136,8 +136,8 @@
         <if test="platformCode != null and platformCode != ''">
             AND t.platform_code = #{platformCode}
         </if>
-        <if test="seriesCode != null and seriesCode != ''">
-            AND t.series_code = #{seriesCode}
+        <if test="carLineCode != null and carLineCode != ''">
+            AND t.series_code = #{carLineCode}
         </if>
         <if test="modelCode != null and modelCode != ''">
             AND t.model_code = #{modelCode}
@@ -187,8 +187,8 @@
         <if test="platformCode != null and platformCode != ''">
             AND t.platform_code = #{platformCode}
         </if>
-        <if test="seriesCode != null and seriesCode != ''">
-            AND t.series_code = #{seriesCode}
+        <if test="carLineCode != null and carLineCode != ''">
+            AND t.series_code = #{carLineCode}
         </if>
         <if test="modelCode != null and modelCode != ''">
             AND t.model_code = #{modelCode}
@@ -226,8 +226,8 @@
         <if test="platformCode != null and platformCode != ''">
             AND t.platform_code = #{platformCode}
         </if>
-        <if test="seriesCode != null and seriesCode != ''">
-            AND t.series_code = #{seriesCode}
+        <if test="carLineCode != null and carLineCode != ''">
+            AND t.series_code = #{carLineCode}
         </if>
         <if test="modelCode != null and modelCode != ''">
             AND t.model_code = #{modelCode}

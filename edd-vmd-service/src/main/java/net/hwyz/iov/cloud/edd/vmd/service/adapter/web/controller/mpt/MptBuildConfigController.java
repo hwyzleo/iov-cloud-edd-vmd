@@ -41,7 +41,7 @@ public class MptBuildConfigController extends BaseController {
         startPage();
         BuildConfigQuery query = BuildConfigQuery.builder()
                 .platformCode(buildConfig.getPlatformCode())
-                .seriesCode(buildConfig.getSeriesCode())
+                .carLineCode(buildConfig.getCarLineCode())
                 .modelCode(buildConfig.getModelCode())
                 .baseModelCode(buildConfig.getBaseModelCode())
                 .code(buildConfig.getCode())

@@ -16,7 +16,7 @@ public class BuildConfigRequest extends BaseRequest {
 
     private String platformCode;
 
-    private String seriesCode;
+    private String carLineCode;
 
     private String modelCode;
 

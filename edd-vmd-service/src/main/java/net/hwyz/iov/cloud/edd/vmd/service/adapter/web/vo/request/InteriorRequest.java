@@ -30,7 +30,7 @@ public class InteriorRequest extends BaseRequest {
     /**
      * 车系代码
      */
-    private String seriesCode;
+    private String carLineCode;
 
     /**
      * 内饰颜色代码

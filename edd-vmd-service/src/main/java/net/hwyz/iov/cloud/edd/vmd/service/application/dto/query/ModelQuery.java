@@ -15,7 +15,7 @@ import java.util.Date;
 public class ModelQuery {
 
     private String platformCode;
-    private String seriesCode;
+    private String carLineCode;
     private String code;
     private String name;
     private Date beginTime;

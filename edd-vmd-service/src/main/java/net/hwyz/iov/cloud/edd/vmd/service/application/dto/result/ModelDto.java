@@ -19,7 +19,7 @@ public class ModelDto {
     private Long id;
     private String brandCode;
     private String platformCode;
-    private String seriesCode;
+    private String carLineCode;
     private String code;
     private String name;
     private String nameEn;

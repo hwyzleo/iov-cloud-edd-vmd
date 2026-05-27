@@ -18,7 +18,7 @@ public class ModelCmd {
 
     private Long id;
     private String platformCode;
-    private String seriesCode;
+    private String carLineCode;
     private String code;
     private String name;
     private String nameEn;

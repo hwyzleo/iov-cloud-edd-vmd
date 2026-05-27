@@ -51,7 +51,7 @@ public class MptBaseModelController extends BaseController {
         startPage();
         BaseModelQuery query = BaseModelQuery.builder()
                 .platformCode(baseModel.getPlatformCode())
-                .seriesCode(baseModel.getSeriesCode())
+                .carLineCode(baseModel.getCarLineCode())
                 .modelCode(baseModel.getModelCode())
                 .code(baseModel.getCode())
                 .name(baseModel.getName())
@@ -81,20 +81,20 @@ public class MptBaseModelController extends BaseController {
      * 获取指定车辆平台及车系及车型下的所有基础车型
      *
      * @param platformCode 车辆平台代码
-     * @param seriesCode   车系代码
+     * @param carLineCode   车系代码
      * @param modelCode    车型代码
      * @return 基础车型信息列表
      */
     @RequiresPermissions("completeVehicle:product:baseModel:list")
     @GetMapping(value = "/listByPlatformCodeAndSeriesCodeAndModelCode")
     public ApiResponse<List<BaseModelResponse>> listByPlatformCodeAndSeriesCodeAndModelCode(@RequestParam(required = false) String platformCode,
-                                                                                            @RequestParam(required = false) String seriesCode,
+                                                                                            @RequestParam(required = false) String carLineCode,
                                                                                             @RequestParam(required = false) String modelCode) {
         log.info("管理后台用户[{}]获取指定车辆平台[{}]及车系[{}]及车型[{}]下的所有基础车型", SecurityContextHolder.getUserName(),
-                platformCode, seriesCode, modelCode);
+                platformCode, carLineCode, modelCode);
         BaseModelQuery query = BaseModelQuery.builder()
                 .platformCode(platformCode)
-                .seriesCode(seriesCode)
+                .carLineCode(carLineCode)
                 .modelCode(modelCode)
                 .build();
         List<BaseModelDto> baseModelDtoList = baseModelAppService.search(query);

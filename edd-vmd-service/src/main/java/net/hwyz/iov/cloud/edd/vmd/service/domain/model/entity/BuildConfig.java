@@ -17,7 +17,7 @@ public class BuildConfig implements DomainObj<BuildConfig> {
 
     private String platformCode;
 
-    private String seriesCode;
+    private String carLineCode;
 
     private String modelCode;
 

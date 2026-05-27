@@ -36,7 +36,7 @@ public class BuildConfigAppService {
     public List<BuildConfigDto> search(BuildConfigQuery query) {
         Map<String, Object> map = new HashMap<>();
         map.put("platformCode", query.getPlatformCode());
-        map.put("seriesCode", query.getSeriesCode());
+        map.put("carLineCode", query.getCarLineCode());
         map.put("modelCode", query.getModelCode());
         map.put("baseModelCode", query.getBaseModelCode());
         map.put("code", query.getCode());

@@ -30,7 +30,7 @@ public class ModelRequest extends BaseRequest {
     /**
      * 车系代码
      */
-    private String seriesCode;
+    private String carLineCode;
 
     /**
      * 车型代码

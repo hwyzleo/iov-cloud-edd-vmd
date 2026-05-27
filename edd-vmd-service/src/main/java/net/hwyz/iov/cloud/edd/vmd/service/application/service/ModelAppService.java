@@ -45,7 +45,7 @@ public class ModelAppService {
     public List<ModelDto> search(ModelQuery query) {
         Map<String, Object> map = new HashMap<>();
         map.put("platformCode", query.getPlatformCode());
-        map.put("seriesCode", query.getSeriesCode());
+        map.put("carLineCode", query.getCarLineCode());
         map.put("code", query.getCode());
         map.put("name", ParamHelper.fuzzyQueryParam(query.getName()));
         map.put("beginTime", query.getBeginTime());
@@ -104,7 +104,7 @@ public class ModelAppService {
     public ModelDto getModelById(Long id) {
         Model model = vehModelRepository.selectById(id);
         ModelDto modelDto = ModelAssembler.INSTANCE.fromDomain(model);
-        CarLine carLine = vehCarLineRepository.selectByCode(model.getSeriesCode());
+        CarLine carLine = vehCarLineRepository.selectByCode(model.getCarLineCode());
         if (carLine != null) {
             modelDto.setBrandCode(carLine.getBrandCode());
         }

@@ -23,7 +23,7 @@ public class VehicleDto {
     private String manufacturerCode;
     private String brandCode;
     private String platformCode;
-    private String seriesCode;
+    private String carLineCode;
     private String modelCode;
     private String baseModelCode;
     private String buildConfigCode;

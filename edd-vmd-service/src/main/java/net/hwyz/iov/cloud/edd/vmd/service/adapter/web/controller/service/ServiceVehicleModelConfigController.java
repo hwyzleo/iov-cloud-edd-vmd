@@ -71,8 +71,8 @@ public class ServiceVehicleModelConfigController extends BaseController {
         VmdBuildConfigResponse response = ServiceBuildConfigAssembler.INSTANCE.toExResponse(buildConfigDto);
         response.setFeatureCodes(ServiceBuildConfigAssembler.INSTANCE.toFeatureCodeExResponseList(featureCodeDtoList));
 
-        if (buildConfigDto.getSeriesCode() != null) {
-            CarLine carLine = carLineAppService.getSeriesByCode(buildConfigDto.getSeriesCode());
+        if (buildConfigDto.getCarLineCode() != null) {
+            CarLine carLine = carLineAppService.getSeriesByCode(buildConfigDto.getCarLineCode());
             if (carLine != null && carLine.getBrandCode() != null) {
                 response.setBrandCode(carLine.getBrandCode());
             }
