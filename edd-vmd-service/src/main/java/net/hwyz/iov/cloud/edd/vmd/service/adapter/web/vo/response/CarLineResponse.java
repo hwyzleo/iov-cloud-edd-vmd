@@ -14,7 +14,7 @@ import java.util.Date;
 @NoArgsConstructor
 @AllArgsConstructor
 
-public class SeriesResponse {
+public class CarLineResponse {
 
     /**
      * 主键

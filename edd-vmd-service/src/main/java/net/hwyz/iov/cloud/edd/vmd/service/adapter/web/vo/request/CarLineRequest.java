@@ -15,7 +15,7 @@ import java.util.Date;
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public class SeriesRequest extends BaseRequest {
+public class CarLineRequest extends BaseRequest {
 
     /**
      * 主键
