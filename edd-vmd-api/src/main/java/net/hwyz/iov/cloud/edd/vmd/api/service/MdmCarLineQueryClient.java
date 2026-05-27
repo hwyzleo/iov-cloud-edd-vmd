@@ -1,6 +1,6 @@
 package net.hwyz.iov.cloud.edd.vmd.api.service;
 
-import net.hwyz.iov.cloud.edd.vmd.api.fallback.MdmSeriesQueryClientFallbackFactory;
+import net.hwyz.iov.cloud.edd.vmd.api.fallback.MdmCarLineQueryClientFallbackFactory;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 
@@ -13,8 +13,8 @@ import java.util.Map;
  *
  * @author hwyz_leo
  */
-@FeignClient(contextId = "mdmSeriesQueryClient", value = "edd-mdm", path = "/api/mdm/series/v1", fallbackFactory = MdmSeriesQueryClientFallbackFactory.class)
-public interface MdmSeriesQueryClient {
+@FeignClient(contextId = "mdmCarLineQueryClient", value = "edd-mdm", path = "/api/mdm/carLine/v1", fallbackFactory = MdmCarLineQueryClientFallbackFactory.class)
+public interface MdmCarLineQueryClient {
 
     /**
      * 获取所有车系数据

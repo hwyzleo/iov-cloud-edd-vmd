@@ -474,7 +474,7 @@ sequenceDiagram
     participant VMD as VMD 启动 / MPT 手工触发
     participant C as MdmSyncController / BootstrapListener
     participant A as MdmSyncAppService
-    participant FC as MdmBrandQueryClient / MdmSeriesQueryClient / MdmPlatformQueryClient
+    participant FC as MdmBrandQueryClient / MdmCarLineQueryClient / MdmPlatformQueryClient
     participant MDM as edd-mdm
     participant R as Brand/Series/Platform Repository
     participant DB as MySQL
@@ -656,7 +656,7 @@ sequenceDiagram
 
 #### 5.2.1 MDM 快照查询 Feign 接口（→ US-001b/US-002b/US-006b）
 - `MdmBrandQueryClient`：调用 MDM 品牌全量快照接口（path/name 由 edd-mdm 接入规范定义，暂标 TBD）
-- `MdmSeriesQueryClient`：调用 MDM 车系全量快照接口（path/name 由 edd-mdm 接入规范定义，暂标 TBD）
+- `MdmCarLineQueryClient`：调用 MDM 车系全量快照接口（path/name 由 edd-mdm 接入规范定义，暂标 TBD）
 - `MdmPlatformQueryClient`：调用 MDM 平台全量快照接口（path/name 由 edd-mdm 接入规范定义，暂标 TBD）
 
 **Fallback**：记录错误日志，抛出异常让调用方感知 MDM 不可用。
