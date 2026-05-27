@@ -19,7 +19,7 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @SuperBuilder
-public class Series implements DomainObj<Series> {
+public class CarLine implements DomainObj<CarLine> {
 
     /**
      * 主键

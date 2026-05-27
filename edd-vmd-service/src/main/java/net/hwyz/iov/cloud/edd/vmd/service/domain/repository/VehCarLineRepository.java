@@ -1,6 +1,6 @@
 package net.hwyz.iov.cloud.edd.vmd.service.domain.repository;
 
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Series;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.CarLine;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 
 import java.util.List;
@@ -11,7 +11,7 @@ import java.util.Map;
  *
  * @author hwyz_leo
  */
-public interface VehSeriesRepository {
+public interface VehCarLineRepository {
 
     /**
      * 根据条件查询车系列表
@@ -19,7 +19,7 @@ public interface VehSeriesRepository {
      * @param map 查询条件
      * @return 车系列表
      */
-    List<Series> selectByMap(Map<String, Object> map);
+    List<CarLine> selectByMap(Map<String, Object> map);
 
     /**
      * 根据条件统计车系数量
@@ -35,7 +35,7 @@ public interface VehSeriesRepository {
      * @param id 主键ID
      * @return 车系
      */
-    Series selectById(Long id);
+    CarLine selectById(Long id);
 
     /**
      * 根据车系代码查询车系
@@ -43,7 +43,7 @@ public interface VehSeriesRepository {
      * @param code 车系代码
      * @return 车系
      */
-    Series selectByCode(String code);
+    CarLine selectByCode(String code);
 
     /**
      * 根据MDM外部引用ID查询车系
@@ -51,7 +51,7 @@ public interface VehSeriesRepository {
      * @param externalRefId MDM外部引用ID
      * @return 车系
      */
-    Series selectByExternalRefId(String externalRefId);
+    CarLine selectByExternalRefId(String externalRefId);
 
     /**
      * 根据数据来源统计车系数量
@@ -64,26 +64,26 @@ public interface VehSeriesRepository {
     /**
      * 新增车系
      *
-     * @param series 车系
+     * @param carLine 车系
      * @return 影响行数
      */
-    int insert(Series series);
+    int insert(CarLine carLine);
 
     /**
      * 修改车系
      *
-     * @param series 车系
+     * @param carLine 车系
      * @return 影响行数
      */
-    int update(Series series);
+    int update(CarLine carLine);
 
     /**
      * 根据主键ID修改车系
      *
-     * @param series 车系
+     * @param carLine 车系
      * @return 影响行数
      */
-    int updateById(Series series);
+    int updateById(CarLine carLine);
 
     /**
      * 批量物理删除车系
