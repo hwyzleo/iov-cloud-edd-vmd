@@ -7,11 +7,11 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmPlatformEve
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmSeriesEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Brand;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Platform;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Series;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.CarLine;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBrandRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehPlatformRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehSeriesRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehCarLineRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -29,7 +29,7 @@ import java.util.List;
 public class MdmSyncAppService {
 
     private final VehBrandRepository vehBrandRepository;
-    private final VehSeriesRepository vehSeriesRepository;
+    private final VehCarLineRepository vehCarLineRepository;
     private final VehPlatformRepository vehPlatformRepository;
 
     /**
@@ -76,10 +76,10 @@ public class MdmSyncAppService {
     public void handleSeriesEvent(MdmSeriesEvent event) {
         log.info("处理MDM车系事件: entityId={}, version={}", event.getEntityId(), event.getVersion());
         // 根据 externalRefId 查找本地记录
-        Series localSeries = vehSeriesRepository.selectByExternalRefId(event.getEntityId());
-        if (localSeries == null) {
+        CarLine localCarLine = vehCarLineRepository.selectByExternalRefId(event.getEntityId());
+        if (localCarLine == null) {
             // 本地不存在，新增
-            Series newSeries = Series.builder()
+            CarLine newCarLine = CarLine.builder()
                     .code(event.getCode())
                     .name(event.getName())
                     .brandCode(event.getBrandCode())
@@ -88,20 +88,20 @@ public class MdmSyncAppService {
                     .externalVersion(event.getVersion())
                     .lastSyncTime(LocalDateTime.now())
                     .build();
-            vehSeriesRepository.insert(newSeries);
+            vehCarLineRepository.insert(newCarLine);
             log.info("新增车系: code={}", event.getCode());
         } else {
             // 本地存在，检查版本
-            if (event.getVersion() > localSeries.getExternalVersion()) {
-                localSeries.setName(event.getName());
-                localSeries.setBrandCode(event.getBrandCode());
-                localSeries.setExternalVersion(event.getVersion());
-                localSeries.setLastSyncTime(LocalDateTime.now());
-                vehSeriesRepository.updateById(localSeries);
+            if (event.getVersion() > localCarLine.getExternalVersion()) {
+                localCarLine.setName(event.getName());
+                localCarLine.setBrandCode(event.getBrandCode());
+                localCarLine.setExternalVersion(event.getVersion());
+                localCarLine.setLastSyncTime(LocalDateTime.now());
+                vehCarLineRepository.updateById(localCarLine);
                 log.info("更新车系: code={}, version={}", event.getCode(), event.getVersion());
             } else {
                 log.info("忽略车系事件（版本不高于本地）: code={}, eventVersion={}, localVersion={}",
-                        event.getCode(), event.getVersion(), localSeries.getExternalVersion());
+                        event.getCode(), event.getVersion(), localCarLine.getExternalVersion());
             }
         }
     }
@@ -166,7 +166,7 @@ public class MdmSyncAppService {
      */
     public void bootstrapSeries() {
         log.info("开始Bootstrap车系数据同步");
-        long count = vehSeriesRepository.countBySource(SourceType.MDM);
+        long count = vehCarLineRepository.countBySource(SourceType.MDM);
         if (count == 0) {
             log.info("本地无MDM车系数据，开始从MDM拉取全量");
             // TODO: 调用 MDM 全量快照接口拉取车系数据

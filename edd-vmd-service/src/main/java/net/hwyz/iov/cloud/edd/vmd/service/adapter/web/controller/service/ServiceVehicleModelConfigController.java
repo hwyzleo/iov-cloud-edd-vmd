@@ -9,7 +9,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.BuildConfigFeat
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.BuildConfigAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.SeriesAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleModelConfigAppService;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Series;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.CarLine;
 import net.hwyz.iov.cloud.framework.web.controller.BaseController;
 import org.springframework.web.bind.annotation.*;
 
@@ -72,9 +72,9 @@ public class ServiceVehicleModelConfigController extends BaseController {
         response.setFeatureCodes(ServiceBuildConfigAssembler.INSTANCE.toFeatureCodeExResponseList(featureCodeDtoList));
 
         if (buildConfigDto.getSeriesCode() != null) {
-            Series series = seriesAppService.getSeriesByCode(buildConfigDto.getSeriesCode());
-            if (series != null && series.getBrandCode() != null) {
-                response.setBrandCode(series.getBrandCode());
+            CarLine carLine = seriesAppService.getSeriesByCode(buildConfigDto.getSeriesCode());
+            if (carLine != null && carLine.getBrandCode() != null) {
+                response.setBrandCode(carLine.getBrandCode());
             }
         }
 

@@ -6,8 +6,8 @@ import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.MptSeriesAssembler;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.SeriesRequest;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.SeriesResponse;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.SeriesQuery;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.SeriesDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.CarLineQuery;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.CarLineDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.SeriesAppService;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
 import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
@@ -47,14 +47,14 @@ public class MptSeriesController extends BaseController {
     public ApiResponse<PageResult<SeriesResponse>> list(SeriesRequest series) {
         log.info("管理后台用户[{}]分页查询车系信息", SecurityContextHolder.getUserName());
         startPage();
-        SeriesQuery query = SeriesQuery.builder()
+        CarLineQuery query = CarLineQuery.builder()
                 .brandCode(series.getBrandCode())
                 .code(series.getCode())
                 .name(series.getName())
                 .beginTime(getBeginTime(series))
                 .endTime(getEndTime(series))
                 .build();
-        List<SeriesDto> seriesDtoList = seriesAppService.search(query);
+        List<CarLineDto> seriesDtoList = seriesAppService.search(query);
         return ApiResponse.ok(getPageResult(PageUtil.convert(seriesDtoList, MptSeriesAssembler.INSTANCE::fromDto)));
     }
 
@@ -68,10 +68,10 @@ public class MptSeriesController extends BaseController {
     @GetMapping(value = "/listByBrandCode")
     public ApiResponse<List<SeriesResponse>> listByBrandCode(@RequestParam(required = false) String brandCode) {
         log.info("管理后台用户[{}]获取指定品牌[{}]下的所有车系", SecurityContextHolder.getUserName(), brandCode);
-        SeriesQuery query = SeriesQuery.builder()
+        CarLineQuery query = CarLineQuery.builder()
                 .brandCode(brandCode)
                 .build();
-        List<SeriesDto> seriesDtoList = seriesAppService.search(query);
+        List<CarLineDto> seriesDtoList = seriesAppService.search(query);
         return ApiResponse.ok(MptSeriesAssembler.INSTANCE.fromDtoList(seriesDtoList));
     }
 

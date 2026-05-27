@@ -12,7 +12,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Brand;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBrandRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehSeriesRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehCarLineRepository;
 import net.hwyz.iov.cloud.framework.common.util.ParamHelper;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Service;
@@ -32,7 +32,7 @@ import java.util.Map;
 public class BrandAppService {
 
     private final VehBrandRepository vehBrandRepository;
-    private final VehSeriesRepository vehSeriesRepository;
+    private final VehCarLineRepository vehCarLineRepository;
     private final VehBasicInfoRepository vehBasicInfoRepository;
 
     /**
@@ -76,7 +76,7 @@ public class BrandAppService {
         Brand brand = vehBrandRepository.selectById(brandId);
         Map<String, Object> map = new HashMap<>();
         map.put("brandCode", brand.getCode());
-        return vehSeriesRepository.countByMap(map) > 0;
+        return vehCarLineRepository.countByMap(map) > 0;
     }
 
     /**

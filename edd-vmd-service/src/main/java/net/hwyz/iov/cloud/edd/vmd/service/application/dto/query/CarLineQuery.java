@@ -12,7 +12,7 @@ import java.util.Date;
  */
 @Data
 @Builder
-public class SeriesQuery {
+public class CarLineQuery {
 
     private String brandCode;
     private String code;

@@ -1,4 +1,4 @@
-package net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd;
+package net.hwyz.iov.cloud.edd.vmd.service.application.dto.result;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class SeriesCmd {
+public class CarLineDto {
 
     private Long id;
     private String brandCode;

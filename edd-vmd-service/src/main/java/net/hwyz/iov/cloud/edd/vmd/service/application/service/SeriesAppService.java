@@ -3,19 +3,19 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 import cn.hutool.core.util.ObjUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.SeriesAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.SeriesDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.SeriesQuery;
+import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.CarLineAssembler;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.CarLineDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.CarLineQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.ProductDataReadOnlyException;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Series;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.CarLine;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehModelRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehSeriesRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehCarLineRepository;
 import net.hwyz.iov.cloud.framework.common.util.ParamHelper;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Service;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.SeriesCmd;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.CarLineCmd;
 
 import java.util.HashMap;
 import java.util.List;
@@ -31,7 +31,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class SeriesAppService {
 
-    private final VehSeriesRepository vehSeriesRepository;
+    private final VehCarLineRepository vehCarLineRepository;
     private final VehModelRepository vehModelRepository;
     private final VehBasicInfoRepository vehBasicInfoRepository;
 
@@ -41,15 +41,15 @@ public class SeriesAppService {
      * @param query 查询 DTO
      * @return 车系列表
      */
-    public List<SeriesDto> search(SeriesQuery query) {
+    public List<CarLineDto> search(CarLineQuery query) {
         Map<String, Object> map = new HashMap<>();
         map.put("brandCode", query.getBrandCode());
         map.put("code", query.getCode());
         map.put("name", ParamHelper.fuzzyQueryParam(query.getName()));
         map.put("beginTime", query.getBeginTime());
         map.put("endTime", query.getEndTime());
-        List<Series> seriesList = vehSeriesRepository.selectByMap(map);
-        return PageUtil.convert(seriesList, SeriesAssembler.INSTANCE::fromDomain);
+        List<CarLine> carLineList = vehCarLineRepository.selectByMap(map);
+        return PageUtil.convert(carLineList, CarLineAssembler.INSTANCE::fromDomain);
     }
 
     /**
@@ -63,8 +63,8 @@ public class SeriesAppService {
         if (ObjUtil.isNull(seriesId)) {
             seriesId = -1L;
         }
-        Series series = vehSeriesRepository.selectByCode(code);
-        return !ObjUtil.isNotNull(series) || series.getId().longValue() == seriesId.longValue();
+        CarLine carLine = vehCarLineRepository.selectByCode(code);
+        return !ObjUtil.isNotNull(carLine) || carLine.getId().longValue() == seriesId.longValue();
     }
 
     /**
@@ -74,9 +74,9 @@ public class SeriesAppService {
      * @return 结果
      */
     public Boolean checkSeriesModelExist(Long seriesId) {
-        Series series = vehSeriesRepository.selectById(seriesId);
+        CarLine carLine = vehCarLineRepository.selectById(seriesId);
         Map<String, Object> map = new HashMap<>();
-        map.put("seriesCode", series.getCode());
+        map.put("seriesCode", carLine.getCode());
         return vehModelRepository.countByMap(map) > 0;
     }
 
@@ -87,9 +87,9 @@ public class SeriesAppService {
      * @return 结果
      */
     public Boolean checkSeriesVehicleExist(Long seriesId) {
-        Series series = vehSeriesRepository.selectById(seriesId);
+        CarLine carLine = vehCarLineRepository.selectById(seriesId);
         Map<String, Object> map = new HashMap<>();
-        map.put("seriesCode", series.getCode());
+        map.put("seriesCode", carLine.getCode());
         return vehBasicInfoRepository.countByMap(map) > 0;
     }
 
@@ -99,8 +99,8 @@ public class SeriesAppService {
      * @param id 主键ID
      * @return 车系 DTO
      */
-    public SeriesDto getSeriesById(Long id) {
-        return SeriesAssembler.INSTANCE.fromDomain(vehSeriesRepository.selectById(id));
+    public CarLineDto getSeriesById(Long id) {
+        return CarLineAssembler.INSTANCE.fromDomain(vehCarLineRepository.selectById(id));
     }
 
     /**
@@ -109,8 +109,8 @@ public class SeriesAppService {
      * @param code 车系代码
      * @return 车系领域对象
      */
-    public Series getSeriesByCode(String code) {
-        return vehSeriesRepository.selectByCode(code);
+    public CarLine getSeriesByCode(String code) {
+        return vehCarLineRepository.selectByCode(code);
     }
 
     /**
@@ -120,13 +120,13 @@ public class SeriesAppService {
      * @param userId    操作用户ID
      * @return 结果
      */
-    public int createSeries(SeriesCmd seriesCmd, String userId) {
-        Series series = SeriesAssembler.INSTANCE.toDomain(seriesCmd);
+    public int createSeries(CarLineCmd seriesCmd, String userId) {
+        CarLine carLine = CarLineAssembler.INSTANCE.toDomain(seriesCmd);
         // 检查是否为 MDM 来源数据
-        if (series.getSource() == SourceType.MDM) {
-            throw new ProductDataReadOnlyException("车系", series.getCode());
+        if (carLine.getSource() == SourceType.MDM) {
+            throw new ProductDataReadOnlyException("车系", carLine.getCode());
         }
-        return vehSeriesRepository.insert(series);
+        return vehCarLineRepository.insert(carLine);
     }
 
     /**
@@ -136,14 +136,14 @@ public class SeriesAppService {
      * @param userId    操作用户ID
      * @return 结果
      */
-    public int modifySeries(SeriesCmd seriesCmd, String userId) {
-        Series series = vehSeriesRepository.selectById(seriesCmd.getId());
+    public int modifySeries(CarLineCmd seriesCmd, String userId) {
+        CarLine carLine = vehCarLineRepository.selectById(seriesCmd.getId());
         // 检查是否为 MDM 来源数据
-        if (series.getSource() == SourceType.MDM) {
-            throw new ProductDataReadOnlyException("车系", series.getCode());
+        if (carLine.getSource() == SourceType.MDM) {
+            throw new ProductDataReadOnlyException("车系", carLine.getCode());
         }
-        Series updateSeries = SeriesAssembler.INSTANCE.toDomain(seriesCmd);
-        return vehSeriesRepository.update(updateSeries);
+        CarLine updateCarLine = CarLineAssembler.INSTANCE.toDomain(seriesCmd);
+        return vehCarLineRepository.update(updateCarLine);
     }
 
     /**
@@ -155,12 +155,12 @@ public class SeriesAppService {
     public int deleteSeriesByIds(Long[] ids) {
         // 检查是否为 MDM 来源数据
         for (Long id : ids) {
-            Series series = vehSeriesRepository.selectById(id);
-            if (series != null && series.getSource() == SourceType.MDM) {
-                throw new ProductDataReadOnlyException("车系", series.getCode());
+            CarLine carLine = vehCarLineRepository.selectById(id);
+            if (carLine != null && carLine.getSource() == SourceType.MDM) {
+                throw new ProductDataReadOnlyException("车系", carLine.getCode());
             }
         }
-        return vehSeriesRepository.batchPhysicalDelete(ids);
+        return vehCarLineRepository.batchPhysicalDelete(ids);
     }
 
 }
