@@ -39,6 +39,12 @@ public class VmdVehicleModelConfigServiceFallbackFactory implements FallbackFact
                 log.error("车辆车系车型配置服务根据生产配置代码[{}]获取生产配置详细信息调用失败", buildConfigCode, throwable);
                 return null;
             }
+
+            @Override
+            public String getBuildConfigCodeByOptionCodes(String saleModelCode, List<String> optionCodes) {
+                log.error("车辆车系车型配置服务根据销售车型编码[{}]和OptionCode列表[{}]获取生产配置代码调用失败", saleModelCode, optionCodes, throwable);
+                return null;
+            }
         };
     }
 }

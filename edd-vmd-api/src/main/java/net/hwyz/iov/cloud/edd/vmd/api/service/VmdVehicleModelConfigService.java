@@ -46,4 +46,14 @@ public interface VmdVehicleModelConfigService {
     @GetMapping("/buildConfig/{buildConfigCode}")
     VmdBuildConfigResponse getBuildConfigByCode(@PathVariable String buildConfigCode);
 
+    /**
+     * 根据销售车型编码和OptionCode列表获取匹配的生产配置代码
+     *
+     * @param saleModelCode 销售车型编码
+     * @param optionCodes   OptionCode列表
+     * @return 生产配置代码
+     */
+    @GetMapping("/buildConfigCode/byOptionCodes")
+    String getBuildConfigCodeByOptionCodes(@RequestParam String saleModelCode, @RequestParam List<String> optionCodes);
+
 }
