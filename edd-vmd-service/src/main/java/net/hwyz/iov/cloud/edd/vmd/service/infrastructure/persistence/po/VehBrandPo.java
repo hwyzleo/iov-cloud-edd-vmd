@@ -12,10 +12,19 @@ import lombok.*;
 import net.hwyz.iov.cloud.framework.mysql.po.BasePo;
 
 /**
- * <p>
- * 车辆品牌表 持久化对象
- * </p>
- *
+ * 品牌持久化对象 - 对应 tb_veh_brand 表
+ * 
+ * <p>该表同时承载 MDM Brand 投影数据（source=MDM）和历史手动维护数据（source=MANUAL）。</p>
+ * 
+ * <p>MDM 投影字段（source, external_ref_id, external_version, last_sync_time）
+ * 由 MdmSyncAppService 在事件订阅和 Bootstrap 时写入。</p>
+ * 
+ * <p>数据来源规则：</p>
+ * <ul>
+ *   <li>source=MDM：只读，禁止通过 MPT 后台修改/删除</li>
+ *   <li>source=MANUAL：兼容期遗留数据，允许有限维护</li>
+ * </ul>
+ * 
  * @author hwyz_leo
  * @since 2024-09-24
  */
@@ -36,7 +45,7 @@ public class VehBrandPo extends BasePo {
     private Long id;
 
     /**
-     * 品牌代码
+     * 品牌代码（brandCode 关联键）
      */
     @TableField("code")
     private String code;
