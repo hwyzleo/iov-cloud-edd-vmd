@@ -10,6 +10,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.ManufacturerQuer
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Manufacturer;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehManufacturerRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehPlantRepository;
 import net.hwyz.iov.cloud.framework.common.util.ParamHelper;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Service;
@@ -29,6 +30,7 @@ import java.util.Map;
 public class ManufacturerAppService {
 
     private final VehManufacturerRepository vehManufacturerRepository;
+    private final VehPlantRepository vehPlantRepository;
     private final VehBasicInfoRepository vehBasicInfoRepository;
 
     /**

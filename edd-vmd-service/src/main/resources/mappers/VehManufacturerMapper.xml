@@ -12,8 +12,8 @@
         <result column="modify_by" property="modifyBy" />
         <result column="row_version" property="rowVersion" />
         <result column="row_valid" property="rowValid" />
-        <result column="code" property="code" />
-        <result column="name" property="name" />
+        <result column="plant_code" property="code" />
+        <result column="plant_name" property="name" />
         <result column="name_en" property="nameEn" />
         <result column="enable" property="enable" />
         <result column="sort" property="sort" />
@@ -21,14 +21,14 @@
 
     <!-- 通用查询结果列 -->
     <sql id="baseColumnList">
-        id, code, name, name_en, enable, sort, 
+        id, plant_code, plant_name, name_en, enable, sort, 
         description, create_time, create_by, modify_time, modify_by, row_version, row_valid
     </sql>
 
     <!-- 插入 -->
     <insert id="insertPo" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO tb_veh_manufacturer (
-            id, code, name, name_en, enable, sort, 
+        INSERT INTO tb_veh_plant (
+            id, plant_code, plant_name, name_en, enable, sort, 
             description, create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
         VALUES (
@@ -39,7 +39,7 @@
 
     <!-- 批量插入 -->
     <insert id="batchInsertPo" useGeneratedKeys="true" keyProperty="id" parameterType="java.util.List">
-        INSERT INTO tb_veh_manufacturer (
+        INSERT INTO tb_veh_plant (
             id, code, name, name_en, enable, sort, 
             description, create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
@@ -54,9 +54,9 @@
 
     <!-- 更新 -->
     <update id="updatePo" parameterType="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehManufacturerPo">
-        UPDATE tb_veh_manufacturer t SET
+        UPDATE tb_veh_plant t SET
         <if test="name != null and name != ''">
-            t.name = #{name},
+            t.plant_name = #{name},
         </if>
         <if test="nameEn != null and nameEn != ''">
             t.name_en = #{nameEn},
@@ -80,7 +80,7 @@
 
     <!-- 逻辑删除 -->
     <update id="logicalDeletePo" parameterType="Long">
-        UPDATE tb_veh_manufacturer t SET
+        UPDATE tb_veh_plant t SET
         t.row_version = t.row_version + 1,
         t.modify_time = now(),
         t.row_valid = 0
@@ -89,13 +89,13 @@
 
     <!-- 物理删除 -->
     <delete id="physicalDeletePo" parameterType="Long">
-        DELETE FROM tb_veh_manufacturer t
+        DELETE FROM tb_veh_plant t
         WHERE t.id = #{value}
     </delete>
 
     <!-- 批量物理删除车辆工厂信息 -->
     <delete id="batchPhysicalDeletePo" parameterType="Long">
-        DELETE FROM tb_veh_manufacturer t
+        DELETE FROM tb_veh_plant t
         WHERE t.id IN
         <foreach collection="array" item="id" open="(" separator="," close=")">
             #{id}
@@ -105,7 +105,7 @@
     <!-- 根据主键获取对应数据 -->
     <select id="selectPoById" parameterType="Long" resultMap="baseResultMap">
         SELECT <include refid="baseColumnList"/>
-        FROM tb_veh_manufacturer t
+        FROM tb_veh_plant t
         WHERE t.id = #{value}
         AND t.row_valid = 1
     </select>
@@ -113,7 +113,7 @@
     <!-- 根据数据对象获取对应数据列表 -->
     <select id="selectPoByExample" parameterType="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehManufacturerPo" resultMap="baseResultMap">
         SELECT <include refid="baseColumnList"/>
-        FROM tb_veh_manufacturer t
+        FROM tb_veh_plant t
         WHERE t.row_valid = 1
         <if test="id != null">
             AND t.id = #{id}
@@ -157,11 +157,11 @@
     <!-- 根据Map对象获取对应数据列表 -->
     <select id="selectPoByMap" parameterType="java.util.Map" resultMap="baseResultMap">
         SELECT <include refid="baseColumnList"/>
-        FROM tb_veh_manufacturer t
+        FROM tb_veh_plant t
         WHERE t.row_valid = 1
         <!-- 添加自定义条件 -->
         <if test="code != null and code != ''">
-            AND t.code = #{code}
+            AND t.plant_code = #{code}
         </if>
         <if test="name != null and name != ''">
             AND (t.name LIKE #{name} OR t.name_en LIKE #{name})
@@ -178,20 +178,20 @@
     <!-- 通过code查询车辆工厂信息 -->
     <select id="selectPoByCode" parameterType="java.util.Map" resultMap="baseResultMap">
         SELECT <include refid="baseColumnList"/>
-        FROM tb_veh_manufacturer t
+        FROM tb_veh_plant t
         WHERE t.row_valid = 1
-        AND t.code = #{code}
+        AND t.plant_code = #{code}
         LIMIT 1
     </select>
 
     <!-- 根据Map对象统计记录数 -->
     <select id="countPoByMap" parameterType="java.util.Map" resultType="int">
         SELECT COUNT(*)
-        FROM tb_veh_manufacturer t
+        FROM tb_veh_plant t
         WHERE t.row_valid = 1
         <!-- 添加自定义条件 -->
         <if test="code != null and code != ''">
-            AND t.code = #{code}
+            AND t.plant_code = #{code}
         </if>
     </select>
 </mapper>

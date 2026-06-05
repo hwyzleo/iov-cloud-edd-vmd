@@ -47,9 +47,14 @@ public class Vehicle extends BaseDo<String> implements DomainObj<Vehicle> {
     private String vehicleBaseVersion;
 
     /**
-     * 工厂代码
+     * 工厂代码（历史遗留，兼容期保留）
      */
     private String manufacturerCode;
+
+    /**
+     * 生产工厂代码（CR-011新增，承接manufacturerCode语义）
+     */
+    private String plantCode;
 
     /**
      * 品牌代码

@@ -42,10 +42,16 @@ public class VehBasicInfoPo extends BasePo {
     private String vin;
 
     /**
-     * 工厂代码
+     * 工厂代码（历史遗留，兼容期保留）
      */
     @TableField("manufacturer_code")
     private String manufacturerCode;
+
+    /**
+     * 生产工厂代码（CR-011新增，承接manufacturer_code语义）
+     */
+    @TableField("plant_code")
+    private String plantCode;
 
     /**
      * 品牌代码

@@ -19,12 +19,21 @@
 - G3：支持 6 类（PRODUCE/EOL/BTM/CCP/IDCM/TBOX/SIM）批量数据导入并下钻到 TSP/OTA/IDK 等下游服务。
 - G4：对管理后台提供完整 CRUD + 鉴权（`completeVehicle:*` / `iov:configCenter:*` 权限点）能力。
 - G5：在产品树（品牌/车系/平台）主数据上，VMD 作为 edd-mdm 的下游消费方，持有本地投影副本。
+- G6：在工厂（Plant）主数据上，VMD 作为 edd-mdm 的下游消费方，持有 Plant 本地投影副本，用于车辆生产工厂追溯；车辆主档使用 `plantCode` 表示生产工厂编码，VMD 不再承担 Plant 主数据治理职责（CR-011）。
+
+> **Plant / 工厂主数据语义统一（CR-011 补充）**：
+> - VMD 中 Plant 本地投影用于支撑车辆生产工厂追溯，不再承担 Plant 主数据治理职责。
+> - VMD 与 MDM 在工厂主数据命名上统一使用 **Plant**（MDM 侧实体与 VMD 侧本地投影同名）。
+> - VMD 车辆主档使用 `plantCode` 表示生产工厂编码。
+> - 历史 `manufacturerCode` 作为兼容字段或迁移来源处理，不作为长期新字段继续扩展。
+> - VMD Plant 是面向车辆主数据上下文（bounded context）的消费型只读投影，不是 MDM Plant 的完整副本/镜像表。
+> - VMD Plant 投影字段以车辆生产工厂追溯、导入校验、查询展示和运行时解耦为边界。
 
 ### 非目标（Non-Goals，本期不做）
 - N1：不替代账号服务（`ExAccountService`）做用户身份/手机号实名核验。
 - N2：不替代安全密钥服务（`ExSkService`）执行 IMMO_SK 的实际生成。
 - N3：不实现 V2.0+ 解析器（当前仅 V1.0）。
-- N4：不再充当品牌/车系/平台的企业级 SSOT；不实施跨系统主数据治理（Golden Record / 审批工作流 / 数据质量打分）。
+- N4：不再充当品牌/车系/平台/**Plant（工厂）**的企业级 SSOT；不实施跨系统主数据治理（Golden Record / 审批工作流 / 数据质量打分 / 编码规则生成 / 生命周期管理）。
 
 ## 3. User Stories
 
@@ -119,12 +128,53 @@
 - WHEN Mpt-User 调用 `POST /api/mpt/mdmSync/v1/bootstrap?entity=platform` THE SYSTEM SHALL 调用 MDM 全量快照接口拉取平台数据并 upsert 本地副本（不删除本地记录）。
 - THE SYSTEM SHALL 在 upsert 时写入 source=MDM / external_ref_id / external_version / last_sync_time。
 
-#### US-007: 维护生产厂商（Manufacturer）
-**As a** Mpt-User, **I want** 维护生产厂商, **so that** 每台车辆可追溯到其生产工厂。
+#### US-007: 消费 MDM Plant 主数据本地投影
+**As a** System, **I want** VMD 从 MDM 同步 Plant 主数据并维护本地 Plant 投影表, **so that** 每台车辆可通过 `plantCode` 追溯到生产工厂，同时 VMD 不再承担 Plant 主数据维护职责。
+
+> **命名迁移（CR-011）**：本 US 由原「US-007 维护生产厂商（Manufacturer）」演进而来。Plant 主数据 SSOT 上移至 edd-mdm，VMD 仅保留 Plant 本地投影副本。Manufacturer / manufacturerCode 自此为历史兼容命名，新能力统一使用 Plant / plantCode（迁移与兼容策略见 US-007c）。VMD Plant 投影为 MDM Plant 在 VMD bounded context 下的按需最小化只读视图，不要求与 MDM Plant 主数据字段完全一致（字段范围见 §4「Plant 投影字段范围原则」）。
+
+**Acceptance Criteria** (EARS):
+- WHEN MDM 通过 Kafka 推送 PlantCreated / PlantUpdated / PlantDeleted 事件 THE SYSTEM SHALL upsert VMD 本地 Plant 投影数据，并写入 source=MDM / external_ref_id / external_version / last_sync_time。
+- WHEN event.version <= local.external_version THEN THE SYSTEM SHALL 忽略该事件，避免乱序事件覆盖较新数据。
+- WHEN 同步 MDM Plant 数据 THE SYSTEM SHALL 仅持久化 VMD 业务场景所需字段，不要求 VMD Plant 投影表结构与 MDM Plant 主数据模型完全一致。
+- WHEN MDM Plant 新增字段但 VMD 未消费该字段 THEN THE SYSTEM SHALL NOT 要求变更 VMD Plant 投影表结构。
+- WHEN MDM Plant 字段变化影响 VMD 的车辆导入、车辆查询、车辆追溯、展示或校验逻辑 THEN THE SYSTEM SHALL 通过独立 CR 调整 VMD Plant 投影模型。
+- WHEN VMD 本地 Plant 记录 source=MDM THEN THE SYSTEM SHALL 拒绝来自 MPT 后台的 add / edit / delete 操作，并返回明确错误（`ProductDataReadOnlyException`，错误码 `202014`）。
+- WHEN VMD 处理车辆生产导入数据 THE SYSTEM SHALL 写入 `plantCode` 字段，用于车辆生产工厂追溯。
+- WHEN 历史车辆数据仍存在 `manufacturerCode` THEN THE SYSTEM SHALL 通过迁移脚本、兼容字段或映射逻辑保证历史车辆可继续查询和追溯。
+- WHEN 查询车辆详情 THE SYSTEM SHALL 可基于本地 Plant 投影数据展示或关联生产工厂信息。
+- WHEN MDM 不可用 THEN THE SYSTEM SHALL 使用已同步的本地 Plant 投影数据支撑车辆查询和历史追溯（不对 MDM 形成运行时强依赖）。
+- IF 本地不存在对应 `plantCode` THEN THE SYSTEM SHALL 不阻断历史车辆查询，但应在展示或校验结果中体现 Plant 信息缺失。
+- IF 历史数据仅存在 `manufacturerCode` 且未完成字段迁移 THEN THE SYSTEM SHALL 支持 `manufacturerCode` 到 `plantCode` 的兼容读取或迁移处理。
+- WHEN VMD 启动时检测本地 source=MDM 的 Plant 投影记录数为 0 THE SYSTEM SHALL 自动调用 MDM Plant 全量快照接口拉取 Plant 数据并 upsert 本地副本。
+- WHEN Mpt-User 调用手工 Bootstrap 接口并指定 `entity=plant` THE SYSTEM SHALL 调用 MDM Plant 全量快照接口拉取 Plant 数据并 upsert 本地 Plant 投影副本，不删除本地已有记录。
+- THE SYSTEM SHALL 校验调用方持有 `completeVehicle:product:plant:list/query/export` 权限点；`completeVehicle:product:plant:add/edit/remove` 权限点仅作为兼容期遗留保留（仅可作用于 source=MANUAL 过渡数据），对 source=MDM 记录一律拒绝，并规划后续兼容性清理 CR 下线。
+
+#### US-007b: Bootstrap 时从 MDM 全量同步 Plant 数据
+**As a** System, **I want** Bootstrap 时从 MDM 全量同步 Plant 数据, **so that** 首次接入、数据丢失或重新初始化后，VMD 可以恢复 Plant 主数据本地投影。
 
 **Acceptance Criteria**:
-- WHEN 删除某生产厂商 IF 其下存在车辆 THEN THE SYSTEM SHALL 拒绝删除。
-- THE SYSTEM SHALL 强制 `code` 唯一性。
+- WHEN VMD 启动时检测本地 source=MDM 的 Plant 投影记录数为 0 THE SYSTEM SHALL 自动调用 MDM Plant 全量快照接口拉取数据并 upsert 本地副本。
+- WHEN Mpt-User 调用 `POST /api/mpt/mdmSync/v1/bootstrap?entity=plant` THE SYSTEM SHALL 调用 MDM Plant 全量快照接口拉取数据并 upsert 本地 Plant 投影副本。
+- WHEN Mpt-User 调用 `POST /api/mpt/mdmSync/v1/bootstrap?entity=all` THE SYSTEM SHALL 在全量同步中包含 Plant 数据。
+- THE SYSTEM SHALL 在 upsert 时写入 source=MDM / external_ref_id / external_version / last_sync_time。
+- THE SYSTEM SHALL 不因 MDM Plant 快照接口失败而删除或清空本地已有 Plant 投影数据。
+- THE SYSTEM SHALL 支持重复执行 Bootstrap，重复同步时按 external_ref_id / external_version 幂等 upsert。
+- THE SYSTEM SHALL 只同步 VMD Plant 投影所需字段，不要求同步 MDM Plant 的完整字段集。
+
+#### US-007c: Manufacturer 到 Plant 的兼容迁移
+**As a** System, **I want** 将 VMD 现有 Manufacturer 命名与 `manufacturerCode` 字段逐步迁移为 Plant / `plantCode`, **so that** VMD 与 MDM 在工厂主数据语义上保持一致，同时历史数据和既有调用方不受影响。
+
+**Acceptance Criteria**:
+- WHEN 执行数据库迁移 THE SYSTEM SHALL 将原 `veh_manufacturer` 表迁移或重命名为 `veh_plant`。
+- WHEN 执行数据库迁移 THE SYSTEM SHALL 为车辆主档（`veh_basic_info`）新增 `plant_code` 字段，承接原 `manufacturer_code` 的语义。
+- WHEN 历史车辆记录存在 `manufacturer_code` THE SYSTEM SHALL 将其值迁移或回填到 `plant_code`。
+- WHEN 迁移期间仍存在旧接口或旧字段调用 THE SYSTEM SHALL 提供兼容策略（兼容读取 / 字段映射 / 旧接口保留），避免既有调用方立即失败。
+- WHEN 新增或修改 VMD 内部逻辑 THE SYSTEM SHALL 优先使用 Plant / `plantCode` 命名。
+- WHEN 文档描述历史兼容逻辑 THE SYSTEM SHALL 明确 Manufacturer / `manufacturerCode` 为遗留命名，不再作为新能力命名。
+- THE SYSTEM SHALL 在迁移完成后逐步废弃 Manufacturer 命名的 Controller / AppService / Repository / DTO / VO / API path。
+- THE SYSTEM SHALL 将原 `completeVehicle:product:manufacturer:*` 权限点调整为 `completeVehicle:product:plant:list/query/add/edit/remove/export`；原 manufacturer 权限点如仍需兼容应标记 `deprecated`，并规划后续下线。
+- THE SYSTEM SHALL 将 Manufacturer 到 Plant 的重命名影响纳入本次 CR（CR-011）的兼容性说明，旧字段与旧接口的最终下线由后续兼容性清理 CR 完成。
 
 ### 3.2 特征族 & 配置项域
 
@@ -233,7 +283,7 @@
 
 **Acceptance Criteria**:
 - WHEN 解析每条 ITEM IF `VIN` 为空 THEN THE SYSTEM SHALL 计入无效计数并跳过该条；批次结束后 SHALL 对无效计数 > 0 的情况输出 `WARN` 日志。
-- WHEN VIN 已存在 THE SYSTEM SHALL 更新 `manufacturerCode/brandCode/platformCode/carLineCode/modelCode/baseModelCode/buildConfigCode` 七项；不存在则新建。
+- WHEN VIN 已存在 THE SYSTEM SHALL 更新 `plantCode/brandCode/platformCode/carLineCode/modelCode/baseModelCode/buildConfigCode` 七项；不存在则新建。（`plantCode` 承接原 `manufacturerCode` 语义，迁移期对仅存在 `manufacturerCode` 的历史数据按 US-007c 兼容读取/映射处理，参见 CR-011）
 - WHEN 一条记录处理完成 THE SYSTEM SHALL 通过 `VehiclePublish.produce(vin)` 发布 `VehicleProduceEvent`。
 - WHEN 解析完成 THE SYSTEM SHALL 返回 `ImportResult`，包含 `totalCount/successCount/failureCount/invalidCount` 四项计数。IF 单条处理异常 THEN THE SYSTEM SHALL 计入 `failureCount` 并继续处理下一条。
 
@@ -367,7 +417,52 @@
 - **MDM 同步优先级**：品牌 / 车系 / 平台主数据的 SSOT 优先级为 MDM > VMD 本地；MDM 不可达时降级为只读。
 - **MDM 事件消费**：VMD 通过 Kafka 订阅 MDM 事件，事件 payload schema / topic 命名 / partition 策略 / 重试与死信策略由「edd-mdm 接入规范」定义。
 - **MDM 快照接口**：VMD 通过 Feign 调用 MDM 全量快照接口，路径 / 入参 / 出参由「edd-mdm 接入规范」定义。
-- **数据来源标记**：veh_brand / veh_carLine / veh_platform 三张表新增 source 字段（MDM / MANUAL），source=MDM 的记录禁止通过 MPT 后台修改。
+- **数据来源标记**：veh_brand / veh_carLine / veh_platform / **veh_plant** 四张表新增 source 字段（MDM / MANUAL），source=MDM 的记录禁止通过 MPT 后台修改。
+
+### Plant 主数据投影约束（CR-011）
+- Plant 主数据的权威来源（SSOT）为 **MDM**，VMD 仅保留本地 Plant 投影副本，不作为权威维护入口。
+- VMD 中 `plantCode` 是车辆主档的一部分，作为车辆生产工厂追溯字段长期保留。
+- 原 `manufacturerCode` 为历史遗留命名，应通过迁移脚本、兼容字段或映射逻辑逐步迁移到 `plantCode`。
+- VMD 不负责 Plant 主数据治理、审批、合并、编码生成和生命周期管理。
+- MDM 与 VMD 的 Plant 同步协议（Kafka topic、payload schema、快照接口路径、重试与死信策略）由「edd-mdm 接入规范」定义。
+- 新增需求、接口、领域对象、数据表、DTO、VO、文档统一使用 **Plant** 命名；Manufacturer / `manufacturerCode` 仅出现在历史兼容、迁移说明或旧字段映射场景中。
+- VMD Plant 投影采用按需最小化字段设计，不要求与 MDM Plant 主数据模型完全一致；投影字段以车辆生产工厂追溯、导入校验、查询展示和运行时解耦为边界。
+- MDM Plant 的完整主数据属性、治理属性、审批属性、生命周期属性不在 VMD 投影模型中强制落库。
+- 如 MDM Plant 后续新增字段，只有当该字段被 VMD 的车辆导入、车辆查询、车辆追溯、展示或校验逻辑消费时，才通过独立 CR 纳入 VMD Plant 投影。
+- VMD 可根据排障或审计需要保留 `raw_payload` / `extension_json` 等原始快照字段，但该字段不应作为 VMD 领域逻辑的主要依赖。
+
+### Plant 投影字段范围原则（VMD Plant ⊂ MDM Plant，CR-011）
+> VMD 侧 Plant 投影不要求与 MDM Plant 主数据字段完全一致，应采用**按需最小化投影**原则。VMD Plant 投影是 MDM Plant 在 VMD bounded context 下的只读视图，不是 MDM Plant 的完整副本/镜像表。
+
+**字段设计原则**：
+1. VMD 只保留支撑车辆主数据业务闭环所需的 Plant 字段。
+2. VMD 不复制 MDM Plant 的完整治理模型、审批字段、生命周期状态、组织层级、扩展属性等非 VMD 必需字段。
+3. MDM Plant 字段发生变化时，只有当变化影响 VMD 的车辆导入、车辆查询、车辆追溯、展示或校验逻辑时，才需要同步调整 VMD Plant 投影模型。
+4. VMD Plant 投影是 MDM Plant 在 VMD bounded context 下的只读视图，不是 MDM Plant 的完整副本。
+5. VMD 可以根据排障或审计需要保留 `raw_payload` / `extension_json` 等原始快照字段，但该字段不应作为 VMD 领域逻辑的主要依赖。
+
+**建议 `veh_plant` 至少保留以下字段（最小投影集）**：
+
+| 字段 | 说明 |
+|------|------|
+| `plant_code` | Plant 编码，车辆主档 `plantCode` 的关联键 |
+| `plant_name` | Plant 名称，用于车辆详情展示 |
+| `source` | 数据来源，MDM / MANUAL |
+| `external_ref_id` | MDM Plant 实体 ID |
+| `external_version` | MDM Plant 版本号 |
+| `last_sync_time` | 最近同步时间 |
+| `deleted` / `enabled` / `status` | 可选，用于处理 MDM 删除、停用或不可用状态 |
+| `raw_payload` / `extension_json` | 可选，用于排障、审计或临时兼容 |
+
+**不建议默认同步以下字段（除非 VMD 明确消费，需走独立 CR）**：
+- Plant 审批状态。
+- Plant 生命周期全量状态流转。
+- Plant 组织归属全路径。
+- Plant 地址、经纬度、联系人等详细档案。
+- Plant 编码生成规则。
+- Plant 数据质量评分。
+- Plant 主数据合并 / 拆分关系。
+- MDM 内部治理字段、审批字段、流程字段。
 
 ### 依赖（外部）
 - **TSP 服务**：`TspVehicleCcpService / TspVehicleIdcmService / TspVehicleNetworkService / TspVehicleTboxService / TspCcpInfoService / TspIdcmInfoService / TspTboxInfoService / TspSimService`。
@@ -375,13 +470,14 @@
 - **IDK 服务**：`IdkBtmInfoService`（蓝牙模块批量导入）。
 - **账号服务（已注释）**：`ExAccountService`（预设车主校验，待启用）。
 - **安全密钥服务（已注释）**：`ExSkService`（IMMO_SK 生成，待启用）。
-- **edd-mdm 服务**：Product MDM 子域，提供品牌 / 车系 / 平台主数据的 Kafka 事件推送 + Feign 全量快照接口。详见「edd-mdm 接入规范」。
+- **edd-mdm 服务**：Product MDM 子域，提供品牌 / 车系 / 平台 / **Plant（工厂）**主数据的 Kafka 事件推送 + Feign 全量快照接口。详见「edd-mdm 接入规范」。
 
 ### 前置条件
 - Nacos 中已存在共享配置 `application.yaml / mysql.yaml / redis.yaml`。
 - MySQL 数据库已存在并允许 Flyway 在启动时执行 `V0__Baseline.sql / V1__BuildConfig_feature_code_migration.sql / V2__CarLine_brand_code_migration.sql`。
 - API 网关下游路由已将 `edd-vmd` 注册到正确路径前缀。
 - MDM 已完成首版 Product MDM 子域上线，且 Kafka topic 已开通。
+- MDM 已上线 Plant（工厂）主数据实体，且 Plant 事件 Kafka topic 与 Plant 全量快照接口已就绪（CR-011）。
 - MDM Feign 全量快照接口已就绪，VMD 可通过 Feign 调用。
 - VMD 启动时若本地无 source=MDM 数据，需通过 Bootstrap 流程从 MDM 拉全量。
 
@@ -398,6 +494,13 @@
 - O9：MDM 与 VMD 的具体协议（Kafka topic 命名 / payload 字段映射 / 重试策略 / 死信队列处理）由「edd-mdm 接入规范」单独定义，本 spec 不展开。
 - O10：跨系统 Golden Record 合并能力由 edd-mdm 负责，VMD 不实现。
 - O11：现有数据 source 字段回标为 MDM 的数据治理任务（通过独立 CR 执行对账回标 source='MDM'），本期 spec 不实现。
+- O12：VMD 不再提供 Plant 主数据的本地新增、修改、删除能力（source=MANUAL 过渡数据除外，且仅作为兼容期遗留）（CR-011）。
+- O13：VMD 不实现 Plant 主数据的 Golden Record 合并能力；Plant 编码规则生成与主数据审批流程不在 VMD 范围内（CR-011）。
+- O14：VMD 不要求完整复制 MDM Plant 的所有字段；不承担 MDM Plant 字段变化的自动同步适配责任（字段变化影响 VMD 业务时走独立 CR）（CR-011）。
+- O15：历史车辆中的 `plantCode` / `manufacturerCode` 清洗、纠错、归并由独立数据治理 CR 处理，本期 spec 不实现（CR-011）。
+- O16：本次 CR 只定义 Manufacturer 到 Plant 的系统命名迁移与兼容策略，不要求一次性删除所有旧字段和旧接口；旧字段（`manufacturer_code` 等）、旧接口（`/api/mpt/manufacturer/**`）、旧权限点（`completeVehicle:product:manufacturer:*`）的最终下线由后续兼容性清理 CR 完成（CR-011）。
+- O17：MDM Plant 的内部模型设计、生命周期状态、审批流、编码规则不在 VMD 范围内（CR-011）。
+- O18：MDM Plant 的完整档案展示、主数据维护、审批、合并、拆分、数据质量管理不在 VMD 范围内（CR-011）。
 
 ## 6. Changelog
 
@@ -411,4 +514,5 @@
 | 2026-05-23 | CR-006 | Modified | **US-011 VIN 不存在改为抛异常（fail-fast）**：回退 CR-002/CR-003 中"VIN 不存在返回 null"的既定契约，改为抛出 `VehicleNotExistException`（`VmdErrorCode.VEHICLE_NOT_EXIST`，错误码 `202001`）；同时 `VmdBaseException` 基类从 `BaseException`（int code）改为继承 `BusinessException`（ErrorCode 接口），统一纳入 `GlobalExceptionHandler` 的 `BusinessException` 捕获链路；新增 `VmdErrorCode` 枚举集中管理 VMD 模块错误码；`VmdVehicleServiceFallbackFactory.getByVin` 改为抛 `RuntimeException` 而非返回 null |
 | 2026-05-23 | CR-009 | Modified | **US-018~025 批量导入返回结构化处理摘要**：`ImportDataParser.parse()` 返回类型从 `void` 改为 `ImportResult`（含 `totalCount/successCount/failureCount/invalidCount`）；所有 7 个解析器（PRODUCE/EOL/BTM/TBOX/CCP/IDCM/SIM）实现计数回传；`MptVehicleImportDataController.add/edit` 响应从 `ApiResponse<Void>` 改为 `ApiResponse<ImportResultResponse>`，运营人员可对账 |
 | 2026-05-26 | CR-010 | Modified | **品牌/车系/平台主数据 SSOT 上移至 edd-mdm**：VMD 降级为本地投影副本；新增 source / external_ref_id / external_version / last_sync_time 字段；MPT 后台对 source=MDM 记录禁止写操作；新增 Bootstrap 全量同步流程；新增 MDM 事件订阅流程 |
+| 2026-06-05 | CR-011 | Modified | **工厂 / 生产厂商主数据统一调整为 Plant**：Plant 主数据 SSOT 上移至 MDM，VMD 保留 Plant 本地投影表（US-007 由「维护生产厂商 Manufacturer」改写为「消费 MDM Plant 主数据本地投影」，新增 US-007b Bootstrap 全量同步 Plant、US-007c Manufacturer→Plant 兼容迁移）；原 Manufacturer / manufacturerCode 作为历史兼容命名逐步迁移为 Plant / plantCode（`veh_manufacturer`→`veh_plant`、车辆主档 `manufacturer_code`→`plant_code`）；VMD Plant 投影采用按需最小化字段设计，不要求完整复制 MDM Plant 主数据模型（新增 §4「Plant 投影字段范围原则」）；新增 source / external_ref_id / external_version / last_sync_time 字段；MPT 后台禁止维护 source=MDM 的 Plant 投影数据；新增 Plant MDM 事件订阅与 Bootstrap 全量同步流程；车辆主档使用 plantCode 用于生产工厂追溯；权限点 `completeVehicle:product:manufacturer:*`→`completeVehicle:product:plant:*`（旧权限点标记 deprecated 待后续 CR 下线）；US-019 PRODUCE 解析器字段引用同步为 plantCode（含历史兼容）；§2 新增 G6 与 Plant 语义统一说明、N4 扩展含 Plant；§5 新增 O12~O18。**design.md / tasks.md 需按 SPEC 工作流后续同步落地本 CR** |
 

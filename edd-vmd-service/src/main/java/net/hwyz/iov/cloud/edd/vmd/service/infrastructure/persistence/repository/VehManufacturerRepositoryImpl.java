@@ -3,10 +3,14 @@ package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.repository
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Manufacturer;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Plant;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehManufacturerRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehPlantRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter.ManufacturerConverter;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter.PlantConverter;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehManufacturerMapper;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehManufacturerPo;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehPlantPo;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Repository;
 

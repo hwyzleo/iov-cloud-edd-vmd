@@ -135,13 +135,14 @@ graph TB
 | D10 | Feign 契约策略（**CR-006 修订**） | 强类型 DTO + `*FallbackFactory` + VIN 不存在抛 `VehicleNotExistException` | 返回 `null` / 返回 `Optional<T>` | **fail-fast 原则**：VIN 不存在时抛 `VehicleNotExistException`（`VmdErrorCode.VEHICLE_NOT_EXIST`，错误码 `202001`），由 `GlobalExceptionHandler` 统一捕获返回 `ApiResponse.fail`；`VmdBaseException` 继承 `BusinessException` 以纳入框架统一异常处理链路；Fallback 仅处理基础设施故障（网络/超时），此时抛 `RuntimeException` 让调用方感知服务不可用 |
 | D11 | `Vehicle.isActive()` 实现 | **硬编码 `return true`（已知缺陷，对应 §5 O6）**；导致所有 VIN 在 `generateActiveQrcode` 都被判定为已激活并抛 `VehicleHasActivatedException` | ① 查询 `VehicleLifecycleNode` 表是否存在 `VEHICLE_ACTIVE` 节点 ② 通过 qrcode CONFIRMED 判定 ③ 在 `Vehicle` 表加 `active` 状态列 | Rationale：本 spec 为代码现状基线，仅记录缺陷形态。激活的真实判定规则未在当前代码中实现 |
 | D12 | IMMO_SK 死代码现状 | `VehicleSkSubscribe` 类整体注释 + `ExSkService` import 注释 + 事件订阅方法体注释；`recordGenerateVehicleSkNode` 永不被触发 | — | Rationale：本 spec 为代码现状基线，仅记录现状形态（死代码保留），不规定处理方式（删除/恢复/标 Deprecated 等改造均需走单独 CR） |
-| D13 | MDM 同步策略 | Kafka 事件订阅为主 + Feign 全量快照兜底 + 本地 source 字段标注来源 | ① 仅 Feign 轮询 ② 仅 Kafka 事件 ③ 数据库 CDC | **解耦**：Kafka 事件异步消费，MDM 不可用时不阻塞 VMD 主流程。**可重放**：Kafka 事件支持 offset 回溯重放。**支持降级**：MDM 不可达时降级为只读，source=MANUAL 记录仍可本地维护。**幂等**：通过 external_ref_id + external_version 保证 upsert 幂等性。详见「edd-mdm 接入规范」 |
+| D13 | MDM 同步策略 | Kafka 事件订阅为主 + Feign 全量快照兜底 + 本地 source 字段标注来源 | ① 仅 Feign 轮询 ② 仅 Kafka 事件 ③ 数据库 CDC | **解耦**：Kafka 事件异步消费，MDM 不可用时不阻塞 VMD 主流程。**可重放**：Kafka 事件支持 offset 回溯重放。**支持降级**：MDM 不可达时降级为只读，source=MANUAL 记录仍可本地维护。**幂等**：通过 external_ref_id + external_version 保证 upsert 幂等性。**适用实体（CR-011 扩展）**：品牌 / 车系 / 平台 / **Plant（工厂）**统一采用本策略。详见「edd-mdm 接入规范」 |
+| D14 | Manufacturer→Plant 迁移策略（**CR-011**） | **Flyway 原地重命名** `veh_manufacturer`→`veh_plant`（`code`/`name`→`plant_code`/`plant_name`）+ 补 source 投影字段；车辆主档 `veh_basic_info` 新增 `plant_code` 并从 `manufacturer_code` 回填；旧字段/旧接口兼容期保留 | ① 新建 `veh_plant` 表 + 双写 + 后续删旧表 ② 仅在应用层做 `manufacturer`↔`plant` 别名映射、不改表 ③ 一次性删除 manufacturer 全部痕迹 | **数据零丢失**：`RENAME TABLE` + `UPDATE plant_code=manufacturer_code` 在单次迁移内完成，历史车辆 `plantCode` 可追溯（对应 US-007c）。**渐进式**：`manufacturer_code` 列与旧接口在兼容期保留（标 deprecated），既有调用方不立即失败（对应 requirements §5 O16）。**对齐 MDM 语义**：投影表与车辆字段统一 Plant 命名，消除「MDM=Plant / VMD=Manufacturer」割裂。备选①双写成本高、②不改表会长期保留语义割裂、③一次性删除破坏兼容性——均不取 |
 
 ## 3. Data Model
 
 ### 3.1 持久化表清单（23 张）
 
-按业务域分组，所有表通过 Flyway V0/V1/V2 创建（V3 由本 design 引入）。
+按业务域分组，所有表通过 Flyway V0/V1/V2 创建（V3 引入 MDM source 字段；V4 引入 Plant 迁移，见 §3.4）。
 
 #### 产品树域（10 张）
 | 表名 | PO 类 | 关键列 | 唯一约束 | 关联 |
@@ -156,9 +157,11 @@ graph TB
 | `veh_build_config_feature_code` | `VehBuildConfigFeatureCodePo` | `build_config_code`, `family_code`, `feature_code` | UK(`build_config_code`,`family_code`) | → `veh_build_config.code` |
 | `veh_feature_family` | `VehFeatureFamilyPo` | `code`, `name`, `type` | UK(`code`) | — |
 | `veh_feature_code` | `VehFeatureCodePo` | `code`, `name`, `family_code` | UK(`code`) | → `veh_feature_family.code` |
-| `veh_manufacturer` | `VehManufacturerPo` | `code`, `name` | UK(`code`) | — |
+| `veh_plant` | `VehPlantPo` | `plant_code`, `plant_name`, `source`, `external_ref_id`, `external_version`, `last_sync_time` | UK(`plant_code`), UK(`external_ref_id`) | 由 `veh_manufacturer` 重命名迁移（CR-011，V4）；MDM Plant 主数据本地投影，按需最小化字段 |
 
-> 注：`source` 字段取值 `MDM` / `MANUAL`，默认 `MANUAL`。`external_ref_id` 存储 MDM 侧实体主键 ID（如 `mdm_brand.id`），source=MANUAL 时为 NULL。`external_version` 存储 MDM 侧实体版本号，VMD 收到事件时执行 `IF event.version > local.external_version THEN upsert ELSE ignore`。`last_sync_time` 记录最后一次同步时间。`UK(external_ref_id)` 在 MySQL 中允许多 NULL（source=MANUAL 时自动跳过约束），source=MDM 时 external_ref_id 非空约束生效。
+> 注（产品树域）：`veh_manufacturer` 已于 CR-011（Flyway V4）重命名为 `veh_plant`，列 `code`/`name` 重命名为 `plant_code`/`plant_name` 并补充 MDM 投影字段（详见 §3.4 V4、§2 D14）。`veh_plant` 是 MDM Plant 的按需最小化只读投影，不要求与 MDM Plant 主数据字段完全一致（字段范围见 requirements §4「Plant 投影字段范围原则」）；如需 `deleted`/`enabled`/`status`/`raw_payload`/`extension_json` 等可选字段，由消费场景按 CR 增量纳入。
+
+> 注：`source` 字段取值 `MDM` / `MANUAL`，默认 `MANUAL`。`external_ref_id` 存储 MDM 侧实体主键 ID（如 `mdm_brand.id` / `mdm_plant.id`），source=MANUAL 时为 NULL。`external_version` 存储 MDM 侧实体版本号，VMD 收到事件时执行 `IF event.version > local.external_version THEN upsert ELSE ignore`。`last_sync_time` 记录最后一次同步时间。`UK(external_ref_id)` 在 MySQL 中允许多 NULL（source=MANUAL 时自动跳过约束），source=MDM 时 external_ref_id 非空约束生效。`veh_plant` 同样适用本规则（CR-011）。
 
 #### 配置项域（3 张）
 | 表名 | PO 类 | 关键列 | 唯一约束 |
@@ -170,7 +173,7 @@ graph TB
 #### 物理车域（5 张）
 | 表名 | PO 类 | 关键列 | 唯一约束 | 备注 |
 |------|------|--------|----------|------|
-| `veh_basic_info` | `VehBasicInfoPo` | `vin`, `manufacturer_code`, `brand_code`, `platform_code`, `carLine_code`, `model_code`, `base_model_code`, `build_config_code`, `order_num` | UK(`vin`) | 车辆主档 |
+| `veh_basic_info` | `VehBasicInfoPo` | `vin`, `plant_code`, `manufacturer_code`(legacy), `brand_code`, `platform_code`, `carLine_code`, `model_code`, `base_model_code`, `build_config_code`, `order_num` | UK(`vin`) | 车辆主档；`plant_code` 为生产工厂追溯字段（CR-011，V4），承接 `manufacturer_code` 语义并由其回填；`manufacturer_code` 兼容期保留、标 deprecated，待后续清理 CR 下线 |
 | `veh_detail_info` | `VehDetailInfoPo` | `vin`, 30+ 详细字段 | UK(`vin`) | EOL 解析时填充 |
 | `veh_preset_owner` | `VehPresetOwnerPo` | `vin`, `mobile`, `name` | UK(`vin`) | 预设车主（当前 `checkVehiclePresetOwner` 注释，本期不消费） |
 | `vehicle_config` | `VehicleConfigPo` | `vin`, `version` | UK(`vin`,`version`) | 车辆配置版本 |
@@ -206,11 +209,11 @@ graph TB
   - 行为：`bindOrder(orderNum)`
 
 #### 实体（Entity，21 个）
-按 §3.1 表清单一一对应，关键实体：`Brand` / `CarLine` / `Platform` / `Model` / `BaseModel` / `BaseModelFeatureCode` / `BuildConfig` / `BuildConfigFeatureCode` / `FeatureFamily` / `FeatureCode` / `Manufacturer` / `ConfigItem` / `ConfigItemOption` / `ConfigItemMapping` / `VehicleBasicInfo` / `VehicleDetail` / `VehiclePresetOwner` / `VehicleConfig` / `VehicleConfigItem` / `VehiclePart` / `VehiclePartHistory` / `Part` / `Device` / `Supplier` / `VehicleLifecycle` / `VehicleLifecycleNode` / `VehicleImportData`
+按 §3.1 表清单一一对应，关键实体：`Brand` / `CarLine` / `Platform` / `Model` / `BaseModel` / `BaseModelFeatureCode` / `BuildConfig` / `BuildConfigFeatureCode` / `FeatureFamily` / `FeatureCode` / `Plant`（原 `Manufacturer`，CR-011 迁移；`Manufacturer` 命名作为遗留兼容逐步废弃） / `ConfigItem` / `ConfigItemOption` / `ConfigItemMapping` / `VehicleBasicInfo` / `VehicleDetail` / `VehiclePresetOwner` / `VehicleConfig` / `VehicleConfigItem` / `VehiclePart` / `VehiclePartHistory` / `Part` / `Device` / `Supplier` / `VehicleLifecycle` / `VehicleLifecycleNode` / `VehicleImportData`
 
 #### 值对象（Value Object）
 - **`VehicleLifecycleNodeEnum`**：23 个节点（包含拼写错误 `VEHICLE_INVoICING`，参见 §5 O10 已知缺陷）
-- **`SourceType`**：数据来源枚举（`MDM` / `MANUAL`），用于 Brand / CarLine / Platform 实体
+- **`SourceType`**：数据来源枚举（`MDM` / `MANUAL`），用于 Brand / CarLine / Platform / Plant 实体（Plant 自 CR-011 起纳入）
 - **`VehiclePartState`**：`0=作废 / 1=在用` 等
 - **`MnoType`**：SIM 卡运营商枚举（`CMCC` / `CTCC` / `CUCC` 等，由 SIM 解析器使用）
 - **`DeviceItem`**：设备项类型（`TBOX` / `CCP` / `IDCM` / `BTM` 等）
@@ -235,6 +238,7 @@ graph TB
 | V1 | `V1__BuildConfig_feature_code_migration.sql` | 生产配置特征值迁移 |
 | V2 | `V2__CarLine_brand_code_migration.sql` | 车系冗余 brand_code |
 | V3 | `V3__Add_mdm_source_to_product_tree.sql` | 品牌/车系/平台新增 source / external_ref_id / external_version / last_sync_time 字段 + UK(external_ref_id) + DML 回填 source='MANUAL' |
+| V4 | `V4__Migrate_manufacturer_to_plant.sql` | **CR-011 Manufacturer→Plant 迁移**：① `RENAME TABLE veh_manufacturer TO veh_plant`；② 列重命名 `code`→`plant_code`、`name`→`plant_name`；③ `veh_plant` 新增 source / external_ref_id / external_version / last_sync_time + UK(external_ref_id) + 回填 source='MANUAL'；④ `veh_basic_info` 新增 `plant_code` 列；⑤ DML `UPDATE veh_basic_info SET plant_code = manufacturer_code`（回填历史车辆，对应 US-007c）；⑥ `manufacturer_code` 列兼容期保留（标 deprecated，不在本迁移删除，待后续清理 CR） |
 
 ## 4. Core Flows
 
@@ -444,10 +448,10 @@ graph LR
 sequenceDiagram
     participant K as Kafka
     participant S as MdmEventSubscribe
-    participant R as Brand/CarLine/Platform Repository
+    participant R as Brand/CarLine/Platform/Plant Repository
     participant DB as MySQL
 
-    K->>S: 消费 MDM 事件（BrandCreated/Updated/Deleted）
+    K->>S: 消费 MDM 事件（BrandCreated/Updated/Deleted、PlantCreated/Updated/Deleted ...）
     S->>S: 解析事件 payload（eventType / entityId / version / code / name / ...）
     S->>R: findByExternalRefId(entityId)
     R->>DB: SELECT
@@ -465,7 +469,9 @@ sequenceDiagram
     R->>DB: INSERT/UPDATE
 ```
 
-**对应 US**：US-001 / US-002 / US-006（MDM 事件同步 AC）。
+> Plant 事件（`PlantCreated/PlantUpdated/PlantDeleted`）复用同一订阅与幂等 upsert 逻辑，写入 `veh_plant` 投影表；仅持久化 VMD 业务所需的最小投影字段（CR-011，对应 US-007）。
+
+**对应 US**：US-001 / US-002 / US-006 / **US-007**（MDM 事件同步 AC）。
 
 ### 4.7 F7 - VMD Bootstrap 全量快照
 
@@ -474,16 +480,16 @@ sequenceDiagram
     participant VMD as VMD 启动 / MPT 手工触发
     participant C as MdmSyncController / BootstrapListener
     participant A as MdmSyncAppService
-    participant FC as MdmBrandQueryClient / MdmCarLineQueryClient / MdmPlatformQueryClient
+    participant FC as MdmBrandQueryClient / MdmCarLineQueryClient / MdmPlatformQueryClient / MdmPlantQueryClient
     participant MDM as edd-mdm
-    participant R as Brand/CarLine/Platform Repository
+    participant R as Brand/CarLine/Platform/Plant Repository
     participant DB as MySQL
 
     alt 启动时自动
         VMD->>C: ApplicationReadyEvent
         C->>A: bootstrapAll()
     else 手工触发
-        VMD->>C: POST /api/mpt/mdmSync/v1/bootstrap?entity=brand|carLine|platform|all
+        VMD->>C: POST /api/mpt/mdmSync/v1/bootstrap?entity=brand|carLine|platform|plant|all
         C->>A: bootstrap(entity)
     end
     A->>R: countBySource('MDM')
@@ -502,7 +508,9 @@ sequenceDiagram
     end
 ```
 
-**对应 US**：US-001b / US-002b / US-006b（Bootstrap 全量同步 AC）。
+> Plant 全量快照通过 `MdmPlantQueryClient` 拉取，`entity=plant` 或 `entity=all` 触发；upsert 写入 `veh_plant`，按 external_ref_id / external_version 幂等，快照失败不清空本地已有 Plant 投影（CR-011，对应 US-007b）。
+
+**对应 US**：US-001b / US-002b / US-006b / **US-007b**（Bootstrap 全量同步 AC）。
 
 ## 5. API Contracts
 
@@ -572,8 +580,23 @@ sequenceDiagram
 
 > **source=MDM 只读限制**：POST / PUT / DELETE 接口对 source=MDM 记录抛 `ProductDataReadOnlyException`（错误码 `202014`）。
 
-#### 5.1.7 Manufacturer `MptManufacturerController`（→ US-007）
-完整 7 端点。错误：`code 已存在` / `该生产厂商下存在车辆`。
+#### 5.1.7 Plant `MptPlantController`（→ US-007 / US-007c）
+由原 `MptManufacturerController` 迁移而来（CR-011）。完整 7 端点，权限前缀 `completeVehicle:product:plant:*`：
+| Method | Path | Permission | 说明 |
+|--------|------|-----------|------|
+| GET | `/api/mpt/plant/v1/list` | `completeVehicle:product:plant:list` | 分页查询 Plant 投影 |
+| GET | `/api/mpt/plant/v1/listAll` | `completeVehicle:product:plant:list` | 列出全部 Plant 投影 |
+| GET | `/api/mpt/plant/v1/{plantId}` | `completeVehicle:product:plant:query` | — |
+| POST | `/api/mpt/plant/v1` | `completeVehicle:product:plant:add` | 兼容期遗留，仅可作用于 source=MANUAL 过渡数据 |
+| PUT | `/api/mpt/plant/v1` | `completeVehicle:product:plant:edit` | 同上 |
+| DELETE | `/api/mpt/plant/v1/{plantIds}` | `completeVehicle:product:plant:remove` | 同上 |
+| POST | `/api/mpt/plant/v1/export` | `completeVehicle:product:plant:export` | （O5：未实现，仅日志） |
+
+错误：`code 已存在` / `该工厂(Plant)下存在车辆`。
+
+> **source=MDM 只读限制**：POST / PUT / DELETE 接口对 source=MDM 记录抛 `ProductDataReadOnlyException`（错误码 `202014`）。`add/edit/remove` 权限点与端点仅作兼容期遗留（限 source=MANUAL），后续清理 CR 下线。
+>
+> **遗留兼容（deprecated）**：原 `MptManufacturerController`（`/api/mpt/manufacturer/**`，权限 `completeVehicle:product:manufacturer:*`）在兼容期保留并标 `@Deprecated`，对外仍可路由到 Plant 投影；最终下线由后续兼容性清理 CR 完成（requirements §5 O16）。
 
 #### 5.1.8 FeatureFamily `MptFeatureFamilyController`（→ US-008）
 完整 7 端点 + 子资源：
@@ -643,21 +666,22 @@ sequenceDiagram
 
 错误：`批次号已存在` / `解析器不存在` / `解析异常`
 
-#### 5.1.17 MdmSync `MptMdmSyncController`（→ US-001b/US-002b/US-006b）
+#### 5.1.17 MdmSync `MptMdmSyncController`（→ US-001b/US-002b/US-006b/US-007b）
 | Method | Path | Permission | Request | Response |
 |--------|------|-----------|---------|----------|
-| POST | `/api/mpt/mdmSync/v1/bootstrap` | `completeVehicle:mdmSync:bootstrap` | `?entity=brand\|carLine\|platform\|all` | `ApiResponse<String>` |
+| POST | `/api/mpt/mdmSync/v1/bootstrap` | `completeVehicle:mdmSync:bootstrap` | `?entity=brand\|carLine\|platform\|plant\|all` | `ApiResponse<String>` |
 
-**行为**：调用 MDM 全量快照接口拉取指定实体数据并 upsert 本地副本（不删除本地记录）。
+**行为**：调用 MDM 全量快照接口拉取指定实体数据并 upsert 本地副本（不删除本地记录）。`entity=plant` 同步 Plant 投影（CR-011），`entity=all` 含 Plant。
 
 ### 5.2 Service 端（`edd-vmd-api`，Feign 契约）
 
 > 完整签名以 `edd-vmd-api/src/main/java/.../api/service/Vmd*Service.java` 为准；本节列契约清单 + 错误码 + Fallback 行为。
 
-#### 5.2.1 MDM 快照查询 Feign 接口（→ US-001b/US-002b/US-006b）
+#### 5.2.1 MDM 快照查询 Feign 接口（→ US-001b/US-002b/US-006b/US-007b）
 - `MdmBrandQueryClient`：调用 MDM 品牌全量快照接口（path/name 由 edd-mdm 接入规范定义，暂标 TBD）
 - `MdmCarLineQueryClient`：调用 MDM 车系全量快照接口（path/name 由 edd-mdm 接入规范定义，暂标 TBD）
 - `MdmPlatformQueryClient`：调用 MDM 平台全量快照接口（path/name 由 edd-mdm 接入规范定义，暂标 TBD）
+- `MdmPlantQueryClient`：调用 MDM Plant（工厂）全量快照接口（CR-011；path/name 由 edd-mdm 接入规范定义，暂标 TBD）；仅取 VMD Plant 投影所需的最小字段集
 
 **Fallback**：记录错误日志，抛出异常让调用方感知 MDM 不可用。
 
@@ -720,7 +744,9 @@ sequenceDiagram
 | US-005 BuildConfig + 特征值 | §3.1 产品树 / §4.1 F1 / §5.1.5 | 含特征值嵌套子资源 |
 | US-006 Platform | §3.1 产品树 / §4.1 F1 / §5.1.6 | + listAll |
 | US-006b Platform Bootstrap | §3.1 产品树 / §4.7 F7 / §5.1.17 / §5.2.1 | MDM 全量快照同步 |
-| US-007 Manufacturer | §3.1 产品树 / §4.1 F1 / §5.1.7 | — |
+| US-007 Plant 投影（原 Manufacturer） | §2 D13/D14 / §3.1 产品树(`veh_plant`)+物理车(`plant_code`) / §3.2 / §3.4 V4 / §4.6 F6 / §4.7 F7 / §5.1.7 / §5.1.17 / §5.2.1 | 消费 MDM Plant 主数据本地投影；source=MDM 只读；按需最小化投影 |
+| US-007b Plant Bootstrap | §3.1 产品树(`veh_plant`) / §4.7 F7 / §5.1.17 / §5.2.1 | MDM Plant 全量快照同步（entity=plant\|all） |
+| US-007c Manufacturer→Plant 迁移 | §2 D14 / §3.1 / §3.2 / §3.4 V4 / §5.1.7 | 表/字段重命名 + plant_code 回填 + 旧字段/旧接口/旧权限点兼容期保留 |
 | US-008 FeatureFamily + Code | §3.1 产品树 / §4.1 F1 / §5.1.8 | 含族下特征值 listAll |
 | US-009 ConfigItem + Option + Mapping | §3.1 配置项 / §4.1 F1 / §5.1.9 | 嵌套子资源 |
 | US-010 Vehicle CRUD（MPT） | §3.1 物理车 / §3.2 Vehicle 聚合 / §5.1.10 | 删除联动 lifecycle |
@@ -755,6 +781,7 @@ sequenceDiagram
 | TD-3 | `adapter/web/controller/mpt/MptVehiclePartController.java` add/edit | 未对 `vin` 做存在性校验 | 可创建无主车辆零件记录（脏数据风险） |
 | TD-4 | 全部 `*Controller.export()` | 仅有 `@Log` 注解和日志，无 Excel/CSV 流响应 | 导出端点不可用（O5） |
 | TD-5 | `adapter/web/controller/mpt/MptVehicleConfigController` | 仅 list / 查询配置项 / export，无 add / edit | 车辆配置无法通过 MPT 写入（O8） |
+| TD-6 | `veh_basic_info.manufacturer_code` 列、`/api/mpt/manufacturer/**` 旧接口、`completeVehicle:product:manufacturer:*` 旧权限点 | CR-011 迁移后兼容期保留并标 `@Deprecated`（非缺陷，受控遗留） | 待后续兼容性清理 CR 下线（requirements §5 O16）；下线前需确认无外部调用方依赖旧路径/旧字段 |
 
 ## 8. Open Questions
 
@@ -773,3 +800,4 @@ sequenceDiagram
 | 2026-05-23 | CR-008 | Modified | **US-018 解析器 SPI 类型安全改造**：D9 决策从"Bean Name 字符串拼接"改为"`ImportDataParserRegistry` 自注册表 + `ParserNotFoundException` 异常传播"；`ImportDataParser` 接口新增 `getType()`/`getVersion()` 自描述方法；7 个解析器通过 `@PostConstruct` 自注册到 `ConcurrentHashMap`；`VehicleImportDataAppService` 改用 `registry.getParser(type, version)` 替代 `applicationContext.getBean()`；新增 `ParserNotFoundException`（`VmdErrorCode.PARSER_NOT_FOUND`，错误码 `202013`），解析器缺失时异常传播到前端而非静默 `handle=false`；§4.2 F2 时序图更新 |
 | 2026-05-23 | CR-009 | Modified | **US-018~025 批量导入返回结构化处理摘要**：D9 决策更新（`parse()` 返回 `ImportResult`）；新增 `ImportResult` DTO（`application/dto/result`）+ `ImportResultResponse` VO（`adapter/web/vo/response`）；`ImportDataParser.parse()` 返回类型从 `void` 改为 `ImportResult`；7 个解析器实现计数回传（PRODUCE/EOL 增加 try-catch 记录 `failureCount`）；`VehicleImportDataAppService.parseVehicleImportData()` 返回 `ImportResult`；Controller `add/edit` 响应改为 `ApiResponse<ImportResultResponse>`；§4.2 F2 时序图更新（`ImportResult` 返回 + `ImportResultResponse` 响应）；§5.1.16 API 契约更新 |
 | 2026-05-26 | CR-010 | Modified | **品牌/车系/平台主数据 SSOT 上移至 edd-mdm**：新增 D13（MDM 同步策略）；§3.1 三张表新增 source / external_ref_id / external_version / last_sync_time 字段 + UK(external_ref_id)；§3.2 新增 SourceType 值对象；§3.4 新增 Flyway V3；§4 新增 F6（MDM 事件订阅）/ F7（Bootstrap 全量快照）；§5.1.1~5.1.6 标注 source=MDM 只读限制；§5.1.17 新增 MdmSyncController；§5.2.1 新增 MDM 快照查询 Feign 接口；§5.3 新增 ProductDataReadOnlyException（202014）；§6 补全 US-001b/002b/006b 映射 |
+| 2026-06-05 | CR-011 | Modified | **工厂/生产厂商主数据统一调整为 Plant（落地 requirements CR-011，对应 US-007/US-007b/US-007c）**：§2 D13 扩展适用实体含 Plant，新增 **D14**（Manufacturer→Plant 迁移策略：Flyway 原地重命名 + plant_code 回填 + 兼容期保留）；§3.1 `veh_manufacturer`→`veh_plant`（`code`/`name`→`plant_code`/`plant_name` + MDM 投影字段），`veh_basic_info` 新增 `plant_code`（`manufacturer_code` 标 legacy）；§3.2 实体 `Manufacturer`→`Plant`、SourceType 适用实体含 Plant；§3.4 新增 **Flyway V4**（重命名 + plant_code + 历史回填）；§4.6 F6 / §4.7 F7 纳入 Plant 事件订阅与 Plant Bootstrap（entity=plant\|all）；§5.1.7 `MptManufacturerController`→`MptPlantController`（`completeVehicle:product:plant:*` + source=MDM 只读 + 旧接口/权限点 deprecated）；§5.1.17 bootstrap 新增 `entity=plant`；§5.2.1 新增 `MdmPlantQueryClient`；§6 改写 US-007 映射并新增 US-007b/US-007c；§7 新增 TD-6（manufacturer 遗留兼容项待清理）。**tasks.md 待按 SPEC 工作流后续同步本 CR** |

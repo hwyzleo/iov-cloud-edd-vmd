@@ -14,6 +14,7 @@
         <result column="row_valid" property="rowValid" />
         <result column="vin" property="vin" />
         <result column="manufacturer_code" property="manufacturerCode" />
+        <result column="plant_code" property="plantCode" />
         <result column="brand_code" property="brandCode" />
         <result column="platform_code" property="platformCode" />
         <result column="series_code" property="carLineCode" />
@@ -28,18 +29,18 @@
 
     <!-- 通用查询结果列 -->
     <sql id="baseColumnList">
-        id, vin, manufacturer_code, brand_code, platform_code, series_code, model_code, base_model_code, build_config_code, eol_time, pdi_time, order_num, vehicle_base_version,
+        id, vin, manufacturer_code, plant_code, brand_code, platform_code, series_code, model_code, base_model_code, build_config_code, eol_time, pdi_time, order_num, vehicle_base_version,
         description, create_time, create_by, modify_time, modify_by, row_version, row_valid
     </sql>
 
     <!-- 插入 -->
     <insert id="insertPo" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO tb_veh_basic_info (
-            id, vin, manufacturer_code, brand_code, platform_code, series_code, model_code, base_model_code, build_config_code, eol_time, pdi_time, order_num, vehicle_base_version,
+            id, vin, manufacturer_code, plant_code, brand_code, platform_code, series_code, model_code, base_model_code, build_config_code, eol_time, pdi_time, order_num, vehicle_base_version,
             description, create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
         VALUES (
-            #{id}, #{vin}, #{manufacturerCode}, #{brandCode}, #{platformCode}, #{carLineCode}, #{modelCode}, #{baseModelCode}, #{buildConfigCode}, #{eolTime}, #{pdiTime}, #{orderNum}, #{vehicleBaseVersion},
+            #{id}, #{vin}, #{manufacturerCode}, #{plantCode}, #{brandCode}, #{platformCode}, #{carLineCode}, #{modelCode}, #{baseModelCode}, #{buildConfigCode}, #{eolTime}, #{pdiTime}, #{orderNum}, #{vehicleBaseVersion},
             #{description}, now(), #{createBy}, now(), #{modifyBy}, 1, 1
         )
     </insert>
@@ -47,13 +48,13 @@
     <!-- 批量插入 -->
     <insert id="batchInsertPo" useGeneratedKeys="true" keyProperty="id" parameterType="java.util.List">
         INSERT INTO tb_veh_basic_info (
-            id, vin, manufacturer_code, brand_code, platform_code, series_code, model_code, base_model_code, build_config_code, eol_time, pdi_time, order_num, vehicle_base_version,
+            id, vin, manufacturer_code, plant_code, brand_code, platform_code, series_code, model_code, base_model_code, build_config_code, eol_time, pdi_time, order_num, vehicle_base_version,
             description, create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
         VALUES
         <foreach collection="list" item="item" index="index" separator=",">
         (
-            #{item.id}, #{item.vin}, #{item.manufacturerCode}, #{item.brandCode}, #{item.platformCode}, #{item.carLineCode}, #{item.modelCode}, #{item.baseModelCode}, #{item.buildConfigCode}, #{item.eolTime}, #{item.pdiTime}, #{item.orderNum}, #{item.vehicleBaseVersion},
+            #{item.id}, #{item.vin}, #{item.manufacturerCode}, #{item.plantCode}, #{item.brandCode}, #{item.platformCode}, #{item.carLineCode}, #{item.modelCode}, #{item.baseModelCode}, #{item.buildConfigCode}, #{item.eolTime}, #{item.pdiTime}, #{item.orderNum}, #{item.vehicleBaseVersion},
             #{item.description}, now(), #{item.createBy}, now(), #{item.modifyBy}, 1, 1
         )
         </foreach>
@@ -64,6 +65,9 @@
         UPDATE tb_veh_basic_info t SET
         <if test="manufacturerCode != null and manufacturerCode != ''">
             t.manufacturer_code = #{manufacturerCode},
+        </if>
+        <if test="plantCode != null and plantCode != ''">
+            t.plant_code = #{plantCode},
         </if>
         <if test="brandCode != null and brandCode != ''">
             t.brand_code = #{brandCode},
