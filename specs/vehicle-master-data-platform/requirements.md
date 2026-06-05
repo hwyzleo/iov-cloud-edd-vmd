@@ -18,7 +18,7 @@
 - G2：通过统一 Feign 契约（`Vmd*Service`）对外暴露车辆/零件/设备/车型配置/生命周期五类能力。
 - G3：支持 6 类（PRODUCE/EOL/BTM/CCP/IDCM/TBOX/SIM）批量数据导入并下钻到 TSP/OTA/IDK 等下游服务。
 - G4：对管理后台提供完整 CRUD + 鉴权（`completeVehicle:*` / `iov:configCenter:*` 权限点）能力。
-- G5：在产品树（品牌/车系/平台）主数据上，VMD 作为 edd-mdm 的下游消费方，持有本地投影副本。
+- G5：在产品树（品牌/车系/平台）主数据上，VMD 作为 edd-mdm 的下游消费方，持有本地投影副本；其中 Brand 本地投影为**只读**视图，VMD 消费 MDM Brand 主数据，通过 Brand 投影支撑车辆查询、产品树关联、导入校验和历史追溯，`brandCode` 作为车辆主档与产品树的品牌关联编码长期保留，VMD 不再承担 Brand 主数据维护职责（CR-012）。
 - G6：在工厂（Plant）主数据上，VMD 作为 edd-mdm 的下游消费方，持有 Plant 本地投影副本，用于车辆生产工厂追溯；车辆主档使用 `plantCode` 表示生产工厂编码，VMD 不再承担 Plant 主数据治理职责（CR-011）。
 
 > **Plant / 工厂主数据语义统一（CR-011 补充）**：
@@ -29,11 +29,19 @@
 > - VMD Plant 是面向车辆主数据上下文（bounded context）的消费型只读投影，不是 MDM Plant 的完整副本/镜像表。
 > - VMD Plant 投影字段以车辆生产工厂追溯、导入校验、查询展示和运行时解耦为边界。
 
+> **Brand / 品牌主数据语义统一（CR-012 补充）**：
+> - Brand 主数据的权威来源（SSOT）为 **edd-mdm**，VMD 仅保留 Brand 本地投影副本。
+> - VMD Brand 本地投影面向车辆主数据上下文（bounded context），用于车辆主数据查询、车辆详情展示、导入校验、产品树关联、历史追溯，以及 MDM 不可用时的降级查询，不是 MDM Brand 的完整副本/镜像表。
+> - VMD 车辆主档与产品树继续使用 `brandCode` 作为品牌关联编码长期保留，不因维护权迁移而改名或删除。
+> - VMD 不再承担 Brand 主数据治理、编码生成、审批、Golden Record、生命周期管理等职责。
+> - VMD Brand 投影采用按需最小化字段设计，对 source=MDM 记录保持只读语义。
+
 ### 非目标（Non-Goals，本期不做）
 - N1：不替代账号服务（`ExAccountService`）做用户身份/手机号实名核验。
 - N2：不替代安全密钥服务（`ExSkService`）执行 IMMO_SK 的实际生成。
 - N3：不实现 V2.0+ 解析器（当前仅 V1.0）。
 - N4：不再充当品牌/车系/平台/**Plant（工厂）**的企业级 SSOT；不实施跨系统主数据治理（Golden Record / 审批工作流 / 数据质量打分 / 编码规则生成 / 生命周期管理）。
+- N5：不再作为 **Brand（品牌）**主数据的企业级 SSOT；VMD 不负责 Brand 主数据治理、审批、编码生成、数据质量打分、Golden Record 合并与品牌生命周期管理；不要求完整复制 MDM Brand 的全部字段；不承担 MDM Brand 字段变化的自动适配责任，仅当字段变化影响 VMD 的车辆导入、车辆查询、车辆追溯、展示或校验逻辑时，才通过独立 CR 纳入 VMD Brand 投影（CR-012）。
 
 ## 3. User Stories
 
@@ -44,26 +52,47 @@
 
 ### 3.1 产品主数据维护域
 
-#### US-001: 维护车辆品牌（Brand）
-**As a** Mpt-User, **I want** 维护车辆品牌（CRUD + 列表 + 列出全部）, **so that** 后续车系/车辆能挂载到品牌之下并复用其属性。
+#### US-001: 消费 MDM Brand 主数据本地投影
+**As a** System, **I want** VMD 从 MDM 同步 Brand 主数据并维护本地 Brand 投影表, **so that** 每台车辆可通过 `brandCode` 关联品牌信息，同时 VMD 不再承担 Brand 主数据维护职责。
+
+> **语义重构（CR-012）**：本 US 由原「US-001 维护车辆品牌（Brand）」演进而来。Brand 主数据 SSOT 上移至 edd-mdm，VMD 仅保留 Brand 本地投影副本。VMD Brand 投影为 MDM Brand 在 VMD bounded context 下的按需最小化只读视图，不要求与 MDM Brand 主数据字段完全一致（字段范围见 §4「Brand 投影字段范围原则」）。`brandCode` 作为车辆主档与产品树的品牌关联编码长期保留。VMD Brand 的 add/edit/remove 自此为兼容期遗留能力，仅作用于 source=MANUAL 过渡数据，最终下线策略见 US-001c。
 
 **Acceptance Criteria** (EARS):
-- WHEN Mpt-User 调用 `GET /api/mpt/brand/v1/list` THE SYSTEM SHALL 在数据库分页（`startPage()` + `getPageResult()`）返回符合 `code/name/beginTime/endTime` 过滤条件的品牌列表。
-- WHEN Mpt-User 调用 `POST /api/mpt/brand/v1` 创建品牌 IF `code` 已存在 THEN THE SYSTEM SHALL 返回 `ApiResponse.fail("新增车辆品牌'<code>'失败，车辆品牌代码已存在")`。
-- WHEN Mpt-User 调用 `DELETE /api/mpt/brand/v1/{brandIds}` IF 该品牌下存在车系 OR 该品牌下存在车辆 THEN THE SYSTEM SHALL 拒绝删除并返回对应原因。
-- THE SYSTEM SHALL 校验调用方持有 `completeVehicle:product:brand:list/query/add/edit/remove/export` 权限点；缺权时由 framework-security 统一拦截。
-- WHEN MDM 通过 Kafka 推送 BrandCreated / BrandUpdated / BrandDeleted 事件 THE SYSTEM SHALL upsert 本地副本，并写入 source=MDM / external_ref_id / external_version / last_sync_time。
-- WHEN event.version <= local.external_version THEN THE SYSTEM SHALL 忽略该事件（乱序处理）。
-- IF 记录的 source=MDM THEN THE SYSTEM SHALL 拒绝来自 MPT 的 add / edit / delete 操作并返回明确错误。
-- WHEN MPT 操作 source=MANUAL 的记录 THE SYSTEM SHALL 维持现有 CRUD 行为不变。
+- WHEN MDM 通过 Kafka 推送 BrandCreated / BrandUpdated / BrandDeleted 事件 THE SYSTEM SHALL upsert VMD 本地 Brand 投影数据，并写入 source=MDM / external_ref_id / external_version / last_sync_time。
+- WHEN event.version <= local.external_version THEN THE SYSTEM SHALL 忽略该事件，避免乱序事件覆盖较新数据。
+- WHEN 同步 MDM Brand 数据 THE SYSTEM SHALL 仅持久化 VMD 业务场景所需字段，不要求 VMD Brand 投影表结构与 MDM Brand 主数据模型完全一致。
+- WHEN MDM Brand 新增字段但 VMD 未消费该字段 THEN THE SYSTEM SHALL NOT 要求变更 VMD Brand 投影表结构。
+- WHEN MDM Brand 字段变化影响 VMD 的车辆导入、车辆查询、车辆追溯、展示或校验逻辑 THEN THE SYSTEM SHALL 通过独立 CR 调整 VMD Brand 投影模型。
+- WHEN VMD 本地 Brand 记录 source=MDM THEN THE SYSTEM SHALL 拒绝来自 MPT 后台的 add / edit / delete 操作，并返回明确错误。
+- WHEN VMD 处理车辆生产导入数据 THE SYSTEM SHALL 保留并写入 `brandCode` 字段，用于车辆品牌关联和追溯。
+- WHEN 查询车辆详情 THE SYSTEM SHALL 可基于本地 Brand 投影数据展示或关联品牌信息。
+- WHEN MDM 不可用 THEN THE SYSTEM SHALL 使用已同步的本地 Brand 投影数据支撑车辆查询、展示和历史追溯，不对 MDM 形成运行时强依赖。
+- IF 本地不存在对应 `brandCode` THEN THE SYSTEM SHALL 不阻断历史车辆查询，但应在展示或校验结果中体现 Brand 信息缺失。
+- THE SYSTEM SHALL 校验调用方持有 `completeVehicle:product:brand:list/query/export` 权限点；`completeVehicle:product:brand:add/edit/remove` 权限点仅作为兼容期遗留保留（仅可作用于 source=MANUAL 过渡数据），对 source=MDM 记录一律拒绝，并规划后续兼容性清理 CR 下线。
 
-#### US-001b: Bootstrap 时从 MDM 全量同步品牌数据
-**As a** System, **I want** Bootstrap 时从 MDM 全量同步品牌数据, **so that** 首次接入或数据丢失后可恢复一致性。
+#### US-001b: Bootstrap 时从 MDM 全量同步 Brand 数据
+**As a** System, **I want** Bootstrap 时从 MDM 全量同步 Brand 数据, **so that** 首次接入、数据丢失或重新初始化后，VMD 可以恢复 Brand 主数据本地投影。
 
 **Acceptance Criteria**:
-- WHEN VMD 启动时检测本地 source=MDM 品牌记录数为 0 THE SYSTEM SHALL 自动调用 MDM 全量快照接口拉取品牌数据并 upsert 本地副本。
-- WHEN Mpt-User 调用 `POST /api/mpt/mdmSync/v1/bootstrap?entity=brand` THE SYSTEM SHALL 调用 MDM 全量快照接口拉取品牌数据并 upsert 本地副本（不删除本地记录）。
+- WHEN VMD 启动时检测本地 source=MDM 的 Brand 投影记录数为 0 THE SYSTEM SHALL 自动调用 MDM Brand 全量快照接口拉取 Brand 数据并 upsert 本地副本。
+- WHEN Mpt-User 调用 `POST /api/mpt/mdmSync/v1/bootstrap?entity=brand` THE SYSTEM SHALL 调用 MDM Brand 全量快照接口拉取数据并 upsert 本地 Brand 投影副本。
+- WHEN Mpt-User 调用 `POST /api/mpt/mdmSync/v1/bootstrap?entity=all` THE SYSTEM SHALL 在全量同步中包含 Brand 数据。
 - THE SYSTEM SHALL 在 upsert 时写入 source=MDM / external_ref_id / external_version / last_sync_time。
+- THE SYSTEM SHALL 不因 MDM Brand 快照接口失败而删除或清空本地已有 Brand 投影数据。
+- THE SYSTEM SHALL 支持重复执行 Bootstrap，重复同步时按 external_ref_id / external_version 幂等 upsert。
+- THE SYSTEM SHALL 只同步 VMD Brand 投影所需字段，不要求同步 MDM Brand 的完整字段集。
+
+#### US-001c: Brand 本地维护能力兼容清理
+**As a** System, **I want** 将 VMD 现有 Brand 本地维护能力逐步收敛为只读投影能力, **so that** Brand 主数据维护职责统一回归 MDM，同时历史 source=MANUAL 数据和既有查询能力不受影响。
+
+**Acceptance Criteria**:
+- WHEN 新增或修改 VMD 内部逻辑 THE SYSTEM SHALL 优先使用 MDM Brand 投影语义，不再将 VMD Brand 视为权威主数据。
+- WHEN 历史 Brand 记录 source=MANUAL THEN THE SYSTEM SHALL 在兼容期允许保留查询和必要的过渡维护能力。
+- WHEN Brand 记录 source=MDM THEN THE SYSTEM SHALL 禁止通过 VMD MPT 后台新增、修改或删除。
+- WHEN 文档描述 Brand 维护能力 THE SYSTEM SHALL 明确 VMD Brand add/edit/remove 为兼容期遗留能力，不作为长期能力继续扩展。
+- THE SYSTEM SHALL 规划后续兼容性清理 CR，逐步下线或隐藏 VMD Brand 本地维护入口、旧权限点和相关后台操作。
+- THE SYSTEM SHALL 保留 Brand 查询能力，包括列表、详情、listAll 或车辆详情展示所需查询。
+- THE SYSTEM SHALL 保留 `brandCode` 字段，不因维护权迁移而改名或删除。
 
 #### US-002: 维护车系（CarLine）
 **As a** Mpt-User, **I want** 维护车系并按品牌过滤, **so that** 形成"品牌→车系"产品树。
@@ -464,6 +493,49 @@
 - Plant 主数据合并 / 拆分关系。
 - MDM 内部治理字段、审批字段、流程字段。
 
+### Brand 主数据投影约束（CR-012）
+- Brand 主数据的权威来源（SSOT）为 **MDM**，VMD 仅保留本地 Brand 投影副本，不作为权威维护入口。
+- VMD 中 `brandCode` 是车辆主档和产品树的一部分，作为车辆品牌关联字段长期保留。
+- VMD 不负责 Brand 主数据治理、审批、合并、编码生成和生命周期管理。
+- MDM 与 VMD 的 Brand 同步协议（Kafka topic、payload schema、快照接口路径、重试与死信策略）由「edd-mdm 接入规范」定义。
+- VMD Brand 投影采用按需最小化字段设计，不要求与 MDM Brand 主数据模型完全一致；投影字段以车辆查询、车辆详情展示、导入校验、产品树关联、历史追溯和运行时解耦为边界。
+- MDM Brand 的完整主数据属性、治理属性、审批属性、生命周期属性不在 VMD 投影模型中强制落库。
+- 如 MDM Brand 后续新增字段，只有当该字段被 VMD 的车辆导入、车辆查询、车辆追溯、展示或校验逻辑消费时，才通过独立 CR 纳入 VMD Brand 投影。
+- VMD 可根据排障或审计需要保留 `raw_payload` / `extension_json` 等原始快照字段，但该字段不应作为 VMD 领域逻辑的主要依赖。
+
+### Brand 投影字段范围原则（VMD Brand ⊂ MDM Brand，CR-012）
+> VMD 侧 Brand 投影不要求与 MDM Brand 主数据字段完全一致，应采用**按需最小化投影**原则。VMD Brand 投影是 MDM Brand 在 VMD bounded context 下的只读视图，不是 MDM Brand 的完整副本/镜像表。
+
+**字段设计原则**：
+1. VMD 只保留支撑车辆主数据业务闭环所需的 Brand 字段。
+2. VMD 不复制 MDM Brand 的完整治理模型、审批字段、生命周期状态、组织层级、扩展属性等非 VMD 必需字段。
+3. MDM Brand 字段发生变化时，只有当变化影响 VMD 的车辆导入、车辆查询、车辆追溯、展示或校验逻辑时，才需要同步调整 VMD Brand 投影模型。
+4. VMD Brand 投影是 MDM Brand 在 VMD bounded context 下的只读视图，不是 MDM Brand 的完整副本。
+5. VMD 可以根据排障或审计需要保留 `raw_payload` / `extension_json` 等原始快照字段，但该字段不应作为 VMD 领域逻辑的主要依赖。
+
+**建议 `veh_brand` 至少保留以下字段（最小投影集）**：
+
+| 字段 | 说明 |
+|------|------|
+| `brand_code` | Brand 编码，车辆主档 `brandCode` 的关联键 |
+| `brand_name` | Brand 名称，用于车辆详情、列表和产品树展示 |
+| `source` | 数据来源，MDM / MANUAL |
+| `external_ref_id` | MDM Brand 实体 ID |
+| `external_version` | MDM Brand 版本号 |
+| `last_sync_time` | 最近同步时间 |
+| `deleted` / `enabled` / `status` | 可选，用于处理 MDM 删除、停用或不可用状态 |
+| `raw_payload` / `extension_json` | 可选，用于排障、审计或临时兼容 |
+
+**不建议默认同步以下字段（除非 VMD 明确消费，需走独立 CR）**：
+- Brand 审批状态。
+- Brand 生命周期全量状态流转。
+- Brand 组织归属全路径。
+- Brand Logo、营销介绍、市场属性等非 VMD 必需字段。
+- Brand 编码生成规则。
+- Brand 数据质量评分。
+- Brand Golden Record 合并 / 拆分关系。
+- MDM 内部治理字段、审批字段、流程字段。
+
 ### 依赖（外部）
 - **TSP 服务**：`TspVehicleCcpService / TspVehicleIdcmService / TspVehicleNetworkService / TspVehicleTboxService / TspCcpInfoService / TspIdcmInfoService / TspTboxInfoService / TspSimService`。
 - **OTA 服务**：`OtaVehiclePartService`（车辆零件同步）。
@@ -501,6 +573,13 @@
 - O16：本次 CR 只定义 Manufacturer 到 Plant 的系统命名迁移与兼容策略，不要求一次性删除所有旧字段和旧接口；旧字段（`manufacturer_code` 等）、旧接口（`/api/mpt/manufacturer/**`）、旧权限点（`completeVehicle:product:manufacturer:*`）的最终下线由后续兼容性清理 CR 完成（CR-011）。
 - O17：MDM Plant 的内部模型设计、生命周期状态、审批流、编码规则不在 VMD 范围内（CR-011）。
 - O18：MDM Plant 的完整档案展示、主数据维护、审批、合并、拆分、数据质量管理不在 VMD 范围内（CR-011）。
+- O19：VMD 不再提供 Brand 主数据的长期本地新增、修改、删除能力（source=MANUAL 过渡数据除外，且仅作为兼容期遗留）（CR-012）。
+- O20：VMD 不实现 Brand 主数据的 Golden Record 合并能力（CR-012）。
+- O21：VMD 不实现 Brand 编码规则生成、主数据审批流程、生命周期管理（CR-012）。
+- O22：VMD 不要求完整复制 MDM Brand 的所有字段；不承担 MDM Brand 字段变化的自动同步适配责任（字段变化影响 VMD 业务时走独立 CR）（CR-012）。
+- O23：历史 Brand 数据 source 回标、清洗、纠错、归并由独立数据治理 CR 处理，本期 spec 不实现（CR-012）。
+- O24：本次 CR 只定义 Brand 从本地维护到本地投影的需求语义调整，不要求一次性删除所有 VMD Brand add/edit/remove 接口和权限点；最终下线由后续兼容性清理 CR 完成（CR-012）。
+- O25：MDM Brand 的内部模型设计、生命周期状态、审批流、编码规则不在 VMD 范围内（CR-012）。
 
 ## 6. Changelog
 
@@ -515,4 +594,5 @@
 | 2026-05-23 | CR-009 | Modified | **US-018~025 批量导入返回结构化处理摘要**：`ImportDataParser.parse()` 返回类型从 `void` 改为 `ImportResult`（含 `totalCount/successCount/failureCount/invalidCount`）；所有 7 个解析器（PRODUCE/EOL/BTM/TBOX/CCP/IDCM/SIM）实现计数回传；`MptVehicleImportDataController.add/edit` 响应从 `ApiResponse<Void>` 改为 `ApiResponse<ImportResultResponse>`，运营人员可对账 |
 | 2026-05-26 | CR-010 | Modified | **品牌/车系/平台主数据 SSOT 上移至 edd-mdm**：VMD 降级为本地投影副本；新增 source / external_ref_id / external_version / last_sync_time 字段；MPT 后台对 source=MDM 记录禁止写操作；新增 Bootstrap 全量同步流程；新增 MDM 事件订阅流程 |
 | 2026-06-05 | CR-011 | Modified | **工厂 / 生产厂商主数据统一调整为 Plant**：Plant 主数据 SSOT 上移至 MDM，VMD 保留 Plant 本地投影表（US-007 由「维护生产厂商 Manufacturer」改写为「消费 MDM Plant 主数据本地投影」，新增 US-007b Bootstrap 全量同步 Plant、US-007c Manufacturer→Plant 兼容迁移）；原 Manufacturer / manufacturerCode 作为历史兼容命名逐步迁移为 Plant / plantCode（`veh_manufacturer`→`veh_plant`、车辆主档 `manufacturer_code`→`plant_code`）；VMD Plant 投影采用按需最小化字段设计，不要求完整复制 MDM Plant 主数据模型（新增 §4「Plant 投影字段范围原则」）；新增 source / external_ref_id / external_version / last_sync_time 字段；MPT 后台禁止维护 source=MDM 的 Plant 投影数据；新增 Plant MDM 事件订阅与 Bootstrap 全量同步流程；车辆主档使用 plantCode 用于生产工厂追溯；权限点 `completeVehicle:product:manufacturer:*`→`completeVehicle:product:plant:*`（旧权限点标记 deprecated 待后续 CR 下线）；US-019 PRODUCE 解析器字段引用同步为 plantCode（含历史兼容）；§2 新增 G6 与 Plant 语义统一说明、N4 扩展含 Plant；§5 新增 O12~O18。**design.md / tasks.md 需按 SPEC 工作流后续同步落地本 CR** |
+| 2026-06-05 | CR-012 | Modified | **品牌主数据重构为 MDM Brand 本地投影**：Brand 主数据 SSOT 上移至 MDM，VMD 保留 Brand 本地投影表（US-001 由「维护车辆品牌 Brand」改写为「消费 MDM Brand 主数据本地投影」；强化 US-001b Brand Bootstrap 全量同步；新增 US-001c Brand 本地维护能力兼容清理）；新增 §4「Brand 主数据投影约束」与「Brand 投影字段范围原则」（VMD Brand ⊂ MDM Brand，按需最小化投影，不要求完整复制 MDM Brand 主数据模型）；VMD Brand add/edit/remove 仅作为 source=MANUAL 兼容期遗留能力，对 source=MDM 记录一律只读；保留 `brandCode` 作为车辆主档和产品树的品牌关联字段（不改名、不删除）；§2 G5 纳入 Brand「MDM 下游消费方 + 只读本地投影副本」语义并新增 Brand 语义统一说明、新增 N5 Brand 非目标；§5 新增 O19~O25。**design.md / tasks.md 需按 SPEC 工作流后续同步落地本 CR** |
 

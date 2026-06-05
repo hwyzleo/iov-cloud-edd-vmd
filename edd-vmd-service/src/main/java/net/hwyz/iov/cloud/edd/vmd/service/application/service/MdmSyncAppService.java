@@ -34,15 +34,18 @@ public class MdmSyncAppService {
 
     /**
      * 处理 MDM 品牌事件
+     * 
+     * <p>CR-012：Brand 投影采用按需最小化只读投影，仅同步 VMD 业务所需字段。</p>
      *
      * @param event 品牌事件
      */
     public void handleBrandEvent(MdmBrandEvent event) {
-        log.info("处理MDM品牌事件: entityId={}, version={}", event.getEntityId(), event.getVersion());
+        log.debug("处理 MDM 品牌事件: eventType={}, entityId={}, code={}", 
+                event.getEventType(), event.getEntityId(), event.getCode());
         // 根据 externalRefId 查找本地记录
         Brand localBrand = vehBrandRepository.selectByExternalRefId(event.getEntityId());
         if (localBrand == null) {
-            // 本地不存在，新增
+            // 本地不存在，新增 Brand 投影
             Brand newBrand = Brand.builder()
                     .code(event.getCode())
                     .name(event.getName())
@@ -52,17 +55,20 @@ public class MdmSyncAppService {
                     .lastSyncTime(LocalDateTime.now())
                     .build();
             vehBrandRepository.insert(newBrand);
-            log.info("新增品牌: code={}", event.getCode());
+            log.info("新增 MDM 品牌投影: code={}, name={}", event.getCode(), event.getName());
         } else {
             // 本地存在，检查版本
             if (event.getVersion() > localBrand.getExternalVersion()) {
+                // 更新 Brand 投影（版本更高）
                 localBrand.setName(event.getName());
                 localBrand.setExternalVersion(event.getVersion());
                 localBrand.setLastSyncTime(LocalDateTime.now());
                 vehBrandRepository.updateById(localBrand);
-                log.info("更新品牌: code={}, version={}", event.getCode(), event.getVersion());
+                log.info("更新 MDM 品牌投影: code={}, oldVersion={}, newVersion={}", 
+                        event.getCode(), localBrand.getExternalVersion(), event.getVersion());
             } else {
-                log.info("忽略品牌事件（版本不高于本地）: code={}, eventVersion={}, localVersion={}",
+                // 忽略乱序事件
+                log.debug("忽略 MDM 品牌事件（版本不满足）: code={}, eventVersion={}, localVersion={}",
                         event.getCode(), event.getVersion(), localBrand.getExternalVersion());
             }
         }
@@ -144,20 +150,28 @@ public class MdmSyncAppService {
 
     /**
      * Bootstrap 全量同步品牌数据
+     * 
+     * <p>当本地 source=MDM 的品牌记录数为 0 时，自动调用 MDM Brand 全量快照接口
+     * 拉取数据并 upsert 本地副本。</p>
+     * 
+     * <p>TODO: MDM Brand 全量快照接口待就绪，当前为 stub 实现。
+     * 接口路径和返回格式由「edd-mdm 接入规范」定义。</p>
      */
     public void bootstrapBrand() {
-        log.info("开始Bootstrap品牌数据同步");
+        log.info("开始 Bootstrap 品牌数据同步");
         long count = vehBrandRepository.countBySource(SourceType.MDM);
         if (count == 0) {
-            log.info("本地无MDM品牌数据，开始从MDM拉取全量");
-            // TODO: 调用 MDM 全量快照接口拉取品牌数据
-            // List<Brand> mdmBrands = mdmBrandQueryClient.getAllBrands();
-            // for (Brand brand : mdmBrands) {
-            //     upsertBrand(brand);
+            log.info("本地无 MDM 品牌记录（count=0），启动 Bootstrap 同步");
+            // TODO: 调用 MDM Brand 全量快照接口
+            // MdmBrandQueryClient 接口已定义，待 MDM 服务就绪后启用
+            // List<Map<String, Object>> mdmBrands = mdmBrandQueryClient.getAllBrands();
+            // for (Map<String, Object> brandData : mdmBrands) {
+            //     Brand brand = buildBrandFromMdmData(brandData);
+            //     vehBrandRepository.insert(brand);
             // }
-            log.info("Bootstrap品牌数据同步完成");
+            log.warn("MDM Brand 全量快照接口待实现，Bootstrap 跳过");
         } else {
-            log.info("本地已有MDM品牌数据{}条，跳过Bootstrap", count);
+            log.info("本地已有 MDM 品牌数据 {} 条，跳过 Bootstrap", count);
         }
     }
 

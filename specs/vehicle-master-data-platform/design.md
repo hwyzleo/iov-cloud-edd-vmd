@@ -137,6 +137,7 @@ graph TB
 | D12 | IMMO_SK 死代码现状 | `VehicleSkSubscribe` 类整体注释 + `ExSkService` import 注释 + 事件订阅方法体注释；`recordGenerateVehicleSkNode` 永不被触发 | — | Rationale：本 spec 为代码现状基线，仅记录现状形态（死代码保留），不规定处理方式（删除/恢复/标 Deprecated 等改造均需走单独 CR） |
 | D13 | MDM 同步策略 | Kafka 事件订阅为主 + Feign 全量快照兜底 + 本地 source 字段标注来源 | ① 仅 Feign 轮询 ② 仅 Kafka 事件 ③ 数据库 CDC | **解耦**：Kafka 事件异步消费，MDM 不可用时不阻塞 VMD 主流程。**可重放**：Kafka 事件支持 offset 回溯重放。**支持降级**：MDM 不可达时降级为只读，source=MANUAL 记录仍可本地维护。**幂等**：通过 external_ref_id + external_version 保证 upsert 幂等性。**适用实体（CR-011 扩展）**：品牌 / 车系 / 平台 / **Plant（工厂）**统一采用本策略。详见「edd-mdm 接入规范」 |
 | D14 | Manufacturer→Plant 迁移策略（**CR-011**） | **Flyway 原地重命名** `veh_manufacturer`→`veh_plant`（`code`/`name`→`plant_code`/`plant_name`）+ 补 source 投影字段；车辆主档 `veh_basic_info` 新增 `plant_code` 并从 `manufacturer_code` 回填；旧字段/旧接口兼容期保留 | ① 新建 `veh_plant` 表 + 双写 + 后续删旧表 ② 仅在应用层做 `manufacturer`↔`plant` 别名映射、不改表 ③ 一次性删除 manufacturer 全部痕迹 | **数据零丢失**：`RENAME TABLE` + `UPDATE plant_code=manufacturer_code` 在单次迁移内完成，历史车辆 `plantCode` 可追溯（对应 US-007c）。**渐进式**：`manufacturer_code` 列与旧接口在兼容期保留（标 deprecated），既有调用方不立即失败（对应 requirements §5 O16）。**对齐 MDM 语义**：投影表与车辆字段统一 Plant 命名，消除「MDM=Plant / VMD=Manufacturer」割裂。备选①双写成本高、②不改表会长期保留语义割裂、③一次性删除破坏兼容性——均不取 |
+| D15 | Brand 本地投影定位与维护收敛策略（**CR-012**） | **复用 CR-010/V3 已建 source 投影字段（不新增 Flyway 迁移、不重命名 `veh_brand.code`/`name`）** + Brand 定位为 MDM Brand 按需最小化只读投影（VMD Brand ⊂ MDM Brand）+ add/edit/remove 收敛为 source=MANUAL 兼容期遗留 | ① 重命名 `veh_brand.code`→`brand_code`/`name`→`brand_name` 对齐字段表 ② 新建独立 Brand 投影表 ③ 立即删除 add/edit/remove 接口与权限点 | **与 Plant（D14）的关键差异**：Brand 实体命名不变、`brandCode` 关联键不变（requirements 明确「保留 brandCode，不改名、不删除」），**不存在 Manufacturer→Plant 式的命名迁移驱动**，故 CR-012 **不引入表/列重命名与新 Flyway 迁移**，直接复用 CR-010（Flyway V3）已为 `veh_brand` 建好的 `source`/`external_ref_id`/`external_version`/`last_sync_time` 字段；`veh_brand.code` 即车辆主档 `brand_code` 的关联键（充当字段范围原则中的 `brand_code`），`veh_brand.name` 充当 `brand_name`。**按需最小化**：`veh_brand` 仅保留车辆主数据闭环所需字段，可选字段（`deleted`/`enabled`/`status`/`raw_payload`/`extension_json`）按消费场景走独立 CR 增量纳入，不强制与 MDM Brand 主数据模型一致。**渐进收敛**：source=MDM 记录经 `ProductDataReadOnlyException`（`202014`）保持只读；add/edit/remove 仅对 source=MANUAL 过渡数据保留并标 `@Deprecated`，最终下线由后续兼容性清理 CR 完成（对应 US-001c、requirements §5 O24）。备选 ①无命名迁移驱动、徒增兼容与迁移成本；②`veh_brand` 已具备投影能力、无需新表；③破坏既有调用方兼容性——均不取 |
 
 ## 3. Data Model
 
@@ -147,7 +148,7 @@ graph TB
 #### 产品树域（10 张）
 | 表名 | PO 类 | 关键列 | 唯一约束 | 关联 |
 |------|------|--------|----------|------|
-| `veh_brand` | `VehBrandPo` | `code`, `name`, `source`, `external_ref_id`, `external_version`, `last_sync_time` | UK(`code`), UK(`external_ref_id`) | — |
+| `veh_brand` | `VehBrandPo` | `code`, `name`, `source`, `external_ref_id`, `external_version`, `last_sync_time` | UK(`code`), UK(`external_ref_id`) | MDM Brand 主数据本地投影，按需最小化字段（CR-012）；`code` 为车辆主档 `brand_code` 关联键，沿用不重命名 |
 | `veh_carLine` | `VehCarLinePo` | `code`, `name`, `brand_code`, `source`, `external_ref_id`, `external_version`, `last_sync_time` | UK(`code`), UK(`external_ref_id`) | → `veh_brand.code`；`brand_code` 在 source=MDM 时由事件 payload 提供，source=MANUAL 时由 MPT 写入 |
 | `veh_platform` | `VehPlatformPo` | `code`, `name`, `source`, `external_ref_id`, `external_version`, `last_sync_time` | UK(`code`), UK(`external_ref_id`) | — |
 | `veh_model` | `VehModelPo` | `code`, `name`, `platform_code`, `carLine_code` | UK(`code`) | → `veh_platform.code`, `veh_carLine.code` |
@@ -160,6 +161,8 @@ graph TB
 | `veh_plant` | `VehPlantPo` | `plant_code`, `plant_name`, `source`, `external_ref_id`, `external_version`, `last_sync_time` | UK(`plant_code`), UK(`external_ref_id`) | 由 `veh_manufacturer` 重命名迁移（CR-011，V4）；MDM Plant 主数据本地投影，按需最小化字段 |
 
 > 注（产品树域）：`veh_manufacturer` 已于 CR-011（Flyway V4）重命名为 `veh_plant`，列 `code`/`name` 重命名为 `plant_code`/`plant_name` 并补充 MDM 投影字段（详见 §3.4 V4、§2 D14）。`veh_plant` 是 MDM Plant 的按需最小化只读投影，不要求与 MDM Plant 主数据字段完全一致（字段范围见 requirements §4「Plant 投影字段范围原则」）；如需 `deleted`/`enabled`/`status`/`raw_payload`/`extension_json` 等可选字段，由消费场景按 CR 增量纳入。
+
+> 注（Brand 投影，CR-012）：`veh_brand` 自 CR-012 起定位为 MDM Brand 主数据在 VMD bounded context 下的**按需最小化只读投影**，不是 MDM Brand 的完整副本/镜像表。与 Plant 不同，Brand 实体命名与 `brandCode` 关联键均不变，故 **CR-012 不引入表/列重命名，也不新增 Flyway 迁移**，直接复用 CR-010（V3）已建的 `source`/`external_ref_id`/`external_version`/`last_sync_time` 字段；`veh_brand.code` 即字段范围原则中的 `brand_code`（车辆主档 `brand_code` 关联键）、`veh_brand.name` 即 `brand_name`。字段范围以车辆查询、车辆详情展示、导入校验、产品树关联、历史追溯为边界，可选字段（`deleted`/`enabled`/`status`/`raw_payload`/`extension_json`）按消费场景走独立 CR 增量纳入（详见 §2 D15、requirements §4「Brand 投影字段范围原则」）。
 
 > 注：`source` 字段取值 `MDM` / `MANUAL`，默认 `MANUAL`。`external_ref_id` 存储 MDM 侧实体主键 ID（如 `mdm_brand.id` / `mdm_plant.id`），source=MANUAL 时为 NULL。`external_version` 存储 MDM 侧实体版本号，VMD 收到事件时执行 `IF event.version > local.external_version THEN upsert ELSE ignore`。`last_sync_time` 记录最后一次同步时间。`UK(external_ref_id)` 在 MySQL 中允许多 NULL（source=MANUAL 时自动跳过约束），source=MDM 时 external_ref_id 非空约束生效。`veh_plant` 同样适用本规则（CR-011）。
 
@@ -209,7 +212,7 @@ graph TB
   - 行为：`bindOrder(orderNum)`
 
 #### 实体（Entity，21 个）
-按 §3.1 表清单一一对应，关键实体：`Brand` / `CarLine` / `Platform` / `Model` / `BaseModel` / `BaseModelFeatureCode` / `BuildConfig` / `BuildConfigFeatureCode` / `FeatureFamily` / `FeatureCode` / `Plant`（原 `Manufacturer`，CR-011 迁移；`Manufacturer` 命名作为遗留兼容逐步废弃） / `ConfigItem` / `ConfigItemOption` / `ConfigItemMapping` / `VehicleBasicInfo` / `VehicleDetail` / `VehiclePresetOwner` / `VehicleConfig` / `VehicleConfigItem` / `VehiclePart` / `VehiclePartHistory` / `Part` / `Device` / `Supplier` / `VehicleLifecycle` / `VehicleLifecycleNode` / `VehicleImportData`
+按 §3.1 表清单一一对应，关键实体：`Brand`（CR-012 起定位为 MDM Brand 只读投影） / `CarLine` / `Platform` / `Model` / `BaseModel` / `BaseModelFeatureCode` / `BuildConfig` / `BuildConfigFeatureCode` / `FeatureFamily` / `FeatureCode` / `Plant`（原 `Manufacturer`，CR-011 迁移；`Manufacturer` 命名作为遗留兼容逐步废弃） / `ConfigItem` / `ConfigItemOption` / `ConfigItemMapping` / `VehicleBasicInfo` / `VehicleDetail` / `VehiclePresetOwner` / `VehicleConfig` / `VehicleConfigItem` / `VehiclePart` / `VehiclePartHistory` / `Part` / `Device` / `Supplier` / `VehicleLifecycle` / `VehicleLifecycleNode` / `VehicleImportData`
 
 #### 值对象（Value Object）
 - **`VehicleLifecycleNodeEnum`**：23 个节点（包含拼写错误 `VEHICLE_INVoICING`，参见 §5 O10 已知缺陷）
@@ -239,6 +242,8 @@ graph TB
 | V2 | `V2__CarLine_brand_code_migration.sql` | 车系冗余 brand_code |
 | V3 | `V3__Add_mdm_source_to_product_tree.sql` | 品牌/车系/平台新增 source / external_ref_id / external_version / last_sync_time 字段 + UK(external_ref_id) + DML 回填 source='MANUAL' |
 | V4 | `V4__Migrate_manufacturer_to_plant.sql` | **CR-011 Manufacturer→Plant 迁移**：① `RENAME TABLE veh_manufacturer TO veh_plant`；② 列重命名 `code`→`plant_code`、`name`→`plant_name`；③ `veh_plant` 新增 source / external_ref_id / external_version / last_sync_time + UK(external_ref_id) + 回填 source='MANUAL'；④ `veh_basic_info` 新增 `plant_code` 列；⑤ DML `UPDATE veh_basic_info SET plant_code = manufacturer_code`（回填历史车辆，对应 US-007c）；⑥ `manufacturer_code` 列兼容期保留（标 deprecated，不在本迁移删除，待后续清理 CR） |
+
+> 注（CR-012）：**Brand 投影定位调整不引入新的 Flyway 迁移**。`veh_brand` 复用 V3（`V3__Add_mdm_source_to_product_tree.sql`）已建的 `source`/`external_ref_id`/`external_version`/`last_sync_time` 字段与 `UK(external_ref_id)`；`brandCode` 关联键沿用 `veh_brand.code`，**不重命名**（与 CR-011 的 Manufacturer→Plant 列重命名不同，Brand 无命名迁移驱动，详见 §2 D15）。可选投影字段（`deleted`/`enabled`/`status`/`raw_payload`/`extension_json`）如需启用，由消费场景按独立 CR 增量新增迁移。
 
 ## 4. Core Flows
 
@@ -470,8 +475,10 @@ sequenceDiagram
 ```
 
 > Plant 事件（`PlantCreated/PlantUpdated/PlantDeleted`）复用同一订阅与幂等 upsert 逻辑，写入 `veh_plant` 投影表；仅持久化 VMD 业务所需的最小投影字段（CR-011，对应 US-007）。
+>
+> Brand 事件（`BrandCreated/BrandUpdated/BrandDeleted`）同样复用该订阅与幂等 upsert 逻辑，写入 `veh_brand` 投影表；自 CR-012 起仅持久化 VMD 业务所需的最小投影字段（按需最小化只读投影，对应 US-001）。
 
-**对应 US**：US-001 / US-002 / US-006 / **US-007**（MDM 事件同步 AC）。
+**对应 US**：**US-001** / US-002 / US-006 / **US-007**（MDM 事件同步 AC）。
 
 ### 4.7 F7 - VMD Bootstrap 全量快照
 
@@ -509,8 +516,10 @@ sequenceDiagram
 ```
 
 > Plant 全量快照通过 `MdmPlantQueryClient` 拉取，`entity=plant` 或 `entity=all` 触发；upsert 写入 `veh_plant`，按 external_ref_id / external_version 幂等，快照失败不清空本地已有 Plant 投影（CR-011，对应 US-007b）。
+>
+> Brand 全量快照通过 `MdmBrandQueryClient` 拉取，`entity=brand` 或 `entity=all` 触发；upsert 写入 `veh_brand`，按 external_ref_id / external_version 幂等，快照失败不清空本地已有 Brand 投影，仅同步 VMD Brand 投影所需的最小字段集（CR-012，对应 US-001b）。
 
-**对应 US**：US-001b / US-002b / US-006b / **US-007b**（Bootstrap 全量同步 AC）。
+**对应 US**：**US-001b** / US-002b / US-006b / **US-007b**（Bootstrap 全量同步 AC）。
 
 ## 5. API Contracts
 
@@ -518,20 +527,22 @@ sequenceDiagram
 
 ### 5.1 MPT 端（`/api/mpt/**`，权限点前缀 `completeVehicle:` 或 `iov:configCenter:`）
 
-#### 5.1.1 Brand `MptBrandController`（→ US-001）
+#### 5.1.1 Brand `MptBrandController`（→ US-001 / US-001c）
+
+> **语义重构（CR-012）**：Brand 自 CR-012 起定位为 MDM Brand 主数据本地只读投影的消费方（参照 §5.1.7 Plant）。`list/listAll/query/export` 为长期保留的查询能力；`add/edit/remove`（及对应 `completeVehicle:product:brand:add/edit/remove` 权限点）降级为**兼容期遗留**，仅可作用于 source=MANUAL 过渡数据，对 source=MDM 记录一律拒绝，最终下线由后续兼容性清理 CR 完成（对应 US-001c、§7 TD-7、requirements §5 O24）。`brandCode` 关联键保留，不改名、不删除。
 | Method | Path | Permission | Request | Response |
 |--------|------|-----------|---------|----------|
 | GET | `/api/mpt/brand/v1/list` | `completeVehicle:product:brand:list` | `BrandRequest`（code/name/beginTime/endTime） | `PageResult<BrandResponse>` |
 | GET | `/api/mpt/brand/v1/listAll` | `completeVehicle:product:brand:list` | — | `List<BrandResponse>` |
 | GET | `/api/mpt/brand/v1/{brandId}` | `completeVehicle:product:brand:query` | — | `BrandResponse` |
-| POST | `/api/mpt/brand/v1` | `completeVehicle:product:brand:add` | `BrandRequest` | `ApiResponse<Long>` |
-| PUT | `/api/mpt/brand/v1` | `completeVehicle:product:brand:edit` | `BrandRequest` | `ApiResponse<Boolean>` |
-| DELETE | `/api/mpt/brand/v1/{brandIds}` | `completeVehicle:product:brand:remove` | path `Long[]` | `ApiResponse<Boolean>` |
+| POST | `/api/mpt/brand/v1` | `completeVehicle:product:brand:add` | `BrandRequest` | `ApiResponse<Long>`（兼容期遗留，仅 source=MANUAL） |
+| PUT | `/api/mpt/brand/v1` | `completeVehicle:product:brand:edit` | `BrandRequest` | `ApiResponse<Boolean>`（兼容期遗留，仅 source=MANUAL） |
+| DELETE | `/api/mpt/brand/v1/{brandIds}` | `completeVehicle:product:brand:remove` | path `Long[]` | `ApiResponse<Boolean>`（兼容期遗留，仅 source=MANUAL） |
 | POST | `/api/mpt/brand/v1/export` | `completeVehicle:product:brand:export` | `BrandRequest` | `Excel/CSV stream`（O5：未实现，仅日志） |
 
 错误：`code 已存在` / `该品牌下存在车系` / `该品牌下存在车辆`
 
-> **source=MDM 只读限制**：POST / PUT / DELETE 接口对 source=MDM 记录抛 `ProductDataReadOnlyException`（错误码 `202014`），消息模板 `{entity}'{code}' 来源为 MDM，不允许通过 VMD 后台修改/删除`。
+> **source=MDM 只读限制**：POST / PUT / DELETE 接口对 source=MDM 记录抛 `ProductDataReadOnlyException`（错误码 `202014`），消息模板 `{entity}'{code}' 来源为 MDM，不允许通过 VMD 后台修改/删除`。`add/edit/remove` 权限点与端点仅作兼容期遗留（限 source=MANUAL），后续清理 CR 下线（CR-012，对应 US-001c）。
 
 #### 5.1.2 CarLine `MptCarLineController`（→ US-002）
 完整 7 端点同 5.1.1 模式，权限前缀 `completeVehicle:product:carLine:*`，**额外**：
@@ -678,7 +689,7 @@ sequenceDiagram
 > 完整签名以 `edd-vmd-api/src/main/java/.../api/service/Vmd*Service.java` 为准；本节列契约清单 + 错误码 + Fallback 行为。
 
 #### 5.2.1 MDM 快照查询 Feign 接口（→ US-001b/US-002b/US-006b/US-007b）
-- `MdmBrandQueryClient`：调用 MDM 品牌全量快照接口（path/name 由 edd-mdm 接入规范定义，暂标 TBD）
+- `MdmBrandQueryClient`：调用 MDM 品牌全量快照接口（path/name 由 edd-mdm 接入规范定义，暂标 TBD）；仅取 VMD Brand 投影所需的最小字段集（CR-012）
 - `MdmCarLineQueryClient`：调用 MDM 车系全量快照接口（path/name 由 edd-mdm 接入规范定义，暂标 TBD）
 - `MdmPlatformQueryClient`：调用 MDM 平台全量快照接口（path/name 由 edd-mdm 接入规范定义，暂标 TBD）
 - `MdmPlantQueryClient`：调用 MDM Plant（工厂）全量快照接口（CR-011；path/name 由 edd-mdm 接入规范定义，暂标 TBD）；仅取 VMD Plant 投影所需的最小字段集
@@ -735,8 +746,9 @@ sequenceDiagram
 
 | US-ID | Design Section | Note |
 |-------|----------------|------|
-| US-001 Brand | §3.1 产品树 / §4.1 F1 / §5.1.1 | 完整 CRUD + 删除前置依赖 |
-| US-001b Brand Bootstrap | §3.1 产品树 / §4.7 F7 / §5.1.17 / §5.2.1 | MDM 全量快照同步 |
+| US-001 Brand 投影 | §2 D13/D15 / §3.1 产品树(`veh_brand`) / §3.2 / §4.6 F6 / §4.7 F7 / §5.1.1 / §5.2.1 | 消费 MDM Brand 主数据本地投影；source=MDM 只读；按需最小化投影（CR-012） |
+| US-001b Brand Bootstrap | §3.1 产品树(`veh_brand`) / §4.7 F7 / §5.1.17 / §5.2.1 | MDM Brand 全量快照同步（entity=brand\|all），幂等 upsert、失败不清空（CR-012） |
+| US-001c Brand 本地维护收敛 | §2 D15 / §3.4（无新迁移） / §5.1.1 / §7 TD-7 | add/edit/remove 收敛为 source=MANUAL 兼容期遗留；source=MDM 只读；旧入口/旧权限点待清理 CR 下线（CR-012） |
 | US-002 CarLine | §3.1 产品树 / §4.1 F1 / §5.1.2 | 含 `listByBrandCode` |
 | US-002b CarLine Bootstrap | §3.1 产品树 / §4.7 F7 / §5.1.17 / §5.2.1 | MDM 全量快照同步 |
 | US-003 Model | §3.1 产品树 / §4.1 F1 / §5.1.3 | 含平台+车系联合查询 |
@@ -782,6 +794,7 @@ sequenceDiagram
 | TD-4 | 全部 `*Controller.export()` | 仅有 `@Log` 注解和日志，无 Excel/CSV 流响应 | 导出端点不可用（O5） |
 | TD-5 | `adapter/web/controller/mpt/MptVehicleConfigController` | 仅 list / 查询配置项 / export，无 add / edit | 车辆配置无法通过 MPT 写入（O8） |
 | TD-6 | `veh_basic_info.manufacturer_code` 列、`/api/mpt/manufacturer/**` 旧接口、`completeVehicle:product:manufacturer:*` 旧权限点 | CR-011 迁移后兼容期保留并标 `@Deprecated`（非缺陷，受控遗留） | 待后续兼容性清理 CR 下线（requirements §5 O16）；下线前需确认无外部调用方依赖旧路径/旧字段 |
+| TD-7 | `MptBrandController` 的 `add/edit/remove` 端点、`completeVehicle:product:brand:add/edit/remove` 权限点 | CR-012 后 Brand 定位为 MDM 只读投影，`add/edit/remove` 仅对 source=MANUAL 过渡数据保留并标 `@Deprecated`（非缺陷，受控遗留） | 待后续兼容性清理 CR 下线（requirements §5 O24）；下线前需确认无外部调用方依赖旧入口/旧权限点 |
 
 ## 8. Open Questions
 
@@ -801,3 +814,4 @@ sequenceDiagram
 | 2026-05-23 | CR-009 | Modified | **US-018~025 批量导入返回结构化处理摘要**：D9 决策更新（`parse()` 返回 `ImportResult`）；新增 `ImportResult` DTO（`application/dto/result`）+ `ImportResultResponse` VO（`adapter/web/vo/response`）；`ImportDataParser.parse()` 返回类型从 `void` 改为 `ImportResult`；7 个解析器实现计数回传（PRODUCE/EOL 增加 try-catch 记录 `failureCount`）；`VehicleImportDataAppService.parseVehicleImportData()` 返回 `ImportResult`；Controller `add/edit` 响应改为 `ApiResponse<ImportResultResponse>`；§4.2 F2 时序图更新（`ImportResult` 返回 + `ImportResultResponse` 响应）；§5.1.16 API 契约更新 |
 | 2026-05-26 | CR-010 | Modified | **品牌/车系/平台主数据 SSOT 上移至 edd-mdm**：新增 D13（MDM 同步策略）；§3.1 三张表新增 source / external_ref_id / external_version / last_sync_time 字段 + UK(external_ref_id)；§3.2 新增 SourceType 值对象；§3.4 新增 Flyway V3；§4 新增 F6（MDM 事件订阅）/ F7（Bootstrap 全量快照）；§5.1.1~5.1.6 标注 source=MDM 只读限制；§5.1.17 新增 MdmSyncController；§5.2.1 新增 MDM 快照查询 Feign 接口；§5.3 新增 ProductDataReadOnlyException（202014）；§6 补全 US-001b/002b/006b 映射 |
 | 2026-06-05 | CR-011 | Modified | **工厂/生产厂商主数据统一调整为 Plant（落地 requirements CR-011，对应 US-007/US-007b/US-007c）**：§2 D13 扩展适用实体含 Plant，新增 **D14**（Manufacturer→Plant 迁移策略：Flyway 原地重命名 + plant_code 回填 + 兼容期保留）；§3.1 `veh_manufacturer`→`veh_plant`（`code`/`name`→`plant_code`/`plant_name` + MDM 投影字段），`veh_basic_info` 新增 `plant_code`（`manufacturer_code` 标 legacy）；§3.2 实体 `Manufacturer`→`Plant`、SourceType 适用实体含 Plant；§3.4 新增 **Flyway V4**（重命名 + plant_code + 历史回填）；§4.6 F6 / §4.7 F7 纳入 Plant 事件订阅与 Plant Bootstrap（entity=plant\|all）；§5.1.7 `MptManufacturerController`→`MptPlantController`（`completeVehicle:product:plant:*` + source=MDM 只读 + 旧接口/权限点 deprecated）；§5.1.17 bootstrap 新增 `entity=plant`；§5.2.1 新增 `MdmPlantQueryClient`；§6 改写 US-007 映射并新增 US-007b/US-007c；§7 新增 TD-6（manufacturer 遗留兼容项待清理）。**tasks.md 待按 SPEC 工作流后续同步本 CR** |
+| 2026-06-05 | CR-012 | Modified | **品牌主数据重构为 MDM Brand 本地投影（落地 requirements CR-012，对应 US-001/US-001b/US-001c）**：§2 新增 **D15**（Brand 本地投影定位与维护收敛策略：复用 CR-010/V3 source 字段、**不重命名 `veh_brand` 列、不新增 Flyway 迁移**、add/edit/remove 收敛为 source=MANUAL 兼容期遗留；与 CR-011 Plant 的命名迁移区分）；§3.1 `veh_brand` 行标注为 MDM Brand 按需最小化只读投影并新增 Brand 投影说明注；§3.2 Brand 实体标注为 MDM 只读投影；§3.4 新增 CR-012 说明注（明确不引入新迁移、`brandCode` 沿用 `veh_brand.code` 不改名）；§4.6 F6 / §4.7 F7 纳入 Brand 事件订阅与 Brand Bootstrap（entity=brand\|all）的 CR-012 注；§5.1.1 `MptBrandController` 标注语义重构，`add/edit/remove` 降级为兼容期遗留（限 source=MANUAL）、source=MDM 经 `ProductDataReadOnlyException`（202014）只读；§5.2.1 `MdmBrandQueryClient` 补充「仅取最小字段集」；§6 改写 US-001/US-001b 映射并新增 US-001c；§7 新增 **TD-7**（Brand add/edit/remove 遗留兼容待清理）。**tasks.md 待按 SPEC 工作流后续同步本 CR** |
