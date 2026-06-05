@@ -23,7 +23,12 @@ import java.util.Map;
 
 /**
  * 品牌应用服务类
- *
+ * 
+ * <p>CR-012 语义重构：Brand 自 CR-012 起定位为 MDM Brand 主数据本地只读投影的消费方。</p>
+ * 
+ * <p>查询能力（search/getBrandById/getBrandByCode）：长期保留</p>
+ * <p>写入能力（createBrand/modifyBrand/deleteBrandByIds）：兼容期遗留，仅可作用于 source=MANUAL 过渡数据</p>
+ * 
  * @author hwyz_leo
  */
 @Slf4j
@@ -113,15 +118,21 @@ public class BrandAppService {
     }
 
     /**
-     * 新增品牌
-     *
+     * 新增品牌（兼容期遗留能力）
+     * 
+     * <p>仅可作用于 source=MANUAL 过渡数据。对 source=MDM 记录，
+     * 请通过 MDM 事件订阅或 Bootstrap 同步。</p>
+     * 
+     * @deprecated CR-012 后 Brand 定位为 MDM 只读投影，此方法仅保留兼容性。
+     *             最终下线由后续兼容性清理 CR 完成。
      * @param brandCmd 品牌信息命令
      * @param userId  操作用户ID
      * @return 结果
      */
+    @Deprecated
     public int createBrand(BrandCmd brandCmd, String userId) {
         Brand brand = BrandAssembler.INSTANCE.toDomain(brandCmd);
-        // 检查是否为 MDM 来源数据
+        // Source=MDM 只读限制（CR-012）
         if (brand.getSource() == SourceType.MDM) {
             throw new ProductDataReadOnlyException("品牌", brand.getCode());
         }
@@ -129,15 +140,21 @@ public class BrandAppService {
     }
 
     /**
-     * 修改品牌
-     *
+     * 修改品牌（兼容期遗留能力）
+     * 
+     * <p>仅可作用于 source=MANUAL 过渡数据。对 source=MDM 记录，
+     * 请通过 MDM 事件订阅或 Bootstrap 同步。</p>
+     * 
+     * @deprecated CR-012 后 Brand 定位为 MDM 只读投影，此方法仅保留兼容性。
+     *             最终下线由后续兼容性清理 CR 完成。
      * @param brandCmd 品牌信息命令
      * @param userId  操作用户ID
      * @return 结果
      */
+    @Deprecated
     public int modifyBrand(BrandCmd brandCmd, String userId) {
         Brand brand = vehBrandRepository.selectById(brandCmd.getId());
-        // 检查是否为 MDM 来源数据
+        // Source=MDM 只读限制（CR-012）
         if (brand.getSource() == SourceType.MDM) {
             throw new ProductDataReadOnlyException("品牌", brand.getCode());
         }
@@ -146,13 +163,19 @@ public class BrandAppService {
     }
 
     /**
-     * 批量删除品牌
-     *
+     * 批量删除品牌（兼容期遗留能力）
+     * 
+     * <p>仅可作用于 source=MANUAL 过渡数据。对 source=MDM 记录，
+     * 请通过 MDM 事件订阅或 Bootstrap 同步。</p>
+     * 
+     * @deprecated CR-012 后 Brand 定位为 MDM 只读投影，此方法仅保留兼容性。
+     *             最终下线由后续兼容性清理 CR 完成。
      * @param ids 品牌ID数组
      * @return 结果
      */
+    @Deprecated
     public int deleteBrandByIds(Long[] ids) {
-        // 检查是否为 MDM 来源数据
+        // Source=MDM 只读限制（CR-012）
         for (Long id : ids) {
             Brand brand = vehBrandRepository.selectById(id);
             if (brand != null && brand.getSource() == SourceType.MDM) {
