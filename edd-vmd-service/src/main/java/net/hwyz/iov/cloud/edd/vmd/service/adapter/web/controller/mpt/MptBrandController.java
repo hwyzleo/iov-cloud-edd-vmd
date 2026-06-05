@@ -24,8 +24,17 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 车辆品牌相关管理接口实现类
+ * 品牌管理控制器
  *
+ * <p>CR-012 语义重构：Brand 自 CR-012 起定位为 MDM Brand 主数据本地只读投影的消费方。</p>
+ * <ul>
+ *   <li>list/listAll/query/export：长期保留的查询能力</li>
+ *   <li>add/edit/remove：兼容期遗留，仅可作用于 source=MANUAL 过渡数据，
+ *       对 source=MDM 记录一律拒绝（ProductDataReadOnlyException）。
+ *       最终下线由后续兼容性清理 CR 完成。</li>
+ * </ul>
+ *
+ * @see ProductDataReadOnlyException
  * @author hwyz_leo
  */
 @Slf4j
@@ -98,8 +107,13 @@ public class MptBrandController extends BaseController {
     }
 
     /**
-     * 新增车辆品牌信息
+     * 新增车辆品牌信息（兼容期遗留）
      *
+     * <p>仅可作用于 source=MANUAL 过渡数据。对 source=MDM 记录抛出
+     * ProductDataReadOnlyException（错误码 202014）。</p>
+     *
+     * @deprecated CR-012 后 Brand 定位为 MDM 只读投影，此端点仅保留兼容性。
+     *             最终下线由后续兼容性清理 CR 完成。
      * @param brand 车辆品牌信息
      * @return 结果
      */
@@ -116,8 +130,13 @@ public class MptBrandController extends BaseController {
     }
 
     /**
-     * 修改保存车辆品牌信息
+     * 修改保存车辆品牌信息（兼容期遗留）
      *
+     * <p>仅可作用于 source=MANUAL 过渡数据。对 source=MDM 记录抛出
+     * ProductDataReadOnlyException（错误码 202014）。</p>
+     *
+     * @deprecated CR-012 后 Brand 定位为 MDM 只读投影，此端点仅保留兼容性。
+     *             最终下线由后续兼容性清理 CR 完成。
      * @param brand 车辆品牌信息
      * @return 结果
      */
@@ -134,8 +153,13 @@ public class MptBrandController extends BaseController {
     }
 
     /**
-     * 删除车辆品牌信息
+     * 删除车辆品牌信息（兼容期遗留）
      *
+     * <p>仅可作用于 source=MANUAL 过渡数据。对 source=MDM 记录抛出
+     * ProductDataReadOnlyException（错误码 202014）。</p>
+     *
+     * @deprecated CR-012 后 Brand 定位为 MDM 只读投影，此端点仅保留兼容性。
+     *             最终下线由后续兼容性清理 CR 完成。
      * @param brandIds 车辆品牌ID数组
      * @return 结果
      */
