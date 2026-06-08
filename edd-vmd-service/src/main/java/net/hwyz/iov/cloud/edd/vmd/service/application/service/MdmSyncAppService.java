@@ -2,6 +2,9 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.hwyz.iov.cloud.edd.vmd.api.service.MdmBrandQueryClient;
+import net.hwyz.iov.cloud.edd.vmd.api.service.MdmCarLineQueryClient;
+import net.hwyz.iov.cloud.edd.vmd.api.service.MdmPlatformQueryClient;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmBrandEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmPlatformEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmCarLineEvent;
@@ -16,6 +19,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 /**
  * MDM 同步应用服务类
@@ -31,6 +35,9 @@ public class MdmSyncAppService {
     private final VehBrandRepository vehBrandRepository;
     private final VehCarLineRepository vehCarLineRepository;
     private final VehPlatformRepository vehPlatformRepository;
+    private final MdmBrandQueryClient mdmBrandQueryClient;
+    private final MdmCarLineQueryClient mdmCarLineQueryClient;
+    private final MdmPlatformQueryClient mdmPlatformQueryClient;
 
     /**
      * 处理 MDM 品牌事件
@@ -154,22 +161,37 @@ public class MdmSyncAppService {
      * <p>当本地 source=MDM 的品牌记录数为 0 时，自动调用 MDM Brand 全量快照接口
      * 拉取数据并 upsert 本地副本。</p>
      * 
-     * <p>TODO: MDM Brand 全量快照接口待就绪，当前为 stub 实现。
-     * 接口路径和返回格式由「edd-mdm 接入规范」定义。</p>
+     * <p>CR-012：Brand 投影采用按需最小化只读投影，仅同步 VMD 业务所需字段。</p>
      */
     public void bootstrapBrand() {
         log.info("开始 Bootstrap 品牌数据同步");
         long count = vehBrandRepository.countBySource(SourceType.MDM);
         if (count == 0) {
             log.info("本地无 MDM 品牌记录（count=0），启动 Bootstrap 同步");
-            // TODO: 调用 MDM Brand 全量快照接口
-            // MdmBrandQueryClient 接口已定义，待 MDM 服务就绪后启用
-            // List<Map<String, Object>> mdmBrands = mdmBrandQueryClient.getAllBrands();
-            // for (Map<String, Object> brandData : mdmBrands) {
-            //     Brand brand = buildBrandFromMdmData(brandData);
-            //     vehBrandRepository.insert(brand);
-            // }
-            log.warn("MDM Brand 全量快照接口待实现，Bootstrap 跳过");
+            try {
+                List<Map<String, Object>> mdmBrands = mdmBrandQueryClient.getAllBrands();
+                for (Map<String, Object> brandData : mdmBrands) {
+                    String code = (String) brandData.get("code");
+                    String name = (String) brandData.get("name");
+                    String entityId = (String) brandData.get("id");
+                    Long version = Long.valueOf(brandData.get("version").toString());
+                    
+                    Brand brand = Brand.builder()
+                            .code(code)
+                            .name(name)
+                            .source(SourceType.MDM)
+                            .externalRefId(entityId)
+                            .externalVersion(version)
+                            .lastSyncTime(LocalDateTime.now())
+                            .build();
+                    vehBrandRepository.insert(brand);
+                    log.info("Bootstrap 新增 MDM 品牌投影: code={}", code);
+                }
+                log.info("Bootstrap 品牌数据同步完成，共同步 {} 条", mdmBrands.size());
+            } catch (Exception e) {
+                log.error("Bootstrap 品牌数据同步失败", e);
+                // 不清空本地已有数据
+            }
         } else {
             log.info("本地已有 MDM 品牌数据 {} 条，跳过 Bootstrap", count);
         }
@@ -177,39 +199,87 @@ public class MdmSyncAppService {
 
     /**
      * Bootstrap 全量同步车系数据
+     * 
+     * <p>当本地 source=MDM 的车系记录数为 0 时，自动调用 MDM CarLine 全量快照接口
+     * 拉取数据并 upsert 本地副本。</p>
+     * 
+     * <p>CR-014：CarLine 投影采用按需最小化只读投影，仅同步 VMD 业务所需字段（含 brand_code 冗余字段）。</p>
      */
     public void bootstrapSeries() {
-        log.info("开始Bootstrap车系数据同步");
+        log.info("开始 Bootstrap 车系数据同步");
         long count = vehCarLineRepository.countBySource(SourceType.MDM);
         if (count == 0) {
-            log.info("本地无MDM车系数据，开始从MDM拉取全量");
-            // TODO: 调用 MDM 全量快照接口拉取车系数据
-            // List<Series> mdmSeries = mdmSeriesQueryClient.getAllSeries();
-            // for (Series series : mdmSeries) {
-            //     upsertSeries(series);
-            // }
-            log.info("Bootstrap车系数据同步完成");
+            log.info("本地无 MDM 车系记录（count=0），启动 Bootstrap 同步");
+            try {
+                List<Map<String, Object>> mdmCarLines = mdmCarLineQueryClient.getAllSeries();
+                for (Map<String, Object> carLineData : mdmCarLines) {
+                    String code = (String) carLineData.get("code");
+                    String name = (String) carLineData.get("name");
+                    String brandCode = (String) carLineData.get("brandCode");
+                    String entityId = (String) carLineData.get("id");
+                    Long version = Long.valueOf(carLineData.get("version").toString());
+                    
+                    CarLine carLine = CarLine.builder()
+                            .code(code)
+                            .name(name)
+                            .brandCode(brandCode)
+                            .source(SourceType.MDM)
+                            .externalRefId(entityId)
+                            .externalVersion(version)
+                            .lastSyncTime(LocalDateTime.now())
+                            .build();
+                    vehCarLineRepository.insert(carLine);
+                    log.info("Bootstrap 新增 MDM 车系投影: code={}, brandCode={}", code, brandCode);
+                }
+                log.info("Bootstrap 车系数据同步完成，共同步 {} 条", mdmCarLines.size());
+            } catch (Exception e) {
+                log.error("Bootstrap 车系数据同步失败", e);
+                // 不清空本地已有数据
+            }
         } else {
-            log.info("本地已有MDM车系数据{}条，跳过Bootstrap", count);
+            log.info("本地已有 MDM 车系数据 {} 条，跳过 Bootstrap", count);
         }
     }
 
     /**
      * Bootstrap 全量同步平台数据
+     * 
+     * <p>当本地 source=MDM 的平台记录数为 0 时，自动调用 MDM Platform 全量快照接口
+     * 拉取数据并 upsert 本地副本。</p>
+     * 
+     * <p>CR-013：Platform 投影采用按需最小化只读投影，仅同步 VMD 业务所需字段。</p>
      */
     public void bootstrapPlatform() {
-        log.info("开始Bootstrap平台数据同步");
+        log.info("开始 Bootstrap 平台数据同步");
         long count = vehPlatformRepository.countBySource(SourceType.MDM);
         if (count == 0) {
-            log.info("本地无MDM平台数据，开始从MDM拉取全量");
-            // TODO: 调用 MDM 全量快照接口拉取平台数据
-            // List<Platform> mdmPlatforms = mdmPlatformQueryClient.getAllPlatforms();
-            // for (Platform platform : mdmPlatforms) {
-            //     upsertPlatform(platform);
-            // }
-            log.info("Bootstrap平台数据同步完成");
+            log.info("本地无 MDM 平台记录（count=0），启动 Bootstrap 同步");
+            try {
+                List<Map<String, Object>> mdmPlatforms = mdmPlatformQueryClient.getAllPlatforms();
+                for (Map<String, Object> platformData : mdmPlatforms) {
+                    String code = (String) platformData.get("code");
+                    String name = (String) platformData.get("name");
+                    String entityId = (String) platformData.get("id");
+                    Long version = Long.valueOf(platformData.get("version").toString());
+                    
+                    Platform platform = Platform.builder()
+                            .code(code)
+                            .name(name)
+                            .source(SourceType.MDM)
+                            .externalRefId(entityId)
+                            .externalVersion(version)
+                            .lastSyncTime(LocalDateTime.now())
+                            .build();
+                    vehPlatformRepository.insert(platform);
+                    log.info("Bootstrap 新增 MDM 平台投影: code={}", code);
+                }
+                log.info("Bootstrap 平台数据同步完成，共同步 {} 条", mdmPlatforms.size());
+            } catch (Exception e) {
+                log.error("Bootstrap 平台数据同步失败", e);
+                // 不清空本地已有数据
+            }
         } else {
-            log.info("本地已有MDM平台数据{}条，跳过Bootstrap", count);
+            log.info("本地已有 MDM 平台数据 {} 条，跳过 Bootstrap", count);
         }
     }
 
