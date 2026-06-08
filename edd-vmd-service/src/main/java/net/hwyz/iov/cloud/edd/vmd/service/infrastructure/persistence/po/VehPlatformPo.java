@@ -12,10 +12,23 @@ import lombok.*;
 import net.hwyz.iov.cloud.framework.mysql.po.BasePo;
 
 /**
- * <p>
- * 车辆平台表 持久化对象
- * </p>
- *
+ * 平台持久化对象 - 对应 tb_veh_platform 表
+ * 
+ * <p>该表同时承载 MDM Platform 投影数据（source=MDM）和历史手动维护数据（source=MANUAL）。</p>
+ * 
+ * <p>MDM 投影字段（source, external_ref_id, external_version, last_sync_time）
+ * 由 MdmSyncAppService 在事件订阅和 Bootstrap 时写入。</p>
+ * 
+ * <p>与 Brand（CR-012）完全同构、区别于 Plant（CR-011）的命名迁移：
+ * 平台实体命名不变、platformCode 关联键不变，不涉及表/列重命名，
+ * 直接复用 CR-010/V3 已建的 source/external_ref_id/external_version/last_sync_time 字段。</p>
+ * 
+ * <p>数据来源规则：</p>
+ * <ul>
+ *   <li>source=MDM：只读，禁止通过 MPT 后台修改/删除</li>
+ *   <li>source=MANUAL：兼容期遗留数据，允许有限维护</li>
+ * </ul>
+ * 
  * @author hwyz_leo
  * @since 2024-09-24
  */
@@ -36,7 +49,7 @@ public class VehPlatformPo extends BasePo {
     private Long id;
 
     /**
-     * 平台代码
+     * 平台代码（platformCode 关联键）
      */
     @TableField("code")
     private String code;

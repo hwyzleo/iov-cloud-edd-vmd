@@ -23,7 +23,12 @@ import java.util.Map;
 
 /**
  * 车辆平台应用服务类
- *
+ * 
+ * <p>CR-013 语义重构：Platform 自 CR-013 起定位为 MDM Platform 主数据本地只读投影的消费方。</p>
+ * 
+ * <p>查询能力（search/getPlatformById/getPlatformByCode）：长期保留</p>
+ * <p>写入能力（createPlatform/modifyPlatform/deletePlatformByIds）：兼容期遗留，仅可作用于 source=MANUAL 过渡数据</p>
+ * 
  * @author hwyz_leo
  */
 @Slf4j
@@ -113,15 +118,21 @@ public class PlatformAppService {
     }
 
     /**
-     * 新增车辆平台
-     *
-     * @param platformDto 车辆平台信息 DTO
+     * 新增车辆平台（兼容期遗留能力）
+     * 
+     * <p>仅可作用于 source=MANUAL 过渡数据。对 source=MDM 记录，
+     * 请通过 MDM 事件订阅或 Bootstrap 同步。</p>
+     * 
+     * @deprecated CR-013 后 Platform 定位为 MDM 只读投影，此方法仅保留兼容性。
+     *             最终下线由后续兼容性清理 CR 完成。
+     * @param platformCmd 车辆平台信息命令
      * @param userId      操作用户ID
      * @return 结果
      */
+    @Deprecated
     public int createPlatform(PlatformCmd platformCmd, String userId) {
         Platform platform = PlatformAssembler.INSTANCE.toDomain(platformCmd);
-        // 检查是否为 MDM 来源数据
+        // Source=MDM 只读限制（CR-013）
         if (platform.getSource() == SourceType.MDM) {
             throw new ProductDataReadOnlyException("平台", platform.getCode());
         }
@@ -129,15 +140,21 @@ public class PlatformAppService {
     }
 
     /**
-     * 修改车辆平台
-     *
-     * @param platformDto 车辆平台信息 DTO
+     * 修改车辆平台（兼容期遗留能力）
+     * 
+     * <p>仅可作用于 source=MANUAL 过渡数据。对 source=MDM 记录，
+     * 请通过 MDM 事件订阅或 Bootstrap 同步。</p>
+     * 
+     * @deprecated CR-013 后 Platform 定位为 MDM 只读投影，此方法仅保留兼容性。
+     *             最终下线由后续兼容性清理 CR 完成。
+     * @param platformCmd 车辆平台信息命令
      * @param userId      操作用户ID
      * @return 结果
      */
+    @Deprecated
     public int modifyPlatform(PlatformCmd platformCmd, String userId) {
         Platform platform = vehPlatformRepository.selectById(platformCmd.getId());
-        // 检查是否为 MDM 来源数据
+        // Source=MDM 只读限制（CR-013）
         if (platform.getSource() == SourceType.MDM) {
             throw new ProductDataReadOnlyException("平台", platform.getCode());
         }
@@ -146,13 +163,19 @@ public class PlatformAppService {
     }
 
     /**
-     * 批量删除车辆平台
-     *
+     * 批量删除车辆平台（兼容期遗留能力）
+     * 
+     * <p>仅可作用于 source=MANUAL 过渡数据。对 source=MDM 记录，
+     * 请通过 MDM 事件订阅或 Bootstrap 同步。</p>
+     * 
+     * @deprecated CR-013 后 Platform 定位为 MDM 只读投影，此方法仅保留兼容性。
+     *             最终下线由后续兼容性清理 CR 完成。
      * @param ids 车辆平台ID数组
      * @return 结果
      */
+    @Deprecated
     public int deletePlatformByIds(Long[] ids) {
-        // 检查是否为 MDM 来源数据
+        // Source=MDM 只读限制（CR-013）
         for (Long id : ids) {
             Platform platform = vehPlatformRepository.selectById(id);
             if (platform != null && platform.getSource() == SourceType.MDM) {
