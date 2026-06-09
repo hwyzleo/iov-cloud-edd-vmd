@@ -3,6 +3,7 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.event.subscribe;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmBrandEvent;
+import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmConfigurationEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmPlatformEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmCarLineEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmModelEvent;
@@ -82,6 +83,18 @@ public class MdmEventSubscribe {
         log.info("收到MDM版本事件: type={}, entityId={}, version={}, code={}",
                 event.getEventType(), event.getEntityId(), event.getVersion(), event.getCode());
         mdmSyncAppService.handleVariantEvent(event);
+    }
+
+    /**
+     * 订阅 MDM 配置事件
+     *
+     * @param event 配置事件
+     */
+    @EventListener
+    public void onMdmConfigurationEvent(MdmConfigurationEvent event) {
+        log.info("收到MDM配置事件: type={}, entityId={}, version={}, code={}",
+                event.getEventType(), event.getEntityId(), event.getVersion(), event.getCode());
+        mdmSyncAppService.handleConfigurationEvent(event);
     }
 
 }

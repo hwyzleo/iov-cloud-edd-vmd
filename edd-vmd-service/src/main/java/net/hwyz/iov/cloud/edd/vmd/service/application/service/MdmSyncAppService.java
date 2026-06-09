@@ -4,21 +4,25 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.service.MdmBrandQueryClient;
 import net.hwyz.iov.cloud.edd.vmd.api.service.MdmCarLineQueryClient;
+import net.hwyz.iov.cloud.edd.vmd.api.service.MdmConfigurationQueryClient;
 import net.hwyz.iov.cloud.edd.vmd.api.service.MdmModelQueryClient;
 import net.hwyz.iov.cloud.edd.vmd.api.service.MdmPlatformQueryClient;
 import net.hwyz.iov.cloud.edd.vmd.api.service.MdmVariantQueryClient;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmBrandEvent;
+import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmConfigurationEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmPlatformEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmCarLineEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmModelEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmVariantEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Brand;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Configuration;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Platform;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.CarLine;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Model;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Variant;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBrandRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehConfigurationRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehPlatformRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehCarLineRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehModelRepository;
@@ -42,11 +46,13 @@ public class MdmSyncAppService {
 
     private final VehBrandRepository vehBrandRepository;
     private final VehCarLineRepository vehCarLineRepository;
+    private final VehConfigurationRepository vehConfigurationRepository;
     private final VehPlatformRepository vehPlatformRepository;
     private final VehModelRepository vehModelRepository;
     private final VehVariantRepository vehVariantRepository;
     private final MdmBrandQueryClient mdmBrandQueryClient;
     private final MdmCarLineQueryClient mdmCarLineQueryClient;
+    private final MdmConfigurationQueryClient mdmConfigurationQueryClient;
     private final MdmPlatformQueryClient mdmPlatformQueryClient;
     private final MdmModelQueryClient mdmModelQueryClient;
     private final MdmVariantQueryClient mdmVariantQueryClient;
@@ -251,6 +257,61 @@ public class MdmSyncAppService {
             } else {
                 log.info("忽略版本事件（版本不高于本地）: code={}, eventVersion={}, localVersion={}",
                         event.getCode(), event.getVersion(), localVariant.getExternalVersion());
+            }
+        }
+    }
+
+    /**
+     * 处理 MDM 配置事件
+     *
+     * <p>CR-017：Configuration 投影采用按需最小化只读投影，仅同步 VMD 业务所需字段
+     * （含 platform_code / carLine_code / model_code / variant_code 关联字段）。</p>
+     *
+     * @param event 配置事件
+     */
+    public void handleConfigurationEvent(MdmConfigurationEvent event) {
+        log.info("处理MDM配置事件: entityId={}, version={}", event.getEntityId(), event.getVersion());
+        // 根据 externalRefId 查找本地记录
+        Configuration localConfiguration = vehConfigurationRepository.selectByExternalRefId(event.getEntityId());
+        if (localConfiguration == null) {
+            // 本地不存在，新增
+            Configuration newConfiguration = Configuration.builder()
+                    .code(event.getCode())
+                    .name(event.getName())
+                    .nameEn(event.getNameEn())
+                    .platformCode(event.getPlatformCode())
+                    .carLineCode(event.getCarLineCode())
+                    .modelCode(event.getModelCode())
+                    .variantCode(event.getVariantCode())
+                    .vehicleStageCode(event.getVehicleStageCode())
+                    .enable(event.getEnable())
+                    .sort(event.getSort())
+                    .source(SourceType.MDM)
+                    .externalRefId(event.getEntityId())
+                    .externalVersion(event.getVersion())
+                    .lastSyncTime(LocalDateTime.now())
+                    .build();
+            vehConfigurationRepository.insert(newConfiguration);
+            log.info("新增配置: code={}", event.getCode());
+        } else {
+            // 本地存在，检查版本
+            if (event.getVersion() > localConfiguration.getExternalVersion()) {
+                localConfiguration.setName(event.getName());
+                localConfiguration.setNameEn(event.getNameEn());
+                localConfiguration.setPlatformCode(event.getPlatformCode());
+                localConfiguration.setCarLineCode(event.getCarLineCode());
+                localConfiguration.setModelCode(event.getModelCode());
+                localConfiguration.setVariantCode(event.getVariantCode());
+                localConfiguration.setVehicleStageCode(event.getVehicleStageCode());
+                localConfiguration.setEnable(event.getEnable());
+                localConfiguration.setSort(event.getSort());
+                localConfiguration.setExternalVersion(event.getVersion());
+                localConfiguration.setLastSyncTime(LocalDateTime.now());
+                vehConfigurationRepository.updateById(localConfiguration);
+                log.info("更新配置: code={}, version={}", event.getCode(), event.getVersion());
+            } else {
+                log.info("忽略配置事件（版本不高于本地）: code={}, eventVersion={}, localVersion={}",
+                        event.getCode(), event.getVersion(), localConfiguration.getExternalVersion());
             }
         }
     }
@@ -480,6 +541,65 @@ public class MdmSyncAppService {
     }
 
     /**
+     * Bootstrap 全量同步配置数据
+     *
+     * <p>当本地 source=MDM 的配置记录数为 0 时，自动调用 MDM Configuration 全量快照接口
+     * 拉取数据并 upsert 本地副本。</p>
+     *
+     * <p>CR-017：Configuration 投影采用按需最小化只读投影，仅同步 VMD 业务所需字段
+     * （含 platform_code / carLine_code / model_code / variant_code 关联字段）。</p>
+     */
+    public void bootstrapConfiguration() {
+        log.info("开始 Bootstrap 配置数据同步");
+        long count = vehConfigurationRepository.countBySource(SourceType.MDM);
+        if (count == 0) {
+            log.info("本地无 MDM 配置记录（count=0），启动 Bootstrap 同步");
+            try {
+                List<Map<String, Object>> mdmConfigurations = mdmConfigurationQueryClient.getAllConfigurations();
+                for (Map<String, Object> configurationData : mdmConfigurations) {
+                    String code = (String) configurationData.get("code");
+                    String name = (String) configurationData.get("name");
+                    String nameEn = (String) configurationData.get("nameEn");
+                    String platformCode = (String) configurationData.get("platformCode");
+                    String carLineCode = (String) configurationData.get("carLineCode");
+                    String modelCode = (String) configurationData.get("modelCode");
+                    String variantCode = (String) configurationData.get("variantCode");
+                    String vehicleStageCode = (String) configurationData.get("vehicleStageCode");
+                    Boolean enable = (Boolean) configurationData.get("enable");
+                    Integer sort = (Integer) configurationData.get("sort");
+                    String entityId = (String) configurationData.get("id");
+                    Long version = Long.valueOf(configurationData.get("version").toString());
+
+                    Configuration configuration = Configuration.builder()
+                            .code(code)
+                            .name(name)
+                            .nameEn(nameEn)
+                            .platformCode(platformCode)
+                            .carLineCode(carLineCode)
+                            .modelCode(modelCode)
+                            .variantCode(variantCode)
+                            .vehicleStageCode(vehicleStageCode)
+                            .enable(enable)
+                            .sort(sort)
+                            .source(SourceType.MDM)
+                            .externalRefId(entityId)
+                            .externalVersion(version)
+                            .lastSyncTime(LocalDateTime.now())
+                            .build();
+                    vehConfigurationRepository.insert(configuration);
+                    log.info("Bootstrap 新增 MDM 配置投影: code={}, variantCode={}", code, variantCode);
+                }
+                log.info("Bootstrap 配置数据同步完成，共同步 {} 条", mdmConfigurations.size());
+            } catch (Exception e) {
+                log.error("Bootstrap 配置数据同步失败", e);
+                // 不清空本地已有数据
+            }
+        } else {
+            log.info("本地已有 MDM 配置数据 {} 条，跳过 Bootstrap", count);
+        }
+    }
+
+    /**
      * Bootstrap 全量同步所有数据
      */
     public void bootstrapAll() {
@@ -489,6 +609,7 @@ public class MdmSyncAppService {
         bootstrapPlatform();
         bootstrapModel();
         bootstrapVariant();
+        bootstrapConfiguration();
         log.info("Bootstrap全量数据同步完成");
     }
 
