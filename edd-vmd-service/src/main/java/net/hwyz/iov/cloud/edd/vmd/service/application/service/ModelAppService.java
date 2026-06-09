@@ -6,8 +6,10 @@ import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.ModelAssembler;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ModelDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.ModelQuery;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.ProductDataReadOnlyException;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Model;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.CarLine;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBaseModelRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehModelRepository;
@@ -130,6 +132,10 @@ public class ModelAppService {
      */
     public int createModel(ModelCmd modelCmd, String userId) {
         Model model = ModelAssembler.INSTANCE.toDomain(modelCmd);
+        // 检查是否为 MDM 来源数据
+        if (model.getSource() == SourceType.MDM) {
+            throw new ProductDataReadOnlyException("车型", model.getCode());
+        }
         return vehModelRepository.insert(model);
     }
 
@@ -141,8 +147,13 @@ public class ModelAppService {
      * @return 结果
      */
     public int modifyModel(ModelCmd modelCmd, String userId) {
-        Model model = ModelAssembler.INSTANCE.toDomain(modelCmd);
-        return vehModelRepository.update(model);
+        Model model = vehModelRepository.selectById(modelCmd.getId());
+        // 检查是否为 MDM 来源数据
+        if (model != null && model.getSource() == SourceType.MDM) {
+            throw new ProductDataReadOnlyException("车型", model.getCode());
+        }
+        Model updateModel = ModelAssembler.INSTANCE.toDomain(modelCmd);
+        return vehModelRepository.update(updateModel);
     }
 
     /**
@@ -152,6 +163,13 @@ public class ModelAppService {
      * @return 结果
      */
     public int deleteModelByIds(Long[] ids) {
+        // 检查是否为 MDM 来源数据
+        for (Long id : ids) {
+            Model model = vehModelRepository.selectById(id);
+            if (model != null && model.getSource() == SourceType.MDM) {
+                throw new ProductDataReadOnlyException("车型", model.getCode());
+            }
+        }
         return vehModelRepository.batchPhysicalDelete(ids);
     }
 

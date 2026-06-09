@@ -12,7 +12,7 @@
         <result column="row_version" property="rowVersion" />
         <result column="row_valid" property="rowValid" />
         <result column="platform_code" property="platformCode" />
-        <result column="series_code" property="carLineCode" />
+        <result column="car_line_code" property="carLineCode" />
         <result column="model_code" property="modelCode" />
         <result column="base_model_code" property="baseModelCode" />
         <result column="code" property="code" />
@@ -24,13 +24,13 @@
     </resultMap>
 
     <sql id="baseColumnList">
-        id, platform_code, series_code, model_code, base_model_code, code, name, name_en, vehicle_stage_code, enable, sort,
+        id, platform_code, car_line_code, model_code, base_model_code, code, name, name_en, vehicle_stage_code, enable, sort,
         description, create_time, create_by, modify_time, modify_by, row_version, row_valid
     </sql>
 
     <insert id="insertPo" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO tb_veh_build_config (
-            id, platform_code, series_code, model_code, base_model_code, code, name, name_en, vehicle_stage_code, enable, sort,
+            id, platform_code, car_line_code, model_code, base_model_code, code, name, name_en, vehicle_stage_code, enable, sort,
             description, create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
         VALUES (
@@ -41,7 +41,7 @@
 
     <insert id="batchInsertPo" useGeneratedKeys="true" keyProperty="id" parameterType="java.util.List">
         INSERT INTO tb_veh_build_config (
-            id, platform_code, series_code, model_code, base_model_code, code, name, name_en, vehicle_stage_code, enable, sort,
+            id, platform_code, car_line_code, model_code, base_model_code, code, name, name_en, vehicle_stage_code, enable, sort,
             description, create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
         VALUES
@@ -120,7 +120,7 @@
             AND t.platform_code = #{platformCode}
         </if>
         <if test="carLineCode != null and carLineCode != ''">
-            AND t.series_code = #{carLineCode}
+            AND t.car_line_code = #{carLineCode}
         </if>
         <if test="modelCode != null and modelCode != ''">
             AND t.model_code = #{modelCode}
@@ -175,7 +175,7 @@
             AND t.platform_code = #{platformCode}
         </if>
         <if test="carLineCode != null and carLineCode != ''">
-            AND t.series_code = #{carLineCode}
+            AND t.car_line_code = #{carLineCode}
         </if>
         <if test="modelCode != null and modelCode != ''">
             AND t.model_code = #{modelCode}
@@ -214,7 +214,7 @@
             AND t.platform_code = #{platformCode}
         </if>
         <if test="carLineCode != null and carLineCode != ''">
-            AND t.series_code = #{carLineCode}
+            AND t.car_line_code = #{carLineCode}
         </if>
         <if test="modelCode != null and modelCode != ''">
             AND t.model_code = #{modelCode}

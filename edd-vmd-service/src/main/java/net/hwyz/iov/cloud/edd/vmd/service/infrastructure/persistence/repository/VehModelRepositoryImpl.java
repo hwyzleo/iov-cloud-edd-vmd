@@ -3,6 +3,7 @@ package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.repository
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Model;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehModelRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter.ModelConverter;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehModelMapper;
@@ -47,12 +48,27 @@ public class VehModelRepositoryImpl implements VehModelRepository {
     }
 
     @Override
+    public Model selectByExternalRefId(String externalRefId) {
+        return ModelConverter.INSTANCE.toDomain(vehModelMapper.selectPoByExternalRefId(externalRefId));
+    }
+
+    @Override
+    public long countBySource(SourceType source) {
+        return vehModelMapper.countPoBySource(source.getValue());
+    }
+
+    @Override
     public int insert(Model model) {
         return vehModelMapper.insertPo(ModelConverter.INSTANCE.fromDomain(model));
     }
 
     @Override
     public int update(Model model) {
+        return vehModelMapper.updatePo(ModelConverter.INSTANCE.fromDomain(model));
+    }
+
+    @Override
+    public int updateById(Model model) {
         return vehModelMapper.updatePo(ModelConverter.INSTANCE.fromDomain(model));
     }
 

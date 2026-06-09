@@ -27,7 +27,7 @@ public class VehBuildConfigPo extends BasePo {
     @TableField("platform_code")
     private String platformCode;
 
-    @TableField("series_code")
+    @TableField("car_line_code")
     private String carLineCode;
 
     @TableField("model_code")

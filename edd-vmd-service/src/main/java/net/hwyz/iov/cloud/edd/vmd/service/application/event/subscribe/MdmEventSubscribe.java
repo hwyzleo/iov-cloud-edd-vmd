@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmBrandEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmPlatformEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmCarLineEvent;
+import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmModelEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.MdmSyncAppService;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -56,6 +57,18 @@ public class MdmEventSubscribe {
         log.info("收到MDM平台事件: type={}, entityId={}, version={}, code={}",
                 event.getEventType(), event.getEntityId(), event.getVersion(), event.getCode());
         mdmSyncAppService.handlePlatformEvent(event);
+    }
+
+    /**
+     * 订阅 MDM 车型事件
+     *
+     * @param event 车型事件
+     */
+    @EventListener
+    public void onMdmModelEvent(MdmModelEvent event) {
+        log.info("收到MDM车型事件: type={}, entityId={}, version={}, code={}",
+                event.getEventType(), event.getEntityId(), event.getVersion(), event.getCode());
+        mdmSyncAppService.handleModelEvent(event);
     }
 
 }

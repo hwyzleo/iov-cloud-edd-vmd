@@ -57,6 +57,7 @@ class VehBrandRepositoryTest extends BaseTest {
                 .name("测试品牌2")
                 .enable(true)
                 .sort(2)
+                .source(SourceType.MANUAL)
                 .build();
         vehBrandRepository.insert(brand);
 
@@ -80,6 +81,7 @@ class VehBrandRepositoryTest extends BaseTest {
                 .name("测试品牌3")
                 .enable(true)
                 .sort(3)
+                .source(SourceType.MANUAL)
                 .build();
         vehBrandRepository.insert(brand);
 
@@ -100,6 +102,7 @@ class VehBrandRepositoryTest extends BaseTest {
                 .name("原始名称")
                 .enable(true)
                 .sort(4)
+                .source(SourceType.MANUAL)
                 .build();
         vehBrandRepository.insert(brand);
 
@@ -124,12 +127,14 @@ class VehBrandRepositoryTest extends BaseTest {
                 .name("品牌5")
                 .enable(true)
                 .sort(5)
+                .source(SourceType.MANUAL)
                 .build();
         Brand brand2 = Brand.builder()
                 .code("TEST_BRAND_006")
                 .name("品牌6")
                 .enable(true)
                 .sort(6)
+                .source(SourceType.MANUAL)
                 .build();
         vehBrandRepository.insert(brand1);
         vehBrandRepository.insert(brand2);
@@ -154,12 +159,14 @@ class VehBrandRepositoryTest extends BaseTest {
                 .name("测试品牌7")
                 .enable(true)
                 .sort(7)
+                .source(SourceType.MANUAL)
                 .build();
         Brand brand2 = Brand.builder()
                 .code("TEST_BRAND_008")
                 .name("其他品牌")
                 .enable(true)
                 .sort(8)
+                .source(SourceType.MANUAL)
                 .build();
         vehBrandRepository.insert(brand1);
         vehBrandRepository.insert(brand2);
@@ -184,6 +191,7 @@ class VehBrandRepositoryTest extends BaseTest {
                 .name("品牌9")
                 .enable(true)
                 .sort(9)
+                .source(SourceType.MANUAL)
                 .build();
         vehBrandRepository.insert(brand);
 

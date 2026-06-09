@@ -140,6 +140,7 @@ graph TB
 | D15 | Brand 本地投影定位与维护收敛策略（**CR-012**） | **复用 CR-010/V3 已建 source 投影字段（不新增 Flyway 迁移、不重命名 `veh_brand.code`/`name`）** + Brand 定位为 MDM Brand 按需最小化只读投影（VMD Brand ⊂ MDM Brand）+ add/edit/remove 收敛为 source=MANUAL 兼容期遗留 | ① 重命名 `veh_brand.code`→`brand_code`/`name`→`brand_name` 对齐字段表 ② 新建独立 Brand 投影表 ③ 立即删除 add/edit/remove 接口与权限点 | **与 Plant（D14）的关键差异**：Brand 实体命名不变、`brandCode` 关联键不变（requirements 明确「保留 brandCode，不改名、不删除」），**不存在 Manufacturer→Plant 式的命名迁移驱动**，故 CR-012 **不引入表/列重命名与新 Flyway 迁移**，直接复用 CR-010（Flyway V3）已为 `veh_brand` 建好的 `source`/`external_ref_id`/`external_version`/`last_sync_time` 字段；`veh_brand.code` 即车辆主档 `brand_code` 的关联键（充当字段范围原则中的 `brand_code`），`veh_brand.name` 充当 `brand_name`。**按需最小化**：`veh_brand` 仅保留车辆主数据闭环所需字段，可选字段（`deleted`/`enabled`/`status`/`raw_payload`/`extension_json`）按消费场景走独立 CR 增量纳入，不强制与 MDM Brand 主数据模型一致。**渐进收敛**：source=MDM 记录经 `ProductDataReadOnlyException`（`202014`）保持只读；add/edit/remove 仅对 source=MANUAL 过渡数据保留并标 `@Deprecated`，最终下线由后续兼容性清理 CR 完成（对应 US-001c、requirements §5 O24）。备选 ①无命名迁移驱动、徒增兼容与迁移成本；②`veh_brand` 已具备投影能力、无需新表；③破坏既有调用方兼容性——均不取 |
 | D16 | Platform 本地投影定位与维护收敛策略（**CR-013**） | **复用 CR-010/V3 已建 source 投影字段（不新增 Flyway 迁移、不重命名 `veh_platform.code`/`name`）** + Platform 定位为 MDM Platform 按需最小化只读投影（VMD Platform ⊂ MDM Platform）+ add/edit/remove 收敛为 source=MANUAL 兼容期遗留 | ① 重命名 `veh_platform.code`→`platform_code`/`name`→`platform_name` 对齐字段表 ② 新建独立 Platform 投影表 ③ 立即删除 add/edit/remove 接口与权限点 | **与 Brand（D15）完全同构、区别于 Plant（D14）的命名迁移**：Platform 实体命名不变、`platformCode` 关联键不变（requirements 明确「保留 platformCode，不改名、不删除」，且作为 `veh_basic_info.platform_code` / `veh_model.platform_code` / `veh_base_model.platform_code` 的平台关联编码长期保留），**不存在 Manufacturer→Plant 式的命名迁移驱动**，故 CR-013 **不引入表/列重命名与新 Flyway 迁移**，直接复用 CR-010（Flyway V3）已为 `veh_platform` 建好的 `source`/`external_ref_id`/`external_version`/`last_sync_time` 字段；`veh_platform.code` 即字段范围原则中的 `platform_code`、`veh_platform.name` 即 `platform_name`。**按需最小化**：`veh_platform` 仅保留车辆主数据闭环所需字段，可选字段（`deleted`/`enabled`/`status`/`raw_payload`/`extension_json`）按消费场景走独立 CR 增量纳入，不强制与 MDM Platform 主数据模型一致。**渐进收敛**：source=MDM 记录经 `ProductDataReadOnlyException`（`202014`）保持只读；add/edit/remove 仅对 source=MANUAL 过渡数据保留并标 `@Deprecated`，最终下线由后续兼容性清理 CR 完成（对应 US-006c、requirements §5 O31）。备选 ①无命名迁移驱动、徒增兼容与迁移成本；②`veh_platform` 已具备投影能力、无需新表；③破坏既有调用方兼容性——均不取 |
 | D17 | CarLine 本地投影定位与维护收敛策略（**CR-014**） | **复用 CR-010/V3 已建 source 投影字段（不新增 Flyway 迁移、不重命名 `veh_carLine.code`/`name`）** + 保留 CR-002/V2 引入的 `brand_code` 冗余字段 + CarLine 定位为 MDM CarLine 按需最小化只读投影（VMD CarLine ⊂ MDM CarLine）+ add/edit/remove 收敛为 source=MANUAL 兼容期遗留 | ① 重命名 `veh_carLine.code`→`carLine_code`/`name`→`carLine_name` 对齐字段表 ② 新建独立 CarLine 投影表 ③ 删除 `brand_code` 冗余字段、改由实时 join `veh_brand` ④ 立即删除 add/edit/remove 接口与权限点 | **与 Brand（D15）/ Platform（D16）同构、区别于 Plant（D14）的命名迁移**：CarLine 实体命名不变、`carLineCode` 关联键不变（requirements 明确「保留 carLineCode，不改名、不删除」），**不存在 Manufacturer→Plant 式的命名迁移驱动**，故 CR-014 **不引入表/列重命名与新 Flyway 迁移**，直接复用 CR-010（Flyway V3）已为 `veh_carLine` 建好的 `source`/`external_ref_id`/`external_version`/`last_sync_time` 字段。**CarLine 的特殊点（区别于 Brand / Platform）**：`veh_carLine` 上的 `brand_code` 冗余字段（由 `V2__CarLine_brand_code_migration.sql` 引入）**必须保留、不得删除或弱化**——用于支撑跨域回查，并支撑 US-031 `getBuildConfig` 在响应中按 `carLineCode → brandCode` 补出 `brandCode`（参见 §5.2.5）；故备选③不取。**按需最小化**：`veh_carLine` 仅保留车辆主数据闭环所需字段（至少 `code`/`name`/`brand_code`/`source`/`external_ref_id`/`external_version`/`last_sync_time`），可选字段（`deleted`/`enabled`/`status`/`raw_payload`/`extension_json`）按消费场景走独立 CR 增量纳入，不强制与 MDM CarLine 主数据模型一致。**渐进收敛**：source=MDM 记录经 `ProductDataReadOnlyException`（`202014`）保持只读；add/edit/remove 仅对 source=MANUAL 过渡数据保留并标 `@Deprecated`，最终下线由后续兼容性清理 CR 完成（对应 US-002c、requirements §5 O38）。备选 ①无命名迁移驱动、徒增兼容与迁移成本；②`veh_carLine` 已具备投影能力、无需新表；③破坏跨域回查与 US-031 契约；④破坏既有调用方兼容性——均不取 |
+| D18 | Model 本地投影定位与维护收敛策略（**CR-015**） | **新增 Flyway 迁移 `V6__Add_mdm_source_to_model.sql` 为 `veh_model` 补齐 source 投影字段（不重命名 `veh_model` 现有列）** + Model 定位为 MDM Model 按需最小化只读投影（VMD Model ⊂ MDM Model）+ add/edit/remove 收敛为 source=MANUAL 兼容期遗留 + 保留「车系→车型→基础车型」引用链 | ① 复用 V3 现有迁移（不可行：V3 未覆盖 veh_model） ② 重命名 `veh_model` 列对齐字段表 ③ 新建独立 Model 投影表 ④ 立即删除 add/edit/remove 接口与权限点 ⑤ 将 BaseModel 一并投影化 | **与 Brand（D15）/ Platform（D16）/ CarLine（D17）同构、区别于 Plant（D14）的命名迁移**：Model 实体命名不变、`modelCode` 关联键不变（requirements 明确「保留 modelCode，不改名、不删除」），不存在 Manufacturer→Plant 式的命名迁移驱动。**与 Brand/Platform/CarLine 的关键差异**：CR-010（Flyway V3，`V3__Add_mdm_source_to_product_tree.sql`）仅为 `veh_brand`/`veh_series`/`veh_platform` 建好 `source`/`external_ref_id`/`external_version`/`last_sync_time` 字段，**未覆盖 `veh_model`**，故 Brand/Platform/CarLine 可复用 V3，而 CR-015 **必须新增 Flyway 迁移 `V6__Add_mdm_source_to_model.sql`**（幂等 ALTER 补齐上述字段 + `UK(external_ref_id)` + 回填 source='MANUAL'），备选①不可行。**按需最小化**：`veh_model` 仅保留车辆主数据闭环所需字段（至少 `code`/`name`/`platform_code`/`car_line_code`/`source`/`external_ref_id`/`external_version`/`last_sync_time`），可选字段（`deleted`/`enabled`/`status`/`raw_payload`/`extension_json`）按消费场景走独立 CR 增量纳入。**产品树引用链保护**：`veh_base_model.model_code → veh_model.code` 的「车系→车型→基础车型」引用链不得切断，BaseModel 当前仍为 VMD 自有，备选⑤（一并投影化 BaseModel）留待后续 CR-016~018，本 CR 不取。**渐进收敛**：source=MDM 记录经 `ProductDataReadOnlyException`（`202014`）保持只读；add/edit/remove 仅对 source=MANUAL 过渡数据保留并标 `@Deprecated`，最终下线由后续兼容性清理 CR 完成（对应 US-003c、requirements §5 O45）。备选 ②无命名迁移驱动、徒增成本；③`veh_model` 补齐投影字段后已具备投影能力、无需新表；④破坏既有调用方兼容性——均不取 |
 
 ## 3. Data Model
 
@@ -248,6 +249,7 @@ graph TB
 | V2 | `V2__CarLine_brand_code_migration.sql` | 车系冗余 brand_code |
 | V3 | `V3__Add_mdm_source_to_product_tree.sql` | 品牌/车系/平台新增 source / external_ref_id / external_version / last_sync_time 字段 + UK(external_ref_id) + DML 回填 source='MANUAL' |
 | V4 | `V4__Migrate_manufacturer_to_plant.sql` | **CR-011 Manufacturer→Plant 迁移**：① `RENAME TABLE veh_manufacturer TO veh_plant`；② 列重命名 `code`→`plant_code`、`name`→`plant_name`；③ `veh_plant` 新增 source / external_ref_id / external_version / last_sync_time + UK(external_ref_id) + 回填 source='MANUAL'；④ `veh_basic_info` 新增 `plant_code` 列；⑤ DML `UPDATE veh_basic_info SET plant_code = manufacturer_code`（回填历史车辆，对应 US-007c）；⑥ `manufacturer_code` 列兼容期保留（标 deprecated，不在本迁移删除，待后续清理 CR） |
+| V6 | `V6__Add_mdm_source_to_model.sql` | **CR-015 Model 本地投影**：为 `veh_model` 新增 source / external_ref_id / external_version / last_sync_time + `UK(external_ref_id)` + 回填 source='MANUAL'（幂等 ALTER）。**新增本迁移的原因**：V3 仅覆盖 `veh_brand`/`veh_series`/`veh_platform`，未覆盖 `veh_model`，故区别于 Brand/Platform/CarLine 复用 V3；保持 `code`/`name`/`platform_code`/`car_line_code`(=carLineCode) 不变（详见 §2 D18） |
 
 > 注（CR-012）：**Brand 投影定位调整不引入新的 Flyway 迁移**。`veh_brand` 复用 V3（`V3__Add_mdm_source_to_product_tree.sql`）已建的 `source`/`external_ref_id`/`external_version`/`last_sync_time` 字段与 `UK(external_ref_id)`；`brandCode` 关联键沿用 `veh_brand.code`，**不重命名**（与 CR-011 的 Manufacturer→Plant 列重命名不同，Brand 无命名迁移驱动，详见 §2 D15）。可选投影字段（`deleted`/`enabled`/`status`/`raw_payload`/`extension_json`）如需启用，由消费场景按独立 CR 增量新增迁移。
 
@@ -255,7 +257,7 @@ graph TB
 
 > 注（CR-014）：**CarLine 投影定位调整同样不引入新的 Flyway 迁移**。`veh_carLine` 复用 V3（`V3__Add_mdm_source_to_product_tree.sql`）已建的 `source`/`external_ref_id`/`external_version`/`last_sync_time` 字段与 `UK(external_ref_id)`；`carLineCode` 关联键沿用 `veh_carLine.code`，**不重命名**（与 Brand（CR-012）/ Platform（CR-013）同构、区别于 CR-011 的 Manufacturer→Plant 列重命名，CarLine 无命名迁移驱动，详见 §2 D17）。**车系特殊点**：CR-002/V2（`V2__CarLine_brand_code_migration.sql`）为 `veh_carLine` 引入的 `brand_code` 冗余字段**继续保留、不回退、不弱化**（跨域回查 + US-031 `getBuildConfig`），CR-014 不对其做任何删除或迁移。可选投影字段（`deleted`/`enabled`/`status`/`raw_payload`/`extension_json`）如需启用，由消费场景按独立 CR 增量新增迁移。
 
-## 4. Core Flows
+> 注（CR-015）：**Model 投影定位调整需新增 Flyway 迁移**（区别于 Brand/CR-012、Platform/CR-013、CarLine/CR-014 复用 V3）。原因：V3（`V3__Add_mdm_source_to_product_tree.sql`）仅为 `veh_brand`/`veh_series`/`veh_platform` 建了 source 投影字段，**未覆盖 `veh_model`**。故 CR-015 新增 `V6__Add_mdm_source_to_model.sql`（幂等 ALTER）为 `veh_model` 补齐 `source`/`external_ref_id`/`external_version`/`last_sync_time` 字段与 `UK(external_ref_id)`，并回填 source='MANUAL'；`modelCode` 关联键沿用 `veh_model.code`，`carLineCode` 沿用 `veh_model.car_line_code`，**均不重命名**（无命名迁移驱动，详见 §2 D18）。**产品树引用链 `veh_base_model.model_code → veh_model.code` 不得切断**，BaseModel 仍为 VMD 自有，可选投影字段如需启用由消费场景按独立 CR 增量新增迁移。
 
 ### 4.1 F1 - MPT 维护产品树（删除前置依赖检查）
 
@@ -491,8 +493,10 @@ sequenceDiagram
 > Platform 事件（`PlatformCreated/PlatformUpdated/PlatformDeleted`）同样复用该订阅与幂等 upsert 逻辑，写入 `veh_platform` 投影表；自 CR-013 起仅持久化 VMD 业务所需的最小投影字段（按需最小化只读投影，对应 US-006）。该事件链路 CR-010 已覆盖，CR-013 复用不新增链路。
 >
 > CarLine 事件（`CarLineCreated/CarLineUpdated/CarLineDeleted`）同样复用该订阅与幂等 upsert 逻辑，写入 `veh_carLine` 投影表；自 CR-014 起仅持久化 VMD 业务所需的最小投影字段（按需最小化只读投影，含 `brand_code` 冗余字段——由事件 payload 提供、用于跨域回查与 US-031 `getBuildConfig`，对应 US-002）。该事件链路 CR-010 已覆盖，CR-014 复用不新增链路。
+>
+> Model 事件（`ModelCreated/ModelUpdated/ModelDeleted`）同样复用该订阅与幂等 upsert 逻辑（新增 `MdmModelEvent` + `MdmEventSubscribe.onMdmModelEvent` + `MdmSyncAppService.handleModelEvent`），写入 `veh_model` 投影表；自 CR-015 起仅持久化 VMD 业务所需的最小投影字段（按需最小化只读投影，含 `platform_code` / `series_code`(=carLineCode) 关联字段，对应 US-003）。订阅与幂等 upsert 机制复用现有 F6 链路、不新造链路；投影字段落库依赖 CR-015 新增的 `V6__Add_mdm_source_to_model.sql`（详见 §2 D18 / §3.4）。
 
-**对应 US**：**US-001** / US-002 / US-006 / **US-007**（MDM 事件同步 AC）。
+**对应 US**：**US-001** / US-002 / US-003 / US-006 / **US-007**（MDM 事件同步 AC）。
 
 ### 4.7 F7 - VMD Bootstrap 全量快照
 
@@ -501,7 +505,7 @@ sequenceDiagram
     participant VMD as VMD 启动 / MPT 手工触发
     participant C as MdmSyncController / BootstrapListener
     participant A as MdmSyncAppService
-    participant FC as MdmBrandQueryClient / MdmCarLineQueryClient / MdmPlatformQueryClient / MdmPlantQueryClient
+    participant FC as MdmBrandQueryClient / MdmCarLineQueryClient / MdmPlatformQueryClient / MdmPlantQueryClient / MdmModelQueryClient
     participant MDM as edd-mdm
     participant R as Brand/CarLine/Platform/Plant Repository
     participant DB as MySQL
@@ -510,7 +514,7 @@ sequenceDiagram
         VMD->>C: ApplicationReadyEvent
         C->>A: bootstrapAll()
     else 手工触发
-        VMD->>C: POST /api/mpt/mdmSync/v1/bootstrap?entity=brand|carLine|platform|plant|all
+        VMD->>C: POST /api/mpt/mdmSync/v1/bootstrap?entity=brand|carLine|platform|plant|model|all
         C->>A: bootstrap(entity)
     end
     A->>R: countBySource('MDM')
@@ -536,8 +540,10 @@ sequenceDiagram
 > Platform 全量快照通过 `MdmPlatformQueryClient` 拉取，`entity=platform` 或 `entity=all` 触发；upsert 写入 `veh_platform`，按 external_ref_id / external_version 幂等，快照失败不清空本地已有 Platform 投影，仅同步 VMD Platform 投影所需的最小字段集（CR-013，对应 US-006b）。该 Bootstrap 链路 CR-010 已覆盖，CR-013 复用不新增链路。
 >
 > CarLine 全量快照通过 `MdmCarLineQueryClient` 拉取，`entity=carLine` 或 `entity=all` 触发；upsert 写入 `veh_carLine`，按 external_ref_id / external_version 幂等，快照失败不清空本地已有 CarLine 投影，仅同步 VMD CarLine 投影所需的最小字段集（含 `brand_code` 冗余字段，CR-014，对应 US-002b）。该 Bootstrap 链路 CR-010 已覆盖，CR-014 复用不新增链路。
+>
+> Model 全量快照通过 `MdmModelQueryClient` 拉取（CR-015 新增 Feign 客户端 + `MdmModelQueryClientFallbackFactory` 降级兜底），`entity=model` 或 `entity=all` 触发；启动时本地 source=MDM 的 Model 记录数为 0 自动拉全量；upsert 写入 `veh_model`，按 external_ref_id / external_version 幂等，快照失败不清空本地已有 Model 投影，仅同步 VMD Model 投影所需的最小字段集（含 `platform_code` / `series_code`(=carLineCode) 关联字段，CR-015，对应 US-003b）。Bootstrap 机制复用现有 F7 链路、不新造链路；投影字段落库依赖 CR-015 新增的 `V6__Add_mdm_source_to_model.sql`。
 
-**对应 US**：**US-001b** / US-002b / US-006b / **US-007b**（Bootstrap 全量同步 AC）。
+**对应 US**：**US-001b** / US-002b / US-003b / US-006b / **US-007b**（Bootstrap 全量同步 AC）。
 
 ## 5. API Contracts
 
@@ -580,13 +586,16 @@ sequenceDiagram
 
 > **source=MDM 只读限制**：POST / PUT / DELETE 接口对 source=MDM 记录抛 `ProductDataReadOnlyException`（错误码 `202014`），消息模板 `{entity}'{code}' 来源为 MDM，不允许通过 VMD 后台修改/删除`。`add/edit/remove` 权限点与端点仅作兼容期遗留（限 source=MANUAL），后续清理 CR 下线（CR-014，对应 US-002c）。
 
-#### 5.1.3 Model `MptModelController`（→ US-003）
+#### 5.1.3 Model `MptModelController`（→ US-003 / US-003c）
+
+> **语义重构（CR-015）**：Model 自 CR-015 起定位为 MDM Model 主数据本地只读投影的消费方（与 §5.1.1 Brand / §5.1.2 CarLine / §5.1.6 Platform 同构，参照 §5.1.7 Plant）。`list/listByPlatformCodeAndCarLineCode/query/export` 为长期保留的查询能力（查询语义不变，数据来源变为本地投影）；`add/edit/remove`（及对应 `completeVehicle:product:model:add/edit/remove` 权限点）降级为**兼容期遗留**，仅可作用于 source=MANUAL 过渡数据，对 source=MDM 记录一律经 `ProductDataReadOnlyException`（错误码 `202014`）拒绝，最终下线由后续兼容性清理 CR 完成（对应 US-003c、§7 TD-10、requirements §5 O45）。`modelCode` 关联键保留，不改名、不删除；**`veh_base_model.model_code → veh_model.code` 的「车系→车型→基础车型」引用链不得切断**（BaseModel 当前仍为 VMD 自有，见 §5.1.4）。MDM 事件订阅（F6，新增 entity=model）与 Bootstrap 全量同步（F7，entity=model\|all）复用现有机制，新增 `MdmModelQueryClient`（§5.2.1）用于运行时按需查询与降级兜底；投影字段落库依赖 CR-015 新增的 `V6__Add_mdm_source_to_model.sql`（§2 D18 / §3.4）。
+
 完整 7 端点 + 额外：
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/api/mpt/model/v1/listByPlatformCodeAndCarLineCode` | 入参 `platformCode`,`carLineCode`，返回交集 |
 
-错误：`code 已存在` / `该车型下存在基础车型` / `该车型下存在车辆`
+错误：`code 已存在` / `该车型下存在基础车型` / `该车型下存在车辆` / `source=MDM 只读`（`ProductDataReadOnlyException`，`202014`）
 
 #### 5.1.4 BaseModel `MptBaseModelController`（→ US-004）
 完整 7 端点 + 特征值嵌套子资源：
@@ -715,22 +724,23 @@ sequenceDiagram
 
 错误：`批次号已存在` / `解析器不存在` / `解析异常`
 
-#### 5.1.17 MdmSync `MptMdmSyncController`（→ US-001b/US-002b/US-006b/US-007b）
+#### 5.1.17 MdmSync `MptMdmSyncController`（→ US-001b/US-002b/US-003b/US-006b/US-007b）
 | Method | Path | Permission | Request | Response |
 |--------|------|-----------|---------|----------|
-| POST | `/api/mpt/mdmSync/v1/bootstrap` | `completeVehicle:mdmSync:bootstrap` | `?entity=brand\|carLine\|platform\|plant\|all` | `ApiResponse<String>` |
+| POST | `/api/mpt/mdmSync/v1/bootstrap` | `completeVehicle:mdmSync:bootstrap` | `?entity=brand\|carLine\|platform\|plant\|model\|all` | `ApiResponse<String>` |
 
-**行为**：调用 MDM 全量快照接口拉取指定实体数据并 upsert 本地副本（不删除本地记录）。`entity=plant` 同步 Plant 投影（CR-011），`entity=all` 含 Plant。
+**行为**：调用 MDM 全量快照接口拉取指定实体数据并 upsert 本地副本（不删除本地记录）。`entity=plant` 同步 Plant 投影（CR-011），`entity=model` 同步 Model 投影（CR-015），`entity=all` 含 Plant 与 Model。
 
 ### 5.2 Service 端（`edd-vmd-api`，Feign 契约）
 
 > 完整签名以 `edd-vmd-api/src/main/java/.../api/service/Vmd*Service.java` 为准；本节列契约清单 + 错误码 + Fallback 行为。
 
-#### 5.2.1 MDM 快照查询 Feign 接口（→ US-001b/US-002b/US-006b/US-007b）
+#### 5.2.1 MDM 快照查询 Feign 接口（→ US-001b/US-002b/US-003b/US-006b/US-007b）
 - `MdmBrandQueryClient`：调用 MDM 品牌全量快照接口（path/name 由 edd-mdm 接入规范定义，暂标 TBD）；仅取 VMD Brand 投影所需的最小字段集（CR-012）
 - `MdmCarLineQueryClient`：调用 MDM 车系全量快照接口（path/name 由 edd-mdm 接入规范定义，暂标 TBD）；仅取 VMD CarLine 投影所需的最小字段集（含 `brand_code` 冗余字段，CR-014）
 - `MdmPlatformQueryClient`：调用 MDM 平台全量快照接口（path/name 由 edd-mdm 接入规范定义，暂标 TBD）；仅取 VMD Platform 投影所需的最小字段集（CR-013）
 - `MdmPlantQueryClient`：调用 MDM Plant（工厂）全量快照接口（CR-011；path/name 由 edd-mdm 接入规范定义，暂标 TBD）；仅取 VMD Plant 投影所需的最小字段集
+- `MdmModelQueryClient`：调用 MDM 车型全量快照接口（CR-015；`@FeignClient(value="edd-mdm", path="/api/mdm/model/v1")`，`getAllModels()` → `GET /listAll`，配 `MdmModelQueryClientFallbackFactory`）；仅取 VMD Model 投影所需的最小字段集（含 `platformCode` / `carLineCode` 关联字段）
 
 **Fallback**：记录错误日志，抛出异常让调用方感知 MDM 不可用。
 
@@ -790,8 +800,10 @@ sequenceDiagram
 | US-002 CarLine 投影 | §2 D13/D17 / §3.1 产品树(`veh_carLine`) / §3.2 / §4.1 F1 / §4.6 F6 / §4.7 F7 / §5.1.2 / §5.2.1 | 消费 MDM CarLine 主数据本地投影；source=MDM 只读；按需最小化投影；含 `listByBrandCode`、保留 `brandCode` 冗余字段（CR-014） |
 | US-002b CarLine Bootstrap | §3.1 产品树(`veh_carLine`) / §4.7 F7 / §5.1.17 / §5.2.1 | MDM CarLine 全量快照同步（entity=carLine\|all），幂等 upsert、失败不清空、最小字段集含 `brand_code`（CR-014） |
 | US-002c CarLine 本地维护收敛 | §2 D17 / §3.4（无新迁移、保留 V2 brand_code） / §5.1.2 / §7 TD-9 | add/edit/remove 收敛为 source=MANUAL 兼容期遗留；source=MDM 只读；保留 carLineCode 与 brandCode 冗余字段；旧入口/旧权限点待清理 CR 下线（CR-014） |
-| US-003 Model | §3.1 产品树 / §4.1 F1 / §5.1.3 | 含平台+车系联合查询 |
-| US-004 BaseModel + 特征值 | §3.1 产品树 / §4.1 F1 / §5.1.4 | 含特征值嵌套子资源 |
+| US-003 Model 投影 | §2 D13/D18 / §3.1 产品树(`veh_model`) / §3.2 / §3.4 V6 / §4.1 F1 / §4.6 F6 / §4.7 F7 / §5.1.3 / §5.2.1 | 消费 MDM Model 主数据本地投影；source=MDM 只读；按需最小化投影；含平台+车系联合查询；保留「车系→车型→基础车型」引用链（CR-015） |
+| US-003b Model Bootstrap | §3.1 产品树(`veh_model`) / §3.4 V6 / §4.7 F7 / §5.1.17 / §5.2.1 | MDM Model 全量快照同步（entity=model\|all），幂等 upsert、失败不清空、最小字段集含 `platform_code`/`series_code`（CR-015） |
+| US-003c Model 本地维护收敛 | §2 D18 / §3.4 V6 / §5.1.3 / §7 TD-10 | add/edit/remove 收敛为 source=MANUAL 兼容期遗留；source=MDM 只读；保留 modelCode 与「车系→车型→基础车型」引用链；旧入口/旧权限点待清理 CR 下线（CR-015） |
+| US-004 BaseModel + 特征值 | §3.1 产品树 / §4.1 F1 / §5.1.4 | 含特征值嵌套子资源；查询语义不变，所引用 modelCode 自 CR-015 起来自 Model 本地投影；引用链不切断 |
 | US-005 BuildConfig + 特征值 | §3.1 产品树 / §4.1 F1 / §5.1.5 | 含特征值嵌套子资源 |
 | US-006 Platform 投影 | §2 D13/D16 / §3.1 产品树(`veh_platform`) / §3.2 / §4.6 F6 / §4.7 F7 / §5.1.6 / §5.2.1 | 消费 MDM Platform 主数据本地投影；source=MDM 只读；按需最小化投影（CR-013） |
 | US-006b Platform Bootstrap | §3.1 产品树(`veh_platform`) / §4.7 F7 / §5.1.17 / §5.2.1 | MDM Platform 全量快照同步（entity=platform\|all），幂等 upsert、失败不清空（CR-013） |
@@ -837,6 +849,7 @@ sequenceDiagram
 | TD-7 | `MptBrandController` 的 `add/edit/remove` 端点、`completeVehicle:product:brand:add/edit/remove` 权限点 | CR-012 后 Brand 定位为 MDM 只读投影，`add/edit/remove` 仅对 source=MANUAL 过渡数据保留并标 `@Deprecated`（非缺陷，受控遗留） | 待后续兼容性清理 CR 下线（requirements §5 O24）；下线前需确认无外部调用方依赖旧入口/旧权限点 |
 | TD-8 | `MptPlatformController` 的 `add/edit/remove` 端点、`completeVehicle:product:platform:add/edit/remove` 权限点 | CR-013 后 Platform 定位为 MDM 只读投影，`add/edit/remove` 仅对 source=MANUAL 过渡数据保留并标 `@Deprecated`（非缺陷，受控遗留） | 待后续兼容性清理 CR 下线（requirements §5 O31）；下线前需确认无外部调用方依赖旧入口/旧权限点 |
 | TD-9 | `MptCarLineController` 的 `add/edit/remove` 端点、`completeVehicle:product:carLine:add/edit/remove` 权限点 | CR-014 后 CarLine 定位为 MDM 只读投影，`add/edit/remove` 仅对 source=MANUAL 过渡数据保留并标 `@Deprecated`（非缺陷，受控遗留） | 待后续兼容性清理 CR 下线（requirements §5 O38）；下线前需确认无外部调用方依赖旧入口/旧权限点。**注意**：`veh_carLine.brand_code` 冗余字段不属于本项清理范围，须长期保留（跨域回查 + US-031 `getBuildConfig`，参见 §2 D17） |
+| TD-10 | `MptModelController` 的 `add/edit/remove` 端点、`completeVehicle:product:model:add/edit/remove` 权限点 | CR-015 后 Model 定位为 MDM 只读投影，`add/edit/remove` 仅对 source=MANUAL 过渡数据保留并标 `@Deprecated`（非缺陷，受控遗留） | 待后续兼容性清理 CR 下线（requirements §5 O45）；下线前需确认无外部调用方依赖旧入口/旧权限点。**注意**：`veh_base_model.model_code → veh_model.code` 的「车系→车型→基础车型」引用链须长期保留、不在本项清理范围内（BaseModel 仍为 VMD 自有，留待 CR-016~018，参见 §2 D18） |
 
 ## 8. Open Questions
 
@@ -859,3 +872,4 @@ sequenceDiagram
 | 2026-06-05 | CR-012 | Modified | **品牌主数据重构为 MDM Brand 本地投影（落地 requirements CR-012，对应 US-001/US-001b/US-001c）**：§2 新增 **D15**（Brand 本地投影定位与维护收敛策略：复用 CR-010/V3 source 字段、**不重命名 `veh_brand` 列、不新增 Flyway 迁移**、add/edit/remove 收敛为 source=MANUAL 兼容期遗留；与 CR-011 Plant 的命名迁移区分）；§3.1 `veh_brand` 行标注为 MDM Brand 按需最小化只读投影并新增 Brand 投影说明注；§3.2 Brand 实体标注为 MDM 只读投影；§3.4 新增 CR-012 说明注（明确不引入新迁移、`brandCode` 沿用 `veh_brand.code` 不改名）；§4.6 F6 / §4.7 F7 纳入 Brand 事件订阅与 Brand Bootstrap（entity=brand\|all）的 CR-012 注；§5.1.1 `MptBrandController` 标注语义重构，`add/edit/remove` 降级为兼容期遗留（限 source=MANUAL）、source=MDM 经 `ProductDataReadOnlyException`（202014）只读；§5.2.1 `MdmBrandQueryClient` 补充「仅取最小字段集」；§6 改写 US-001/US-001b 映射并新增 US-001c；§7 新增 **TD-7**（Brand add/edit/remove 遗留兼容待清理）。**tasks.md 待按 SPEC 工作流后续同步本 CR** |
 | 2026-06-08 | CR-013 | Modified | **平台主数据重构为 MDM Platform 本地投影（落地 requirements CR-013，对应 US-006/US-006b/US-006c）**：§2 新增 **D16**（Platform 本地投影定位与维护收敛策略：复用 CR-010/V3 source 字段、**不重命名 `veh_platform` 列、不新增 Flyway 迁移**、add/edit/remove 收敛为 source=MANUAL 兼容期遗留；与 Brand（D15）完全同构、区别于 CR-011 Plant 的命名迁移）；§3.1 `veh_platform` 行标注为 MDM Platform 按需最小化只读投影并新增 Platform 投影说明注（`veh_platform.code` 即 `platform_code`、`name` 即 `platform_name`，为 `veh_basic_info`/`veh_model`/`veh_base_model` 的 `platform_code` 关联键）；§3.2 Platform 实体标注为 MDM 只读投影；§3.4 新增 CR-013 说明注（明确不引入新迁移、`platformCode` 沿用 `veh_platform.code` 不改名）；§4.6 F6 / §4.7 F7 纳入 Platform 事件订阅与 Platform Bootstrap（entity=platform\|all）的 CR-013 注（复用 CR-010 已覆盖链路、不新增链路）；§5.1.6 `MptPlatformController` 由简述扩展为完整端点表并标注语义重构，`add/edit/remove` 降级为兼容期遗留（限 source=MANUAL）、source=MDM 经 `ProductDataReadOnlyException`（202014）只读；§5.2.1 `MdmPlatformQueryClient` 补充「仅取最小字段集」；§6 改写 US-006/US-006b 映射并新增 US-006c；§7 新增 **TD-8**（Platform add/edit/remove 遗留兼容待清理）。**tasks.md 待按 SPEC 工作流后续同步本 CR** |
 | 2026-06-08 | CR-014 | Modified | **车系主数据重构为 MDM CarLine 本地投影（落地 requirements CR-014，对应 US-002/US-002b/US-002c）**：§2 新增 **D17**（CarLine 本地投影定位与维护收敛策略：复用 CR-010/V3 source 字段、**不重命名 `veh_carLine` 列、不新增 Flyway 迁移**、add/edit/remove 收敛为 source=MANUAL 兼容期遗留；与 Brand（D15）/ Platform（D16）同构、区别于 CR-011 Plant 的命名迁移；**车系特殊点：保留 CR-002/V2 引入的 `brand_code` 冗余字段、不得删除或弱化，备选③删 brand_code 不取**）；§3.1 `veh_carLine` 行标注为 MDM CarLine 按需最小化只读投影并新增 CarLine 投影说明注（`brand_code` 冗余字段必须保留，用于跨域回查 + US-031 `getBuildConfig`）；§3.2 CarLine 实体标注为 MDM 只读投影（保留 `brandCode` 冗余字段）；§3.4 新增 CR-014 说明注（明确不引入新迁移、`carLineCode` 沿用 `veh_carLine.code` 不改名、V2 `brand_code` 继续保留不回退）；§4.6 F6 / §4.7 F7 纳入 CarLine 事件订阅与 CarLine Bootstrap（entity=carLine\|all）的 CR-014 注（复用 CR-010 已覆盖链路、不新增链路，最小字段集含 `brand_code`）；§5.1.2 `MptCarLineController` 由简述扩展为完整端点表（含 `listByBrandCode`）并标注语义重构，`add/edit/remove` 降级为兼容期遗留（限 source=MANUAL）、source=MDM 经 `ProductDataReadOnlyException`（202014）只读，`carLineCode` 与 `brandCode` 冗余字段保留；§5.2.1 `MdmCarLineQueryClient` 补充「仅取最小字段集（含 brand_code）」；§6 改写 US-002/US-002b 映射并新增 US-002c；§7 新增 **TD-9**（CarLine add/edit/remove 遗留兼容待清理，并注明 brand_code 冗余字段不在清理范围）。**tasks.md 待按 SPEC 工作流后续同步本 CR** |
+| 2026-06-08 | CR-015 | Modified | **车型主数据重构为 MDM Model 本地投影（落地 requirements CR-015，对应 US-003/US-003b/US-003c，US-004 查询语义不变）**：§2 新增 **D18**（Model 本地投影定位与维护收敛策略：与 Brand（D15）/ Platform（D16）/ CarLine（D17）同构、区别于 CR-011 Plant 的命名迁移；**关键差异：CR-010/V3 未覆盖 `veh_model`，故 CR-015 新增 Flyway 迁移 `V6__Add_mdm_source_to_model.sql`（区别于 CR-013/CR-014 复用 V3）**、不重命名 `veh_model` 现有列、add/edit/remove 收敛为 source=MANUAL 兼容期遗留、保留「车系→车型→基础车型」引用链，备选①复用 V3 不可行、⑤一并投影化 BaseModel 留待后续 CR）；§3.1 新增 CR-015 说明注（明确需新增 V6 迁移、`modelCode` 沿用 `veh_model.code`、`carLineCode` 沿用 `veh_model.series_code` 均不改名、引用链不切断）；§3.4 新增 **V6** 行（`V6__Add_mdm_source_to_model.sql`：为 `veh_model` 补齐 source/external_ref_id/external_version/last_sync_time + UK(external_ref_id) + 回填 source='MANUAL'）；§4.6 F6 / §4.7 F7 纳入 Model 事件订阅（新增 `MdmModelEvent`/`onMdmModelEvent`/`handleModelEvent`）与 Model Bootstrap（entity=model\|all，新增 `bootstrapModel`）的 CR-015 注（复用现有机制、不新造链路，最小字段集含 `platform_code`/`series_code`）；§5.1.3 `MptModelController` 标注语义重构，`add/edit/remove` 降级为兼容期遗留（限 source=MANUAL）、source=MDM 经 `ProductDataReadOnlyException`（202014）只读，`modelCode` 与引用链保留；§5.1.17 `MptMdmSyncController` 与 §5.2.1 新增 `MdmModelQueryClient`（`path=/api/mdm/model/v1`，`getAllModels`→`/listAll`，配 `MdmModelQueryClientFallbackFactory` 降级兜底）+ entity 列表纳入 model；§6 改写 US-003 映射并新增 US-003b/US-003c、US-004 补注（modelCode 来源变为投影、引用链不切断）；§7 新增 **TD-10**（Model add/edit/remove 遗留兼容待清理，并注明「车系→车型→基础车型」引用链不在清理范围）。**tasks.md 待按 SPEC 工作流后续同步本 CR** |

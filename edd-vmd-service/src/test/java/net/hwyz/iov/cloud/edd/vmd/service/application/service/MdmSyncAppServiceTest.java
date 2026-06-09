@@ -2,16 +2,20 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 
 import net.hwyz.iov.cloud.edd.vmd.api.service.MdmBrandQueryClient;
 import net.hwyz.iov.cloud.edd.vmd.api.service.MdmCarLineQueryClient;
+import net.hwyz.iov.cloud.edd.vmd.api.service.MdmModelQueryClient;
 import net.hwyz.iov.cloud.edd.vmd.api.service.MdmPlatformQueryClient;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmBrandEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmCarLineEvent;
+import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmModelEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmPlatformEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Brand;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.CarLine;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Model;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Platform;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBrandRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehCarLineRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehModelRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehPlatformRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
@@ -50,6 +54,9 @@ class MdmSyncAppServiceTest {
     private VehPlatformRepository vehPlatformRepository;
 
     @Mock
+    private VehModelRepository vehModelRepository;
+
+    @Mock
     private MdmBrandQueryClient mdmBrandQueryClient;
 
     @Mock
@@ -57,6 +64,9 @@ class MdmSyncAppServiceTest {
 
     @Mock
     private MdmPlatformQueryClient mdmPlatformQueryClient;
+
+    @Mock
+    private MdmModelQueryClient mdmModelQueryClient;
 
     @InjectMocks
     private MdmSyncAppService mdmSyncAppService;
@@ -411,6 +421,7 @@ class MdmSyncAppServiceTest {
         when(vehBrandRepository.countBySource(SourceType.MDM)).thenReturn(1L);
         when(vehCarLineRepository.countBySource(SourceType.MDM)).thenReturn(1L);
         when(vehPlatformRepository.countBySource(SourceType.MDM)).thenReturn(1L);
+        when(vehModelRepository.countBySource(SourceType.MDM)).thenReturn(1L);
 
         // When
         mdmSyncAppService.bootstrapAll();
@@ -419,6 +430,7 @@ class MdmSyncAppServiceTest {
         verify(vehBrandRepository).countBySource(SourceType.MDM);
         verify(vehCarLineRepository).countBySource(SourceType.MDM);
         verify(vehPlatformRepository).countBySource(SourceType.MDM);
+        verify(vehModelRepository).countBySource(SourceType.MDM);
     }
 
     @Test
@@ -467,5 +479,194 @@ class MdmSyncAppServiceTest {
         verify(vehPlatformRepository).countBySource(SourceType.MDM);
         verify(mdmPlatformQueryClient).getAllPlatforms();
         verify(vehPlatformRepository, never()).insert(any(Platform.class));
+    }
+
+    @Test
+    @DisplayName("handleModelEvent应新增本地不存在的车型投影")
+    void handleModelEvent_shouldInsertWhenLocalModelNotExists() {
+        // Given
+        MdmModelEvent event = new MdmModelEvent("CREATED", "mdm-model-001", 1L, "MODEL001", "新车型", "PLATFORM001", "CARLINE001", LocalDateTime.now());
+
+        when(vehModelRepository.selectByExternalRefId("mdm-model-001")).thenReturn(null);
+        when(vehModelRepository.insert(any(Model.class))).thenReturn(1);
+
+        // When
+        mdmSyncAppService.handleModelEvent(event);
+
+        // Then
+        verify(vehModelRepository).selectByExternalRefId("mdm-model-001");
+        verify(vehModelRepository).insert(any(Model.class));
+    }
+
+    @Test
+    @DisplayName("handleModelEvent应更新本地已存在且版本更高的车型投影")
+    void handleModelEvent_shouldUpdateWhenLocalModelExistsAndVersionHigher() {
+        // Given
+        MdmModelEvent event = new MdmModelEvent("UPDATED", "mdm-model-002", 2L, "MODEL002", "更新后的车型", "PLATFORM002", "CARLINE002", LocalDateTime.now());
+
+        Model localModel = Model.builder()
+                .id(1L)
+                .code("MODEL002")
+                .name("原始车型")
+                .platformCode("PLATFORM002")
+                .carLineCode("CARLINE002")
+                .source(SourceType.MDM)
+                .externalRefId("mdm-model-002")
+                .externalVersion(1L)
+                .build();
+
+        when(vehModelRepository.selectByExternalRefId("mdm-model-002")).thenReturn(localModel);
+        when(vehModelRepository.updateById(any(Model.class))).thenReturn(1);
+
+        // When
+        mdmSyncAppService.handleModelEvent(event);
+
+        // Then
+        verify(vehModelRepository).selectByExternalRefId("mdm-model-002");
+        verify(vehModelRepository).updateById(any(Model.class));
+    }
+
+    @Test
+    @DisplayName("handleModelEvent应忽略版本不高于本地的车型事件")
+    void handleModelEvent_shouldIgnoreWhenVersionNotHigher() {
+        // Given
+        MdmModelEvent event = new MdmModelEvent("UPDATED", "mdm-model-003", 1L, "MODEL003", "旧版本车型", "PLATFORM003", "CARLINE003", LocalDateTime.now());
+
+        Model localModel = Model.builder()
+                .id(1L)
+                .code("MODEL003")
+                .name("本地车型")
+                .platformCode("PLATFORM003")
+                .carLineCode("CARLINE003")
+                .source(SourceType.MDM)
+                .externalRefId("mdm-model-003")
+                .externalVersion(2L)
+                .build();
+
+        when(vehModelRepository.selectByExternalRefId("mdm-model-003")).thenReturn(localModel);
+
+        // When
+        mdmSyncAppService.handleModelEvent(event);
+
+        // Then
+        verify(vehModelRepository).selectByExternalRefId("mdm-model-003");
+        verify(vehModelRepository, never()).updateById(any(Model.class));
+    }
+
+    @Test
+    @DisplayName("bootstrapModel应跳过当本地已有MDM车型数据时")
+    void bootstrapModel_shouldSkipWhenLocalMdmModelsExist() {
+        // Given
+        when(vehModelRepository.countBySource(SourceType.MDM)).thenReturn(5L);
+
+        // When
+        mdmSyncAppService.bootstrapModel();
+
+        // Then
+        verify(vehModelRepository).countBySource(SourceType.MDM);
+        verify(mdmModelQueryClient, never()).getAllModels();
+    }
+
+    @Test
+    @DisplayName("bootstrapModel应同步当本地无MDM车型数据时")
+    void bootstrapModel_shouldSyncWhenNoLocalMdmModels() {
+        // Given
+        when(vehModelRepository.countBySource(SourceType.MDM)).thenReturn(0L);
+
+        Map<String, Object> modelData1 = new HashMap<>();
+        modelData1.put("id", "mdm-model-001");
+        modelData1.put("code", "MODEL001");
+        modelData1.put("name", "车型1");
+        modelData1.put("platformCode", "PLATFORM001");
+        modelData1.put("carLineCode", "CARLINE001");
+        modelData1.put("version", 1);
+
+        Map<String, Object> modelData2 = new HashMap<>();
+        modelData2.put("id", "mdm-model-002");
+        modelData2.put("code", "MODEL002");
+        modelData2.put("name", "车型2");
+        modelData2.put("platformCode", "PLATFORM001");
+        modelData2.put("carLineCode", "CARLINE001");
+        modelData2.put("version", 1);
+
+        List<Map<String, Object>> mdmModels = Arrays.asList(modelData1, modelData2);
+        when(mdmModelQueryClient.getAllModels()).thenReturn(mdmModels);
+        when(vehModelRepository.insert(any(Model.class))).thenReturn(1);
+
+        // When
+        mdmSyncAppService.bootstrapModel();
+
+        // Then
+        verify(vehModelRepository).countBySource(SourceType.MDM);
+        verify(mdmModelQueryClient).getAllModels();
+        verify(vehModelRepository, times(2)).insert(any(Model.class));
+    }
+
+    @Test
+    @DisplayName("bootstrapModel应处理MDM接口异常并不清空本地数据")
+    void bootstrapModel_shouldHandleMdmClientExceptionAndNotClearLocalData() {
+        // Given
+        when(vehModelRepository.countBySource(SourceType.MDM)).thenReturn(0L);
+        when(mdmModelQueryClient.getAllModels()).thenThrow(new RuntimeException("MDM服务不可用"));
+
+        // When
+        mdmSyncAppService.bootstrapModel();
+
+        // Then
+        verify(vehModelRepository).countBySource(SourceType.MDM);
+        verify(mdmModelQueryClient).getAllModels();
+        verify(vehModelRepository, never()).insert(any(Model.class));
+    }
+
+    @Test
+    @DisplayName("handleModelEvent应正确处理平台和车系关联字段")
+    void handleModelEvent_shouldCorrectlyHandlePlatformAndCarLineFields() {
+        // Given
+        MdmModelEvent event = new MdmModelEvent("CREATED", "mdm-model-004", 1L, "MODEL004", "新车型", "PLATFORM001", "CARLINE001", LocalDateTime.now());
+
+        when(vehModelRepository.selectByExternalRefId("mdm-model-004")).thenReturn(null);
+        when(vehModelRepository.insert(any(Model.class))).thenReturn(1);
+
+        // When
+        mdmSyncAppService.handleModelEvent(event);
+
+        // Then
+        verify(vehModelRepository).selectByExternalRefId("mdm-model-004");
+        verify(vehModelRepository).insert(argThat(model ->
+                "PLATFORM001".equals(model.getPlatformCode()) &&
+                "CARLINE001".equals(model.getCarLineCode()) &&
+                SourceType.MDM.equals(model.getSource())
+        ));
+    }
+
+    @Test
+    @DisplayName("bootstrapModel应正确处理平台和车系关联字段")
+    void bootstrapModel_shouldCorrectlyHandlePlatformAndCarLineFields() {
+        // Given
+        when(vehModelRepository.countBySource(SourceType.MDM)).thenReturn(0L);
+
+        Map<String, Object> modelData = new HashMap<>();
+        modelData.put("id", "mdm-model-003");
+        modelData.put("code", "MODEL003");
+        modelData.put("name", "车型3");
+        modelData.put("platformCode", "PLATFORM002");
+        modelData.put("carLineCode", "CARLINE002");
+        modelData.put("version", 1);
+
+        List<Map<String, Object>> mdmModels = Arrays.asList(modelData);
+        when(mdmModelQueryClient.getAllModels()).thenReturn(mdmModels);
+        when(vehModelRepository.insert(any(Model.class))).thenReturn(1);
+
+        // When
+        mdmSyncAppService.bootstrapModel();
+
+        // Then
+        verify(vehModelRepository).countBySource(SourceType.MDM);
+        verify(mdmModelQueryClient).getAllModels();
+        verify(vehModelRepository).insert(argThat(model ->
+                "PLATFORM002".equals(model.getPlatformCode()) &&
+                "CARLINE002".equals(model.getCarLineCode()) &&
+                SourceType.MDM.equals(model.getSource())
+        ));
     }
 }

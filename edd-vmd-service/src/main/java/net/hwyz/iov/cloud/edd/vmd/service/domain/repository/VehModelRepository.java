@@ -1,6 +1,7 @@
 package net.hwyz.iov.cloud.edd.vmd.service.domain.repository;
 
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Model;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 
 import java.util.List;
 import java.util.Map;
@@ -45,6 +46,22 @@ public interface VehModelRepository {
     Model selectByCode(String code);
 
     /**
+     * 根据MDM外部引用ID查询车型
+     *
+     * @param externalRefId MDM外部引用ID
+     * @return 车型
+     */
+    Model selectByExternalRefId(String externalRefId);
+
+    /**
+     * 根据数据来源统计车型数量
+     *
+     * @param source 数据来源
+     * @return 数量
+     */
+    long countBySource(SourceType source);
+
+    /**
      * 新增车型
      *
      * @param model 车型
@@ -59,6 +76,14 @@ public interface VehModelRepository {
      * @return 影响行数
      */
     int update(Model model);
+
+    /**
+     * 根据主键ID修改车型
+     *
+     * @param model 车型
+     * @return 影响行数
+     */
+    int updateById(Model model);
 
     /**
      * 批量物理删除车型

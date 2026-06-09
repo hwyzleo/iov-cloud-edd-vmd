@@ -13,43 +13,52 @@
         <result column="row_version" property="rowVersion" />
         <result column="row_valid" property="rowValid" />
         <result column="platform_code" property="platformCode" />
-        <result column="series_code" property="carLineCode" />
+        <result column="car_line_code" property="carLineCode" />
         <result column="code" property="code" />
         <result column="name" property="name" />
         <result column="name_en" property="nameEn" />
         <result column="enable" property="enable" />
         <result column="sort" property="sort" />
+        <result column="source" property="source" />
+        <result column="external_ref_id" property="externalRefId" />
+        <result column="external_version" property="externalVersion" />
+        <result column="last_sync_time" property="lastSyncTime" />
     </resultMap>
 
     <!-- 通用查询结果列 -->
     <sql id="baseColumnList">
-        id, platform_code, series_code, code, name, name_en, enable, sort, 
-        description, create_time, create_by, modify_time, modify_by, row_version, row_valid
+        id, platform_code, car_line_code, code, name, name_en, enable, sort, 
+        description, source, external_ref_id, external_version, last_sync_time,
+        create_time, create_by, modify_time, modify_by, row_version, row_valid
     </sql>
 
     <!-- 插入 -->
     <insert id="insertPo" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO tb_veh_model (
-            id, platform_code, series_code, code, name, name_en, enable, sort, 
-            description, create_time, create_by, modify_time, modify_by, row_version, row_valid
+            id, platform_code, car_line_code, code, name, name_en, enable, sort, 
+            description, source, external_ref_id, external_version, last_sync_time,
+            create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
         VALUES (
             #{id}, #{platformCode}, #{carLineCode}, #{code}, #{name}, #{nameEn}, #{enable}, #{sort}, 
-            #{description}, now(), #{createBy}, now(), #{modifyBy}, 1, 1
+            #{description}, #{source}, #{externalRefId}, #{externalVersion}, #{lastSyncTime},
+            now(), #{createBy}, now(), #{modifyBy}, 1, 1
         )
     </insert>
 
     <!-- 批量插入 -->
     <insert id="batchInsertPo" useGeneratedKeys="true" keyProperty="id" parameterType="java.util.List">
         INSERT INTO tb_veh_model (
-            id, platform_code, series_code, code, name, name_en, enable, sort, 
-            description, create_time, create_by, modify_time, modify_by, row_version, row_valid
+            id, platform_code, car_line_code, code, name, name_en, enable, sort, 
+            description, source, external_ref_id, external_version, last_sync_time,
+            create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
         VALUES
         <foreach collection="list" item="item" index="index" separator=",">
         (
             #{item.id}, #{item.platformCode}, #{item.carLineCode}, #{item.code}, #{item.name}, #{item.nameEn}, #{item.enable}, #{item.sort}, 
-            #{item.description}, now(), #{item.createBy}, now(), #{item.modifyBy}, 1, 1
+            #{item.description}, #{item.source}, #{item.externalRefId}, #{item.externalVersion}, #{item.lastSyncTime},
+            now(), #{item.createBy}, now(), #{item.modifyBy}, 1, 1
         )
         </foreach>
     </insert>
@@ -71,6 +80,18 @@
         </if>
         <if test="description != null and description != ''">
             t.description = #{description},
+        </if>
+        <if test="source != null and source != ''">
+            t.source = #{source},
+        </if>
+        <if test="externalRefId != null and externalRefId != ''">
+            t.external_ref_id = #{externalRefId},
+        </if>
+        <if test="externalVersion != null">
+            t.external_version = #{externalVersion},
+        </if>
+        <if test="lastSyncTime != null">
+            t.last_sync_time = #{lastSyncTime},
         </if>
         <if test="modifyBy != null">
             t.modify_by = #{modifyBy},
@@ -124,7 +145,7 @@
             AND t.platform_code = #{platformCode}
         </if>
         <if test="carLineCode != null and carLineCode != ''">
-            AND t.series_code = #{carLineCode}
+            AND t.car_line_code = #{carLineCode}
         </if>
         <if test="code != null and code != ''">
             AND t.code = #{code}
@@ -172,7 +193,7 @@
             AND t.platform_code = #{platformCode}
         </if>
         <if test="carLineCode != null and carLineCode != ''">
-            AND t.series_code = #{carLineCode}
+            AND t.car_line_code = #{carLineCode}
         </if>
         <if test="code != null and code != ''">
             AND t.code = #{code}
@@ -208,7 +229,7 @@
             AND t.platform_code = #{platformCode}
         </if>
         <if test="carLineCode != null and carLineCode != ''">
-            AND t.series_code = #{carLineCode}
+            AND t.car_line_code = #{carLineCode}
         </if>
         <if test="code != null and code != ''">
             AND t.code = #{code}

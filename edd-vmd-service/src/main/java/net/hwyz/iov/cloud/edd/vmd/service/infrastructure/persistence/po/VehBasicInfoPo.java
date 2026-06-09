@@ -68,7 +68,7 @@ public class VehBasicInfoPo extends BasePo {
     /**
      * 车系代码
      */
-    @TableField("series_code")
+    @TableField("car_line_code")
     private String carLineCode;
 
     /**

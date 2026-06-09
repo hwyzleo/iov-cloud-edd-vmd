@@ -119,6 +119,65 @@ class FlywayMigrationTest {
     }
 
     @Test
+    @DisplayName("V6迁移脚本文件应存在")
+    void v6MigrationScript_shouldExist() {
+        // Given
+        Path migrationFile = Paths.get(MIGRATION_PATH, "V6__Add_mdm_source_to_model.sql");
+
+        // Then
+        assertTrue(Files.exists(migrationFile), "V6迁移脚本文件应该存在");
+    }
+
+    @Test
+    @DisplayName("V6迁移脚本应包含MDM投影字段")
+    void v6MigrationScript_shouldContainMdmProjectionFields() throws IOException {
+        // Given
+        Path migrationFile = Paths.get(MIGRATION_PATH, "V6__Add_mdm_source_to_model.sql");
+        String content = Files.readString(migrationFile);
+
+        // Then
+        assertTrue(content.contains("source"), "迁移脚本应包含source字段");
+        assertTrue(content.contains("external_ref_id"), "迁移脚本应包含external_ref_id字段");
+        assertTrue(content.contains("external_version"), "迁移脚本应包含external_version字段");
+        assertTrue(content.contains("last_sync_time"), "迁移脚本应包含last_sync_time字段");
+    }
+
+    @Test
+    @DisplayName("V6迁移脚本应包含唯一约束")
+    void v6MigrationScript_shouldContainUniqueConstraint() throws IOException {
+        // Given
+        Path migrationFile = Paths.get(MIGRATION_PATH, "V6__Add_mdm_source_to_model.sql");
+        String content = Files.readString(migrationFile);
+
+        // Then
+        assertTrue(content.contains("UNIQUE KEY"), "迁移脚本应包含唯一约束");
+        assertTrue(content.contains("uk_external_ref_id"), "迁移脚本应包含external_ref_id唯一约束");
+    }
+
+    @Test
+    @DisplayName("V6迁移脚本应包含数据回填语句")
+    void v6MigrationScript_shouldContainDataBackfill() throws IOException {
+        // Given
+        Path migrationFile = Paths.get(MIGRATION_PATH, "V6__Add_mdm_source_to_model.sql");
+        String content = Files.readString(migrationFile);
+
+        // Then
+        assertTrue(content.contains("UPDATE"), "迁移脚本应包含UPDATE语句");
+        assertTrue(content.contains("source"), "迁移脚本应回填source字段");
+    }
+
+    @Test
+    @DisplayName("V6迁移脚本应针对veh_model表")
+    void v6MigrationScript_shouldTargetVehModelTable() throws IOException {
+        // Given
+        Path migrationFile = Paths.get(MIGRATION_PATH, "V6__Add_mdm_source_to_model.sql");
+        String content = Files.readString(migrationFile);
+
+        // Then
+        assertTrue(content.contains("veh_model"), "迁移脚本应针对veh_model表");
+    }
+
+    @Test
     @DisplayName("所有迁移脚本文件应存在")
     void allMigrationScripts_shouldExist() {
         // Given
@@ -128,7 +187,8 @@ class FlywayMigrationTest {
                 "V2__Series_brand_code_migration.sql",
                 "V3__Add_mdm_source_to_product_tree.sql",
                 "V4__Rename_series_to_car_line.sql",
-                "V5__Migrate_manufacturer_to_plant.sql"
+                "V5__Migrate_manufacturer_to_plant.sql",
+                "V6__Add_mdm_source_to_model.sql"
         };
 
         // Then

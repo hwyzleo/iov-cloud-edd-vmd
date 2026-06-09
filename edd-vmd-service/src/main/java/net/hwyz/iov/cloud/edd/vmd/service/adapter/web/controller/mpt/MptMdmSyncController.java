@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
  * 
  * <p>提供从 MDM 全量快照同步数据到 VMD 本地投影的能力。</p>
  * 
- * <p>支持实体：brand（品牌）、carLine（车系）、platform（平台）、plant（工厂）、all（全部）</p>
+ * <p>支持实体：brand（品牌）、carLine（车系）、platform（平台）、plant（工厂）、model（车型）、all（全部）</p>
  * 
  * <p>同步规则：</p>
  * <ul>
@@ -40,7 +40,7 @@ public class MptMdmSyncController extends BaseController {
      * <p>从 MDM 拉取指定实体的全量快照并 upsert 本地投影副本。
      * 不删除本地已有记录，按 external_ref_id / external_version 幂等。</p>
      * 
-     * @param entity 同步实体类型：brand|carLine|platform|plant|all
+     * @param entity 同步实体类型：brand|carLine|platform|plant|model|all
      * @return 操作结果
      */
     @RequiresPermissions("completeVehicle:mdmSync:bootstrap")
@@ -58,6 +58,9 @@ public class MptMdmSyncController extends BaseController {
             case "platform":
                 mdmSyncAppService.bootstrapPlatform();
                 return ApiResponse.ok("平台数据同步完成");
+            case "model":
+                mdmSyncAppService.bootstrapModel();
+                return ApiResponse.ok("车型数据同步完成");
             case "all":
                 mdmSyncAppService.bootstrapAll();
                 return ApiResponse.ok("全量数据同步完成");
