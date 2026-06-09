@@ -2,15 +2,15 @@ package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.repository
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.BaseModelFeatureCode;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VariantFeatureCode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Variant;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehVariantRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter.BaseModelFeatureCodeConverter;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter.VariantConverter;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehBaseModelFeatureCodeMapper;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter.VariantFeatureCodeConverter;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehVariantFeatureCodeMapper;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehVariantMapper;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehBaseModelFeatureCodePo;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehVariantFeatureCodePo;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehVariantPo;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Repository;
@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
 public class VehVariantRepositoryImpl implements VehVariantRepository {
 
     private final VehVariantMapper vehVariantMapper;
-    private final VehBaseModelFeatureCodeMapper vehBaseModelFeatureCodeMapper;
+    private final VehVariantFeatureCodeMapper vehVariantFeatureCodeMapper;
 
     @Override
     public List<Variant> selectByMap(Map<String, Object> map) {
@@ -84,27 +84,27 @@ public class VehVariantRepositoryImpl implements VehVariantRepository {
     }
 
     @Override
-    public List<BaseModelFeatureCode> selectFeatureCodeByExample(BaseModelFeatureCode example) {
-        List<VehBaseModelFeatureCodePo> poList = vehBaseModelFeatureCodeMapper.selectPoByExample(BaseModelFeatureCodeConverter.INSTANCE.fromDomain(example));
-        return PageUtil.convert(poList, BaseModelFeatureCodeConverter.INSTANCE::toDomain);
+    public List<VariantFeatureCode> selectFeatureCodeByExample(VariantFeatureCode example) {
+        List<VehVariantFeatureCodePo> poList = vehVariantFeatureCodeMapper.selectPoByExample(VariantFeatureCodeConverter.INSTANCE.fromDomain(example));
+        return PageUtil.convert(poList, VariantFeatureCodeConverter.INSTANCE::toDomain);
     }
 
     @Override
-    public int batchInsertFeatureCode(List<BaseModelFeatureCode> featureCodeList) {
-        List<VehBaseModelFeatureCodePo> poList = featureCodeList.stream()
-                .map(BaseModelFeatureCodeConverter.INSTANCE::fromDomain)
+    public int batchInsertFeatureCode(List<VariantFeatureCode> featureCodeList) {
+        List<VehVariantFeatureCodePo> poList = featureCodeList.stream()
+                .map(VariantFeatureCodeConverter.INSTANCE::fromDomain)
                 .collect(Collectors.toList());
-        return vehBaseModelFeatureCodeMapper.batchInsertPo(poList);
+        return vehVariantFeatureCodeMapper.batchInsertPo(poList);
     }
 
     @Override
-    public int updateFeatureCode(BaseModelFeatureCode featureCode) {
-        return vehBaseModelFeatureCodeMapper.updatePo(BaseModelFeatureCodeConverter.INSTANCE.fromDomain(featureCode));
+    public int updateFeatureCode(VariantFeatureCode featureCode) {
+        return vehVariantFeatureCodeMapper.updatePo(VariantFeatureCodeConverter.INSTANCE.fromDomain(featureCode));
     }
 
     @Override
     public int batchPhysicalDeleteFeatureCode(Long[] ids) {
-        return vehBaseModelFeatureCodeMapper.batchPhysicalDeletePo(ids);
+        return vehVariantFeatureCodeMapper.batchPhysicalDeletePo(ids);
     }
 
 }

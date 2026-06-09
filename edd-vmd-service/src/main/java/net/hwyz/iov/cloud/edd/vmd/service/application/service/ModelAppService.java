@@ -10,7 +10,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.common.exception.ProductDataReadOnlyEx
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Model;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.CarLine;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBaseModelRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehVariantRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehModelRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehCarLineRepository;
@@ -35,7 +35,7 @@ public class ModelAppService {
 
     private final VehModelRepository vehModelRepository;
     private final VehCarLineRepository vehCarLineRepository;
-    private final VehBaseModelRepository vehBaseModelRepository;
+    private final VehVariantRepository vehVariantRepository;
     private final VehBasicInfoRepository vehBasicInfoRepository;
 
     /**
@@ -72,16 +72,16 @@ public class ModelAppService {
     }
 
     /**
-     * 检查车型下是否存在基础车型
+     * 检查车型下是否存在版本
      *
      * @param modelId 车型ID
      * @return 结果
      */
-    public Boolean checkModelBaseModelExist(Long modelId) {
+    public Boolean checkModelVariantExist(Long modelId) {
         Model model = vehModelRepository.selectById(modelId);
         Map<String, Object> map = new HashMap<>();
         map.put("modelCode", model.getCode());
-        return vehBaseModelRepository.countByMap(map) > 0;
+        return vehVariantRepository.countByMap(map) > 0;
     }
 
     /**

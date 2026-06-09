@@ -4,7 +4,7 @@ import lombok.*;
 import net.hwyz.iov.cloud.framework.common.bean.BaseRequest;
 
 /**
- * 管理后台基础车型特征值 请求
+ * 管理后台版本特征值 请求（原BaseModelFeatureCodeRequest，CR-016重命名）
  *
  * @author hwyz_leo
  */
@@ -13,7 +13,7 @@ import net.hwyz.iov.cloud.framework.common.bean.BaseRequest;
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public class BaseModelFeatureCodeRequest extends BaseRequest {
+public class VariantFeatureCodeRequest extends BaseRequest {
 
     /**
      * 主键
@@ -21,9 +21,9 @@ public class BaseModelFeatureCodeRequest extends BaseRequest {
     private Long id;
 
     /**
-     * 基础车型代码
+     * 版本代码
      */
-    private String baseModelCode;
+    private String variantCode;
 
     /**
      * 特征族代码

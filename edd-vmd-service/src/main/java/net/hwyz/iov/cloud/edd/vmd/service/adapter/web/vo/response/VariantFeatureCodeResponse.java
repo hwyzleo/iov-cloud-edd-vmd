@@ -5,7 +5,7 @@ import lombok.*;
 import java.util.Date;
 
 /**
- * 管理后台基础车型特征值 响应
+ * 管理后台版本特征值 响应（原BaseModelFeatureCodeResponse，CR-016重命名）
  *
  * @author hwyz_leo
  */
@@ -13,7 +13,7 @@ import java.util.Date;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class BaseModelFeatureCodeResponse {
+public class VariantFeatureCodeResponse {
 
     /**
      * 主键
@@ -21,9 +21,9 @@ public class BaseModelFeatureCodeResponse {
     private Long id;
 
     /**
-     * 基础车型代码
+     * 版本代码
      */
-    private String baseModelCode;
+    private String variantCode;
 
     /**
      * 特征族代码

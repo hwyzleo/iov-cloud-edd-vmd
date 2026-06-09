@@ -1,7 +1,7 @@
 package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter;
 
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.BaseModelFeatureCode;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehBaseModelFeatureCodePo;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VariantFeatureCode;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehVariantFeatureCodePo;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.factory.Mappers;
@@ -9,14 +9,14 @@ import org.mapstruct.factory.Mappers;
 import java.util.List;
 
 /**
- * 基础车型特征关系领域对象转换器
+ * 版本特征关系领域对象转换器（原BaseModelFeatureCodeConverter，CR-016重命名）
  *
  * @author hwyz_leo
  */
 @Mapper
-public interface BaseModelFeatureCodeConverter {
+public interface VariantFeatureCodeConverter {
 
-    BaseModelFeatureCodeConverter INSTANCE = Mappers.getMapper(BaseModelFeatureCodeConverter.class);
+    VariantFeatureCodeConverter INSTANCE = Mappers.getMapper(VariantFeatureCodeConverter.class);
 
     /**
      * PO 转领域对象
@@ -26,7 +26,7 @@ public interface BaseModelFeatureCodeConverter {
      */
     @Mapping(target = "familyName", ignore = true)
     @Mapping(target = "featureName", ignore = true)
-    BaseModelFeatureCode toDomain(VehBaseModelFeatureCodePo po);
+    VariantFeatureCode toDomain(VehVariantFeatureCodePo po);
 
     /**
      * PO 列表转领域对象列表
@@ -34,7 +34,7 @@ public interface BaseModelFeatureCodeConverter {
      * @param poList PO 列表
      * @return 领域对象列表
      */
-    List<BaseModelFeatureCode> toDomainList(List<VehBaseModelFeatureCodePo> poList);
+    List<VariantFeatureCode> toDomainList(List<VehVariantFeatureCodePo> poList);
 
     /**
      * 领域对象转 PO
@@ -42,5 +42,5 @@ public interface BaseModelFeatureCodeConverter {
      * @param domain 领域对象
      * @return PO
      */
-    VehBaseModelFeatureCodePo fromDomain(BaseModelFeatureCode domain);
+    VehVariantFeatureCodePo fromDomain(VariantFeatureCode domain);
 }

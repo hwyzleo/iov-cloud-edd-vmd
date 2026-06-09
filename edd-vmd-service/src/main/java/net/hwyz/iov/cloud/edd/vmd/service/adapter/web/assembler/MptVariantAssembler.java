@@ -1,13 +1,13 @@
 package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler;
 
-import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.BaseModelFeatureCodeRequest;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.VariantFeatureCodeRequest;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.VariantRequest;
-import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.BaseModelFeatureCodeResponse;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.VariantFeatureCodeResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.VariantResponse;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.BaseModelFeatureCodeCmd;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.VariantCmd;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.BaseModelFeatureCodeDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.VariantFeatureCodeCmd;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.VariantDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.VariantFeatureCodeDto;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 
@@ -50,25 +50,25 @@ public interface MptVariantAssembler {
     /**
      * 特征值 DTO 转 Response
      *
-     * @param baseModelFeatureCodeDto 特征值 DTO
+     * @param variantFeatureCodeDto 特征值 DTO
      * @return 特征值 Response
      */
-    BaseModelFeatureCodeResponse fromFeatureCodeDto(BaseModelFeatureCodeDto baseModelFeatureCodeDto);
+    VariantFeatureCodeResponse fromFeatureCodeDto(VariantFeatureCodeDto variantFeatureCodeDto);
 
     /**
      * 特征值 Request 转命令
      *
-     * @param baseModelFeatureCodeRequest 特征值 Request
+     * @param variantFeatureCodeRequest 特征值 Request
      * @return 特征值命令
      */
-    BaseModelFeatureCodeCmd toFeatureCodeCmd(BaseModelFeatureCodeRequest baseModelFeatureCodeRequest);
+    VariantFeatureCodeCmd toFeatureCodeCmd(VariantFeatureCodeRequest variantFeatureCodeRequest);
 
     /**
      * 特征值 DTO 列表转 Response 列表
      *
-     * @param baseModelFeatureCodeDtoList 特征值 DTO 列表
+     * @param variantFeatureCodeDtoList 特征值 DTO 列表
      * @return 特征值 Response 列表
      */
-    List<BaseModelFeatureCodeResponse> fromFeatureCodeDtoList(List<BaseModelFeatureCodeDto> baseModelFeatureCodeDtoList);
+    List<VariantFeatureCodeResponse> fromFeatureCodeDtoList(List<VariantFeatureCodeDto> variantFeatureCodeDtoList);
 
 }

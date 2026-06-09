@@ -7,7 +7,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.common.exception.ProductDataReadOnlyEx
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Model;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.CarLine;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBaseModelRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehVariantRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehModelRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehCarLineRepository;
@@ -43,7 +43,7 @@ class ModelAppServiceTest {
     private VehCarLineRepository vehCarLineRepository;
 
     @Mock
-    private VehBaseModelRepository vehBaseModelRepository;
+    private VehVariantRepository vehVariantRepository;
 
     @Mock
     private VehBasicInfoRepository vehBasicInfoRepository;
@@ -148,41 +148,41 @@ class ModelAppServiceTest {
     }
 
     @Test
-    @DisplayName("checkModelBaseModelExist应返回true当车型下有基础车型时")
-    void checkModelBaseModelExist_shouldReturnTrueWhenBaseModelsExist() {
+    @DisplayName("checkModelVariantExist应返回true当车型下有版本时")
+    void checkModelVariantExist_shouldReturnTrueWhenVariantsExist() {
         // Given
         Long modelId = 1L;
         Model model = Model.builder().id(modelId).code("MODEL001").build();
 
         when(vehModelRepository.selectById(modelId)).thenReturn(model);
-        when(vehBaseModelRepository.countByMap(any(Map.class))).thenReturn(5);
+        when(vehVariantRepository.countByMap(any(Map.class))).thenReturn(5);
 
         // When
-        Boolean result = modelAppService.checkModelBaseModelExist(modelId);
+        Boolean result = modelAppService.checkModelVariantExist(modelId);
 
         // Then
         assertTrue(result);
         verify(vehModelRepository).selectById(modelId);
-        verify(vehBaseModelRepository).countByMap(any(Map.class));
+        verify(vehVariantRepository).countByMap(any(Map.class));
     }
 
     @Test
-    @DisplayName("checkModelBaseModelExist应返回false当车型下无基础车型时")
-    void checkModelBaseModelExist_shouldReturnFalseWhenNoBaseModels() {
+    @DisplayName("checkModelVariantExist应返回false当车型下无版本时")
+    void checkModelVariantExist_shouldReturnFalseWhenNoVariants() {
         // Given
         Long modelId = 1L;
         Model model = Model.builder().id(modelId).code("MODEL001").build();
 
         when(vehModelRepository.selectById(modelId)).thenReturn(model);
-        when(vehBaseModelRepository.countByMap(any(Map.class))).thenReturn(0);
+        when(vehVariantRepository.countByMap(any(Map.class))).thenReturn(0);
 
         // When
-        Boolean result = modelAppService.checkModelBaseModelExist(modelId);
+        Boolean result = modelAppService.checkModelVariantExist(modelId);
 
         // Then
         assertFalse(result);
         verify(vehModelRepository).selectById(modelId);
-        verify(vehBaseModelRepository).countByMap(any(Map.class));
+        verify(vehVariantRepository).countByMap(any(Map.class));
     }
 
     @Test

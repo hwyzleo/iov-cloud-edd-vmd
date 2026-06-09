@@ -10,7 +10,7 @@ import lombok.experimental.SuperBuilder;
 
 /**
  * <p>
- * 车辆基础车型特征值关系表 持久化对象
+ * 车辆版本特征值关系表 持久化对象（原VehBaseModelFeatureCodePo，CR-016重命名）
  * </p>
  *
  * @author hwyz_leo
@@ -22,7 +22,7 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @AllArgsConstructor
 @TableName("tb_veh_base_model_feature_code")
-public class VehBaseModelFeatureCodePo extends BasePo {
+public class VehVariantFeatureCodePo extends BasePo {
 
     private static final long serialVersionUID = 1L;
 
@@ -31,12 +31,6 @@ public class VehBaseModelFeatureCodePo extends BasePo {
      */
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
-
-    /**
-     * 基础车型代码
-     */
-    @TableField("base_model_code")
-    private String baseModelCode;
 
     /**
      * 版本代码

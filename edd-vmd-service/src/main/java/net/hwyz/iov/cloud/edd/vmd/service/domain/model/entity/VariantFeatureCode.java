@@ -9,7 +9,7 @@ import net.hwyz.iov.cloud.framework.common.domain.DomainObj;
 import java.time.Instant;
 
 /**
- * 基础车型特征值关系领域对象
+ * 版本特征值关系领域对象（原BaseModelFeatureCode，CR-016重命名）
  *
  * @author hwyz_leo
  */
@@ -17,7 +17,7 @@ import java.time.Instant;
 @Getter
 @Setter
 @SuperBuilder
-public class BaseModelFeatureCode implements DomainObj<BaseModelFeatureCode> {
+public class VariantFeatureCode implements DomainObj<VariantFeatureCode> {
 
     /**
      * 主键
@@ -25,25 +25,9 @@ public class BaseModelFeatureCode implements DomainObj<BaseModelFeatureCode> {
     private Long id;
 
     /**
-     * 版本代码（原baseModelCode，CR-016重命名）
+     * 版本代码
      */
     private String variantCode;
-
-    /**
-     * @deprecated Use {@link #getVariantCode()} instead. Kept for backward compatibility.
-     */
-    @Deprecated
-    public String getBaseModelCode() {
-        return variantCode;
-    }
-
-    /**
-     * @deprecated Use {@link #setVariantCode(String)} instead. Kept for backward compatibility.
-     */
-    @Deprecated
-    public void setBaseModelCode(String baseModelCode) {
-        this.variantCode = baseModelCode;
-    }
 
     /**
      * 特征族代码

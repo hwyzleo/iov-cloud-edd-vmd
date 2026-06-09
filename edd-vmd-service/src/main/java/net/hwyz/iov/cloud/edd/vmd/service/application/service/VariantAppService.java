@@ -3,18 +3,18 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 import cn.hutool.core.util.ObjUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.BaseModelFeatureCodeAssembler;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.VariantAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.BaseModelFeatureCodeCmd;
+import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.VariantFeatureCodeAssembler;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.VariantCmd;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.VariantFeatureCodeCmd;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.VariantQuery;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.BaseModelFeatureCodeDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.OptionCodeDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.OptionFamilyDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.VariantDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.VariantFeatureCodeDto;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.ProductDataReadOnlyException;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.BaseModelFeatureCode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Variant;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VariantFeatureCode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehConfigurationRepository;
@@ -181,13 +181,13 @@ public class VariantAppService {
      * @param familyCode  特征族编码
      * @return 版本特征关系列表
      */
-    public List<BaseModelFeatureCodeDto> searchFeatureCode(String variantCode, String familyCode) {
-        BaseModelFeatureCode example = BaseModelFeatureCode.builder()
+    public List<VariantFeatureCodeDto> searchFeatureCode(String variantCode, String familyCode) {
+        VariantFeatureCode example = VariantFeatureCode.builder()
                 .variantCode(variantCode)
                 .familyCode(familyCode)
                 .build();
-        List<BaseModelFeatureCode> list = vehVariantRepository.selectFeatureCodeByExample(example);
-        List<BaseModelFeatureCodeDto> dtoList = PageUtil.convert(list, BaseModelFeatureCodeAssembler.INSTANCE::fromDomain);
+        List<VariantFeatureCode> list = vehVariantRepository.selectFeatureCodeByExample(example);
+        List<VariantFeatureCodeDto> dtoList = PageUtil.convert(list, VariantFeatureCodeAssembler.INSTANCE::fromDomain);
         dtoList.forEach(dto -> {
             OptionFamilyDto optionFamily = optionFamilyAppService.getOptionFamilyByCode(dto.getFamilyCode());
             if (optionFamily != null) {
@@ -214,9 +214,9 @@ public class VariantAppService {
      * @param id 主键ID
      * @return 版本特征关系信息
      */
-    public BaseModelFeatureCodeDto getVariantFeatureCodeById(Long id) {
-        List<BaseModelFeatureCode> list = vehVariantRepository.selectFeatureCodeByExample(BaseModelFeatureCode.builder().id(id).build());
-        return list.isEmpty() ? null : BaseModelFeatureCodeAssembler.INSTANCE.fromDomain(list.get(0));
+    public VariantFeatureCodeDto getVariantFeatureCodeById(Long id) {
+        List<VariantFeatureCode> list = vehVariantRepository.selectFeatureCodeByExample(VariantFeatureCode.builder().id(id).build());
+        return list.isEmpty() ? null : VariantFeatureCodeAssembler.INSTANCE.fromDomain(list.get(0));
     }
 
     /**
@@ -231,7 +231,7 @@ public class VariantAppService {
         if (ObjUtil.isNull(id)) {
             id = -1L;
         }
-        List<BaseModelFeatureCode> list = vehVariantRepository.selectFeatureCodeByExample(BaseModelFeatureCode.builder()
+        List<VariantFeatureCode> list = vehVariantRepository.selectFeatureCodeByExample(VariantFeatureCode.builder()
                 .variantCode(variantCode)
                 .familyCode(familyCode)
                 .build());
@@ -244,8 +244,8 @@ public class VariantAppService {
      * @param featureCodeCmd 版本特征关系信息
      * @return 结果
      */
-    public int createVariantFeatureCode(BaseModelFeatureCodeCmd featureCodeCmd) {
-        BaseModelFeatureCode featureCode = BaseModelFeatureCodeAssembler.INSTANCE.toDomain(featureCodeCmd);
+    public int createVariantFeatureCode(VariantFeatureCodeCmd featureCodeCmd) {
+        VariantFeatureCode featureCode = VariantFeatureCodeAssembler.INSTANCE.toDomain(featureCodeCmd);
         return vehVariantRepository.batchInsertFeatureCode(List.of(featureCode));
     }
 
@@ -255,8 +255,8 @@ public class VariantAppService {
      * @param featureCodeCmd 版本特征关系信息
      * @return 结果
      */
-    public int modifyVariantFeatureCode(BaseModelFeatureCodeCmd featureCodeCmd) {
-        BaseModelFeatureCode featureCode = BaseModelFeatureCodeAssembler.INSTANCE.toDomain(featureCodeCmd);
+    public int modifyVariantFeatureCode(VariantFeatureCodeCmd featureCodeCmd) {
+        VariantFeatureCode featureCode = VariantFeatureCodeAssembler.INSTANCE.toDomain(featureCodeCmd);
         return vehVariantRepository.updateFeatureCode(featureCode);
     }
 
