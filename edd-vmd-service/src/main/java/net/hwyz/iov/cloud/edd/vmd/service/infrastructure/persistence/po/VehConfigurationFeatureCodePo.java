@@ -14,15 +14,15 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @AllArgsConstructor
 @TableName("tb_veh_build_config_feature_code")
-public class VehBuildConfigFeatureCodePo extends BasePo {
+public class VehConfigurationFeatureCodePo extends BasePo {
 
     private static final long serialVersionUID = 1L;
 
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
-    @TableField("build_config_code")
-    private String buildConfigCode;
+    @TableField("configuration_code")
+    private String configurationCode;
 
     @TableField("family_code")
     private String familyCode;

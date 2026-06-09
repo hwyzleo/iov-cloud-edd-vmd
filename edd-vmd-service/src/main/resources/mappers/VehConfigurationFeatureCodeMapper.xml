@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehBuildConfigFeatureCodeMapper">
+<mapper namespace="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehConfigurationFeatureCodeMapper">
 
-    <resultMap id="baseResultMap" type="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehBuildConfigFeatureCodePo">
+    <resultMap id="baseResultMap" type="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehConfigurationFeatureCodePo">
         <id column="id" property="id" />
         <result column="description" property="description" />
         <result column="create_time" property="createTime" />
@@ -11,46 +11,46 @@
         <result column="modify_by" property="modifyBy" />
         <result column="row_version" property="rowVersion" />
         <result column="row_valid" property="rowValid" />
-        <result column="build_config_code" property="buildConfigCode" />
+        <result column="configuration_code" property="configurationCode" />
         <result column="family_code" property="familyCode" />
         <result column="feature_code" property="featureCode" />
         <result column="feature_type" property="featureType" />
     </resultMap>
 
     <sql id="baseColumnList">
-        id, build_config_code, family_code, feature_code, feature_type,
+        id, configuration_code, family_code, feature_code, feature_type,
         description, create_time, create_by, modify_time, modify_by, row_version, row_valid
     </sql>
 
     <insert id="insertPo" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO tb_veh_build_config_feature_code (
-            id, build_config_code, family_code, feature_code, feature_type,
+            id, configuration_code, family_code, feature_code, feature_type,
             description, create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
         VALUES (
-            #{id}, #{buildConfigCode}, #{familyCode}, #{featureCode}, #{featureType},
+            #{id}, #{configurationCode}, #{familyCode}, #{featureCode}, #{featureType},
             #{description}, now(), #{createBy}, now(), #{modifyBy}, 1, 1
         )
     </insert>
 
     <insert id="batchInsertPo" useGeneratedKeys="true" keyProperty="id" parameterType="java.util.List">
         INSERT INTO tb_veh_build_config_feature_code (
-            id, build_config_code, family_code, feature_code, feature_type,
+            id, configuration_code, family_code, feature_code, feature_type,
             description, create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
         VALUES
         <foreach collection="list" item="item" index="index" separator=",">
         (
-            #{item.id}, #{item.buildConfigCode}, #{item.familyCode}, #{item.featureCode}, #{item.featureType},
+            #{item.id}, #{item.configurationCode}, #{item.familyCode}, #{item.featureCode}, #{item.featureType},
             #{item.description}, now(), #{item.createBy}, now(), #{item.modifyBy}, 1, 1
         )
         </foreach>
     </insert>
 
-    <update id="updatePo" parameterType="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehBuildConfigFeatureCodePo">
+    <update id="updatePo" parameterType="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehConfigurationFeatureCodePo">
         UPDATE tb_veh_build_config_feature_code t SET
-        <if test="buildConfigCode != null and buildConfigCode != ''">
-            t.build_config_code = #{buildConfigCode},
+        <if test="configurationCode != null and configurationCode != ''">
+            t.configuration_code = #{configurationCode},
         </if>
         <if test="familyCode != null and familyCode != ''">
             t.family_code = #{familyCode},
@@ -100,15 +100,15 @@
         AND t.row_valid = 1
     </select>
 
-    <select id="selectPoByExample" parameterType="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehBuildConfigFeatureCodePo" resultMap="baseResultMap">
+    <select id="selectPoByExample" parameterType="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehConfigurationFeatureCodePo" resultMap="baseResultMap">
         SELECT <include refid="baseColumnList"/>
         FROM tb_veh_build_config_feature_code t
         WHERE t.row_valid = 1
         <if test="id != null">
             AND t.id = #{id}
         </if>
-        <if test="buildConfigCode != null and buildConfigCode != ''">
-            AND t.build_config_code = #{buildConfigCode}
+        <if test="configurationCode != null and configurationCode != ''">
+            AND t.configuration_code = #{configurationCode}
         </if>
         <if test="familyCode != null and familyCode != ''">
             AND t.family_code = #{familyCode}
@@ -144,17 +144,17 @@
         SELECT <include refid="baseColumnList"/>
         FROM tb_veh_build_config_feature_code t
         WHERE t.row_valid = 1
-        <if test="buildConfigCode != null and buildConfigCode != ''">
-            AND t.build_config_code = #{buildConfigCode}
+        <if test="configurationCode != null and configurationCode != ''">
+            AND t.configuration_code = #{configurationCode}
         </if>
         ORDER BY t.family_code ASC
     </select>
 
-    <select id="selectPoByBuildConfigCodeAndFamilyCode" parameterType="java.util.Map" resultMap="baseResultMap">
+    <select id="selectPoByConfigurationCodeAndFamilyCode" parameterType="java.util.Map" resultMap="baseResultMap">
         SELECT <include refid="baseColumnList"/>
         FROM tb_veh_build_config_feature_code t
         WHERE t.row_valid = 1
-        AND t.build_config_code = #{buildConfigCode}
+        AND t.configuration_code = #{configurationCode}
         AND t.family_code = #{familyCode}
         LIMIT 1
     </select>
@@ -165,8 +165,8 @@
         WHERE t.row_valid = 1
     </select>
 
-    <select id="selectBuildConfigCodeByFeatureCodeMap" parameterType="java.util.Map" resultType="java.lang.String">
-        SELECT t.build_config_code
+    <select id="selectConfigurationCodeByFeatureCodeMap" parameterType="java.util.Map" resultType="java.lang.String">
+        SELECT t.configuration_code
         FROM tb_veh_build_config_feature_code t
         WHERE t.row_valid = 1
         AND (
@@ -174,7 +174,7 @@
             (t.family_code = #{familyCode} AND FIND_IN_SET(#{featureCode}, t.feature_code) > 0)
         </foreach>
         )
-        GROUP BY t.build_config_code
+        GROUP BY t.configuration_code
         HAVING COUNT(DISTINCT t.family_code) = #{familyCount}
     </select>
 </mapper>

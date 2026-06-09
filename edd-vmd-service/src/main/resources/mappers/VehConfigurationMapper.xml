@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
-<mapper namespace="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehBuildConfigMapper">
+<mapper namespace="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehConfigurationMapper">
 
-    <resultMap id="baseResultMap" type="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehBuildConfigPo">
+    <resultMap id="baseResultMap" type="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehConfigurationPo">
         <id column="id" property="id" />
         <result column="description" property="description" />
         <result column="create_time" property="createTime" />
@@ -21,40 +21,50 @@
         <result column="vehicle_stage_code" property="vehicleStageCode" />
         <result column="enable" property="enable" />
         <result column="sort" property="sort" />
+        <result column="variant_code" property="variantCode" />
+        <result column="source" property="source" />
+        <result column="external_ref_id" property="externalRefId" />
+        <result column="external_version" property="externalVersion" />
+        <result column="last_sync_time" property="lastSyncTime" />
     </resultMap>
 
     <sql id="baseColumnList">
         id, platform_code, car_line_code, model_code, base_model_code, code, name, name_en, vehicle_stage_code, enable, sort,
+        variant_code, source, external_ref_id, external_version, last_sync_time,
         description, create_time, create_by, modify_time, modify_by, row_version, row_valid
     </sql>
 
     <insert id="insertPo" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO tb_veh_build_config (
+        INSERT INTO tb_veh_configuration (
             id, platform_code, car_line_code, model_code, base_model_code, code, name, name_en, vehicle_stage_code, enable, sort,
+            variant_code, source, external_ref_id, external_version, last_sync_time,
             description, create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
         VALUES (
             #{id}, #{platformCode}, #{carLineCode}, #{modelCode}, #{baseModelCode}, #{code}, #{name}, #{nameEn}, #{vehicleStageCode}, #{enable}, #{sort},
+            #{variantCode}, #{source}, #{externalRefId}, #{externalVersion}, #{lastSyncTime},
             #{description}, now(), #{createBy}, now(), #{modifyBy}, 1, 1
         )
     </insert>
 
     <insert id="batchInsertPo" useGeneratedKeys="true" keyProperty="id" parameterType="java.util.List">
-        INSERT INTO tb_veh_build_config (
+        INSERT INTO tb_veh_configuration (
             id, platform_code, car_line_code, model_code, base_model_code, code, name, name_en, vehicle_stage_code, enable, sort,
+            variant_code, source, external_ref_id, external_version, last_sync_time,
             description, create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
         VALUES
         <foreach collection="list" item="item" index="index" separator=",">
         (
             #{item.id}, #{item.platformCode}, #{item.carLineCode}, #{item.modelCode}, #{item.baseModelCode}, #{item.code}, #{item.name}, #{item.nameEn}, #{item.vehicleStageCode}, #{item.enable}, #{item.sort},
+            #{item.variantCode}, #{item.source}, #{item.externalRefId}, #{item.externalVersion}, #{item.lastSyncTime},
             #{item.description}, now(), #{item.createBy}, now(), #{item.modifyBy}, 1, 1
         )
         </foreach>
     </insert>
 
-    <update id="updatePo" parameterType="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehBuildConfigPo">
-        UPDATE tb_veh_build_config t SET
+    <update id="updatePo" parameterType="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehConfigurationPo">
+        UPDATE tb_veh_configuration t SET
         <if test="name != null and name != ''">
             t.name = #{name},
         </if>
@@ -70,6 +80,21 @@
         <if test="sort != null">
             t.sort = #{sort},
         </if>
+        <if test="variantCode != null and variantCode != ''">
+            t.variant_code = #{variantCode},
+        </if>
+        <if test="source != null and source != ''">
+            t.source = #{source},
+        </if>
+        <if test="externalRefId != null and externalRefId != ''">
+            t.external_ref_id = #{externalRefId},
+        </if>
+        <if test="externalVersion != null">
+            t.external_version = #{externalVersion},
+        </if>
+        <if test="lastSyncTime != null">
+            t.last_sync_time = #{lastSyncTime},
+        </if>
         <if test="description != null and description != ''">
             t.description = #{description},
         </if>
@@ -82,7 +107,7 @@
     </update>
 
     <update id="logicalDeletePo" parameterType="Long">
-        UPDATE tb_veh_build_config t SET
+        UPDATE tb_veh_configuration t SET
         t.row_version = t.row_version + 1,
         t.modify_time = now(),
         t.row_valid = 0
@@ -90,12 +115,12 @@
     </update>
 
     <delete id="physicalDeletePo" parameterType="Long">
-        DELETE FROM tb_veh_build_config t
+        DELETE FROM tb_veh_configuration t
         WHERE t.id = #{value}
     </delete>
 
     <delete id="batchPhysicalDeletePo" parameterType="Long">
-        DELETE FROM tb_veh_build_config t
+        DELETE FROM tb_veh_configuration t
         WHERE t.id IN
         <foreach collection="array" item="id" open="(" separator="," close=")">
             #{id}
@@ -104,14 +129,14 @@
 
     <select id="selectPoById" parameterType="Long" resultMap="baseResultMap">
         SELECT <include refid="baseColumnList"/>
-        FROM tb_veh_build_config t
+        FROM tb_veh_configuration t
         WHERE t.id = #{value}
         AND t.row_valid = 1
     </select>
 
-    <select id="selectPoByExample" parameterType="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehBuildConfigPo" resultMap="baseResultMap">
+    <select id="selectPoByExample" parameterType="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehConfigurationPo" resultMap="baseResultMap">
         SELECT <include refid="baseColumnList"/>
-        FROM tb_veh_build_config t
+        FROM tb_veh_configuration t
         WHERE t.row_valid = 1
         <if test="id != null">
             AND t.id = #{id}
@@ -146,6 +171,18 @@
         <if test="sort != null">
             AND t.sort = #{sort}
         </if>
+        <if test="variantCode != null and variantCode != ''">
+            AND t.variant_code = #{variantCode}
+        </if>
+        <if test="source != null and source != ''">
+            AND t.source = #{source}
+        </if>
+        <if test="externalRefId != null and externalRefId != ''">
+            AND t.external_ref_id = #{externalRefId}
+        </if>
+        <if test="externalVersion != null">
+            AND t.external_version = #{externalVersion}
+        </if>
         <if test="description != null and description != ''">
             AND t.description = #{description}
         </if>
@@ -169,7 +206,7 @@
 
     <select id="selectPoByMap" parameterType="java.util.Map" resultMap="baseResultMap">
         SELECT <include refid="baseColumnList"/>
-        FROM tb_veh_build_config t
+        FROM tb_veh_configuration t
         WHERE t.row_valid = 1
         <if test="platformCode != null and platformCode != ''">
             AND t.platform_code = #{platformCode}
@@ -200,7 +237,7 @@
 
     <select id="selectPoByCode" parameterType="java.util.Map" resultMap="baseResultMap">
         SELECT <include refid="baseColumnList"/>
-        FROM tb_veh_build_config t
+        FROM tb_veh_configuration t
         WHERE t.row_valid = 1
         AND t.code = #{code}
         LIMIT 1
@@ -208,7 +245,7 @@
 
     <select id="countPoByMap" parameterType="java.util.Map" resultType="int">
         SELECT COUNT(*)
-        FROM tb_veh_build_config t
+        FROM tb_veh_configuration t
         WHERE t.row_valid = 1
         <if test="platformCode != null and platformCode != ''">
             AND t.platform_code = #{platformCode}

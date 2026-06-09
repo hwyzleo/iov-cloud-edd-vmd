@@ -11,13 +11,15 @@ import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import net.hwyz.iov.cloud.framework.mysql.po.BasePo;
 
+import java.time.LocalDateTime;
+
 @Getter
 @Setter
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("tb_veh_build_config")
-public class VehBuildConfigPo extends BasePo {
+@TableName("tb_veh_configuration")
+public class VehConfigurationPo extends BasePo {
 
     private static final long serialVersionUID = 1L;
 
@@ -56,4 +58,16 @@ public class VehBuildConfigPo extends BasePo {
 
     @TableField("variant_code")
     private String variantCode;
+
+    @TableField("source")
+    private String source;
+
+    @TableField("external_ref_id")
+    private String externalRefId;
+
+    @TableField("external_version")
+    private Long externalVersion;
+
+    @TableField("last_sync_time")
+    private LocalDateTime lastSyncTime;
 }

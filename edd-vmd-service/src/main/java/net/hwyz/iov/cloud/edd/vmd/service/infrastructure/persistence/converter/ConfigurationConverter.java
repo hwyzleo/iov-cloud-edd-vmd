@@ -1,9 +1,8 @@
 package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter;
 
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Configuration;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehBuildConfigPo;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehConfigurationPo;
 import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
 import org.mapstruct.factory.Mappers;
 
 import java.util.List;
@@ -14,25 +13,25 @@ import java.util.List;
  * @author hwyz_leo
  */
 @Mapper
-public interface BuildConfigConverter {
+public interface ConfigurationConverter {
 
-    BuildConfigConverter INSTANCE = Mappers.getMapper(BuildConfigConverter.class);
+    ConfigurationConverter INSTANCE = Mappers.getMapper(ConfigurationConverter.class);
 
     /**
      * PO 转领域对象
      *
-     * @param vehBuildConfigPo PO
+     * @param vehConfigurationPo PO
      * @return 领域对象
      */
-    Configuration toDomain(VehBuildConfigPo vehBuildConfigPo);
+    Configuration toDomain(VehConfigurationPo vehConfigurationPo);
 
     /**
      * PO 列表转领域对象列表
      *
-     * @param vehBuildConfigPoList PO 列表
+     * @param vehConfigurationPoList PO 列表
      * @return 领域对象列表
      */
-    List<Configuration> toDomainList(List<VehBuildConfigPo> vehBuildConfigPoList);
+    List<Configuration> toDomainList(List<VehConfigurationPo> vehConfigurationPoList);
 
     /**
      * 领域对象转 PO
@@ -40,5 +39,5 @@ public interface BuildConfigConverter {
      * @param configuration 领域对象
      * @return PO
      */
-    VehBuildConfigPo fromDomain(Configuration configuration);
+    VehConfigurationPo fromDomain(Configuration configuration);
 }

@@ -7,7 +7,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.common.exception.ProductDataReadOnlyEx
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Variant;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBuildConfigRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehConfigurationRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehVariantRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -35,7 +35,7 @@ class VariantAppServiceTest {
     private VehBasicInfoRepository vehBasicInfoRepository;
 
     @Mock
-    private VehBuildConfigRepository vehBuildConfigRepository;
+    private VehConfigurationRepository vehBuildConfigRepository;
 
     @Mock
     private FeatureFamilyAppService featureFamilyAppService;
