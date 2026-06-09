@@ -17,7 +17,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.BaseModel;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.BaseModelFeatureCode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBaseModelRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBuildConfigRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehConfigurationRepository;
 import net.hwyz.iov.cloud.framework.common.util.ParamHelper;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Service;
@@ -39,7 +39,7 @@ public class BaseModelAppService {
 
     private final VehBaseModelRepository vehBaseModelRepository;
     private final VehBasicInfoRepository vehBasicInfoRepository;
-    private final VehBuildConfigRepository vehBuildConfigRepository;
+    private final VehConfigurationRepository vehConfigurationRepository;
     private final FeatureFamilyAppService featureFamilyAppService;
 
     // ==================== 基础车型 ====================
@@ -88,7 +88,7 @@ public class BaseModelAppService {
         BaseModel baseModel = vehBaseModelRepository.selectById(baseModelId);
         Map<String, Object> map = new HashMap<>();
         map.put("baseModelCode", baseModel.getCode());
-        return vehBuildConfigRepository.countByMap(map) > 0;
+        return vehConfigurationRepository.countByMap(map) > 0;
     }
 
     /**

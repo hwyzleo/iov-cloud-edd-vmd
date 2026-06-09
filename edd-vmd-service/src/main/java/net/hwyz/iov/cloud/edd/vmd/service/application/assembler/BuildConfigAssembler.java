@@ -1,7 +1,7 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.assembler;
 
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.BuildConfigDto;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.BuildConfig;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Configuration;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.BuildConfigCmd;
@@ -21,10 +21,10 @@ public interface BuildConfigAssembler {
     /**
      * 领域对象转 DTO
      *
-     * @param buildConfig 领域对象
+     * @param configuration 领域对象
      * @return DTO
      */
-    BuildConfigDto fromDomain(BuildConfig buildConfig);
+    BuildConfigDto fromDomain(Configuration configuration);
 
     /**
      * DTO 转领域对象
@@ -32,22 +32,22 @@ public interface BuildConfigAssembler {
      * @param buildConfigDto DTO
      * @return 领域对象
      */
-    BuildConfig toDomain(BuildConfigDto buildConfigDto);
+    Configuration toDomain(BuildConfigDto buildConfigDto);
     /**
      * 命令转领域对象
      *
      * @param cmd 命令
      * @return 领域对象
      */
-    BuildConfig toDomain(BuildConfigCmd cmd);
+    Configuration toDomain(BuildConfigCmd cmd);
 
 
     /**
      * 领域对象列表转 DTO 列表
      *
-     * @param buildConfigList 领域对象列表
+     * @param configurationList 领域对象列表
      * @return DTO 列表
      */
-    List<BuildConfigDto> fromDomainList(List<BuildConfig> buildConfigList);
+    List<BuildConfigDto> fromDomainList(List<Configuration> configurationList);
 
 }

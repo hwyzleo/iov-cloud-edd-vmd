@@ -18,7 +18,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.BaseModelFeatureCo
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Variant;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBuildConfigRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehConfigurationRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehVariantRepository;
 import net.hwyz.iov.cloud.framework.common.util.ParamHelper;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
@@ -40,7 +40,7 @@ public class VariantAppService {
 
     private final VehVariantRepository vehVariantRepository;
     private final VehBasicInfoRepository vehBasicInfoRepository;
-    private final VehBuildConfigRepository vehBuildConfigRepository;
+    private final VehConfigurationRepository vehConfigurationRepository;
     private final FeatureFamilyAppService featureFamilyAppService;
 
     // ==================== 版本 ====================
@@ -89,7 +89,7 @@ public class VariantAppService {
         Variant variant = vehVariantRepository.selectById(variantId);
         Map<String, Object> map = new HashMap<>();
         map.put("variantCode", variant.getCode());
-        return vehBuildConfigRepository.countByMap(map) > 0;
+        return vehConfigurationRepository.countByMap(map) > 0;
     }
 
     /**

@@ -2,9 +2,10 @@ package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.repository
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.BuildConfig;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.BuildConfigFeatureCode;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBuildConfigRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Configuration;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.ConfigurationFeatureCode;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehConfigurationRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter.BuildConfigConverter;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter.BuildConfigFeatureCodeConverter;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehBuildConfigMapper;
@@ -21,13 +22,13 @@ import java.util.stream.Collectors;
 @Slf4j
 @Repository
 @RequiredArgsConstructor
-public class VehBuildConfigRepositoryImpl implements VehBuildConfigRepository {
+public class VehBuildConfigRepositoryImpl implements VehConfigurationRepository {
 
     private final VehBuildConfigMapper vehBuildConfigMapper;
     private final VehBuildConfigFeatureCodeMapper vehBuildConfigFeatureCodeMapper;
 
     @Override
-    public List<BuildConfig> selectByMap(Map<String, Object> map) {
+    public List<Configuration> selectByMap(Map<String, Object> map) {
         List<VehBuildConfigPo> poList = vehBuildConfigMapper.selectPoByMap(map);
         return PageUtil.convert(poList, BuildConfigConverter.INSTANCE::toDomain);
     }
@@ -38,23 +39,23 @@ public class VehBuildConfigRepositoryImpl implements VehBuildConfigRepository {
     }
 
     @Override
-    public BuildConfig selectById(Long id) {
+    public Configuration selectById(Long id) {
         return BuildConfigConverter.INSTANCE.toDomain(vehBuildConfigMapper.selectPoById(id));
     }
 
     @Override
-    public BuildConfig selectByCode(String code) {
+    public Configuration selectByCode(String code) {
         return BuildConfigConverter.INSTANCE.toDomain(vehBuildConfigMapper.selectPoByCode(code));
     }
 
     @Override
-    public int insert(BuildConfig buildConfig) {
-        return vehBuildConfigMapper.insertPo(BuildConfigConverter.INSTANCE.fromDomain(buildConfig));
+    public int insert(Configuration configuration) {
+        return vehBuildConfigMapper.insertPo(BuildConfigConverter.INSTANCE.fromDomain(configuration));
     }
 
     @Override
-    public int update(BuildConfig buildConfig) {
-        return vehBuildConfigMapper.updatePo(BuildConfigConverter.INSTANCE.fromDomain(buildConfig));
+    public int update(Configuration configuration) {
+        return vehBuildConfigMapper.updatePo(BuildConfigConverter.INSTANCE.fromDomain(configuration));
     }
 
     @Override
@@ -63,19 +64,19 @@ public class VehBuildConfigRepositoryImpl implements VehBuildConfigRepository {
     }
 
     @Override
-    public List<BuildConfig> selectByExample(BuildConfig example) {
+    public List<Configuration> selectByExample(Configuration example) {
         List<VehBuildConfigPo> poList = vehBuildConfigMapper.selectPoByExample(BuildConfigConverter.INSTANCE.fromDomain(example));
         return PageUtil.convert(poList, BuildConfigConverter.INSTANCE::toDomain);
     }
 
     @Override
-    public List<BuildConfigFeatureCode> selectFeatureCodeByExample(BuildConfigFeatureCode example) {
+    public List<ConfigurationFeatureCode> selectFeatureCodeByExample(ConfigurationFeatureCode example) {
         List<VehBuildConfigFeatureCodePo> poList = vehBuildConfigFeatureCodeMapper.selectPoByExample(BuildConfigFeatureCodeConverter.INSTANCE.fromDomain(example));
         return PageUtil.convert(poList, BuildConfigFeatureCodeConverter.INSTANCE::toDomain);
     }
 
     @Override
-    public int batchInsertFeatureCode(List<BuildConfigFeatureCode> featureCodeList) {
+    public int batchInsertFeatureCode(List<ConfigurationFeatureCode> featureCodeList) {
         List<VehBuildConfigFeatureCodePo> poList = featureCodeList.stream()
                 .map(BuildConfigFeatureCodeConverter.INSTANCE::fromDomain)
                 .collect(Collectors.toList());
@@ -83,7 +84,7 @@ public class VehBuildConfigRepositoryImpl implements VehBuildConfigRepository {
     }
 
     @Override
-    public int updateFeatureCode(BuildConfigFeatureCode featureCode) {
+    public int updateFeatureCode(ConfigurationFeatureCode featureCode) {
         return vehBuildConfigFeatureCodeMapper.updatePo(BuildConfigFeatureCodeConverter.INSTANCE.fromDomain(featureCode));
     }
 
@@ -93,11 +94,26 @@ public class VehBuildConfigRepositoryImpl implements VehBuildConfigRepository {
     }
 
     @Override
-    public List<String> selectBuildConfigCodeByFeatureCodeMap(Map<String, String> featureCodeMap) {
+    public List<String> selectConfigurationCodeByFeatureCodeMap(Map<String, String> featureCodeMap) {
         Map<String, Object> params = new java.util.HashMap<>();
         params.put("featureCodeMap", featureCodeMap);
         params.put("familyCount", featureCodeMap.size());
         return vehBuildConfigFeatureCodeMapper.selectBuildConfigCodeByFeatureCodeMap(params);
+    }
+
+    @Override
+    public Configuration selectByExternalRefId(String externalRefId) {
+        return null;
+    }
+
+    @Override
+    public long countBySource(SourceType source) {
+        return 0;
+    }
+
+    @Override
+    public int updateById(Configuration configuration) {
+        return 0;
     }
 
 }

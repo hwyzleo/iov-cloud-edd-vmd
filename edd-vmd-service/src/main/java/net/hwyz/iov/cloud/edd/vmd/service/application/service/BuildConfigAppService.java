@@ -10,10 +10,10 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.BuildConfigFeat
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.FeatureCodeDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.FeatureFamilyDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.BuildConfigQuery;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.BuildConfig;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.BuildConfigFeatureCode;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Configuration;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.ConfigurationFeatureCode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBuildConfigRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehConfigurationRepository;
 import net.hwyz.iov.cloud.framework.common.util.ParamHelper;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Service;
@@ -29,7 +29,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class BuildConfigAppService {
 
-    private final VehBuildConfigRepository vehBuildConfigRepository;
+    private final VehConfigurationRepository vehConfigurationRepository;
     private final VehBasicInfoRepository vehBasicInfoRepository;
     private final FeatureFamilyAppService featureFamilyAppService;
 
@@ -44,75 +44,75 @@ public class BuildConfigAppService {
         map.put("name", ParamHelper.fuzzyQueryParam(query.getName()));
         map.put("beginTime", query.getBeginTime());
         map.put("endTime", query.getEndTime());
-        List<BuildConfig> buildConfigList = vehBuildConfigRepository.selectByMap(map);
-        return PageUtil.convert(buildConfigList, BuildConfigAssembler.INSTANCE::fromDomain);
+        List<Configuration> configurationList = vehConfigurationRepository.selectByMap(map);
+        return PageUtil.convert(configurationList, BuildConfigAssembler.INSTANCE::fromDomain);
     }
 
     public List<BuildConfigDto> getBuildConfigListByVariantCode(String variantCode) {
-        List<BuildConfig> buildConfigList = vehBuildConfigRepository.selectByExample(BuildConfig.builder()
+        List<Configuration> configurationList = vehConfigurationRepository.selectByExample(Configuration.builder()
                 .variantCode(variantCode)
                 .enable(true)
                 .build());
-        return PageUtil.convert(buildConfigList, BuildConfigAssembler.INSTANCE::fromDomain);
+        return PageUtil.convert(configurationList, BuildConfigAssembler.INSTANCE::fromDomain);
     }
 
     @Deprecated
     public List<BuildConfigDto> getBuildConfigListByBaseModelCode(String baseModelCode) {
-        List<BuildConfig> buildConfigList = vehBuildConfigRepository.selectByExample(BuildConfig.builder()
-                .baseModelCode(baseModelCode)
+        List<Configuration> configurationList = vehConfigurationRepository.selectByExample(Configuration.builder()
+                .variantCode(baseModelCode)
                 .enable(true)
                 .build());
-        return PageUtil.convert(buildConfigList, BuildConfigAssembler.INSTANCE::fromDomain);
+        return PageUtil.convert(configurationList, BuildConfigAssembler.INSTANCE::fromDomain);
     }
 
-public BuildConfigDto getBuildConfigByCode(String code) {
-        BuildConfig buildConfig = vehBuildConfigRepository.selectByCode(code);
-        return BuildConfigAssembler.INSTANCE.fromDomain(buildConfig);
+    public BuildConfigDto getBuildConfigByCode(String code) {
+        Configuration configuration = vehConfigurationRepository.selectByCode(code);
+        return BuildConfigAssembler.INSTANCE.fromDomain(configuration);
     }
 
-    public BuildConfig getBuildConfigEntityByCode(String code) {
-        return vehBuildConfigRepository.selectByCode(code);
+    public Configuration getBuildConfigEntityByCode(String code) {
+        return vehConfigurationRepository.selectByCode(code);
     }
 
     public Boolean checkCodeUnique(Long buildConfigId, String code) {
         if (ObjUtil.isNull(buildConfigId)) {
             buildConfigId = -1L;
         }
-        BuildConfig buildConfig = getBuildConfigEntityByCode(code);
-        return !ObjUtil.isNotNull(buildConfig) || buildConfig.getId().longValue() == buildConfigId.longValue();
+        Configuration configuration = getBuildConfigEntityByCode(code);
+        return !ObjUtil.isNotNull(configuration) || configuration.getId().longValue() == buildConfigId.longValue();
     }
 
     public Boolean checkBuildConfigVehicleExist(Long buildConfigId) {
-        BuildConfig buildConfig = vehBuildConfigRepository.selectById(buildConfigId);
+        Configuration configuration = vehConfigurationRepository.selectById(buildConfigId);
         Map<String, Object> map = new HashMap<>();
-        map.put("buildConfigCode", buildConfig.getCode());
+        map.put("buildConfigCode", configuration.getCode());
         return vehBasicInfoRepository.countByMap(map) > 0;
     }
 
     public BuildConfigDto getBuildConfigById(Long id) {
-        return BuildConfigAssembler.INSTANCE.fromDomain(vehBuildConfigRepository.selectById(id));
+        return BuildConfigAssembler.INSTANCE.fromDomain(vehConfigurationRepository.selectById(id));
     }
 
     public int createBuildConfig(BuildConfigCmd buildConfigCmd, String userId) {
-        BuildConfig buildConfig = BuildConfigAssembler.INSTANCE.toDomain(buildConfigCmd);
-        return vehBuildConfigRepository.insert(buildConfig);
+        Configuration configuration = BuildConfigAssembler.INSTANCE.toDomain(buildConfigCmd);
+        return vehConfigurationRepository.insert(configuration);
     }
 
     public int modifyBuildConfig(BuildConfigCmd buildConfigCmd, String userId) {
-        BuildConfig buildConfig = BuildConfigAssembler.INSTANCE.toDomain(buildConfigCmd);
-        return vehBuildConfigRepository.update(buildConfig);
+        Configuration configuration = BuildConfigAssembler.INSTANCE.toDomain(buildConfigCmd);
+        return vehConfigurationRepository.update(configuration);
     }
 
     public int deleteBuildConfigByIds(Long[] ids) {
-        return vehBuildConfigRepository.batchPhysicalDelete(ids);
+        return vehConfigurationRepository.batchPhysicalDelete(ids);
     }
 
     public List<BuildConfigFeatureCodeDto> searchFeatureCode(String buildConfigCode, String familyCode) {
-        BuildConfigFeatureCode example = BuildConfigFeatureCode.builder()
-                .buildConfigCode(buildConfigCode)
+        ConfigurationFeatureCode example = ConfigurationFeatureCode.builder()
+                .configurationCode(buildConfigCode)
                 .familyCode(familyCode)
                 .build();
-        List<BuildConfigFeatureCode> list = vehBuildConfigRepository.selectFeatureCodeByExample(example);
+        List<ConfigurationFeatureCode> list = vehConfigurationRepository.selectFeatureCodeByExample(example);
         List<BuildConfigFeatureCodeDto> dtoList = PageUtil.convert(list, BuildConfigFeatureCodeAssembler.INSTANCE::fromDomain);
         dtoList.forEach(dto -> {
             FeatureFamilyDto featureFamily = featureFamilyAppService.getFeatureFamilyByCode(dto.getFamilyCode());
@@ -135,7 +135,7 @@ public BuildConfigDto getBuildConfigByCode(String code) {
     }
 
     public BuildConfigFeatureCodeDto getBuildConfigFeatureCodeById(Long id) {
-        List<BuildConfigFeatureCode> list = vehBuildConfigRepository.selectFeatureCodeByExample(BuildConfigFeatureCode.builder().id(id).build());
+        List<ConfigurationFeatureCode> list = vehConfigurationRepository.selectFeatureCodeByExample(ConfigurationFeatureCode.builder().id(id).build());
         return list.isEmpty() ? null : BuildConfigFeatureCodeAssembler.INSTANCE.fromDomain(list.get(0));
     }
 
@@ -143,25 +143,25 @@ public BuildConfigDto getBuildConfigByCode(String code) {
         if (ObjUtil.isNull(id)) {
             id = -1L;
         }
-        List<BuildConfigFeatureCode> list = vehBuildConfigRepository.selectFeatureCodeByExample(BuildConfigFeatureCode.builder()
-                .buildConfigCode(buildConfigCode)
+        List<ConfigurationFeatureCode> list = vehConfigurationRepository.selectFeatureCodeByExample(ConfigurationFeatureCode.builder()
+                .configurationCode(buildConfigCode)
                 .familyCode(familyCode)
                 .build());
         return list.isEmpty() || list.get(0).getId().longValue() == id.longValue();
     }
 
     public int createBuildConfigFeatureCode(BuildConfigFeatureCodeCmd featureCodeCmd) {
-        BuildConfigFeatureCode featureCode = BuildConfigFeatureCodeAssembler.INSTANCE.toDomain(featureCodeCmd);
-        return vehBuildConfigRepository.batchInsertFeatureCode(List.of(featureCode));
+        ConfigurationFeatureCode featureCode = BuildConfigFeatureCodeAssembler.INSTANCE.toDomain(featureCodeCmd);
+        return vehConfigurationRepository.batchInsertFeatureCode(List.of(featureCode));
     }
 
     public int modifyBuildConfigFeatureCode(BuildConfigFeatureCodeCmd featureCodeCmd) {
-        BuildConfigFeatureCode featureCode = BuildConfigFeatureCodeAssembler.INSTANCE.toDomain(featureCodeCmd);
-        return vehBuildConfigRepository.updateFeatureCode(featureCode);
+        ConfigurationFeatureCode featureCode = BuildConfigFeatureCodeAssembler.INSTANCE.toDomain(featureCodeCmd);
+        return vehConfigurationRepository.updateFeatureCode(featureCode);
     }
 
     public int deleteBuildConfigFeatureCodeByIds(Long[] ids) {
-        return vehBuildConfigRepository.batchPhysicalDeleteFeatureCode(ids);
+        return vehConfigurationRepository.batchPhysicalDeleteFeatureCode(ids);
     }
 
 }
