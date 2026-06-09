@@ -6,7 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * 版本特征值 DTO（原BaseModelFeatureCodeDto，CR-016重命名）
+ * 版本选项值 DTO（原BaseModelFeatureCodeDto→VariantFeatureCodeDto，CR-018重命名）
  *
  * @author hwyz_leo
  */
@@ -14,15 +14,15 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class VariantFeatureCodeDto {
+public class VariantOptionCodeDto {
 
     private Long id;
     private String variantCode;
-    private String familyCode;
-    private String familyName;
-    private String[] featureCode;
-    private String[] featureName;
-    private String featureType;
+    private String optionFamilyCode;
+    private String optionFamilyName;
+    private String[] optionCode;
+    private String[] optionName;
+    private String optionType;
     private String description;
 
 }

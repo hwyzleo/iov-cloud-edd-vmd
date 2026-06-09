@@ -4,21 +4,21 @@ import cn.hutool.core.util.ObjUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.ConfigurationAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.ConfigurationFeatureCodeAssembler;
+import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.ConfigurationOptionCodeAssembler;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ConfigurationDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ConfigurationFeatureCodeDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ConfigurationOptionCodeDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.OptionCodeDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.OptionFamilyDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.ConfigurationQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Configuration;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.ConfigurationFeatureCode;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.ConfigurationOptionCode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehConfigurationRepository;
 import net.hwyz.iov.cloud.framework.common.util.ParamHelper;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Service;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.ConfigurationCmd;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.ConfigurationFeatureCodeCmd;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.ConfigurationOptionCodeCmd;
 
 import java.util.HashMap;
 import java.util.List;
@@ -107,25 +107,25 @@ public class ConfigurationAppService {
         return vehConfigurationRepository.batchPhysicalDelete(ids);
     }
 
-    public List<ConfigurationFeatureCodeDto> searchFeatureCode(String configurationCode, String familyCode) {
-        ConfigurationFeatureCode example = ConfigurationFeatureCode.builder()
+    public List<ConfigurationOptionCodeDto> searchOptionCode(String configurationCode, String optionFamilyCode) {
+        ConfigurationOptionCode example = ConfigurationOptionCode.builder()
                 .configurationCode(configurationCode)
-                .familyCode(familyCode)
+                .optionFamilyCode(optionFamilyCode)
                 .build();
-        List<ConfigurationFeatureCode> list = vehConfigurationRepository.selectFeatureCodeByExample(example);
-        List<ConfigurationFeatureCodeDto> dtoList = PageUtil.convert(list, ConfigurationFeatureCodeAssembler.INSTANCE::fromDomain);
+        List<ConfigurationOptionCode> list = vehConfigurationRepository.selectOptionCodeByExample(example);
+        List<ConfigurationOptionCodeDto> dtoList = PageUtil.convert(list, ConfigurationOptionCodeAssembler.INSTANCE::fromDomain);
         dtoList.forEach(dto -> {
-            OptionFamilyDto optionFamily = optionFamilyAppService.getOptionFamilyByCode(dto.getFamilyCode());
+            OptionFamilyDto optionFamily = optionFamilyAppService.getOptionFamilyByCode(dto.getOptionFamilyCode());
             if (optionFamily != null) {
-                dto.setFamilyName(optionFamily.getName());
+                dto.setOptionFamilyName(optionFamily.getName());
             }
-            if (dto.getFeatureCode() != null) {
-                dto.setFeatureName(new String[dto.getFeatureCode().length]);
+            if (dto.getOptionCode() != null) {
+                dto.setOptionName(new String[dto.getOptionCode().length]);
                 int i = 0;
-                for (String code : dto.getFeatureCode()) {
+                for (String code : dto.getOptionCode()) {
                     OptionCodeDto optionCode = optionFamilyAppService.getOptionCodeByCode(code);
                     if (optionCode != null) {
-                        dto.getFeatureName()[i] = optionCode.getName();
+                        dto.getOptionName()[i] = optionCode.getName();
                     }
                     i++;
                 }
@@ -134,34 +134,34 @@ public class ConfigurationAppService {
         return dtoList;
     }
 
-    public ConfigurationFeatureCodeDto getConfigurationFeatureCodeById(Long id) {
-        List<ConfigurationFeatureCode> list = vehConfigurationRepository.selectFeatureCodeByExample(ConfigurationFeatureCode.builder().id(id).build());
-        return list.isEmpty() ? null : ConfigurationFeatureCodeAssembler.INSTANCE.fromDomain(list.get(0));
+    public ConfigurationOptionCodeDto getConfigurationOptionCodeById(Long id) {
+        List<ConfigurationOptionCode> list = vehConfigurationRepository.selectOptionCodeByExample(ConfigurationOptionCode.builder().id(id).build());
+        return list.isEmpty() ? null : ConfigurationOptionCodeAssembler.INSTANCE.fromDomain(list.get(0));
     }
 
-    public Boolean checkFeatureCodeUnique(Long id, String configurationCode, String familyCode) {
+    public Boolean checkOptionCodeUnique(Long id, String configurationCode, String optionFamilyCode) {
         if (ObjUtil.isNull(id)) {
             id = -1L;
         }
-        List<ConfigurationFeatureCode> list = vehConfigurationRepository.selectFeatureCodeByExample(ConfigurationFeatureCode.builder()
+        List<ConfigurationOptionCode> list = vehConfigurationRepository.selectOptionCodeByExample(ConfigurationOptionCode.builder()
                 .configurationCode(configurationCode)
-                .familyCode(familyCode)
+                .optionFamilyCode(optionFamilyCode)
                 .build());
         return list.isEmpty() || list.get(0).getId().longValue() == id.longValue();
     }
 
-    public int createConfigurationFeatureCode(ConfigurationFeatureCodeCmd featureCodeCmd) {
-        ConfigurationFeatureCode featureCode = ConfigurationFeatureCodeAssembler.INSTANCE.toDomain(featureCodeCmd);
-        return vehConfigurationRepository.batchInsertFeatureCode(List.of(featureCode));
+    public int createConfigurationOptionCode(ConfigurationOptionCodeCmd optionCodeCmd) {
+        ConfigurationOptionCode optionCode = ConfigurationOptionCodeAssembler.INSTANCE.toDomain(optionCodeCmd);
+        return vehConfigurationRepository.batchInsertOptionCode(List.of(optionCode));
     }
 
-    public int modifyConfigurationFeatureCode(ConfigurationFeatureCodeCmd featureCodeCmd) {
-        ConfigurationFeatureCode featureCode = ConfigurationFeatureCodeAssembler.INSTANCE.toDomain(featureCodeCmd);
-        return vehConfigurationRepository.updateFeatureCode(featureCode);
+    public int modifyConfigurationOptionCode(ConfigurationOptionCodeCmd optionCodeCmd) {
+        ConfigurationOptionCode optionCode = ConfigurationOptionCodeAssembler.INSTANCE.toDomain(optionCodeCmd);
+        return vehConfigurationRepository.updateOptionCode(optionCode);
     }
 
-    public int deleteConfigurationFeatureCodeByIds(Long[] ids) {
-        return vehConfigurationRepository.batchPhysicalDeleteFeatureCode(ids);
+    public int deleteConfigurationOptionCodeByIds(Long[] ids) {
+        return vehConfigurationRepository.batchPhysicalDeleteOptionCode(ids);
     }
 
 }

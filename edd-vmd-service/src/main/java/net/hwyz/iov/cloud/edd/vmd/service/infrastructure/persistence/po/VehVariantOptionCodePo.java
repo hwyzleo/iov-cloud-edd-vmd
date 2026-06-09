@@ -8,40 +8,51 @@ import net.hwyz.iov.cloud.framework.mysql.po.BasePo;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
+/**
+ * <p>
+ * 车辆版本选项值关系表 持久化对象（原VehBaseModelFeatureCodePo→VehVariantFeatureCodePo，CR-018重命名）
+ * </p>
+ *
+ * @author hwyz_leo
+ * @since 2026-02-08
+ */
 @Getter
 @Setter
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("tb_veh_build_config_feature_code")
-public class VehConfigurationFeatureCodePo extends BasePo {
+@TableName("tb_veh_base_model_feature_code")
+public class VehVariantOptionCodePo extends BasePo {
 
     private static final long serialVersionUID = 1L;
 
+    /**
+     * 主键
+     */
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
-    @TableField("configuration_code")
-    private String configurationCode;
-
-    @TableField("family_code")
-    private String familyCode;
-
-    @TableField("feature_code")
-    private String featureCode;
-
-    @TableField("feature_type")
-    private String featureType;
+    /**
+     * 版本代码
+     */
+    @TableField("variant_code")
+    private String variantCode;
 
     /**
-     * 选项族代码(原familyCode, CR-018别名)
+     * 选项族代码(原family_code)
      */
     @TableField("option_family_code")
     private String optionFamilyCode;
 
     /**
-     * 选项值代码(原featureCode, CR-018别名)
+     * 选项值代码(原feature_code)
      */
     @TableField("option_code")
     private String optionCode;
+
+    /**
+     * 选项值类型(原feature_type)
+     */
+    @TableField("feature_type")
+    private String optionType;
 }

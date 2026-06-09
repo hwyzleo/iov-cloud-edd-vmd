@@ -4,17 +4,17 @@ import cn.hutool.core.util.ObjUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.VariantAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.VariantFeatureCodeAssembler;
+import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.VariantOptionCodeAssembler;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.VariantCmd;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.VariantFeatureCodeCmd;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.VariantOptionCodeCmd;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.VariantQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.OptionCodeDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.OptionFamilyDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.VariantDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.VariantFeatureCodeDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.VariantOptionCodeDto;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.ProductDataReadOnlyException;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Variant;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VariantFeatureCode;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VariantOptionCode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehConfigurationRepository;
@@ -172,34 +172,34 @@ public class VariantAppService {
         return vehVariantRepository.batchPhysicalDelete(ids);
     }
 
-    // ==================== 版本特征 ====================
+    // ==================== 版本选项值 ====================
 
     /**
-     * 查询版本特征关系信息
+     * 查询版本选项值关系信息
      *
-     * @param variantCode 版本编码
-     * @param familyCode  特征族编码
-     * @return 版本特征关系列表
+     * @param variantCode      版本编码
+     * @param optionFamilyCode 选项族编码
+     * @return 版本选项值关系列表
      */
-    public List<VariantFeatureCodeDto> searchFeatureCode(String variantCode, String familyCode) {
-        VariantFeatureCode example = VariantFeatureCode.builder()
+    public List<VariantOptionCodeDto> searchOptionCode(String variantCode, String optionFamilyCode) {
+        VariantOptionCode example = VariantOptionCode.builder()
                 .variantCode(variantCode)
-                .familyCode(familyCode)
+                .optionFamilyCode(optionFamilyCode)
                 .build();
-        List<VariantFeatureCode> list = vehVariantRepository.selectFeatureCodeByExample(example);
-        List<VariantFeatureCodeDto> dtoList = PageUtil.convert(list, VariantFeatureCodeAssembler.INSTANCE::fromDomain);
+        List<VariantOptionCode> list = vehVariantRepository.selectOptionCodeByExample(example);
+        List<VariantOptionCodeDto> dtoList = PageUtil.convert(list, VariantOptionCodeAssembler.INSTANCE::fromDomain);
         dtoList.forEach(dto -> {
-            OptionFamilyDto optionFamily = optionFamilyAppService.getOptionFamilyByCode(dto.getFamilyCode());
+            OptionFamilyDto optionFamily = optionFamilyAppService.getOptionFamilyByCode(dto.getOptionFamilyCode());
             if (optionFamily != null) {
-                dto.setFamilyName(optionFamily.getName());
+                dto.setOptionFamilyName(optionFamily.getName());
             }
-            if (dto.getFeatureCode() != null) {
-                dto.setFeatureName(new String[dto.getFeatureCode().length]);
+            if (dto.getOptionCode() != null) {
+                dto.setOptionName(new String[dto.getOptionCode().length]);
                 int i = 0;
-                for (String code : dto.getFeatureCode()) {
+                for (String code : dto.getOptionCode()) {
                     OptionCodeDto optionCode = optionFamilyAppService.getOptionCodeByCode(code);
                     if (optionCode != null) {
-                        dto.getFeatureName()[i] = optionCode.getName();
+                        dto.getOptionName()[i] = optionCode.getName();
                     }
                     i++;
                 }
@@ -209,65 +209,65 @@ public class VariantAppService {
     }
 
     /**
-     * 根据主键ID获取版本特征关系信息
+     * 根据主键ID获取版本选项值关系信息
      *
      * @param id 主键ID
-     * @return 版本特征关系信息
+     * @return 版本选项值关系信息
      */
-    public VariantFeatureCodeDto getVariantFeatureCodeById(Long id) {
-        List<VariantFeatureCode> list = vehVariantRepository.selectFeatureCodeByExample(VariantFeatureCode.builder().id(id).build());
-        return list.isEmpty() ? null : VariantFeatureCodeAssembler.INSTANCE.fromDomain(list.get(0));
+    public VariantOptionCodeDto getVariantOptionCodeById(Long id) {
+        List<VariantOptionCode> list = vehVariantRepository.selectOptionCodeByExample(VariantOptionCode.builder().id(id).build());
+        return list.isEmpty() ? null : VariantOptionCodeAssembler.INSTANCE.fromDomain(list.get(0));
     }
 
     /**
-     * 检查版本特征关系是否唯一
+     * 检查版本选项值关系是否唯一
      *
-     * @param id           主键ID
-     * @param variantCode  版本编码
-     * @param familyCode   特征族编码
+     * @param id               主键ID
+     * @param variantCode      版本编码
+     * @param optionFamilyCode 选项族编码
      * @return 结果
      */
-    public Boolean checkFeatureCodeUnique(Long id, String variantCode, String familyCode) {
+    public Boolean checkOptionCodeUnique(Long id, String variantCode, String optionFamilyCode) {
         if (ObjUtil.isNull(id)) {
             id = -1L;
         }
-        List<VariantFeatureCode> list = vehVariantRepository.selectFeatureCodeByExample(VariantFeatureCode.builder()
+        List<VariantOptionCode> list = vehVariantRepository.selectOptionCodeByExample(VariantOptionCode.builder()
                 .variantCode(variantCode)
-                .familyCode(familyCode)
+                .optionFamilyCode(optionFamilyCode)
                 .build());
         return list.isEmpty() || list.get(0).getId().longValue() == id.longValue();
     }
 
     /**
-     * 新增版本特征关系
+     * 新增版本选项值关系
      *
-     * @param featureCodeCmd 版本特征关系信息
+     * @param optionCodeCmd 版本选项值关系信息
      * @return 结果
      */
-    public int createVariantFeatureCode(VariantFeatureCodeCmd featureCodeCmd) {
-        VariantFeatureCode featureCode = VariantFeatureCodeAssembler.INSTANCE.toDomain(featureCodeCmd);
-        return vehVariantRepository.batchInsertFeatureCode(List.of(featureCode));
+    public int createVariantOptionCode(VariantOptionCodeCmd optionCodeCmd) {
+        VariantOptionCode optionCode = VariantOptionCodeAssembler.INSTANCE.toDomain(optionCodeCmd);
+        return vehVariantRepository.batchInsertOptionCode(List.of(optionCode));
     }
 
     /**
-     * 修改版本特征关系
+     * 修改版本选项值关系
      *
-     * @param featureCodeCmd 版本特征关系信息
+     * @param optionCodeCmd 版本选项值关系信息
      * @return 结果
      */
-    public int modifyVariantFeatureCode(VariantFeatureCodeCmd featureCodeCmd) {
-        VariantFeatureCode featureCode = VariantFeatureCodeAssembler.INSTANCE.toDomain(featureCodeCmd);
-        return vehVariantRepository.updateFeatureCode(featureCode);
+    public int modifyVariantOptionCode(VariantOptionCodeCmd optionCodeCmd) {
+        VariantOptionCode optionCode = VariantOptionCodeAssembler.INSTANCE.toDomain(optionCodeCmd);
+        return vehVariantRepository.updateOptionCode(optionCode);
     }
 
     /**
-     * 批量删除版本特征关系
+     * 批量删除版本选项值关系
      *
      * @param ids 主键ID数组
      * @return 结果
      */
-    public int deleteVariantFeatureCodeByIds(Long[] ids) {
-        return vehVariantRepository.batchPhysicalDeleteFeatureCode(ids);
+    public int deleteVariantOptionCodeByIds(Long[] ids) {
+        return vehVariantRepository.batchPhysicalDeleteOptionCode(ids);
     }
 
 }

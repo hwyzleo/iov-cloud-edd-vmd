@@ -21,7 +21,7 @@ public class VehicleModelConfigAppService {
             log.warn("选项族选项值为空，无法匹配生产配置代码");
             return null;
         }
-        List<String> buildConfigCodes = vehConfigurationRepository.selectConfigurationCodeByFeatureCodeMap(optionCodeMap);
+        List<String> buildConfigCodes = vehConfigurationRepository.selectConfigurationCodeByOptionCodeMap(optionCodeMap);
         if (buildConfigCodes == null || buildConfigCodes.isEmpty()) {
             log.warn("未匹配到任何生产配置代码，选项族选项值为[{}]", optionCodeMap);
             return null;

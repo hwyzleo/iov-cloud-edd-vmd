@@ -1,7 +1,7 @@
 package net.hwyz.iov.cloud.edd.vmd.service.domain.repository;
 
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Configuration;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.ConfigurationFeatureCode;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.ConfigurationOptionCode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 
 import java.util.List;
@@ -25,15 +25,15 @@ public interface VehConfigurationRepository {
 
     List<Configuration> selectByExample(Configuration example);
 
-    List<ConfigurationFeatureCode> selectFeatureCodeByExample(ConfigurationFeatureCode example);
+    List<ConfigurationOptionCode> selectOptionCodeByExample(ConfigurationOptionCode example);
 
-    int batchInsertFeatureCode(List<ConfigurationFeatureCode> featureCodeList);
+    int batchInsertOptionCode(List<ConfigurationOptionCode> optionCodeList);
 
-    int updateFeatureCode(ConfigurationFeatureCode featureCode);
+    int updateOptionCode(ConfigurationOptionCode optionCode);
 
-    int batchPhysicalDeleteFeatureCode(Long[] ids);
+    int batchPhysicalDeleteOptionCode(Long[] ids);
 
-    List<String> selectConfigurationCodeByFeatureCodeMap(Map<String, String> featureCodeMap);
+    List<String> selectConfigurationCodeByOptionCodeMap(Map<String, String> optionCodeMap);
 
     Configuration selectByExternalRefId(String externalRefId);
 

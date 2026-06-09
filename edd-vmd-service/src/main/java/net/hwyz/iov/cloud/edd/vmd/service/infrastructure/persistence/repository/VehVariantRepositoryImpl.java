@@ -2,15 +2,15 @@ package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.repository
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VariantFeatureCode;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VariantOptionCode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Variant;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehVariantRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter.VariantConverter;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter.VariantFeatureCodeConverter;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehVariantFeatureCodeMapper;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter.VariantOptionCodeConverter;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehVariantOptionCodeMapper;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehVariantMapper;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehVariantFeatureCodePo;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehVariantOptionCodePo;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehVariantPo;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Repository;
@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
 public class VehVariantRepositoryImpl implements VehVariantRepository {
 
     private final VehVariantMapper vehVariantMapper;
-    private final VehVariantFeatureCodeMapper vehVariantFeatureCodeMapper;
+    private final VehVariantOptionCodeMapper vehVariantOptionCodeMapper;
 
     @Override
     public List<Variant> selectByMap(Map<String, Object> map) {
@@ -84,27 +84,27 @@ public class VehVariantRepositoryImpl implements VehVariantRepository {
     }
 
     @Override
-    public List<VariantFeatureCode> selectFeatureCodeByExample(VariantFeatureCode example) {
-        List<VehVariantFeatureCodePo> poList = vehVariantFeatureCodeMapper.selectPoByExample(VariantFeatureCodeConverter.INSTANCE.fromDomain(example));
-        return PageUtil.convert(poList, VariantFeatureCodeConverter.INSTANCE::toDomain);
+    public List<VariantOptionCode> selectOptionCodeByExample(VariantOptionCode example) {
+        List<VehVariantOptionCodePo> poList = vehVariantOptionCodeMapper.selectPoByExample(VariantOptionCodeConverter.INSTANCE.fromDomain(example));
+        return PageUtil.convert(poList, VariantOptionCodeConverter.INSTANCE::toDomain);
     }
 
     @Override
-    public int batchInsertFeatureCode(List<VariantFeatureCode> featureCodeList) {
-        List<VehVariantFeatureCodePo> poList = featureCodeList.stream()
-                .map(VariantFeatureCodeConverter.INSTANCE::fromDomain)
+    public int batchInsertOptionCode(List<VariantOptionCode> optionCodeList) {
+        List<VehVariantOptionCodePo> poList = optionCodeList.stream()
+                .map(VariantOptionCodeConverter.INSTANCE::fromDomain)
                 .collect(Collectors.toList());
-        return vehVariantFeatureCodeMapper.batchInsertPo(poList);
+        return vehVariantOptionCodeMapper.batchInsertPo(poList);
     }
 
     @Override
-    public int updateFeatureCode(VariantFeatureCode featureCode) {
-        return vehVariantFeatureCodeMapper.updatePo(VariantFeatureCodeConverter.INSTANCE.fromDomain(featureCode));
+    public int updateOptionCode(VariantOptionCode optionCode) {
+        return vehVariantOptionCodeMapper.updatePo(VariantOptionCodeConverter.INSTANCE.fromDomain(optionCode));
     }
 
     @Override
-    public int batchPhysicalDeleteFeatureCode(Long[] ids) {
-        return vehVariantFeatureCodeMapper.batchPhysicalDeletePo(ids);
+    public int batchPhysicalDeleteOptionCode(Long[] ids) {
+        return vehVariantOptionCodeMapper.batchPhysicalDeletePo(ids);
     }
 
 }

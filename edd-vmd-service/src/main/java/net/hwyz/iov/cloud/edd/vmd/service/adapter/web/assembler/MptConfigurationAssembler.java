@@ -1,15 +1,15 @@
 package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler;
 
-import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.ConfigurationFeatureCodeRequest;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.ConfigurationOptionCodeRequest;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.ConfigurationRequest;
-import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.ConfigurationFeatureCodeResponse;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.ConfigurationOptionCodeResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.ConfigurationResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ConfigurationDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ConfigurationFeatureCodeDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ConfigurationOptionCodeDto;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.ConfigurationCmd;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.ConfigurationFeatureCodeCmd;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.ConfigurationOptionCodeCmd;
 
 import java.util.List;
 
@@ -26,10 +26,10 @@ public interface MptConfigurationAssembler {
 
     List<ConfigurationResponse> fromDtoList(List<ConfigurationDto> configurationDtoList);
 
-    ConfigurationFeatureCodeResponse fromFeatureCodeDto(ConfigurationFeatureCodeDto configurationFeatureCodeDto);
+    ConfigurationOptionCodeResponse fromOptionCodeDto(ConfigurationOptionCodeDto configurationOptionCodeDto);
 
-    ConfigurationFeatureCodeCmd toFeatureCodeCmd(ConfigurationFeatureCodeRequest configurationFeatureCodeRequest);
+    ConfigurationOptionCodeCmd toOptionCodeCmd(ConfigurationOptionCodeRequest configurationOptionCodeRequest);
 
-    List<ConfigurationFeatureCodeResponse> fromFeatureCodeDtoList(List<ConfigurationFeatureCodeDto> configurationFeatureCodeDtoList);
+    List<ConfigurationOptionCodeResponse> fromOptionCodeDtoList(List<ConfigurationOptionCodeDto> configurationOptionCodeDtoList);
 
 }

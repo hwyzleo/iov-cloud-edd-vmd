@@ -5,7 +5,7 @@ import lombok.*;
 import java.util.Date;
 
 /**
- * 管理后台版本特征值 响应（原BaseModelFeatureCodeResponse，CR-016重命名）
+ * 管理后台版本选项值 响应（原BaseModelFeatureCodeResponse→VariantFeatureCodeResponse，CR-018重命名）
  *
  * @author hwyz_leo
  */
@@ -13,7 +13,7 @@ import java.util.Date;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class VariantFeatureCodeResponse {
+public class VariantOptionCodeResponse {
 
     /**
      * 主键
@@ -26,29 +26,29 @@ public class VariantFeatureCodeResponse {
     private String variantCode;
 
     /**
-     * 特征族代码
+     * 选项族代码
      */
-    private String familyCode;
+    private String optionFamilyCode;
 
     /**
-     * 特征族名称
+     * 选项族名称
      */
-    private String familyName;
+    private String optionFamilyName;
 
     /**
-     * 特征值代码
+     * 选项值代码
      */
-    private String[] featureCode;
+    private String[] optionCode;
 
     /**
-     * 特征值名称
+     * 选项值名称
      */
-    private String[] featureName;
+    private String[] optionName;
 
     /**
-     * 特征值类型
+     * 选项值类型
      */
-    private String featureType;
+    private String optionType;
 
     /**
      * 创建时间

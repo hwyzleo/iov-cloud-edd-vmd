@@ -34,6 +34,9 @@ public class VmdBuildConfigResponse {
 
     private Integer sort;
 
-    private List<VmdBuildConfigFeatureCodeResponse> featureCodes;
+    /**
+     * 选项值列表（CR-018重命名，原featureCodes）
+     */
+    private List<VmdBuildConfigOptionCodeResponse> optionCodes;
 
 }

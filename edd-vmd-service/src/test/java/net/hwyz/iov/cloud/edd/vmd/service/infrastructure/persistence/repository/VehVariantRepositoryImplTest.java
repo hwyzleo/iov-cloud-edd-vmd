@@ -2,7 +2,7 @@ package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.repository
 
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Variant;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehVariantFeatureCodeMapper;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehVariantOptionCodeMapper;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehVariantMapper;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehVariantPo;
 import org.junit.jupiter.api.DisplayName;
@@ -25,7 +25,7 @@ class VehVariantRepositoryImplTest {
     private VehVariantMapper vehVariantMapper;
 
     @Mock
-    private VehVariantFeatureCodeMapper vehVariantFeatureCodeMapper;
+    private VehVariantOptionCodeMapper vehVariantOptionCodeMapper;
 
     @InjectMocks
     private VehVariantRepositoryImpl vehVariantRepositoryImpl;

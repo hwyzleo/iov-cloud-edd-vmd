@@ -1,13 +1,13 @@
 package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler;
 
-import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.VariantFeatureCodeRequest;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.VariantOptionCodeRequest;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.VariantRequest;
-import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.VariantFeatureCodeResponse;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.VariantOptionCodeResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.VariantResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.VariantCmd;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.VariantFeatureCodeCmd;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.VariantOptionCodeCmd;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.VariantDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.VariantFeatureCodeDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.VariantOptionCodeDto;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 
@@ -48,27 +48,27 @@ public interface MptVariantAssembler {
     List<VariantResponse> fromDtoList(List<VariantDto> variantDtoList);
 
     /**
-     * 特征值 DTO 转 Response
+     * 选项值 DTO 转 Response
      *
-     * @param variantFeatureCodeDto 特征值 DTO
-     * @return 特征值 Response
+     * @param variantOptionCodeDto 选项值 DTO
+     * @return 选项值 Response
      */
-    VariantFeatureCodeResponse fromFeatureCodeDto(VariantFeatureCodeDto variantFeatureCodeDto);
+    VariantOptionCodeResponse fromOptionCodeDto(VariantOptionCodeDto variantOptionCodeDto);
 
     /**
-     * 特征值 Request 转命令
+     * 选项值 Request 转命令
      *
-     * @param variantFeatureCodeRequest 特征值 Request
-     * @return 特征值命令
+     * @param variantOptionCodeRequest 选项值 Request
+     * @return 选项值命令
      */
-    VariantFeatureCodeCmd toFeatureCodeCmd(VariantFeatureCodeRequest variantFeatureCodeRequest);
+    VariantOptionCodeCmd toOptionCodeCmd(VariantOptionCodeRequest variantOptionCodeRequest);
 
     /**
-     * 特征值 DTO 列表转 Response 列表
+     * 选项值 DTO 列表转 Response 列表
      *
-     * @param variantFeatureCodeDtoList 特征值 DTO 列表
-     * @return 特征值 Response 列表
+     * @param variantOptionCodeDtoList 选项值 DTO 列表
+     * @return 选项值 Response 列表
      */
-    List<VariantFeatureCodeResponse> fromFeatureCodeDtoList(List<VariantFeatureCodeDto> variantFeatureCodeDtoList);
+    List<VariantOptionCodeResponse> fromOptionCodeDtoList(List<VariantOptionCodeDto> variantOptionCodeDtoList);
 
 }

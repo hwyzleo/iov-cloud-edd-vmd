@@ -1,6 +1,6 @@
 package net.hwyz.iov.cloud.edd.vmd.service.domain.repository;
 
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VariantFeatureCode;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VariantOptionCode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Variant;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 
@@ -95,35 +95,35 @@ public interface VehVariantRepository {
     int batchPhysicalDelete(Long[] ids);
 
     /**
-     * 根据条件查询版本特征值关系列表
+     * 根据条件查询版本选项值关系列表
      *
      * @param example 查询条件
-     * @return 版本特征值关系列表
+     * @return 版本选项值关系列表
      */
-    List<VariantFeatureCode> selectFeatureCodeByExample(VariantFeatureCode example);
+    List<VariantOptionCode> selectOptionCodeByExample(VariantOptionCode example);
 
     /**
-     * 批量新增版本特征值关系
+     * 批量新增版本选项值关系
      *
-     * @param featureCodeList 版本特征值关系列表
+     * @param optionCodeList 版本选项值关系列表
      * @return 影响行数
      */
-    int batchInsertFeatureCode(List<VariantFeatureCode> featureCodeList);
+    int batchInsertOptionCode(List<VariantOptionCode> optionCodeList);
 
     /**
-     * 修改版本特征值关系
+     * 修改版本选项值关系
      *
-     * @param featureCode 版本特征值关系
+     * @param optionCode 版本选项值关系
      * @return 影响行数
      */
-    int updateFeatureCode(VariantFeatureCode featureCode);
+    int updateOptionCode(VariantOptionCode optionCode);
 
     /**
-     * 批量物理删除基础车型特征值关系
+     * 批量物理删除版本选项值关系
      *
      * @param ids 主键ID数组
      * @return 影响行数
      */
-    int batchPhysicalDeleteFeatureCode(Long[] ids);
+    int batchPhysicalDeleteOptionCode(Long[] ids);
 
 }

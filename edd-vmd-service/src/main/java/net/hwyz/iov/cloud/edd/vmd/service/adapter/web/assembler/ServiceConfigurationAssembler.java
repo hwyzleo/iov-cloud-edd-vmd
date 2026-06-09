@@ -1,9 +1,9 @@
 package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler;
 
 import net.hwyz.iov.cloud.edd.vmd.api.vo.response.VmdBuildConfigResponse;
-import net.hwyz.iov.cloud.edd.vmd.api.vo.response.VmdBuildConfigFeatureCodeResponse;
+import net.hwyz.iov.cloud.edd.vmd.api.vo.response.VmdBuildConfigOptionCodeResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ConfigurationDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ConfigurationFeatureCodeDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ConfigurationOptionCodeDto;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 
@@ -16,10 +16,10 @@ public interface ServiceConfigurationAssembler {
 
     VmdBuildConfigResponse toExResponse(ConfigurationDto dto);
 
-    VmdBuildConfigFeatureCodeResponse toFeatureCodeExResponse(ConfigurationFeatureCodeDto dto);
+    VmdBuildConfigOptionCodeResponse toOptionCodeExResponse(ConfigurationOptionCodeDto dto);
 
     List<VmdBuildConfigResponse> toExResponseList(List<ConfigurationDto> dtoList);
 
-    List<VmdBuildConfigFeatureCodeResponse> toFeatureCodeExResponseList(List<ConfigurationFeatureCodeDto> dtoList);
+    List<VmdBuildConfigOptionCodeResponse> toOptionCodeExResponseList(List<ConfigurationOptionCodeDto> dtoList);
 
 }

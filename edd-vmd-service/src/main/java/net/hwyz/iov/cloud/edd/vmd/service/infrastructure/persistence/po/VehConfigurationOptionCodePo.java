@@ -10,61 +10,43 @@ import lombok.experimental.SuperBuilder;
 
 /**
  * <p>
- * 车辆版本特征值关系表 持久化对象（原VehBaseModelFeatureCodePo，CR-016重命名）
+ * 车辆配置选项值关系表 持久化对象（原VehBuildConfigFeatureCodePo→VehConfigurationFeatureCodePo，CR-018重命名）
  * </p>
  *
  * @author hwyz_leo
- * @since 2026-02-08
+ * @since 2024-10-11
  */
 @Getter
 @Setter
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("tb_veh_base_model_feature_code")
-public class VehVariantFeatureCodePo extends BasePo {
+@TableName("tb_veh_build_config_feature_code")
+public class VehConfigurationOptionCodePo extends BasePo {
 
     private static final long serialVersionUID = 1L;
 
-    /**
-     * 主键
-     */
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
-    /**
-     * 版本代码
-     */
-    @TableField("variant_code")
-    private String variantCode;
+    @TableField("configuration_code")
+    private String configurationCode;
 
     /**
-     * 特征族代码
-     */
-    @TableField("family_code")
-    private String familyCode;
-
-    /**
-     * 特征值代码
-     */
-    @TableField("feature_code")
-    private String featureCode;
-
-    /**
-     * 特征值类型
-     */
-    @TableField("feature_type")
-    private String featureType;
-
-    /**
-     * 选项族代码(原familyCode, CR-018别名)
+     * 选项族代码(原family_code)
      */
     @TableField("option_family_code")
     private String optionFamilyCode;
 
     /**
-     * 选项值代码(原featureCode, CR-018别名)
+     * 选项值代码(原feature_code)
      */
     @TableField("option_code")
     private String optionCode;
+
+    /**
+     * 选项值类型(原feature_type)
+     */
+    @TableField("feature_type")
+    private String optionType;
 }

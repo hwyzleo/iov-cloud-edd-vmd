@@ -2,7 +2,7 @@ package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.repository
 
 import net.hwyz.iov.cloud.edd.vmd.service.BaseTest;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Configuration;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.ConfigurationFeatureCode;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.ConfigurationOptionCode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehConfigurationRepository;
 import org.junit.jupiter.api.Test;
@@ -422,8 +422,8 @@ class VehConfigurationRepositoryImplTest extends BaseTest {
     }
 
     @Test
-    @DisplayName("应成功插入特征码并查询")
-    void insertFeatureCode_shouldSuccessfullyInsertAndQueryFeatureCode() {
+    @DisplayName("应成功插入选项值并查询")
+    void insertOptionCode_shouldSuccessfullyInsertAndQueryOptionCode() {
         // Given
         Configuration configuration = Configuration.builder()
                 .code("TEST_CONFIG_017")
@@ -438,85 +438,85 @@ class VehConfigurationRepositoryImplTest extends BaseTest {
                 .build();
         vehConfigurationRepository.insert(configuration);
 
-        ConfigurationFeatureCode featureCode = ConfigurationFeatureCode.builder()
+        ConfigurationOptionCode optionCode = ConfigurationOptionCode.builder()
                 .configurationCode("TEST_CONFIG_017")
-                .familyCode("FAMILY_001")
-                .featureCode("FEATURE_001")
-                .featureType("EXTERIOR")
+                .optionFamilyCode("FAMILY_001")
+                .optionCode("OPTION_001")
+                .optionType("EXTERIOR")
                 .build();
 
         // When
-        int insertResult = vehConfigurationRepository.batchInsertFeatureCode(Arrays.asList(featureCode));
+        int insertResult = vehConfigurationRepository.batchInsertOptionCode(Arrays.asList(optionCode));
 
         // Then
         assertEquals(1, insertResult);
 
-        ConfigurationFeatureCode queryExample = ConfigurationFeatureCode.builder()
+        ConfigurationOptionCode queryExample = ConfigurationOptionCode.builder()
                 .configurationCode("TEST_CONFIG_017")
-                .familyCode("FAMILY_001")
+                .optionFamilyCode("FAMILY_001")
                 .build();
-        List<ConfigurationFeatureCode> featureCodes = vehConfigurationRepository.selectFeatureCodeByExample(queryExample);
-        assertNotNull(featureCodes);
-        assertFalse(featureCodes.isEmpty());
-        assertEquals("FEATURE_001", featureCodes.get(0).getFeatureCode());
+        List<ConfigurationOptionCode> optionCodes = vehConfigurationRepository.selectOptionCodeByExample(queryExample);
+        assertNotNull(optionCodes);
+        assertFalse(optionCodes.isEmpty());
+        assertEquals("OPTION_001", optionCodes.get(0).getOptionCode());
     }
 
     @Test
-    @DisplayName("应成功更新特征码")
-    void updateFeatureCode_shouldSuccessfullyUpdateFeatureCode() {
+    @DisplayName("应成功更新选项值")
+    void updateOptionCode_shouldSuccessfullyUpdateOptionCode() {
         // Given
-        ConfigurationFeatureCode featureCode = ConfigurationFeatureCode.builder()
+        ConfigurationOptionCode optionCode = ConfigurationOptionCode.builder()
                 .configurationCode("TEST_CONFIG_018")
-                .familyCode("FAMILY_002")
-                .featureCode("FEATURE_002")
-                .featureType("INTERIOR")
+                .optionFamilyCode("FAMILY_002")
+                .optionCode("OPTION_002")
+                .optionType("INTERIOR")
                 .build();
-        vehConfigurationRepository.batchInsertFeatureCode(Arrays.asList(featureCode));
+        vehConfigurationRepository.batchInsertOptionCode(Arrays.asList(optionCode));
 
         // When
-        featureCode.setFeatureType("UPDATED_TYPE");
-        int result = vehConfigurationRepository.updateFeatureCode(featureCode);
+        optionCode.setOptionType("UPDATED_TYPE");
+        int result = vehConfigurationRepository.updateOptionCode(optionCode);
 
         // Then
         assertEquals(1, result);
-        ConfigurationFeatureCode queryExample = ConfigurationFeatureCode.builder()
+        ConfigurationOptionCode queryExample = ConfigurationOptionCode.builder()
                 .configurationCode("TEST_CONFIG_018")
-                .familyCode("FAMILY_002")
+                .optionFamilyCode("FAMILY_002")
                 .build();
-        List<ConfigurationFeatureCode> featureCodes = vehConfigurationRepository.selectFeatureCodeByExample(queryExample);
-        assertNotNull(featureCodes);
-        assertFalse(featureCodes.isEmpty());
-        assertEquals("UPDATED_TYPE", featureCodes.get(0).getFeatureType());
+        List<ConfigurationOptionCode> optionCodes = vehConfigurationRepository.selectOptionCodeByExample(queryExample);
+        assertNotNull(optionCodes);
+        assertFalse(optionCodes.isEmpty());
+        assertEquals("UPDATED_TYPE", optionCodes.get(0).getOptionType());
     }
 
     @Test
-    @DisplayName("应成功批量删除特征码")
-    void batchPhysicalDeleteFeatureCode_shouldSuccessfullyDeleteFeatureCodes() {
+    @DisplayName("应成功批量删除选项值")
+    void batchPhysicalDeleteOptionCode_shouldSuccessfullyDeleteOptionCodes() {
         // Given
-        ConfigurationFeatureCode featureCode1 = ConfigurationFeatureCode.builder()
+        ConfigurationOptionCode optionCode1 = ConfigurationOptionCode.builder()
                 .configurationCode("TEST_CONFIG_019")
-                .familyCode("FAMILY_003")
-                .featureCode("FEATURE_003")
-                .featureType("TYPE_A")
+                .optionFamilyCode("FAMILY_003")
+                .optionCode("OPTION_003")
+                .optionType("TYPE_A")
                 .build();
-        ConfigurationFeatureCode featureCode2 = ConfigurationFeatureCode.builder()
+        ConfigurationOptionCode optionCode2 = ConfigurationOptionCode.builder()
                 .configurationCode("TEST_CONFIG_019")
-                .familyCode("FAMILY_004")
-                .featureCode("FEATURE_004")
-                .featureType("TYPE_B")
+                .optionFamilyCode("FAMILY_004")
+                .optionCode("OPTION_004")
+                .optionType("TYPE_B")
                 .build();
-        vehConfigurationRepository.batchInsertFeatureCode(Arrays.asList(featureCode1, featureCode2));
+        vehConfigurationRepository.batchInsertOptionCode(Arrays.asList(optionCode1, optionCode2));
 
         // When
-        Long[] ids = {featureCode1.getId(), featureCode2.getId()};
-        int result = vehConfigurationRepository.batchPhysicalDeleteFeatureCode(ids);
+        Long[] ids = {optionCode1.getId(), optionCode2.getId()};
+        int result = vehConfigurationRepository.batchPhysicalDeleteOptionCode(ids);
 
         // Then
         assertEquals(2, result);
-        ConfigurationFeatureCode queryExample = ConfigurationFeatureCode.builder()
+        ConfigurationOptionCode queryExample = ConfigurationOptionCode.builder()
                 .configurationCode("TEST_CONFIG_019")
                 .build();
-        List<ConfigurationFeatureCode> featureCodes = vehConfigurationRepository.selectFeatureCodeByExample(queryExample);
-        assertTrue(featureCodes.isEmpty());
+        List<ConfigurationOptionCode> optionCodes = vehConfigurationRepository.selectOptionCodeByExample(queryExample);
+        assertTrue(optionCodes.isEmpty());
     }
 }

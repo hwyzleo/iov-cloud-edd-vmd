@@ -5,7 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.response.VmdBuildConfigResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.ServiceConfigurationAssembler;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ConfigurationDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ConfigurationFeatureCodeDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ConfigurationOptionCodeDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.ConfigurationAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.CarLineAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleModelConfigAppService;
@@ -37,6 +37,7 @@ public class ServiceVehicleModelConfigController extends BaseController {
      * @param featureCodeMap 特征族代码-特征值代码映射
      * @return 生产配置代码
      */
+    @Deprecated
     @GetMapping("/buildConfigCode")
     public String getVehicleBuildConfigCode(@RequestParam Map<String, String> featureCodeMap) {
         log.info("内部服务请求根据特征族特征值[{}]得到匹配的生产配置代码", featureCodeMap);
@@ -84,7 +85,7 @@ public class ServiceVehicleModelConfigController extends BaseController {
     }
 
     /**
-     * 根据生产配置代码获取生产配置详细信息（包含特征值）
+     * 根据生产配置代码获取生产配置详细信息（包含选项值）
      *
      * @param buildConfigCode 生产配置代码
      * @return 生产配置详细信息
@@ -93,10 +94,10 @@ public class ServiceVehicleModelConfigController extends BaseController {
     public VmdBuildConfigResponse getBuildConfigByCode(@PathVariable String buildConfigCode) {
         log.info("内部服务请求根据生产配置代码[{}]获取生产配置详细信息", buildConfigCode);
         ConfigurationDto configurationDto = configurationAppService.getConfigurationByCode(buildConfigCode);
-        List<ConfigurationFeatureCodeDto> featureCodeDtoList = configurationAppService.searchFeatureCode(buildConfigCode, null);
+        List<ConfigurationOptionCodeDto> optionCodeDtoList = configurationAppService.searchOptionCode(buildConfigCode, null);
 
         VmdBuildConfigResponse response = ServiceConfigurationAssembler.INSTANCE.toExResponse(configurationDto);
-        response.setFeatureCodes(ServiceConfigurationAssembler.INSTANCE.toFeatureCodeExResponseList(featureCodeDtoList));
+        response.setOptionCodes(ServiceConfigurationAssembler.INSTANCE.toOptionCodeExResponseList(optionCodeDtoList));
 
         if (configurationDto.getCarLineCode() != null) {
             CarLine carLine = carLineAppService.getSeriesByCode(configurationDto.getCarLineCode());

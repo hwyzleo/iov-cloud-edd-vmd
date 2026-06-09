@@ -3,15 +3,15 @@ package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.repository
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Configuration;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.ConfigurationFeatureCode;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.ConfigurationOptionCode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehConfigurationRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter.ConfigurationConverter;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter.ConfigurationFeatureCodeConverter;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter.ConfigurationOptionCodeConverter;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehConfigurationMapper;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehConfigurationFeatureCodeMapper;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehConfigurationOptionCodeMapper;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehConfigurationPo;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehConfigurationFeatureCodePo;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehConfigurationOptionCodePo;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Repository;
 
@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
 public class VehConfigurationRepositoryImpl implements VehConfigurationRepository {
 
     private final VehConfigurationMapper vehConfigurationMapper;
-    private final VehConfigurationFeatureCodeMapper vehConfigurationFeatureCodeMapper;
+    private final VehConfigurationOptionCodeMapper vehConfigurationOptionCodeMapper;
 
     @Override
     public List<Configuration> selectByMap(Map<String, Object> map) {
@@ -70,35 +70,35 @@ public class VehConfigurationRepositoryImpl implements VehConfigurationRepositor
     }
 
     @Override
-    public List<ConfigurationFeatureCode> selectFeatureCodeByExample(ConfigurationFeatureCode example) {
-        List<VehConfigurationFeatureCodePo> poList = vehConfigurationFeatureCodeMapper.selectPoByExample(ConfigurationFeatureCodeConverter.INSTANCE.fromDomain(example));
-        return PageUtil.convert(poList, ConfigurationFeatureCodeConverter.INSTANCE::toDomain);
+    public List<ConfigurationOptionCode> selectOptionCodeByExample(ConfigurationOptionCode example) {
+        List<VehConfigurationOptionCodePo> poList = vehConfigurationOptionCodeMapper.selectPoByExample(ConfigurationOptionCodeConverter.INSTANCE.fromDomain(example));
+        return PageUtil.convert(poList, ConfigurationOptionCodeConverter.INSTANCE::toDomain);
     }
 
     @Override
-    public int batchInsertFeatureCode(List<ConfigurationFeatureCode> featureCodeList) {
-        List<VehConfigurationFeatureCodePo> poList = featureCodeList.stream()
-                .map(ConfigurationFeatureCodeConverter.INSTANCE::fromDomain)
+    public int batchInsertOptionCode(List<ConfigurationOptionCode> optionCodeList) {
+        List<VehConfigurationOptionCodePo> poList = optionCodeList.stream()
+                .map(ConfigurationOptionCodeConverter.INSTANCE::fromDomain)
                 .collect(Collectors.toList());
-        return vehConfigurationFeatureCodeMapper.batchInsertPo(poList);
+        return vehConfigurationOptionCodeMapper.batchInsertPo(poList);
     }
 
     @Override
-    public int updateFeatureCode(ConfigurationFeatureCode featureCode) {
-        return vehConfigurationFeatureCodeMapper.updatePo(ConfigurationFeatureCodeConverter.INSTANCE.fromDomain(featureCode));
+    public int updateOptionCode(ConfigurationOptionCode optionCode) {
+        return vehConfigurationOptionCodeMapper.updatePo(ConfigurationOptionCodeConverter.INSTANCE.fromDomain(optionCode));
     }
 
     @Override
-    public int batchPhysicalDeleteFeatureCode(Long[] ids) {
-        return vehConfigurationFeatureCodeMapper.batchPhysicalDeletePo(ids);
+    public int batchPhysicalDeleteOptionCode(Long[] ids) {
+        return vehConfigurationOptionCodeMapper.batchPhysicalDeletePo(ids);
     }
 
     @Override
-    public List<String> selectConfigurationCodeByFeatureCodeMap(Map<String, String> featureCodeMap) {
+    public List<String> selectConfigurationCodeByOptionCodeMap(Map<String, String> optionCodeMap) {
         Map<String, Object> params = new java.util.HashMap<>();
-        params.put("featureCodeMap", featureCodeMap);
-        params.put("familyCount", featureCodeMap.size());
-        return vehConfigurationFeatureCodeMapper.selectConfigurationCodeByFeatureCodeMap(params);
+        params.put("optionCodeMap", optionCodeMap);
+        params.put("optionFamilyCount", optionCodeMap.size());
+        return vehConfigurationOptionCodeMapper.selectConfigurationCodeByOptionCodeMap(params);
     }
 
     @Override
