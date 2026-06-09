@@ -8,11 +8,11 @@ import java.util.Date;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class BuildConfigFeatureCodeResponse {
+public class ConfigurationFeatureCodeResponse {
 
     private Long id;
 
-    private String buildConfigCode;
+    private String configurationCode;
 
     private String familyCode;
 

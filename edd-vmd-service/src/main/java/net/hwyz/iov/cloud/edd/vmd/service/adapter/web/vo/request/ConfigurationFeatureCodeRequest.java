@@ -8,11 +8,11 @@ import net.hwyz.iov.cloud.framework.common.bean.BaseRequest;
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public class BuildConfigFeatureCodeRequest extends BaseRequest {
+public class ConfigurationFeatureCodeRequest extends BaseRequest {
 
     private Long id;
 
-    private String buildConfigCode;
+    private String configurationCode;
 
     private String familyCode;
 

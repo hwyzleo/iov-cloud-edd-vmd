@@ -10,9 +10,9 @@ import org.mapstruct.factory.Mappers;
 import java.util.List;
 
 @Mapper
-public interface ServiceBuildConfigAssembler {
+public interface ServiceConfigurationAssembler {
 
-    ServiceBuildConfigAssembler INSTANCE = Mappers.getMapper(ServiceBuildConfigAssembler.class);
+    ServiceConfigurationAssembler INSTANCE = Mappers.getMapper(ServiceConfigurationAssembler.class);
 
     VmdBuildConfigResponse toExResponse(ConfigurationDto dto);
 

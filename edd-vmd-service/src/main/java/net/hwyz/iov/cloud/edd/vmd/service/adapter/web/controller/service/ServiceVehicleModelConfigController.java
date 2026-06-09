@@ -3,7 +3,7 @@ package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.controller.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.response.VmdBuildConfigResponse;
-import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.ServiceBuildConfigAssembler;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.ServiceConfigurationAssembler;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ConfigurationDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ConfigurationFeatureCodeDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.ConfigurationAppService;
@@ -53,7 +53,7 @@ public class ServiceVehicleModelConfigController extends BaseController {
     public List<VmdBuildConfigResponse> getBuildConfigListByVariantCode(@PathVariable String variantCode) {
         log.info("内部服务请求根据版本代码[{}]获取生产配置列表", variantCode);
         List<ConfigurationDto> dtoList = configurationAppService.getConfigurationListByVariantCode(variantCode);
-        return ServiceBuildConfigAssembler.INSTANCE.toExResponseList(dtoList);
+        return ServiceConfigurationAssembler.INSTANCE.toExResponseList(dtoList);
     }
 
     /**
@@ -67,7 +67,7 @@ public class ServiceVehicleModelConfigController extends BaseController {
     public List<VmdBuildConfigResponse> getBuildConfigListByBaseModelCode(@PathVariable String baseModelCode) {
         log.info("内部服务请求根据基础车型代码[{}]获取生产配置列表", baseModelCode);
         List<ConfigurationDto> dtoList = configurationAppService.getConfigurationListByBaseModelCode(baseModelCode);
-        return ServiceBuildConfigAssembler.INSTANCE.toExResponseList(dtoList);
+        return ServiceConfigurationAssembler.INSTANCE.toExResponseList(dtoList);
     }
 
     /**
@@ -82,8 +82,8 @@ public class ServiceVehicleModelConfigController extends BaseController {
         ConfigurationDto configurationDto = configurationAppService.getConfigurationByCode(buildConfigCode);
         List<ConfigurationFeatureCodeDto> featureCodeDtoList = configurationAppService.searchFeatureCode(buildConfigCode, null);
 
-        VmdBuildConfigResponse response = ServiceBuildConfigAssembler.INSTANCE.toExResponse(configurationDto);
-        response.setFeatureCodes(ServiceBuildConfigAssembler.INSTANCE.toFeatureCodeExResponseList(featureCodeDtoList));
+        VmdBuildConfigResponse response = ServiceConfigurationAssembler.INSTANCE.toExResponse(configurationDto);
+        response.setFeatureCodes(ServiceConfigurationAssembler.INSTANCE.toFeatureCodeExResponseList(featureCodeDtoList));
 
         if (configurationDto.getCarLineCode() != null) {
             CarLine carLine = carLineAppService.getSeriesByCode(configurationDto.getCarLineCode());

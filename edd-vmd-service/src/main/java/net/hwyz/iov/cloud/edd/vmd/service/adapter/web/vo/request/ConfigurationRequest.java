@@ -1,6 +1,7 @@
-package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response;
+package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request;
 
 import lombok.*;
+import net.hwyz.iov.cloud.framework.common.bean.BaseRequest;
 
 import java.util.Date;
 
@@ -8,7 +9,8 @@ import java.util.Date;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class BuildConfigResponse {
+@EqualsAndHashCode(callSuper = true)
+public class ConfigurationRequest extends BaseRequest {
 
     private Long id;
 
@@ -17,6 +19,8 @@ public class BuildConfigResponse {
     private String carLineCode;
 
     private String modelCode;
+
+    private String variantCode;
 
     private String baseModelCode;
 
