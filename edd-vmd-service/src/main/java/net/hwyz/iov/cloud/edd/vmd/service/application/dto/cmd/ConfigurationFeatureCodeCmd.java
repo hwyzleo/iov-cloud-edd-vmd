@@ -9,10 +9,10 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class BuildConfigFeatureCodeCmd {
+public class ConfigurationFeatureCodeCmd {
 
     private Long id;
-    private String buildConfigCode;
+    private String configurationCode;
     private String familyCode;
     private String familyName;
     private String[] featureCode;

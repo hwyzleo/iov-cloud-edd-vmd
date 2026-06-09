@@ -12,7 +12,7 @@ import java.util.Date;
  */
 @Data
 @Builder
-public class BuildConfigQuery {
+public class ConfigurationQuery {
 
     private String platformCode;
     private String carLineCode;

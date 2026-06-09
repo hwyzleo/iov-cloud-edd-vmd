@@ -4,12 +4,12 @@ import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.BuildConfigFeat
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.BuildConfigRequest;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.BuildConfigFeatureCodeResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.BuildConfigResponse;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.BuildConfigDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.BuildConfigFeatureCodeDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ConfigurationDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ConfigurationFeatureCodeDto;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.BuildConfigCmd;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.BuildConfigFeatureCodeCmd;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.ConfigurationCmd;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.ConfigurationFeatureCodeCmd;
 
 import java.util.List;
 
@@ -18,18 +18,18 @@ public interface MptBuildConfigAssembler {
 
     MptBuildConfigAssembler INSTANCE = Mappers.getMapper(MptBuildConfigAssembler.class);
 
-    BuildConfigResponse fromDto(BuildConfigDto buildConfigDto);
+    BuildConfigResponse fromDto(ConfigurationDto configurationDto);
 
-    BuildConfigDto toDto(BuildConfigRequest buildConfigVo);
+    ConfigurationDto toDto(BuildConfigRequest buildConfigVo);
 
-    BuildConfigCmd toCmd(BuildConfigRequest vo);
+    ConfigurationCmd toCmd(BuildConfigRequest vo);
 
-    List<BuildConfigResponse> fromDtoList(List<BuildConfigDto> buildConfigDtoList);
+    List<BuildConfigResponse> fromDtoList(List<ConfigurationDto> configurationDtoList);
 
-    BuildConfigFeatureCodeResponse fromFeatureCodeDto(BuildConfigFeatureCodeDto buildConfigFeatureCodeDto);
+    BuildConfigFeatureCodeResponse fromFeatureCodeDto(ConfigurationFeatureCodeDto configurationFeatureCodeDto);
 
-    BuildConfigFeatureCodeCmd toFeatureCodeCmd(BuildConfigFeatureCodeRequest buildConfigFeatureCodeRequest);
+    ConfigurationFeatureCodeCmd toFeatureCodeCmd(BuildConfigFeatureCodeRequest buildConfigFeatureCodeRequest);
 
-    List<BuildConfigFeatureCodeResponse> fromFeatureCodeDtoList(List<BuildConfigFeatureCodeDto> buildConfigFeatureCodeDtoList);
+    List<BuildConfigFeatureCodeResponse> fromFeatureCodeDtoList(List<ConfigurationFeatureCodeDto> configurationFeatureCodeDtoList);
 
 }

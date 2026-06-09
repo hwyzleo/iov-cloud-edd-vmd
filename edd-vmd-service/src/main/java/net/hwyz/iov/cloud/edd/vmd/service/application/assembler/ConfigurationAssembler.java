@@ -1,10 +1,10 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.assembler;
 
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.BuildConfigDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ConfigurationDto;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Configuration;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.BuildConfigCmd;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.ConfigurationCmd;
 
 import java.util.List;
 
@@ -14,9 +14,9 @@ import java.util.List;
  * @author hwyz_leo
  */
 @Mapper
-public interface BuildConfigAssembler {
+public interface ConfigurationAssembler {
 
-    BuildConfigAssembler INSTANCE = Mappers.getMapper(BuildConfigAssembler.class);
+    ConfigurationAssembler INSTANCE = Mappers.getMapper(ConfigurationAssembler.class);
 
     /**
      * 领域对象转 DTO
@@ -24,22 +24,22 @@ public interface BuildConfigAssembler {
      * @param configuration 领域对象
      * @return DTO
      */
-    BuildConfigDto fromDomain(Configuration configuration);
+    ConfigurationDto fromDomain(Configuration configuration);
 
     /**
      * DTO 转领域对象
      *
-     * @param buildConfigDto DTO
+     * @param configurationDto DTO
      * @return 领域对象
      */
-    Configuration toDomain(BuildConfigDto buildConfigDto);
+    Configuration toDomain(ConfigurationDto configurationDto);
     /**
      * 命令转领域对象
      *
      * @param cmd 命令
      * @return 领域对象
      */
-    Configuration toDomain(BuildConfigCmd cmd);
+    Configuration toDomain(ConfigurationCmd cmd);
 
 
     /**
@@ -48,6 +48,6 @@ public interface BuildConfigAssembler {
      * @param configurationList 领域对象列表
      * @return DTO 列表
      */
-    List<BuildConfigDto> fromDomainList(List<Configuration> configurationList);
+    List<ConfigurationDto> fromDomainList(List<Configuration> configurationList);
 
 }

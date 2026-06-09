@@ -1,4 +1,4 @@
-package net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd;
+package net.hwyz.iov.cloud.edd.vmd.service.application.dto.result;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class BuildConfigCmd {
+public class ConfigurationDto {
 
     private Long id;
     private String platformCode;

@@ -4,9 +4,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.response.VmdBuildConfigResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.ServiceBuildConfigAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.BuildConfigDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.BuildConfigFeatureCodeDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.service.BuildConfigAppService;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ConfigurationDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ConfigurationFeatureCodeDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.ConfigurationAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.CarLineAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleModelConfigAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.CarLine;
@@ -28,7 +28,7 @@ import java.util.Map;
 public class ServiceVehicleModelConfigController extends BaseController {
 
     private final VehicleModelConfigAppService vehicleModelConfigAppService;
-    private final BuildConfigAppService buildConfigAppService;
+    private final ConfigurationAppService configurationAppService;
     private final CarLineAppService carLineAppService;
 
     /**
@@ -52,7 +52,7 @@ public class ServiceVehicleModelConfigController extends BaseController {
     @GetMapping("/buildConfig/list/{variantCode}")
     public List<VmdBuildConfigResponse> getBuildConfigListByVariantCode(@PathVariable String variantCode) {
         log.info("内部服务请求根据版本代码[{}]获取生产配置列表", variantCode);
-        List<BuildConfigDto> dtoList = buildConfigAppService.getBuildConfigListByVariantCode(variantCode);
+        List<ConfigurationDto> dtoList = configurationAppService.getConfigurationListByVariantCode(variantCode);
         return ServiceBuildConfigAssembler.INSTANCE.toExResponseList(dtoList);
     }
 
@@ -66,7 +66,7 @@ public class ServiceVehicleModelConfigController extends BaseController {
     @GetMapping("/buildConfig/listByBaseModelCode/{baseModelCode}")
     public List<VmdBuildConfigResponse> getBuildConfigListByBaseModelCode(@PathVariable String baseModelCode) {
         log.info("内部服务请求根据基础车型代码[{}]获取生产配置列表", baseModelCode);
-        List<BuildConfigDto> dtoList = buildConfigAppService.getBuildConfigListByBaseModelCode(baseModelCode);
+        List<ConfigurationDto> dtoList = configurationAppService.getConfigurationListByBaseModelCode(baseModelCode);
         return ServiceBuildConfigAssembler.INSTANCE.toExResponseList(dtoList);
     }
 
@@ -79,14 +79,14 @@ public class ServiceVehicleModelConfigController extends BaseController {
     @GetMapping("/buildConfig/{buildConfigCode}")
     public VmdBuildConfigResponse getBuildConfigByCode(@PathVariable String buildConfigCode) {
         log.info("内部服务请求根据生产配置代码[{}]获取生产配置详细信息", buildConfigCode);
-        BuildConfigDto buildConfigDto = buildConfigAppService.getBuildConfigByCode(buildConfigCode);
-        List<BuildConfigFeatureCodeDto> featureCodeDtoList = buildConfigAppService.searchFeatureCode(buildConfigCode, null);
+        ConfigurationDto configurationDto = configurationAppService.getConfigurationByCode(buildConfigCode);
+        List<ConfigurationFeatureCodeDto> featureCodeDtoList = configurationAppService.searchFeatureCode(buildConfigCode, null);
 
-        VmdBuildConfigResponse response = ServiceBuildConfigAssembler.INSTANCE.toExResponse(buildConfigDto);
+        VmdBuildConfigResponse response = ServiceBuildConfigAssembler.INSTANCE.toExResponse(configurationDto);
         response.setFeatureCodes(ServiceBuildConfigAssembler.INSTANCE.toFeatureCodeExResponseList(featureCodeDtoList));
 
-        if (buildConfigDto.getCarLineCode() != null) {
-            CarLine carLine = carLineAppService.getSeriesByCode(buildConfigDto.getCarLineCode());
+        if (configurationDto.getCarLineCode() != null) {
+            CarLine carLine = carLineAppService.getSeriesByCode(configurationDto.getCarLineCode());
             if (carLine != null && carLine.getBrandCode() != null) {
                 response.setBrandCode(carLine.getBrandCode());
             }
