@@ -1,12 +1,14 @@
-package net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd;
+package net.hwyz.iov.cloud.edd.vmd.service.application.dto.result;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.time.LocalDateTime;
+
 /**
- * 特征值 DTO
+ * 选装值 DTO
  *
  * @author hwyz_leo
  */
@@ -14,16 +16,18 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class FeatureCodeCmd {
+public class OptionCodeDto {
 
     private Long id;
-    private String familyCode;
+    private String optionFamilyCode;
     private String code;
     private String name;
     private String nameEn;
     private String val;
     private Boolean enable;
     private Integer sort;
-    private String description;
+    private String source;
+    private LocalDateTime createTime;
+    private LocalDateTime updateTime;
 
 }

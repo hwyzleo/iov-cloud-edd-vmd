@@ -8,9 +8,13 @@ import net.hwyz.iov.cloud.edd.vmd.api.service.MdmConfigurationQueryClient;
 import net.hwyz.iov.cloud.edd.vmd.api.service.MdmModelQueryClient;
 import net.hwyz.iov.cloud.edd.vmd.api.service.MdmPlantQueryClient;
 import net.hwyz.iov.cloud.edd.vmd.api.service.MdmPlatformQueryClient;
+import net.hwyz.iov.cloud.edd.vmd.api.service.MdmOptionFamilyQueryClient;
+import net.hwyz.iov.cloud.edd.vmd.api.service.MdmOptionCodeQueryClient;
 import net.hwyz.iov.cloud.edd.vmd.api.service.MdmVariantQueryClient;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmBrandEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmConfigurationEvent;
+import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmOptionFamilyEvent;
+import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmOptionCodeEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmPlatformEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmCarLineEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmModelEvent;
@@ -18,6 +22,8 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmPlantEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmVariantEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Brand;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Configuration;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.OptionFamily;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.OptionCode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Platform;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.CarLine;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Model;
@@ -26,6 +32,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Variant;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBrandRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehConfigurationRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehOptionFamilyRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehPlatformRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehCarLineRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehModelRepository;
@@ -55,6 +62,7 @@ public class MdmSyncAppService {
     private final VehModelRepository vehModelRepository;
     private final VehPlantRepository vehPlantRepository;
     private final VehVariantRepository vehVariantRepository;
+    private final VehOptionFamilyRepository vehOptionFamilyRepository;
     private final MdmBrandQueryClient mdmBrandQueryClient;
     private final MdmCarLineQueryClient mdmCarLineQueryClient;
     private final MdmConfigurationQueryClient mdmConfigurationQueryClient;
@@ -62,6 +70,8 @@ public class MdmSyncAppService {
     private final MdmPlantQueryClient mdmPlantQueryClient;
     private final MdmPlatformQueryClient mdmPlatformQueryClient;
     private final MdmVariantQueryClient mdmVariantQueryClient;
+    private final MdmOptionFamilyQueryClient mdmOptionFamilyQueryClient;
+    private final MdmOptionCodeQueryClient mdmOptionCodeQueryClient;
 
     /**
      * 处理 MDM 品牌事件
@@ -606,6 +616,198 @@ public class MdmSyncAppService {
     }
 
     /**
+     * 处理 MDM 选项族事件
+     *
+     * <p>CR-018：OptionFamily 投影采用按需最小化只读投影，仅同步 VMD 业务所需字段。</p>
+     *
+     * @param event 选项族事件
+     */
+    public void handleOptionFamilyEvent(MdmOptionFamilyEvent event) {
+        log.info("处理MDM选项族事件: entityId={}, version={}", event.getEntityId(), event.getVersion());
+        OptionFamily localOptionFamily = vehOptionFamilyRepository.selectByExternalRefId(event.getEntityId());
+        if (localOptionFamily == null) {
+            OptionFamily newOptionFamily = OptionFamily.builder()
+                    .code(event.getCode())
+                    .name(event.getName())
+                    .nameEn(event.getNameEn())
+                    .type(event.getType())
+                    .mandatory(event.getMandatory())
+                    .enable(event.getEnable())
+                    .sort(event.getSort())
+                    .source(SourceType.MDM.name())
+                    .externalRefId(event.getEntityId())
+                    .externalVersion(event.getVersion())
+                    .lastSyncTime(LocalDateTime.now())
+                    .build();
+            vehOptionFamilyRepository.insert(newOptionFamily);
+            log.info("新增选项族: code={}", event.getCode());
+        } else {
+            if (event.getVersion() > localOptionFamily.getExternalVersion()) {
+                localOptionFamily.setName(event.getName());
+                localOptionFamily.setNameEn(event.getNameEn());
+                localOptionFamily.setType(event.getType());
+                localOptionFamily.setMandatory(event.getMandatory());
+                localOptionFamily.setEnable(event.getEnable());
+                localOptionFamily.setSort(event.getSort());
+                localOptionFamily.setExternalVersion(event.getVersion());
+                localOptionFamily.setLastSyncTime(LocalDateTime.now());
+                vehOptionFamilyRepository.updateById(localOptionFamily);
+                log.info("更新选项族: code={}, version={}", event.getCode(), event.getVersion());
+            } else {
+                log.info("忽略选项族事件（版本不高于本地）: code={}, eventVersion={}, localVersion={}",
+                        event.getCode(), event.getVersion(), localOptionFamily.getExternalVersion());
+            }
+        }
+    }
+
+    /**
+     * 处理 MDM 选项值事件
+     *
+     * <p>CR-018：OptionCode 投影采用按需最小化只读投影，仅同步 VMD 业务所需字段。</p>
+     *
+     * @param event 选项值事件
+     */
+    public void handleOptionCodeEvent(MdmOptionCodeEvent event) {
+        log.info("处理MDM选项值事件: entityId={}, version={}", event.getEntityId(), event.getVersion());
+        OptionCode localOptionCode = vehOptionFamilyRepository.selectOptionCodeByExternalRefId(event.getEntityId());
+        if (localOptionCode == null) {
+            OptionCode newOptionCode = OptionCode.builder()
+                    .code(event.getCode())
+                    .optionFamilyCode(event.getOptionFamilyCode())
+                    .name(event.getName())
+                    .nameEn(event.getNameEn())
+                    .val(event.getVal())
+                    .enable(event.getEnable())
+                    .sort(event.getSort())
+                    .source(SourceType.MDM.name())
+                    .externalRefId(event.getEntityId())
+                    .externalVersion(event.getVersion())
+                    .lastSyncTime(LocalDateTime.now())
+                    .build();
+            vehOptionFamilyRepository.insertOptionCode(newOptionCode);
+            log.info("新增选项值: code={}", event.getCode());
+        } else {
+            if (event.getVersion() > localOptionCode.getExternalVersion()) {
+                localOptionCode.setOptionFamilyCode(event.getOptionFamilyCode());
+                localOptionCode.setName(event.getName());
+                localOptionCode.setNameEn(event.getNameEn());
+                localOptionCode.setVal(event.getVal());
+                localOptionCode.setEnable(event.getEnable());
+                localOptionCode.setSort(event.getSort());
+                localOptionCode.setExternalVersion(event.getVersion());
+                localOptionCode.setLastSyncTime(LocalDateTime.now());
+                vehOptionFamilyRepository.updateOptionCodeById(localOptionCode);
+                log.info("更新选项值: code={}, version={}", event.getCode(), event.getVersion());
+            } else {
+                log.info("忽略选项值事件（版本不高于本地）: code={}, eventVersion={}, localVersion={}",
+                        event.getCode(), event.getVersion(), localOptionCode.getExternalVersion());
+            }
+        }
+    }
+
+    /**
+     * Bootstrap 全量同步选项族数据
+     *
+     * <p>当本地 source=MDM 的选项族记录数为 0 时，自动调用 MDM OptionFamily 全量快照接口
+     * 拉取数据并 upsert 本地副本。</p>
+     *
+     * <p>CR-018：OptionFamily 投影采用按需最小化只读投影，仅同步 VMD 业务所需字段。</p>
+     */
+    public void bootstrapOptionFamily() {
+        log.info("开始 Bootstrap 选项族数据同步");
+        long count = vehOptionFamilyRepository.countBySource(SourceType.MDM.name());
+        if (count == 0) {
+            log.info("本地无 MDM 选项族记录（count=0），启动 Bootstrap 同步");
+            try {
+                List<Map<String, Object>> mdmOptionFamilies = mdmOptionFamilyQueryClient.getAllOptionFamilies();
+                for (Map<String, Object> optionFamilyData : mdmOptionFamilies) {
+                    String code = (String) optionFamilyData.get("code");
+                    String name = (String) optionFamilyData.get("name");
+                    String nameEn = (String) optionFamilyData.get("nameEn");
+                    String type = (String) optionFamilyData.get("type");
+                    Boolean mandatory = (Boolean) optionFamilyData.get("mandatory");
+                    Boolean enable = (Boolean) optionFamilyData.get("enable");
+                    Integer sort = (Integer) optionFamilyData.get("sort");
+                    String entityId = (String) optionFamilyData.get("id");
+                    Long version = Long.valueOf(optionFamilyData.get("version").toString());
+
+                    OptionFamily optionFamily = OptionFamily.builder()
+                            .code(code)
+                            .name(name)
+                            .nameEn(nameEn)
+                            .type(type)
+                            .mandatory(mandatory)
+                            .enable(enable)
+                            .sort(sort)
+                            .source(SourceType.MDM.name())
+                            .externalRefId(entityId)
+                            .externalVersion(version)
+                            .lastSyncTime(LocalDateTime.now())
+                            .build();
+                    vehOptionFamilyRepository.insert(optionFamily);
+                    log.info("Bootstrap 新增 MDM 选项族投影: code={}", code);
+                }
+                log.info("Bootstrap 选项族数据同步完成，共同步 {} 条", mdmOptionFamilies.size());
+            } catch (Exception e) {
+                log.error("Bootstrap 选项族数据同步失败", e);
+            }
+        } else {
+            log.info("本地已有 MDM 选项族数据 {} 条，跳过 Bootstrap", count);
+        }
+    }
+
+    /**
+     * Bootstrap 全量同步选项值数据
+     *
+     * <p>当本地 source=MDM 的选项值记录数为 0 时，自动调用 MDM OptionCode 全量快照接口
+     * 拉取数据并 upsert 本地副本。</p>
+     *
+     * <p>CR-018：OptionCode 投影采用按需最小化只读投影，仅同步 VMD 业务所需字段。</p>
+     */
+    public void bootstrapOptionCode() {
+        log.info("开始 Bootstrap 选项值数据同步");
+        long count = vehOptionFamilyRepository.countOptionCodeBySource(SourceType.MDM.name());
+        if (count == 0) {
+            log.info("本地无 MDM 选项值记录（count=0），启动 Bootstrap 同步");
+            try {
+                List<Map<String, Object>> mdmOptionCodes = mdmOptionCodeQueryClient.getAllOptionCodes();
+                for (Map<String, Object> optionCodeData : mdmOptionCodes) {
+                    String code = (String) optionCodeData.get("code");
+                    String optionFamilyCode = (String) optionCodeData.get("optionFamilyCode");
+                    String name = (String) optionCodeData.get("name");
+                    String nameEn = (String) optionCodeData.get("nameEn");
+                    String val = (String) optionCodeData.get("val");
+                    Boolean enable = (Boolean) optionCodeData.get("enable");
+                    Integer sort = (Integer) optionCodeData.get("sort");
+                    String entityId = (String) optionCodeData.get("id");
+                    Long version = Long.valueOf(optionCodeData.get("version").toString());
+
+                    OptionCode optionCode = OptionCode.builder()
+                            .code(code)
+                            .optionFamilyCode(optionFamilyCode)
+                            .name(name)
+                            .nameEn(nameEn)
+                            .val(val)
+                            .enable(enable)
+                            .sort(sort)
+                            .source(SourceType.MDM.name())
+                            .externalRefId(entityId)
+                            .externalVersion(version)
+                            .lastSyncTime(LocalDateTime.now())
+                            .build();
+                    vehOptionFamilyRepository.insertOptionCode(optionCode);
+                    log.info("Bootstrap 新增 MDM 选项值投影: code={}", code);
+                }
+                log.info("Bootstrap 选项值数据同步完成，共同步 {} 条", mdmOptionCodes.size());
+            } catch (Exception e) {
+                log.error("Bootstrap 选项值数据同步失败", e);
+            }
+        } else {
+            log.info("本地已有 MDM 选项值数据 {} 条，跳过 Bootstrap", count);
+        }
+    }
+
+    /**
      * 处理 MDM 工厂事件
      *
      * <p>CR-011：Plant 投影采用按需最小化只读投影，仅同步 VMD 业务所需字段。</p>
@@ -701,6 +903,8 @@ public class MdmSyncAppService {
         bootstrapModel();
         bootstrapVariant();
         bootstrapConfiguration();
+        bootstrapOptionFamily();
+        bootstrapOptionCode();
         log.info("Bootstrap全量数据同步完成");
     }
 

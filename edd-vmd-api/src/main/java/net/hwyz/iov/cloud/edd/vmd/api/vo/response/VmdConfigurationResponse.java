@@ -36,4 +36,9 @@ public class VmdConfigurationResponse {
 
     private List<VmdConfigurationFeatureCodeResponse> featureCodes;
 
+    /**
+     * 选项值列表(原featureCodes, CR-018重命名)
+     */
+    private List<VmdConfigurationFeatureCodeResponse> optionCodes;
+
 }

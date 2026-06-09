@@ -61,4 +61,16 @@ public class VehBaseModelFeatureCodePo extends BasePo {
      */
     @TableField("feature_type")
     private String featureType;
+
+    /**
+     * 选项族代码(原familyCode, CR-018别名)
+     */
+    @TableField("option_family_code")
+    private String optionFamilyCode;
+
+    /**
+     * 选项值代码(原featureCode, CR-018别名)
+     */
+    @TableField("option_code")
+    private String optionCode;
 }

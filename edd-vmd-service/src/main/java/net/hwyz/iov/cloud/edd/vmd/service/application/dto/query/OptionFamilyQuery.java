@@ -6,18 +6,17 @@ import lombok.Data;
 import java.util.Date;
 
 /**
- * 特征值查询 DTO
+ * 选装族查询 DTO
  *
  * @author hwyz_leo
  */
 @Data
 @Builder
-public class FeatureCodeQuery {
+public class OptionFamilyQuery {
 
-    private Long featureFamilyId;
-    private String familyCode;
+    private String code;
     private String name;
-    private String featureCode;
+    private String type;
     private Date beginTime;
     private Date endTime;
 

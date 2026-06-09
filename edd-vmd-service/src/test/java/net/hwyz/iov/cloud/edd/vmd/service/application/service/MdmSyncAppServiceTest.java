@@ -2,21 +2,37 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 
 import net.hwyz.iov.cloud.edd.vmd.api.service.MdmBrandQueryClient;
 import net.hwyz.iov.cloud.edd.vmd.api.service.MdmCarLineQueryClient;
+import net.hwyz.iov.cloud.edd.vmd.api.service.MdmConfigurationQueryClient;
 import net.hwyz.iov.cloud.edd.vmd.api.service.MdmModelQueryClient;
+import net.hwyz.iov.cloud.edd.vmd.api.service.MdmOptionCodeQueryClient;
+import net.hwyz.iov.cloud.edd.vmd.api.service.MdmOptionFamilyQueryClient;
+import net.hwyz.iov.cloud.edd.vmd.api.service.MdmPlantQueryClient;
 import net.hwyz.iov.cloud.edd.vmd.api.service.MdmPlatformQueryClient;
+import net.hwyz.iov.cloud.edd.vmd.api.service.MdmVariantQueryClient;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmBrandEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmCarLineEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmModelEvent;
+import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmOptionCodeEvent;
+import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmOptionFamilyEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmPlatformEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Brand;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.CarLine;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Configuration;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Model;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.OptionCode;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.OptionFamily;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Plant;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Platform;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Variant;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBrandRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehCarLineRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehConfigurationRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehModelRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehOptionFamilyRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehPlantRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehPlatformRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehVariantRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -57,6 +73,18 @@ class MdmSyncAppServiceTest {
     private VehModelRepository vehModelRepository;
 
     @Mock
+    private VehOptionFamilyRepository vehOptionFamilyRepository;
+
+    @Mock
+    private VehConfigurationRepository vehConfigurationRepository;
+
+    @Mock
+    private VehPlantRepository vehPlantRepository;
+
+    @Mock
+    private VehVariantRepository vehVariantRepository;
+
+    @Mock
     private MdmBrandQueryClient mdmBrandQueryClient;
 
     @Mock
@@ -67,6 +95,21 @@ class MdmSyncAppServiceTest {
 
     @Mock
     private MdmModelQueryClient mdmModelQueryClient;
+
+    @Mock
+    private MdmOptionFamilyQueryClient mdmOptionFamilyQueryClient;
+
+    @Mock
+    private MdmOptionCodeQueryClient mdmOptionCodeQueryClient;
+
+    @Mock
+    private MdmConfigurationQueryClient mdmConfigurationQueryClient;
+
+    @Mock
+    private MdmPlantQueryClient mdmPlantQueryClient;
+
+    @Mock
+    private MdmVariantQueryClient mdmVariantQueryClient;
 
     @InjectMocks
     private MdmSyncAppService mdmSyncAppService;
@@ -421,7 +464,12 @@ class MdmSyncAppServiceTest {
         when(vehBrandRepository.countBySource(SourceType.MDM)).thenReturn(1L);
         when(vehCarLineRepository.countBySource(SourceType.MDM)).thenReturn(1L);
         when(vehPlatformRepository.countBySource(SourceType.MDM)).thenReturn(1L);
+        when(vehPlantRepository.countBySource(SourceType.MDM.name())).thenReturn(1);
         when(vehModelRepository.countBySource(SourceType.MDM)).thenReturn(1L);
+        when(vehVariantRepository.countBySource(SourceType.MDM)).thenReturn(1L);
+        when(vehConfigurationRepository.countBySource(SourceType.MDM)).thenReturn(1L);
+        when(vehOptionFamilyRepository.countBySource(SourceType.MDM.name())).thenReturn(1L);
+        when(vehOptionFamilyRepository.countOptionCodeBySource(SourceType.MDM.name())).thenReturn(1L);
 
         // When
         mdmSyncAppService.bootstrapAll();
@@ -430,7 +478,12 @@ class MdmSyncAppServiceTest {
         verify(vehBrandRepository).countBySource(SourceType.MDM);
         verify(vehCarLineRepository).countBySource(SourceType.MDM);
         verify(vehPlatformRepository).countBySource(SourceType.MDM);
+        verify(vehPlantRepository).countBySource(SourceType.MDM.name());
         verify(vehModelRepository).countBySource(SourceType.MDM);
+        verify(vehVariantRepository).countBySource(SourceType.MDM);
+        verify(vehConfigurationRepository).countBySource(SourceType.MDM);
+        verify(vehOptionFamilyRepository).countBySource(SourceType.MDM.name());
+        verify(vehOptionFamilyRepository).countOptionCodeBySource(SourceType.MDM.name());
     }
 
     @Test
@@ -668,5 +721,171 @@ class MdmSyncAppServiceTest {
                 "CARLINE002".equals(model.getCarLineCode()) &&
                 SourceType.MDM.equals(model.getSource())
         ));
+    }
+
+    // ==================== OptionFamily Event Tests ====================
+
+    @Test
+    @DisplayName("handleOptionFamilyEvent应新增本地不存在的选项族投影")
+    void handleOptionFamilyEvent_shouldInsertWhenLocalOptionFamilyNotExists() {
+        // Given
+        MdmOptionFamilyEvent event = new MdmOptionFamilyEvent("CREATED", "mdm-of-001", 1L, "OF001",
+                "选装族1", "Option Family 1", "EXTERIOR", true, true, 1, LocalDateTime.now());
+
+        when(vehOptionFamilyRepository.selectByExternalRefId("mdm-of-001")).thenReturn(null);
+        when(vehOptionFamilyRepository.insert(any(OptionFamily.class))).thenReturn(1);
+
+        // When
+        mdmSyncAppService.handleOptionFamilyEvent(event);
+
+        // Then
+        verify(vehOptionFamilyRepository).selectByExternalRefId("mdm-of-001");
+        verify(vehOptionFamilyRepository).insert(any(OptionFamily.class));
+    }
+
+    @Test
+    @DisplayName("handleOptionFamilyEvent应更新本地已存在且版本更高的选项族投影")
+    void handleOptionFamilyEvent_shouldUpdateWhenLocalOptionFamilyExistsAndVersionHigher() {
+        // Given
+        MdmOptionFamilyEvent event = new MdmOptionFamilyEvent("UPDATED", "mdm-of-002", 2L, "OF002",
+                "更新后的选装族", "Updated Option Family", "INTERIOR", false, true, 2, LocalDateTime.now());
+
+        OptionFamily localOptionFamily = OptionFamily.builder()
+                .id(1L)
+                .code("OF002")
+                .name("原始选装族")
+                .nameEn("Original Option Family")
+                .type("EXTERIOR")
+                .mandatory(true)
+                .enable(false)
+                .sort(1)
+                .source(SourceType.MDM.name())
+                .externalRefId("mdm-of-002")
+                .externalVersion(1L)
+                .build();
+
+        when(vehOptionFamilyRepository.selectByExternalRefId("mdm-of-002")).thenReturn(localOptionFamily);
+        when(vehOptionFamilyRepository.updateById(any(OptionFamily.class))).thenReturn(1);
+
+        // When
+        mdmSyncAppService.handleOptionFamilyEvent(event);
+
+        // Then
+        verify(vehOptionFamilyRepository).selectByExternalRefId("mdm-of-002");
+        verify(vehOptionFamilyRepository).updateById(any(OptionFamily.class));
+    }
+
+    @Test
+    @DisplayName("handleOptionFamilyEvent应忽略版本不高于本地的选项族事件")
+    void handleOptionFamilyEvent_shouldIgnoreWhenVersionNotHigher() {
+        // Given
+        MdmOptionFamilyEvent event = new MdmOptionFamilyEvent("UPDATED", "mdm-of-003", 1L, "OF003",
+                "旧版本选装族", "Old Option Family", "EXTERIOR", true, true, 1, LocalDateTime.now());
+
+        OptionFamily localOptionFamily = OptionFamily.builder()
+                .id(1L)
+                .code("OF003")
+                .name("本地选装族")
+                .nameEn("Local Option Family")
+                .type("EXTERIOR")
+                .mandatory(true)
+                .enable(true)
+                .sort(1)
+                .source(SourceType.MDM.name())
+                .externalRefId("mdm-of-003")
+                .externalVersion(2L)
+                .build();
+
+        when(vehOptionFamilyRepository.selectByExternalRefId("mdm-of-003")).thenReturn(localOptionFamily);
+
+        // When
+        mdmSyncAppService.handleOptionFamilyEvent(event);
+
+        // Then
+        verify(vehOptionFamilyRepository).selectByExternalRefId("mdm-of-003");
+        verify(vehOptionFamilyRepository, never()).updateById(any(OptionFamily.class));
+    }
+
+    // ==================== OptionCode Event Tests ====================
+
+    @Test
+    @DisplayName("handleOptionCodeEvent应新增本地不存在的选项值投影")
+    void handleOptionCodeEvent_shouldInsertWhenLocalOptionCodeNotExists() {
+        // Given
+        MdmOptionCodeEvent event = new MdmOptionCodeEvent("CREATED", "mdm-oc-001", 1L, "OC001",
+                "OF001", "选装值1", "Option Code 1", "V001", true, 1, LocalDateTime.now());
+
+        when(vehOptionFamilyRepository.selectOptionCodeByExternalRefId("mdm-oc-001")).thenReturn(null);
+        when(vehOptionFamilyRepository.insertOptionCode(any(OptionCode.class))).thenReturn(1);
+
+        // When
+        mdmSyncAppService.handleOptionCodeEvent(event);
+
+        // Then
+        verify(vehOptionFamilyRepository).selectOptionCodeByExternalRefId("mdm-oc-001");
+        verify(vehOptionFamilyRepository).insertOptionCode(any(OptionCode.class));
+    }
+
+    @Test
+    @DisplayName("handleOptionCodeEvent应更新本地已存在且版本更高的选项值投影")
+    void handleOptionCodeEvent_shouldUpdateWhenLocalOptionCodeExistsAndVersionHigher() {
+        // Given
+        MdmOptionCodeEvent event = new MdmOptionCodeEvent("UPDATED", "mdm-oc-002", 2L, "OC002",
+                "OF002", "更新后的选装值", "Updated Option Code", "V002", true, 2, LocalDateTime.now());
+
+        OptionCode localOptionCode = OptionCode.builder()
+                .id(1L)
+                .code("OC002")
+                .optionFamilyCode("OF001")
+                .name("原始选装值")
+                .nameEn("Original Option Code")
+                .val("V001")
+                .enable(false)
+                .sort(1)
+                .source(SourceType.MDM.name())
+                .externalRefId("mdm-oc-002")
+                .externalVersion(1L)
+                .build();
+
+        when(vehOptionFamilyRepository.selectOptionCodeByExternalRefId("mdm-oc-002")).thenReturn(localOptionCode);
+        when(vehOptionFamilyRepository.updateOptionCodeById(any(OptionCode.class))).thenReturn(1);
+
+        // When
+        mdmSyncAppService.handleOptionCodeEvent(event);
+
+        // Then
+        verify(vehOptionFamilyRepository).selectOptionCodeByExternalRefId("mdm-oc-002");
+        verify(vehOptionFamilyRepository).updateOptionCodeById(any(OptionCode.class));
+    }
+
+    @Test
+    @DisplayName("handleOptionCodeEvent应忽略版本不高于本地的选项值事件")
+    void handleOptionCodeEvent_shouldIgnoreWhenVersionNotHigher() {
+        // Given
+        MdmOptionCodeEvent event = new MdmOptionCodeEvent("UPDATED", "mdm-oc-003", 1L, "OC003",
+                "OF003", "旧版本选装值", "Old Option Code", "V003", true, 1, LocalDateTime.now());
+
+        OptionCode localOptionCode = OptionCode.builder()
+                .id(1L)
+                .code("OC003")
+                .optionFamilyCode("OF003")
+                .name("本地选装值")
+                .nameEn("Local Option Code")
+                .val("V003")
+                .enable(true)
+                .sort(1)
+                .source(SourceType.MDM.name())
+                .externalRefId("mdm-oc-003")
+                .externalVersion(2L)
+                .build();
+
+        when(vehOptionFamilyRepository.selectOptionCodeByExternalRefId("mdm-oc-003")).thenReturn(localOptionCode);
+
+        // When
+        mdmSyncAppService.handleOptionCodeEvent(event);
+
+        // Then
+        verify(vehOptionFamilyRepository).selectOptionCodeByExternalRefId("mdm-oc-003");
+        verify(vehOptionFamilyRepository, never()).updateOptionCodeById(any(OptionCode.class));
     }
 }

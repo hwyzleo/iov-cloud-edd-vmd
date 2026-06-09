@@ -44,6 +44,19 @@ public class ServiceVehicleModelConfigController extends BaseController {
     }
 
     /**
+     * 按选项族-选项值组合反查配置代码
+     * CR-018: 原按特征族特征值反查, 入参键改名
+     *
+     * @param optionCodes 选项族代码-选项值代码映射
+     * @return 配置代码
+     */
+    @GetMapping("/configurationCode/byOptionCodeMap")
+    public String getConfigurationCodeByOptionCodeMap(@RequestParam Map<String, String> optionCodes) {
+        log.info("内部服务请求根据选项族选项值[{}]得到匹配的配置代码", optionCodes);
+        return vehicleModelConfigAppService.getVehicleBuildConfigCode(optionCodes);
+    }
+
+    /**
      * 根据版本代码获取生产配置列表
      *
      * @param variantCode 版本代码

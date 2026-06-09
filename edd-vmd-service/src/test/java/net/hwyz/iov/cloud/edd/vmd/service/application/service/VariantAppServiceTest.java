@@ -38,7 +38,7 @@ class VariantAppServiceTest {
     private VehConfigurationRepository vehBuildConfigRepository;
 
     @Mock
-    private FeatureFamilyAppService featureFamilyAppService;
+    private OptionFamilyAppService optionFamilyAppService;
 
     @InjectMocks
     private VariantAppService variantAppService;

@@ -8,6 +8,8 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmPlatformEve
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmCarLineEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmModelEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmPlantEvent;
+import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmOptionFamilyEvent;
+import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmOptionCodeEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmVariantEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.MdmSyncAppService;
 import org.springframework.context.event.EventListener;
@@ -108,6 +110,30 @@ public class MdmEventSubscribe {
         log.info("收到MDM配置事件: type={}, entityId={}, version={}, code={}",
                 event.getEventType(), event.getEntityId(), event.getVersion(), event.getCode());
         mdmSyncAppService.handleConfigurationEvent(event);
+    }
+
+    /**
+     * 订阅 MDM 选项族事件
+     *
+     * @param event 选项族事件
+     */
+    @EventListener
+    public void onMdmOptionFamilyEvent(MdmOptionFamilyEvent event) {
+        log.info("收到MDM选项族事件: type={}, entityId={}, version={}, code={}",
+                event.getEventType(), event.getEntityId(), event.getVersion(), event.getCode());
+        mdmSyncAppService.handleOptionFamilyEvent(event);
+    }
+
+    /**
+     * 订阅 MDM 选项值事件
+     *
+     * @param event 选项值事件
+     */
+    @EventListener
+    public void onMdmOptionCodeEvent(MdmOptionCodeEvent event) {
+        log.info("收到MDM选项值事件: type={}, entityId={}, version={}, code={}",
+                event.getEventType(), event.getEntityId(), event.getVersion(), event.getCode());
+        mdmSyncAppService.handleOptionCodeEvent(event);
     }
 
 }

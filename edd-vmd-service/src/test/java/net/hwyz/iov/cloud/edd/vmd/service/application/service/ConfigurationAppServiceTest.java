@@ -33,7 +33,7 @@ class ConfigurationAppServiceTest {
     private VehBasicInfoRepository vehBasicInfoRepository;
 
     @Mock
-    private FeatureFamilyAppService featureFamilyAppService;
+    private OptionFamilyAppService optionFamilyAppService;
 
     @InjectMocks
     private ConfigurationAppService configurationAppService;

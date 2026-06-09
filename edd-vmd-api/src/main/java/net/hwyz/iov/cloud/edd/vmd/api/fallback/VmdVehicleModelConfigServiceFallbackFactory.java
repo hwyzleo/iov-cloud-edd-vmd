@@ -53,6 +53,12 @@ public class VmdVehicleModelConfigServiceFallbackFactory implements FallbackFact
                 return null;
             }
 
+            @Override
+            public String getConfigurationCodeByOptionCodeMap(Map<String, String> optionCodes) {
+                log.error("车辆车系车型配置服务根据选项族选项值[{}]得到匹配的配置代码调用失败", optionCodes, throwable);
+                return null;
+            }
+
             @Deprecated
             @Override
             public String getVehicleBuildConfigCode(Map<String, String> featureCodeMap) {

@@ -7,8 +7,8 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.ConfigurationAss
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.ConfigurationFeatureCodeAssembler;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ConfigurationDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ConfigurationFeatureCodeDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.FeatureCodeDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.FeatureFamilyDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.OptionCodeDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.OptionFamilyDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.ConfigurationQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Configuration;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.ConfigurationFeatureCode;
@@ -31,7 +31,7 @@ public class ConfigurationAppService {
 
     private final VehConfigurationRepository vehConfigurationRepository;
     private final VehBasicInfoRepository vehBasicInfoRepository;
-    private final FeatureFamilyAppService featureFamilyAppService;
+    private final OptionFamilyAppService optionFamilyAppService;
 
     public List<ConfigurationDto> search(ConfigurationQuery query) {
         Map<String, Object> map = new HashMap<>();
@@ -115,17 +115,17 @@ public class ConfigurationAppService {
         List<ConfigurationFeatureCode> list = vehConfigurationRepository.selectFeatureCodeByExample(example);
         List<ConfigurationFeatureCodeDto> dtoList = PageUtil.convert(list, ConfigurationFeatureCodeAssembler.INSTANCE::fromDomain);
         dtoList.forEach(dto -> {
-            FeatureFamilyDto featureFamily = featureFamilyAppService.getFeatureFamilyByCode(dto.getFamilyCode());
-            if (featureFamily != null) {
-                dto.setFamilyName(featureFamily.getName());
+            OptionFamilyDto optionFamily = optionFamilyAppService.getOptionFamilyByCode(dto.getFamilyCode());
+            if (optionFamily != null) {
+                dto.setFamilyName(optionFamily.getName());
             }
             if (dto.getFeatureCode() != null) {
                 dto.setFeatureName(new String[dto.getFeatureCode().length]);
                 int i = 0;
                 for (String code : dto.getFeatureCode()) {
-                    FeatureCodeDto featureCode = featureFamilyAppService.getFeatureCodeByCode(code);
-                    if (featureCode != null) {
-                        dto.getFeatureName()[i] = featureCode.getName();
+                    OptionCodeDto optionCode = optionFamilyAppService.getOptionCodeByCode(code);
+                    if (optionCode != null) {
+                        dto.getFeatureName()[i] = optionCode.getName();
                     }
                     i++;
                 }

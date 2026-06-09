@@ -3,7 +3,6 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 import cn.hutool.core.util.ObjUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.MptFeatureAssembler;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.BaseModelAssembler;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.BaseModelFeatureCodeAssembler;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.BaseModelCmd;
@@ -11,8 +10,8 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.BaseModelFeatureCo
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.BaseModelQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.BaseModelDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.BaseModelFeatureCodeDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.FeatureCodeDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.FeatureFamilyDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.OptionCodeDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.OptionFamilyDto;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.BaseModel;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.BaseModelFeatureCode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBaseModelRepository;
@@ -40,7 +39,7 @@ public class BaseModelAppService {
     private final VehBaseModelRepository vehBaseModelRepository;
     private final VehBasicInfoRepository vehBasicInfoRepository;
     private final VehConfigurationRepository vehConfigurationRepository;
-    private final FeatureFamilyAppService featureFamilyAppService;
+    private final OptionFamilyAppService optionFamilyAppService;
 
     // ==================== 基础车型 ====================
 
@@ -173,17 +172,17 @@ public class BaseModelAppService {
         List<BaseModelFeatureCode> list = vehBaseModelRepository.selectFeatureCodeByExample(example);
         List<BaseModelFeatureCodeDto> dtoList = PageUtil.convert(list, BaseModelFeatureCodeAssembler.INSTANCE::fromDomain);
         dtoList.forEach(dto -> {
-            FeatureFamilyDto featureFamily = featureFamilyAppService.getFeatureFamilyByCode(dto.getFamilyCode());
-            if (featureFamily != null) {
-                dto.setFamilyName(featureFamily.getName());
+            OptionFamilyDto optionFamily = optionFamilyAppService.getOptionFamilyByCode(dto.getFamilyCode());
+            if (optionFamily != null) {
+                dto.setFamilyName(optionFamily.getName());
             }
             if (dto.getFeatureCode() != null) {
                 dto.setFeatureName(new String[dto.getFeatureCode().length]);
                 int i = 0;
                 for (String code : dto.getFeatureCode()) {
-                    FeatureCodeDto featureCode = featureFamilyAppService.getFeatureCodeByCode(code);
-                    if (featureCode != null) {
-                        dto.getFeatureName()[i] = featureCode.getName();
+                    OptionCodeDto optionCode = optionFamilyAppService.getOptionCodeByCode(code);
+                    if (optionCode != null) {
+                        dto.getFeatureName()[i] = optionCode.getName();
                     }
                     i++;
                 }

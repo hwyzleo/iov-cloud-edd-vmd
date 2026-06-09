@@ -30,6 +30,13 @@ public interface VmdVehicleModelConfigService {
     String getConfigurationCodeByFeatureCodes(@RequestParam Map<String, String> featureCodeMap);
 
     /**
+     * 按选项族-选项值组合反查配置代码
+     * CR-018: 原 getConfigurationCodeByFeatureCodes, 入参键改名
+     */
+    @GetMapping("/configurationCode/byOptionCodeMap")
+    String getConfigurationCodeByOptionCodeMap(@RequestParam Map<String, String> optionCodes);
+
+    /**
      * 根据版本代码获取配置列表
      *
      * @param variantCode 版本代码

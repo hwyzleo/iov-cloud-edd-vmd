@@ -21,6 +21,7 @@
 - G5：在产品树（品牌/车系/平台/车型）主数据上，VMD 作为 edd-mdm 的下游消费方，持有本地投影副本；其中 Brand、CarLine、Platform 与 Model 本地投影均为**只读**视图，VMD 消费 MDM Brand / MDM CarLine / MDM Platform / MDM Model 主数据，通过 Brand 投影支撑车辆查询、产品树关联、导入校验和历史追溯（`brandCode` 作为车辆主档与产品树的品牌关联编码长期保留，VMD 不再承担 Brand 主数据维护职责，CR-012），通过 CarLine 投影支撑车辆查询、产品树关联、导入校验和历史追溯（`carLineCode` 作为车辆主档与产品树的车系关联编码长期保留，车系投影上的 `brandCode` 冗余字段一并保留用于跨域回查，VMD 不再承担 CarLine 主数据维护职责，CR-014），通过 Platform 投影支撑车辆查询、产品树关联、导入校验和历史追溯（`platformCode` 作为车辆主档与产品树的平台关联编码长期保留，VMD 不再承担 Platform 主数据维护职责，CR-013），通过 Model 投影支撑车辆查询、产品树关联（车系→车型→版本（原基础车型）链路）、导入校验和历史追溯（`modelCode` 作为车辆主档与产品树的车型关联编码长期保留，VMD 不再承担 Model 主数据维护职责，CR-015），通过 Variant（版本，原 BaseModel 基础车型）投影支撑车辆查询、产品树关联（车型→版本链路）、导入校验和历史追溯（`variantCode` 作为车辆主档与产品树的版本关联编码长期保留，承接原 `baseModelCode` 语义，VMD 不再承担 Variant 主数据维护职责，CR-016）。
 - G6：在工厂（Plant）主数据上，VMD 作为 edd-mdm 的下游消费方，持有 Plant 本地投影副本，用于车辆生产工厂追溯；车辆主档使用 `plantCode` 表示生产工厂编码，VMD 不再承担 Plant 主数据治理职责（CR-011）。
 - G7：在配置（Configuration，原 BuildConfig 生产配置）主数据上，VMD 作为 edd-mdm 的下游消费方，持有 Configuration 配置本地投影副本，用于配置关联、特征-配置反查、导入校验、查询展示与历史追溯；车辆主档使用 `configurationCode`（承接原 `buildConfigCode` 语义）作为配置关联编码（每台物理车唯一映射的核心锚点），VMD 不再承担 Configuration 配置主数据维护职责（CR-017）。
+- G8：在选项族（OptionFamily，原 FeatureFamily 特征族）/选项值（OptionCode，原 FeatureCode 特征值）主数据上，VMD 作为 edd-mdm 的下游消费方，持有 OptionFamily / OptionCode 本地**只读**投影副本，用于版本（Variant）/配置（Configuration）的选项引用、特征-配置反查（US-031）、查询展示与历史追溯；关联键使用 `optionFamilyCode`（承接原 `familyCode` 语义）/ `optionCode`（承接原 `featureCode` 语义），VMD 不再承担 OptionFamily / OptionCode 主数据治理（编码生成 / 审批 / Golden Record / 质量打分 / 生命周期）职责（CR-018）。
 
 > **Plant / 工厂主数据语义统一（CR-011 补充）**：
 > - VMD 中 Plant 本地投影用于支撑车辆生产工厂追溯，不再承担 Plant 主数据治理职责。
@@ -82,6 +83,16 @@
 > - VMD 不再承担 Configuration 配置主数据治理、编码生成、审批、Golden Record、生命周期管理等职责。
 > - VMD Configuration 投影采用按需最小化字段设计，对 source=MDM 记录保持只读语义。
 
+> **OptionFamily / OptionCode（选项族 / 选项值）主数据语义统一（CR-018 补充）**：
+> - OptionFamily（选项族，原 FeatureFamily 特征族）/ OptionCode（选项值，原 FeatureCode 特征值）主数据的权威来源（SSOT）为 **edd-mdm**，VMD 仅保留 OptionFamily / OptionCode 本地只读投影副本。
+> - **本 CR 与 Plant（CR-011）/ Variant（CR-016）/ Configuration（CR-017）同构、区别于 Brand/Platform/CarLine/Model（CR-012~015 命名不变、仅投影化）**：MDM 侧实体由 FeatureFamily / FeatureCode 改名为 **OptionFamily / OptionCode**，VMD 同步将选项族 / 选项值实体与关联键 `familyCode` / `featureCode` 改名为 OptionFamily / OptionCode / `optionFamilyCode` / `optionCode`。FeatureFamily / FeatureCode / `familyCode` / `featureCode` / 「特征族」「特征值」自此为历史兼容命名，新能力统一使用 OptionFamily / OptionCode / `optionFamilyCode` / `optionCode` / 「选项族」「选项值」（迁移与兼容策略见 US-008c）。
+> - **命名消歧（强约束）**：本 CR 的 OptionFamily / OptionCode（选项族 / 选项值）区别于 ConfigItem（配置项，US-009）下的「枚举值 Option」、configCenter（配置中心）、VehicleConfig（车辆配置，US-013）；同段落出现易混概念时一律用全称限定（如「选项族（OptionFamily）」「选项值（OptionCode）」「配置项枚举值（ConfigItem Option）」），避免裸用「选项」或「Option」。
+> - VMD OptionFamily / OptionCode 本地投影面向车辆主数据上下文（bounded context），用于版本（Variant）/ 配置（Configuration）的选项引用、特征-配置反查（US-031）、查询展示、历史追溯，以及 MDM 不可用时的降级只读查询，是按需最小化只读视图，不是 MDM OptionFamily / OptionCode 的完整副本/镜像表。
+> - VMD 使用 `optionFamilyCode`（承接原 `familyCode` 语义）/ `optionCode`（承接原 `featureCode` 语义）作为关联键长期保留并回填历史值；随实体重命名所必需的引用键——Variant 侧（原 BaseModelFeatureCode，CR-016）、Configuration 侧（原 BuildConfigFeatureCode，CR-017）的特征值引用键——一并由 `featureCode` 兼容改名为 `optionCode`，**仅做改名兼容，不改其业务语义、不重复接管已随 Variant / Configuration 投影下发的选项值映射数据**。
+> - 本 CR 仅处理 OptionFamily / OptionCode 本体（投影化 + 改名）；不切断特征-配置反查（US-031）能力与每台物理车 `configurationCode` 唯一映射。
+> - VMD 不再承担 OptionFamily / OptionCode 主数据治理、编码生成、审批、Golden Record、质量打分、生命周期管理等职责。
+> - VMD OptionFamily / OptionCode 投影采用按需最小化字段设计，对 source=MDM 记录保持只读语义。
+
 ### 非目标（Non-Goals，本期不做）
 - N1：不替代账号服务（`ExAccountService`）做用户身份/手机号实名核验。
 - N2：不替代安全密钥服务（`ExSkService`）执行 IMMO_SK 的实际生成。
@@ -93,6 +104,7 @@
 - N8：不再作为 **Model（车型）**主数据的企业级 SSOT；VMD 不负责 Model 主数据治理、审批、编码生成、数据质量打分、Golden Record 合并与车型生命周期管理；不要求完整复制 MDM Model 的全部字段；不承担 MDM Model 字段变化的自动适配责任，仅当字段变化影响 VMD 的车辆导入、车辆查询、车辆追溯、展示或校验逻辑时，才通过独立 CR 纳入 VMD Model 投影；不在本 CR 内改造 BaseModel / BuildConfig / FeatureFamily（后续 CR-016~018 单独处理），不得切断「车系→车型→基础车型」引用链（CR-015）。
 - N9：不再作为 **Variant（版本，原 BaseModel 基础车型）**主数据的企业级 SSOT；VMD 不负责 Variant 主数据治理、审批、编码生成、数据质量打分、Golden Record 合并与版本生命周期管理；不要求完整复制 MDM Variant 的全部字段；不承担 MDM Variant 字段变化的自动适配责任，仅当字段变化影响 VMD 的车辆导入、车辆查询、车辆追溯、展示或校验逻辑时，才通过独立 CR 纳入 VMD Variant 投影；本 CR 不改造 BaseModelFeatureCode / 特征值的归属与维护语义（仅做随实体重命名必需的引用键兼容改名），不改造 BuildConfig / FeatureFamily 的归属（CR-017 / CR-018 处理），不得切断「车系→车型→版本」及 `BuildConfig → variantCode` 引用链（CR-016）。
 - N10：不再作为 **Configuration（配置，原 BuildConfig 生产配置）**主数据的企业级 SSOT；VMD 不负责 Configuration 主数据治理、审批、编码生成、数据质量打分、Golden Record 合并与配置生命周期管理；不要求完整复制 MDM Configuration 的全部字段；不承担 MDM Configuration 字段变化的自动适配责任，仅当字段变化影响 VMD 的车辆导入、车辆查询、车辆追溯、特征-配置反查、展示或校验逻辑时，才通过独立 CR 纳入 VMD Configuration 投影；本 CR 不改造 BuildConfigFeatureCode / 特征值的归属与维护语义（仅做随实体重命名必需的引用键兼容改名），不改造 FeatureFamily 的归属（CR-018 处理）；不得切断「版本（Variant）→配置（Configuration）」引用链及每台物理车 `configurationCode` 唯一映射（CR-017）。
+- N11：不再作为 **OptionFamily / OptionCode（选项族 / 选项值，原 FeatureFamily / FeatureCode 特征族 / 特征值）**主数据的企业级 SSOT；VMD 不负责 OptionFamily / OptionCode 主数据治理、审批、编码生成、数据质量打分、Golden Record 合并与选项族 / 选项值生命周期管理；不要求完整复制 MDM OptionFamily / OptionCode 的全部字段；不承担 MDM OptionFamily / OptionCode 字段变化的自动适配责任，仅当字段变化影响 VMD 的车辆导入、车辆查询、车辆追溯、特征-配置反查（US-031）、展示或校验逻辑时，才通过独立 CR 纳入 VMD OptionFamily / OptionCode 投影；本 CR 仅做随实体重命名必需的引用键兼容改名（`familyCode`→`optionFamilyCode`、`featureCode`→`optionCode`，含 Variant / Configuration 侧引用键），**不重复接管已随 Variant（CR-016）/ Configuration（CR-017）投影下发的选项值映射数据**；旧字段、旧接口、旧权限点的最终下线留待后续兼容性清理 CR（CR-018）。
 
 ## 3. User Stories
 
@@ -254,7 +266,7 @@
 - IF 本地不存在对应 `variantCode` THEN THE SYSTEM SHALL 不阻断历史车辆查询，但应在展示或校验结果中体现 Variant 信息缺失。
 - IF 历史数据仅存在 `baseModelCode` 且未完成字段迁移 THEN THE SYSTEM SHALL 支持 `baseModelCode` 到 `variantCode` 的兼容读取或迁移处理。
 - THE SYSTEM SHALL 不切断 `veh_variant.model_code → veh_model.code` 的「车系→车型→版本（原基础车型）」产品树引用链。
-- THE SYSTEM SHALL 保持 BaseModelFeatureCode / 特征值的既有业务语义不变（仍可按既有方式查询/挂载），仅将其引用键 `base_model_code` 随实体重命名兼容改名为 `variant_code`，最终归属留待后续 CR。
+- THE SYSTEM SHALL 保持 BaseModelFeatureCode / 特征值的既有业务语义不变（仍可按既有方式查询/挂载），仅将其引用键 `base_model_code` 随实体重命名兼容改名为 `variant_code`；其特征值引用键 `feature_code` 自 CR-018 起随 FeatureCode→OptionCode 重命名兼容改名为 `option_code`（仅引用键改名，业务语义不变，不重复接管已随投影下发的选项值映射），OptionFamily / OptionCode 本体的投影化与归属由 CR-018 处理（见 US-008）。
 - THE SYSTEM SHALL 校验调用方持有 `completeVehicle:product:variant:list/query/export` 权限点；`completeVehicle:product:variant:add/edit/remove` 权限点仅作为兼容期遗留保留（仅可作用于 source=MANUAL 过渡数据），对 source=MDM 记录一律拒绝；原 `completeVehicle:product:baseModel:*` 权限点标记 `deprecated` 并规划后续兼容性清理 CR 下线。
 
 #### US-004b: Bootstrap 时从 MDM 全量同步 Variant 数据
@@ -307,7 +319,7 @@
 - IF 本地不存在对应 `configurationCode` THEN THE SYSTEM SHALL 不阻断历史车辆查询，但应在展示或校验结果中体现 Configuration 信息缺失。
 - IF 历史数据仅存在 `buildConfigCode` 且未完成字段迁移 THEN THE SYSTEM SHALL 支持 `buildConfigCode` 到 `configurationCode` 的兼容读取或映射处理。
 - THE SYSTEM SHALL 不切断「版本（Variant）→配置（Configuration）」引用链与每台物理车 `configurationCode` 唯一映射。
-- THE SYSTEM SHALL 保持 BuildConfigFeatureCode / 特征值的既有业务语义不变（仍可按既有方式查询/挂载并支撑 US-031 反查），仅将其引用键随实体重命名兼容改名，最终归属留待 CR-018。
+- THE SYSTEM SHALL 保持 BuildConfigFeatureCode / 特征值的既有业务语义不变（仍可按既有方式查询/挂载并支撑 US-031 反查），仅将其引用键随实体重命名兼容改名；其特征值引用键 `feature_code` 自 CR-018 起随 FeatureCode→OptionCode 重命名兼容改名为 `option_code`（仅引用键改名，业务语义不变，不重复接管已随 Configuration 投影下发的选项值映射），OptionFamily / OptionCode 本体的投影化与归属由 CR-018 处理（见 US-008）。
 - THE SYSTEM SHALL 校验调用方持有 `completeVehicle:product:configuration:list/query/export` 权限点；`completeVehicle:product:configuration:add/edit/remove` 权限点仅作为兼容期遗留保留（仅可作用于 source=MANUAL 过渡数据），对 source=MDM 记录一律拒绝；原 `completeVehicle:product:buildConfig:*` 权限点标记 `deprecated` 并规划后续兼容性清理 CR 下线。
 
 #### US-005b: Bootstrap 时从 MDM 全量同步 Configuration 数据
@@ -335,7 +347,7 @@
 - THE SYSTEM SHALL 将原 `completeVehicle:product:buildConfig:*` 权限点调整为 `completeVehicle:product:configuration:list/query/export`；`add/edit/remove` 仅作兼容期遗留（仅作用于 source=MANUAL 过渡数据，对 source=MDM 一律拒绝），旧 buildConfig 权限点标记 `deprecated` 并规划后续下线。
 - THE SYSTEM SHALL 保留 Configuration 查询能力，包括 `list` / `listByVariantCode` / `query` / `export` 及车辆详情展示、US-031 特征-配置反查所需查询。
 - THE SYSTEM SHALL 保留并回填 `configurationCode` 关联键，不因维护权迁移或命名迁移而丢失历史数据；保留「版本（Variant）→配置（Configuration）」引用链与每台物理车 `configurationCode` 唯一映射。
-- THE SYSTEM SHALL 保持 BuildConfigFeatureCode / 特征值的既有业务语义不变，仅随实体重命名做引用键兼容改名；其最终归属与 FeatureFamily 改造由 CR-018 处理，旧物的最终下线由后续兼容性清理 CR 完成。
+- THE SYSTEM SHALL 保持 BuildConfigFeatureCode / 特征值的既有业务语义不变，仅随实体重命名做引用键兼容改名；其特征值引用键 `feature_code` 自 CR-018 起随 FeatureCode→OptionCode 重命名兼容改名为 `option_code`（仅引用键改名，业务语义不变），OptionFamily / OptionCode 本体的投影化与归属及 FeatureFamily 改造由 CR-018 处理（见 US-008），旧物的最终下线由后续兼容性清理 CR 完成。
 - THE SYSTEM SHALL 将 BuildConfig→Configuration、`buildConfigCode`→`configurationCode` 的重命名影响纳入本次 CR（CR-017）的兼容性说明，旧字段、旧接口、旧权限点的最终下线由后续兼容性清理 CR 完成。（注：具体迁移脚本、字段物理改名、Flyway 文件等实现细节放 design.md / tasks.md。）
 
 #### US-006: 消费 MDM Platform 主数据本地投影
@@ -428,16 +440,58 @@
 - THE SYSTEM SHALL 将原 `completeVehicle:product:manufacturer:*` 权限点调整为 `completeVehicle:product:plant:list/query/add/edit/remove/export`；原 manufacturer 权限点如仍需兼容应标记 `deprecated`，并规划后续下线。
 - THE SYSTEM SHALL 将 Manufacturer 到 Plant 的重命名影响纳入本次 CR（CR-011）的兼容性说明，旧字段与旧接口的最终下线由后续兼容性清理 CR 完成。
 
-### 3.2 特征族 & 配置项域
+### 3.2 选项族（OptionFamily） & 配置项域
 
-#### US-008: 维护特征族（FeatureFamily）及其特征值（FeatureCode）
-**As a** Mpt-User, **I want** 维护特征族（含 `type`）和族下特征值, **so that** 基础车型/生产配置可引用。
+> **章节命名消歧（CR-018）**：本节标题由原「特征族 & 配置项域」演进而来。其中「选项族（OptionFamily，原 FeatureFamily 特征族）/ 选项值（OptionCode，原 FeatureCode 特征值）」（US-008）已投影化并改名，区别于「配置项（ConfigItem）」（US-009）及其下的「枚举值 Option」；易混处一律用全称限定。
+
+#### US-008: 消费 MDM OptionFamily / OptionCode 主数据本地投影
+**As a** System, **I want** VMD 从 MDM 同步 OptionFamily（选项族）/ OptionCode（选项值）主数据并维护本地只读投影表, **so that** 版本（Variant）/ 配置（Configuration）可通过 `optionFamilyCode` / `optionCode` 引用选项并支撑特征-配置反查，同时 VMD 不再承担 OptionFamily / OptionCode 主数据维护职责。
+
+> **语义重构 + 命名迁移（CR-018）**：本 US 由原「US-008 维护特征族（FeatureFamily）及其特征值（FeatureCode）」演进而来。OptionFamily / OptionCode 主数据 SSOT 上移至 edd-mdm，VMD 仅保留本地只读投影副本。**本 CR 与 Plant（CR-011）/ Variant（CR-016）/ Configuration（CR-017）同构、区别于 Brand/Platform/CarLine/Model（CR-012~015 命名不变、仅投影化）**：MDM 侧实体由 FeatureFamily / FeatureCode 改名为 **OptionFamily / OptionCode**，VMD 同步将实体与关联键 `familyCode` / `featureCode` 改名为 OptionFamily / OptionCode / `optionFamilyCode` / `optionCode`。FeatureFamily / FeatureCode / `familyCode` / `featureCode` / 「特征族」「特征值」自此为历史兼容命名，新能力统一使用 OptionFamily / OptionCode / `optionFamilyCode` / `optionCode` / 「选项族」「选项值」（迁移与兼容策略见 US-008c）。⚠️ 命名消歧：本 US 的 OptionFamily / OptionCode（选项族 / 选项值）区别于 ConfigItem（配置项，US-009）下的「枚举值 Option」、configCenter（配置中心）、VehicleConfig（车辆配置，US-013），易混处用全称限定。VMD OptionFamily / OptionCode 投影为 MDM 对应主数据在 VMD bounded context 下的按需最小化只读视图，不要求与 MDM 字段完全一致（字段范围见 §4「OptionFamily / OptionCode 投影字段范围原则」）。`optionFamilyCode` / `optionCode` 作为关联键长期保留，承接原 `familyCode` / `featureCode` 语义并回填历史值。**随实体重命名所必需的引用键——Variant 侧（原 BaseModelFeatureCode，CR-016）、Configuration 侧（原 BuildConfigFeatureCode，CR-017）的特征值引用键——一并由 `featureCode` 兼容改名为 `optionCode`，仅做改名兼容，不改其业务语义、不重复接管已随 Variant / Configuration 投影下发的选项值映射数据**。VMD OptionFamily / OptionCode 的 add/edit/remove 自此为兼容期遗留能力，仅作用于 source=MANUAL 过渡数据，最终下线策略见 US-008c。
+
+**Acceptance Criteria** (EARS):
+- WHEN MDM 通过 Kafka 推送 OptionFamilyCreated / OptionFamilyUpdated / OptionFamilyDeleted 事件 THE SYSTEM SHALL upsert VMD 本地 OptionFamily 投影数据，并写入 source=MDM / external_ref_id / external_version / last_sync_time。
+- WHEN MDM 通过 Kafka 推送 OptionCodeCreated / OptionCodeUpdated / OptionCodeDeleted 事件 THE SYSTEM SHALL upsert VMD 本地 OptionCode 投影数据，并写入 source=MDM / external_ref_id / external_version / last_sync_time。
+- WHEN event.version <= local.external_version THEN THE SYSTEM SHALL 忽略该事件，避免乱序事件覆盖较新数据。
+- WHEN 同步 MDM OptionFamily / OptionCode 数据 THE SYSTEM SHALL 仅持久化 VMD 业务场景所需字段（OptionFamily 至少 `code`（即 `optionFamilyCode` 关联键）/ `name` / `type` / `source` / `external_ref_id` / `external_version` / `last_sync_time`；OptionCode 至少 `code`（即 `optionCode` 关联键）/ `name` / `option_family_code` / `source` / `external_ref_id` / `external_version` / `last_sync_time`），不要求 VMD 投影表结构与 MDM 主数据模型完全一致。
+- WHEN MDM OptionFamily / OptionCode 新增字段但 VMD 未消费该字段 THEN THE SYSTEM SHALL NOT 要求变更 VMD 投影表结构。
+- WHEN MDM OptionFamily / OptionCode 字段变化影响 VMD 的车辆导入、车辆查询、车辆追溯、特征-配置反查、展示或校验逻辑 THEN THE SYSTEM SHALL 通过独立 CR 调整 VMD OptionFamily / OptionCode 投影模型。
+- WHEN VMD 本地 OptionFamily / OptionCode 记录 source=MDM THEN THE SYSTEM SHALL 拒绝来自 MPT 后台的 add / edit / remove 操作，并返回明确错误（`ProductDataReadOnlyException`，错误码 `202014`）；add/edit/remove 仅作为兼容期遗留能力，仅作用于 source=MANUAL 过渡数据。
+- WHEN 调用 `GET /api/mpt/optionFamily/v1/listAllOptionCode?optionFamilyCode=<x>` THE SYSTEM SHALL 基于本地投影返回该选项族下全部选项值（不分页，查询语义不变，数据来源变为投影）；迁移期保留旧路径 `GET /api/mpt/featureFamily/v1/listAllFeatureCode?familyCode=<x>` 兼容（按 `featureFamily` → `optionFamily`、`familyCode` → `optionFamilyCode`、`featureCode` → `optionCode` 映射读取）。
+- THE SYSTEM SHALL 保留 OptionFamily / OptionCode 只读查询能力（如 `listAll`、按 `optionFamilyCode` 列出 `optionCode` 等），查询语义不变、数据源变为投影；迁移期保留旧 `familyCode` / `featureCode` 入参与旧路径兼容映射。
+- WHEN MDM 不可用 THEN THE SYSTEM SHALL 使用已同步的本地 OptionFamily / OptionCode 投影数据支撑选项引用、特征-配置反查、展示和历史追溯，不对 MDM 形成运行时强依赖。
+- IF 本地不存在对应 `optionFamilyCode` / `optionCode` THEN THE SYSTEM SHALL 不阻断历史车辆 / 配置查询，但应在展示或校验结果中体现选项信息缺失。
+- IF 历史数据仅存在 `familyCode` / `featureCode` 且未完成字段迁移 THEN THE SYSTEM SHALL 支持 `familyCode` → `optionFamilyCode`、`featureCode` → `optionCode` 的兼容读取或映射处理。
+- THE SYSTEM SHALL 不切断特征-配置反查（US-031）能力与每台物理车 `configurationCode` 唯一映射。
+- THE SYSTEM SHALL 校验调用方持有 `completeVehicle:product:optionFamily:list/query/export` 与 `completeVehicle:product:optionCode:list/query/export` 权限点；`completeVehicle:product:optionFamily:add/edit/remove` 与 `completeVehicle:product:optionCode:add/edit/remove` 权限点仅作为兼容期遗留保留（仅可作用于 source=MANUAL 过渡数据），对 source=MDM 记录一律拒绝；原 `completeVehicle:product:featureFamily:*` / `completeVehicle:product:featureCode:*` 权限点标记 `deprecated` 并规划后续兼容性清理 CR 下线。
+
+#### US-008b: Bootstrap 时从 MDM 全量同步 OptionFamily / OptionCode 数据
+**As a** System, **I want** Bootstrap 时从 MDM 全量同步 OptionFamily / OptionCode 数据, **so that** 首次接入、数据丢失或重新初始化后，VMD 可以恢复 OptionFamily / OptionCode 主数据本地投影。
 
 **Acceptance Criteria**:
-- WHEN 调用 `GET /api/mpt/featureFamily/v1/listAllFeatureCode?familyCode=<x>` THE SYSTEM SHALL 返回该族下全部特征值（不分页）。
-- WHEN 创建/修改特征族 IF `code` 已存在 THEN THE SYSTEM SHALL 返回唯一性失败。
-- WHEN 创建/修改特征值 IF `code` 已存在 THEN THE SYSTEM SHALL 返回唯一性失败。
-- WHEN 删除特征族 THE SYSTEM SHALL 同步可删除其下特征值（按 ID 数组）。
+- WHEN VMD 启动时检测本地 source=MDM 的 OptionFamily / OptionCode 投影记录数为 0 THE SYSTEM SHALL 自动调用 MDM OptionFamily / OptionCode 全量快照接口拉取数据并 upsert 本地副本。
+- WHEN Mpt-User 调用 `POST /api/mpt/mdmSync/v1/bootstrap?entity=optionFamily` THE SYSTEM SHALL 调用 MDM OptionFamily 全量快照接口拉取数据并 upsert 本地 OptionFamily 投影副本（不删除本地记录）。
+- WHEN Mpt-User 调用 `POST /api/mpt/mdmSync/v1/bootstrap?entity=optionCode` THE SYSTEM SHALL 调用 MDM OptionCode 全量快照接口拉取数据并 upsert 本地 OptionCode 投影副本（不删除本地记录）。
+- WHEN Mpt-User 调用 `POST /api/mpt/mdmSync/v1/bootstrap?entity=all` THE SYSTEM SHALL 在全量同步中包含 OptionFamily 与 OptionCode 数据。
+- THE SYSTEM SHALL 在 upsert 时写入 source=MDM / external_ref_id / external_version / last_sync_time，并为 OptionCode 写入 `optionFamilyCode` 归属关联字段。
+- THE SYSTEM SHALL 不因 MDM OptionFamily / OptionCode 快照接口失败而删除或清空本地已有投影数据。
+- THE SYSTEM SHALL 支持重复执行 Bootstrap，重复同步时按 external_ref_id / external_version 幂等 upsert。
+- THE SYSTEM SHALL 只同步 VMD OptionFamily / OptionCode 投影所需字段，不要求同步 MDM 的完整字段集。
+
+#### US-008c: OptionFamily / OptionCode 本地维护能力兼容清理与 Feature→Option 命名迁移
+**As a** System, **I want** 将 VMD 现有 FeatureFamily / FeatureCode 本地维护能力收敛为只读 OptionFamily / OptionCode 投影能力，并将 FeatureFamily / FeatureCode / `familyCode` / `featureCode` 命名迁移为 OptionFamily / OptionCode / `optionFamilyCode` / `optionCode`, **so that** OptionFamily / OptionCode 主数据维护职责统一回归 MDM、VMD 与 MDM 在选项族 / 选项值主数据语义与命名上保持一致，同时历史 source=MANUAL 数据、历史 `familyCode` / `featureCode` 数据和既有查询能力不受影响。
+
+**Acceptance Criteria**:
+- WHEN 迁移期间仍存在旧接口、旧字段或旧权限点调用 THE SYSTEM SHALL 提供兼容策略（兼容读取 / 字段映射 / 旧列保留 / 旧接口保留），避免既有调用方立即失败，历史 `familyCode` / `featureCode` / 旧选项数据不得丢失、历史车辆与配置可继续查询追溯。
+- WHEN 新增或修改 VMD 内部逻辑 THE SYSTEM SHALL 优先使用 OptionFamily / OptionCode / `optionFamilyCode` / `optionCode` 命名，不再将 VMD OptionFamily / OptionCode 视为权威主数据。
+- WHEN 历史 OptionFamily / OptionCode 记录 source=MANUAL THEN THE SYSTEM SHALL 在兼容期允许保留查询和必要的过渡维护能力。
+- WHEN OptionFamily / OptionCode 记录 source=MDM THEN THE SYSTEM SHALL 禁止通过 VMD MPT 后台新增、修改或删除。
+- WHEN 文档描述历史兼容逻辑 THE SYSTEM SHALL 明确 FeatureFamily / FeatureCode / `familyCode` / `featureCode` / 「特征族」「特征值」为遗留命名，不再作为新能力命名，仅出现在历史兼容、迁移说明或旧字段映射场景。
+- THE SYSTEM SHALL 在迁移完成后逐步废弃 FeatureFamily / FeatureCode 命名的 Controller / AppService / Repository / DTO / VO / API path（如 `/api/mpt/featureFamily/**`），迁移为 OptionFamily / OptionCode 命名（如 `/api/mpt/optionFamily/**`），旧接口在兼容期保留。
+- THE SYSTEM SHALL 将原 `completeVehicle:product:featureFamily:*` / `completeVehicle:product:featureCode:*` 权限点调整为 `completeVehicle:product:optionFamily:list/query/export` / `completeVehicle:product:optionCode:list/query/export`；`add/edit/remove` 仅作兼容期遗留（仅作用于 source=MANUAL 过渡数据，对 source=MDM 一律拒绝），旧 featureFamily / featureCode 权限点标记 `deprecated` 并规划后续下线。
+- THE SYSTEM SHALL 保留 OptionFamily / OptionCode 查询能力，包括 `listAll` / `listAllOptionCode`（按 `optionFamilyCode`）/ `query` / `export` 及特征-配置反查（US-031）所需查询。
+- THE SYSTEM SHALL 保留并回填 `optionFamilyCode` / `optionCode` 关联键，不因维护权迁移或命名迁移而丢失历史数据；**对 Variant 侧（原 BaseModelFeatureCode）、Configuration 侧（原 BuildConfigFeatureCode）的特征值引用键 `featureCode` 随实体重命名兼容改名为 `optionCode`，仅做引用键改名，不改业务语义、不重复接管已随 Variant（CR-016）/ Configuration（CR-017）投影下发的选项值映射数据**。
+- THE SYSTEM SHALL 将 FeatureFamily→OptionFamily、FeatureCode→OptionCode、`familyCode`→`optionFamilyCode`、`featureCode`→`optionCode` 的重命名影响纳入本次 CR（CR-018）的兼容性说明，旧字段、旧接口、旧权限点的最终下线由后续兼容性清理 CR 完成。（注：具体迁移脚本、字段物理改名、Flyway 文件等实现细节放 design.md / tasks.md。）
 
 #### US-009: 维护配置项（ConfigItem）+ 枚举值（Option）+ 映射（Mapping）
 **As a** Mpt-User, **I want** 配置项 CRUD、枚举值 CRUD、上下游映射 CRUD, **so that** 不同来源系统的字段能在 VMD 内完成翻译。
@@ -645,16 +699,19 @@
   - `/api/service/vehicleLifecycle/v1/{vin}/recordFirstApply*Node` POST × 8
   - `/api/service/vehicleModelConfig/v1/configurationCode` GET（迁移期保留旧路径 `/buildConfigCode` 兼容，CR-017）/ `/configuration/list/{variantCode}` GET（迁移期保留旧路径 `/buildConfig/list/{variantCode}` 及 `/buildConfig/list/{baseModelCode}` 兼容，按 `buildConfig` → `configuration`、`baseModelCode` → `variantCode` 映射，CR-016 与 CR-017 兼容并存）/ `/configuration/{configurationCode}` GET（迁移期保留旧路径 `/buildConfig/{buildConfigCode}` 兼容，CR-017）
 
-#### US-031: 内部服务按"特征族-特征值"反查 Configuration（配置）
-**As a** Service-Caller, **I want** 通过 `GET /api/service/vehicleModelConfig/v1/configurationCode?<familyCode>=<featureCode>...` 用任意特征族特征值组合反查 Configuration 配置代码, **so that** 在订单/前置库等场景将销售配置翻译为生产侧配置。
+#### US-031: 内部服务按"选项族-选项值（OptionFamily-OptionCode）"反查 Configuration（配置）
+**As a** Service-Caller, **I want** 通过 `GET /api/service/vehicleModelConfig/v1/configurationCode?<optionFamilyCode>=<optionCode>...` 用任意选项族选项值组合反查 Configuration 配置代码, **so that** 在订单/前置库等场景将销售配置翻译为生产侧配置。
 
 > **命名迁移（CR-017）**：本 US 由原「US-031 内部服务按"特征族-特征值"反查生产配置」演进而来，路径 `buildConfigCode` / `buildConfig` 改名为 `configurationCode` / `configuration`，响应类型 `VmdBuildConfigResponse` 改名为 `VmdConfigurationResponse`（迁移期保留旧路径与旧响应类型兼容）。⚠️ 命名消歧：此处 Configuration（配置）区别于 VehicleConfig（车辆配置，US-013）、ConfigItem（配置项，US-009）、configCenter（配置中心）。**反查逻辑仍属 VMD**：基于本地 Configuration 投影 + 特征值映射在 VMD 内完成，不对 MDM 形成运行时强依赖（MDM 不可用时仍可基于本地投影反查）。
+>
+> **命名迁移（CR-018）**：本 US 的「特征族-特征值」反查现表述为「选项族-选项值（OptionFamily-OptionCode）」反查，入参键 `familyCode` 改名为 `optionFamilyCode`、值 `featureCode` 改名为 `optionCode`，响应中 `featureCodes` 列表改名为 `optionCodes`（迁移期保留旧入参 `familyCode` / `featureCode` 与旧响应字段 `featureCodes` 兼容映射）。⚠️ 命名消歧：此处 OptionFamily / OptionCode（选项族 / 选项值）区别于 ConfigItem（配置项，US-009）下的「枚举值 Option」。**反查能力与每台物理车 `configurationCode` 唯一映射不得切断**；反查所依赖的选项值映射沿用已随 Configuration 投影下发的数据（CR-017），本 CR 仅做引用键兼容改名、不重复接管该映射。
 
 **Acceptance Criteria**:
-- THE SYSTEM SHALL 接受 `Map<String,String>` 形式的特征值组合并返回单一 Configuration 配置代码（`configurationCode`）。
-- THE SYSTEM SHALL 基于本地 Configuration 投影与特征值映射在 VMD 内完成反查，不强依赖 MDM 运行时可用性。
-- WHEN 调用 `GET /configuration/{configurationCode}` THE SYSTEM SHALL 返回包含 `featureCodes` 列表 + `brandCode` 的完整 `VmdConfigurationResponse`；迁移期保留旧路径 `GET /buildConfig/{buildConfigCode}` 与旧响应类型 `VmdBuildConfigResponse` 兼容（CR-017）。
+- THE SYSTEM SHALL 接受 `Map<String,String>` 形式的选项族-选项值（`optionFamilyCode` → `optionCode`）组合并返回单一 Configuration 配置代码（`configurationCode`）；迁移期兼容旧入参 `familyCode` / `featureCode`（按 `familyCode` → `optionFamilyCode`、`featureCode` → `optionCode` 映射）。
+- THE SYSTEM SHALL 基于本地 Configuration 投影与选项值映射在 VMD 内完成反查，不强依赖 MDM 运行时可用性。
+- WHEN 调用 `GET /configuration/{configurationCode}` THE SYSTEM SHALL 返回包含 `optionCodes` 列表 + `brandCode` 的完整 `VmdConfigurationResponse`；迁移期保留旧响应字段 `featureCodes` 与旧路径 `GET /buildConfig/{buildConfigCode}`、旧响应类型 `VmdBuildConfigResponse` 兼容（CR-017 / CR-018）。
 - IF `carLineCode` 缺失或对应车系不存在 THEN THE SYSTEM SHALL 在响应中省略 `brandCode`（不视为错误）。
+- THE SYSTEM SHALL 不切断特征-配置反查能力与每台物理车 `configurationCode` 唯一映射。
 
 ## 4. Constraints & Assumptions
 
@@ -672,7 +729,7 @@
 - **MDM 同步优先级**：品牌 / 车系 / 平台主数据的 SSOT 优先级为 MDM > VMD 本地；MDM 不可达时降级为只读。
 - **MDM 事件消费**：VMD 通过 Kafka 订阅 MDM 事件，事件 payload schema / topic 命名 / partition 策略 / 重试与死信策略由「edd-mdm 接入规范」定义。
 - **MDM 快照接口**：VMD 通过 Feign 调用 MDM 全量快照接口，路径 / 入参 / 出参由「edd-mdm 接入规范」定义。
-- **数据来源标记**：veh_brand / veh_carLine / veh_platform / **veh_plant** / **veh_model**（CR-015）/ **veh_variant**（原 veh_base_model，CR-016）/ **Configuration 配置投影**（原 BuildConfig，CR-017）七类实体投影表新增 source 字段（MDM / MANUAL），source=MDM 的记录禁止通过 MPT 后台修改。
+- **数据来源标记**：veh_brand / veh_carLine / veh_platform / **veh_plant** / **veh_model**（CR-015）/ **veh_variant**（原 veh_base_model，CR-016）/ **Configuration 配置投影**（原 BuildConfig，CR-017）/ **OptionFamily 选项族投影 / OptionCode 选项值投影**（原 FeatureFamily / FeatureCode，CR-018）九类实体投影表新增 source 字段（MDM / MANUAL），source=MDM 的记录禁止通过 MPT 后台修改。
 
 ### Plant 主数据投影约束（CR-011）
 - Plant 主数据的权威来源（SSOT）为 **MDM**，VMD 仅保留本地 Plant 投影副本，不作为权威维护入口。
@@ -1005,13 +1062,77 @@
 - Configuration 主数据合并 / 拆分关系。
 - MDM 内部治理字段、审批字段、流程字段。
 
+### OptionFamily / OptionCode 主数据投影约束（CR-018）
+- OptionFamily（选项族，原 FeatureFamily 特征族）/ OptionCode（选项值，原 FeatureCode 特征值）主数据的权威来源（SSOT）为 **MDM**，VMD 仅保留本地只读投影副本，不作为权威维护入口。
+- **本 CR 与 Plant（CR-011）/ Variant（CR-016）/ Configuration（CR-017）同构、区别于 Brand/Platform/CarLine/Model（CR-012~015 命名不变、仅投影化）**：MDM 侧实体由 FeatureFamily / FeatureCode 改名为 OptionFamily / OptionCode，VMD 将实体与关联键 `familyCode` / `featureCode` 改名为 OptionFamily / OptionCode / `optionFamilyCode` / `optionCode`。
+- **命名消歧**：本节 OptionFamily / OptionCode（选项族 / 选项值）区别于 ConfigItem（配置项，US-009）下的「枚举值 Option」、configCenter（配置中心）、VehicleConfig（车辆配置，US-013）；同段落出现易混概念时用全称限定，避免裸用「选项」或「Option」。
+- VMD 中 `optionFamilyCode` / `optionCode` 是版本（Variant）/ 配置（Configuration）的选项引用键，作为关联键长期保留，承接原 `familyCode` / `featureCode` 语义并回填历史值，不丢失历史数据。
+- **特征-配置反查（US-031）能力与每台物理车 `configurationCode` 唯一映射不得切断**。
+- 随实体重命名所必需的引用键——Variant 侧（原 BaseModelFeatureCode，CR-016）、Configuration 侧（原 BuildConfigFeatureCode，CR-017）的特征值引用键——一并由 `featureCode` 兼容改名为 `optionCode`，**仅做引用键改名，不改其业务语义、不重复接管已随 Variant / Configuration 投影下发的选项值映射数据**。
+- VMD 不负责 OptionFamily / OptionCode 主数据治理、审批、合并、编码生成和生命周期管理。
+- MDM 与 VMD 的 OptionFamily / OptionCode 同步协议（Kafka topic、payload schema、快照接口路径、重试与死信策略）由「edd-mdm 接入规范」定义，复用现有事件订阅（F6，新增 entity=optionFamily / optionCode）与 Bootstrap 全量同步（F7，entity=optionFamily \| optionCode \| all）机制。
+- VMD OptionFamily / OptionCode 投影采用按需最小化字段设计，不要求与 MDM 主数据模型完全一致；投影字段以选项引用、特征-配置反查、查询展示、历史追溯和运行时解耦为边界。
+- MDM OptionFamily / OptionCode 的完整主数据属性、治理属性、审批属性、生命周期属性不在 VMD 投影模型中强制落库。
+- 如 MDM OptionFamily / OptionCode 后续新增字段，只有当该字段被 VMD 的车辆导入、车辆查询、车辆追溯、特征-配置反查、展示或校验逻辑消费时，才通过独立 CR 纳入 VMD OptionFamily / OptionCode 投影。
+- VMD 可根据排障或审计需要保留 `raw_payload` / `extension_json` 等原始快照字段，但该字段不应作为 VMD 领域逻辑的主要依赖。
+- 命名约束：新增需求、接口、领域对象、数据表、DTO、VO、文档统一使用 **OptionFamily / OptionCode** / `optionFamilyCode` / `optionCode` / 「选项族」「选项值」命名；FeatureFamily / FeatureCode / `familyCode` / `featureCode` / 「特征族」「特征值」仅出现在历史兼容、迁移说明或旧字段映射场景中（与 Manufacturer→Plant、BaseModel→Variant、BuildConfig→Configuration 的历史兼容命名约定并列）。
+
+### OptionFamily / OptionCode 投影字段范围原则（VMD OptionFamily / OptionCode ⊂ MDM，CR-018）
+> VMD 侧 OptionFamily / OptionCode 投影不要求与 MDM 主数据字段完全一致，应采用**按需最小化投影**原则。VMD OptionFamily / OptionCode 投影是 MDM 对应主数据在 VMD bounded context 下的只读视图，不是 MDM 的完整副本/镜像表。
+
+**字段设计原则**：
+1. VMD 只保留支撑车辆主数据业务闭环（选项引用、特征-配置反查、查询展示、历史追溯）所需的 OptionFamily / OptionCode 字段。
+2. VMD 不复制 MDM OptionFamily / OptionCode 的完整治理模型、审批字段、生命周期状态、组织层级、扩展属性等非 VMD 必需字段。
+3. MDM OptionFamily / OptionCode 字段发生变化时，只有当变化影响 VMD 的车辆导入、车辆查询、车辆追溯、特征-配置反查、展示或校验逻辑时，才需要同步调整 VMD 投影模型。
+4. VMD OptionFamily / OptionCode 投影是 MDM 在 VMD bounded context 下的只读视图，不是 MDM 的完整副本。
+5. OptionCode 投影上的 `option_family_code` 归属关联字段为「选项族→选项值」从属关系及特征-配置反查所必需，属于 VMD 业务闭环必备字段，必须保留。
+6. VMD 可以根据排障或审计需要保留 `raw_payload` / `extension_json` 等原始快照字段，但该字段不应作为 VMD 领域逻辑的主要依赖。
+
+**建议 OptionFamily 投影至少保留以下字段（最小投影集）**：
+
+| 字段 | 说明 |
+|------|------|
+| `code` | OptionFamily 编码（即 `optionFamilyCode` 关联键），承接原 `familyCode` |
+| `name` | OptionFamily 名称，用于查询、展示 |
+| `type` | 选项族类型（承接原特征族 `type` 语义），用于选项分类与反查 |
+| `source` | 数据来源，MDM / MANUAL |
+| `external_ref_id` | MDM OptionFamily 实体 ID |
+| `external_version` | MDM OptionFamily 版本号 |
+| `last_sync_time` | 最近同步时间 |
+| `deleted` / `enabled` / `status` | 可选，用于处理 MDM 删除、停用或不可用状态 |
+| `raw_payload` / `extension_json` | 可选，用于排障、审计或临时兼容 |
+
+**建议 OptionCode 投影至少保留以下字段（最小投影集）**：
+
+| 字段 | 说明 |
+|------|------|
+| `code` | OptionCode 编码（即 `optionCode` 关联键），承接原 `featureCode` |
+| `name` | OptionCode 名称，用于查询、展示 |
+| `option_family_code` | 归属选项族关联字段（承接原 `familyCode`），「选项族→选项值」从属关系与特征-配置反查所需 |
+| `source` | 数据来源，MDM / MANUAL |
+| `external_ref_id` | MDM OptionCode 实体 ID |
+| `external_version` | MDM OptionCode 版本号 |
+| `last_sync_time` | 最近同步时间 |
+| `deleted` / `enabled` / `status` | 可选，用于处理 MDM 删除、停用或不可用状态 |
+| `raw_payload` / `extension_json` | 可选，用于排障、审计或临时兼容 |
+
+**不建议默认同步以下字段（除非 VMD 明确消费，需走独立 CR）**：
+- OptionFamily / OptionCode 审批状态。
+- OptionFamily / OptionCode 生命周期全量状态流转。
+- OptionFamily / OptionCode 组织归属全路径。
+- OptionFamily / OptionCode 营销 / 销售选项定位属性。
+- OptionFamily / OptionCode 编码生成规则。
+- OptionFamily / OptionCode 数据质量评分。
+- OptionFamily / OptionCode 主数据合并 / 拆分关系。
+- MDM 内部治理字段、审批字段、流程字段。
+
 ### 依赖（外部）
 - **TSP 服务**：`TspVehicleCcpService / TspVehicleIdcmService / TspVehicleNetworkService / TspVehicleTboxService / TspCcpInfoService / TspIdcmInfoService / TspTboxInfoService / TspSimService`。
 - **OTA 服务**：`OtaVehiclePartService`（车辆零件同步）。
 - **IDK 服务**：`IdkBtmInfoService`（蓝牙模块批量导入）。
 - **账号服务（已注释）**：`ExAccountService`（预设车主校验，待启用）。
 - **安全密钥服务（已注释）**：`ExSkService`（IMMO_SK 生成，待启用）。
-- **edd-mdm 服务**：Product MDM 子域，提供品牌 / 车系 / 平台 / **Plant（工厂）**/ **车型（Model）**/ **版本（Variant，原 BaseModel 基础车型）**/ **配置（Configuration，原 BuildConfig 生产配置）**主数据的 Kafka 事件推送 + Feign 全量快照接口。详见「edd-mdm 接入规范」。
+- **edd-mdm 服务**：Product MDM 子域，提供品牌 / 车系 / 平台 / **Plant（工厂）**/ **车型（Model）**/ **版本（Variant，原 BaseModel 基础车型）**/ **配置（Configuration，原 BuildConfig 生产配置）**/ **选项族（OptionFamily，原 FeatureFamily 特征族）/ 选项值（OptionCode，原 FeatureCode 特征值）**主数据的 Kafka 事件推送 + Feign 全量快照接口。详见「edd-mdm 接入规范」。
 
 ### 前置条件
 - Nacos 中已存在共享配置 `application.yaml / mysql.yaml / redis.yaml`。
@@ -1020,6 +1141,7 @@
 - MDM 已完成首版 Product MDM 子域上线，且 Kafka topic 已开通。
 - MDM 已上线 Plant（工厂）主数据实体，且 Plant 事件 Kafka topic 与 Plant 全量快照接口已就绪（CR-011）。
 - MDM 已上线 Variant（版本，原 BaseModel 基础车型）主数据实体，且 Variant 事件 Kafka topic 与 Variant 全量快照接口已就绪（CR-016）。
+- MDM 已上线 OptionFamily（选项族，原 FeatureFamily）/ OptionCode（选项值，原 FeatureCode）主数据实体，且 OptionFamily / OptionCode 事件 Kafka topic 与全量快照接口已就绪（CR-018）。
 - MDM Feign 全量快照接口已就绪，VMD 可通过 Feign 调用。
 - VMD 启动时若本地无 source=MDM 数据，需通过 Bootstrap 流程从 MDM 拉全量。
 
@@ -1079,6 +1201,13 @@
 - O52：**不改造 BaseModelFeatureCode / 特征值的归属与维护语义**（留待后续 CR），仅做随实体重命名必需的引用键兼容改名（`base_model_code`→`variant_code`）（CR-016）。
 - O53：**不改造 BuildConfig / FeatureFamily 的归属**（CR-017 / CR-018 处理）；不得切断「车系→车型→版本」及 `BuildConfig → variantCode` 引用链（CR-016）。
 - O54：MDM Variant 的内部模型设计、生命周期状态、审批流、编码规则不在 VMD 范围内（CR-016）。
+- O55：VMD 不再提供 OptionFamily / OptionCode（选项族 / 选项值，原 FeatureFamily / FeatureCode）主数据的长期本地新增、修改、删除能力（source=MANUAL 过渡数据除外，且仅作为兼容期遗留）（CR-018）。
+- O56：VMD 不实现 OptionFamily / OptionCode 主数据的 Golden Record 合并、编码规则生成、主数据审批流程与选项族 / 选项值生命周期管理（CR-018）。
+- O57：VMD 不要求完整复制 MDM OptionFamily / OptionCode 的所有字段；不承担 MDM OptionFamily / OptionCode 字段变化的自动同步适配责任（字段变化影响 VMD 业务时走独立 CR）（CR-018）。
+- O58：历史 OptionFamily / OptionCode 数据 source 回标、历史 `familyCode` / `featureCode` 清洗纠错归并由独立数据治理 CR 处理，本期 spec 不实现（CR-018）。
+- O59：本次 CR 只定义 FeatureFamily→OptionFamily / FeatureCode→OptionCode 的投影化、实体重命名与关联键重命名（`familyCode`→`optionFamilyCode`、`featureCode`→`optionCode`）及兼容策略，不要求一次性删除所有旧字段（`family_code` / `feature_code` 等）、旧接口（`/api/mpt/featureFamily/**`、`listAllFeatureCode`）和旧权限点（`completeVehicle:product:featureFamily:*` / `completeVehicle:product:featureCode:*`）；旧资产标记 `deprecated`，最终下线由后续兼容性清理 CR 完成（CR-018）。
+- O60：**不重复接管已随 Variant（CR-016）/ Configuration（CR-017）投影下发的选项值映射数据**，本 CR 仅对 Variant 侧（原 BaseModelFeatureCode）/ Configuration 侧（原 BuildConfigFeatureCode）的特征值引用键 `feature_code` 做随实体重命名必需的兼容改名（`feature_code`→`option_code`），不改其业务语义；不得切断特征-配置反查（US-031）能力与每台物理车 `configurationCode` 唯一映射（CR-018）。
+- O61：MDM OptionFamily / OptionCode 的内部模型设计、生命周期状态、审批流、编码规则不在 VMD 范围内（CR-018）。
 
 ## 6. Changelog
 
@@ -1099,4 +1228,5 @@
 | 2026-06-08 | CR-015 | Modified | **车型主数据重构为 MDM Model 本地投影**：Model 主数据 SSOT 上移至 MDM，VMD 保留 Model 本地投影表（US-003 由「维护车型 Model」改写为「消费 MDM Model 主数据本地投影」；新增 US-003b Model Bootstrap 全量同步（entity=model\|all），补齐最小字段集/失败不清空/幂等 upsert/启动时 source=MDM 记录为 0 自动拉全量措辞；新增 US-003c Model 本地维护能力兼容清理；US-004 BaseModel 查询语义保持不变，仅其引用的 `modelCode` 数据来源变为投影）；与 Brand（CR-012）、Platform（CR-013）、CarLine（CR-014）同构、区别于 Plant 命名迁移——车型实体命名不变、`modelCode` 关联键不变，不引入表/列重命名；**关键差异：CR-010/V3 仅覆盖 veh_brand/veh_series/veh_platform，未覆盖 `veh_model`，故 CR-015 新增 Flyway 迁移 `V6__Add_mdm_source_to_model.sql` 为 `veh_model` 补齐 source / external_ref_id / external_version / last_sync_time 字段 + UK(external_ref_id) + 回填 source='MANUAL'（区别于 CR-013/CR-014 复用 V3）**，保持现有列 `code`/`name`/`platform_code`/`series_code`(=carLineCode) 不变；新增 §4「Model 主数据投影约束」与「Model 投影字段范围原则」（VMD Model ⊂ MDM Model，按需最小化投影，不要求完整复制 MDM Model 主数据模型）；VMD Model add/edit/remove 仅作为 source=MANUAL 兼容期遗留能力，对 source=MDM 记录一律只读（拒绝时抛 `ProductDataReadOnlyException`，错误码 `202014`）；保留 `modelCode` 作为车辆主档与产品树的车型关联字段（不改名、不删除）；**保留 `veh_base_model.model_code → veh_model.code` 的「车系→车型→基础车型」引用链，不得切断（BaseModel 当前仍为 VMD 自有，BaseModel/BuildConfig/FeatureFamily 改造留待后续 CR-016~018）**；MDM 事件订阅（F6，新增 entity=model）与 Bootstrap 全量同步（F7，entity=model\|all）复用现有机制，新增 `MdmModelQueryClient` Feign 客户端用于运行时按需查询与降级兜底；§2 G5 纳入 Model「MDM 下游消费方 + 只读本地投影副本」语义并新增 Model 语义统一说明、新增 N8 Model 非目标；§5 新增 O40~O46；权限点 `completeVehicle:product:model:list/query/export` 长期保留，`add/edit/remove` 仅作兼容期遗留（限 source=MANUAL）待后续 CR 下线。**design.md / tasks.md 需按 SPEC 工作流后续同步落地本 CR** |
 | 2026-06-09 | CR-016 | Modified | **基础车型（BaseModel）重构为 MDM Variant（版本）本地投影 + 命名迁移**：Variant 主数据 SSOT 上移至 MDM，VMD 保留 Variant 本地投影表（US-004 由「维护基础车型 BaseModel 及其特征值」改写为「消费 MDM Variant 主数据本地投影」；新增 US-004b Variant Bootstrap 全量同步（entity=variant\|all）、US-004c Variant 本地维护能力兼容清理 + BaseModel→Variant 命名迁移）；**与 Plant（CR-011）同构、区别于 Brand/Platform/CarLine/Model（CR-012~015 命名不变、仅投影化）——本次涉及实体重命名 + 关联键重命名**：MDM 侧 BaseModel 改名为 Variant，VMD 将 `veh_base_model`→`veh_variant`、`baseModelCode`→`variantCode`，BaseModel/`baseModelCode`/「基础车型」转为历史兼容命名（参照 Manufacturer→Plant）；新增 §4「Variant 主数据投影约束」与「Variant 投影字段范围原则」（VMD Variant ⊂ MDM Variant，按需最小化投影）；VMD Variant add/edit/remove 仅作 source=MANUAL 兼容期遗留，对 source=MDM 一律只读（拒绝时抛 `ProductDataReadOnlyException`，错误码 `202014`）；保留并回填 `variantCode`，**`veh_variant.model_code → veh_model.code` 的「车系→车型→版本（原基础车型）」与 `BuildConfig → variantCode` 引用链不得切断**；US-005 BuildConfig 引用键 `base_model_code`→`variant_code`、路径 `listByBaseModelCode/{baseModelCode}`→`listByVariantCode/{variantCode}`（保留旧路径兼容，BuildConfig 本体仍为 VMD 自有）；US-019 PRODUCE 解析器七项编码 `baseModelCode`→`variantCode`（含历史兼容读取/映射）；US-030 service 路径 `/buildConfig/list/{baseModelCode}`→`/buildConfig/list/{variantCode}`（保留旧路径兼容）；MDM 事件订阅（F6，新增 entity=variant）与 Bootstrap 全量同步（F7，entity=variant\|all）复用现有机制；§1 产品树链路、§2 G5 纳入 Variant 语义并新增 Variant 语义统一说明、新增 N9 Variant 非目标；§5 新增 O47~O54。**本 CR 不改造 BaseModelFeatureCode/特征值归属（仅引用键兼容改名）、不改造 BuildConfig/FeatureFamily 归属（CR-017/CR-018）**。<br>**受影响清单（供实现对账）**：<br>· 表：`tb_veh_base_model`→`tb_veh_variant`（重命名 + 补 source/external_ref_id/external_version/last_sync_time + UK(external_ref_id)）；`tb_veh_basic_info`（新增 `variant_code` 回填）；`tb_veh_build_config`（`base_model_code`→`variant_code`）；`tb_veh_base_model_feature_code`（`base_model_code`→`variant_code`，仅引用键改名）。<br>· 字段：`base_model_code`/`baseModelCode`→`variant_code`/`variantCode`（保留旧列/旧字段兼容并回填）；`veh_variant` 保留列 `code`/`name`/`platform_code`/`car_line_code`/`model_code` 不变。<br>· 权限点：`completeVehicle:product:baseModel:*`→`completeVehicle:product:variant:list/query/export`；`variant:add/edit/remove` 仅兼容期遗留（限 source=MANUAL）；旧 `baseModel:*` 标记 `deprecated` 待后续 CR 下线。<br>· API path：`/api/mpt/baseModel/**`→`/api/mpt/variant/**`（含 `listByPlatformCodeAndCarLineCodeAndModelCode`）；`/api/mpt/buildConfig/v1/listByBaseModelCode/{baseModelCode}`→`listByVariantCode/{variantCode}`；`/api/service/vehicleModelConfig/v1/buildConfig/list/{baseModelCode}`→`/buildConfig/list/{variantCode}`（旧路径迁移期保留兼容）。<br>· Flyway：新增 `V7__Migrate_base_model_to_variant.sql`（表迁移/重命名 + 投影字段 + UK + 回填 source='MANUAL'）、`V8__Migrate_base_model_code_to_variant_code.sql`（basic_info/build_config/base_model_feature_code 关联键迁移回填），接续 CR-015 的 V6。**design.md / tasks.md 需按 SPEC 工作流后续同步落地本 CR** |
 | 2026-06-09 | CR-017 | Modified | **生产配置（BuildConfig）重构为 MDM Configuration（配置）本地投影 + 命名迁移**：Configuration 配置主数据 SSOT 上移至 MDM，VMD 保留 Configuration 本地投影表（US-005 由「维护生产配置 BuildConfig 及其特征值」改写为「消费 MDM Configuration 主数据本地投影」；新增 US-005b Configuration Bootstrap 全量同步（entity=configuration\|all）、US-005c Configuration 本地维护能力兼容清理 + BuildConfig→Configuration 命名迁移）；**与 Plant（CR-011）/ Variant（CR-016）同构、区别于 Brand/Platform/CarLine/Model（CR-012~015 命名不变、仅投影化）——本次涉及实体重命名 + 关联键重命名**：MDM 侧 BuildConfig 改名为 Configuration，VMD 将 `buildConfigCode`→`configurationCode`，BuildConfig/`buildConfigCode`/「生产配置」转为历史兼容命名（参照 Manufacturer→Plant、BaseModel→Variant）；**命名消歧**——Configuration（配置）区别于 VehicleConfig（车辆配置，US-013）、ConfigItem（配置项，US-009）、configCenter（配置中心），易混处用全称限定；新增 §4「Configuration 配置主数据投影约束」与「Configuration 投影字段范围原则」（VMD Configuration ⊂ MDM Configuration，按需最小化投影）；VMD Configuration add/edit/remove 仅作 source=MANUAL 兼容期遗留，对 source=MDM 一律只读（拒绝时抛 `ProductDataReadOnlyException`，错误码 `202014`）；保留并回填 `configurationCode`（每台物理车唯一映射的核心锚点），**「版本（Variant）→配置（Configuration）」引用链与每台物理车 `configurationCode` 唯一映射不得切断**；US-019 PRODUCE 解析器七项编码 `buildConfigCode`→`configurationCode`（含历史兼容读取/映射）；US-030 service 路径 `/buildConfigCode`→`/configurationCode`、`/buildConfig/list/{variantCode}`→`/configuration/list/{variantCode}`、`/buildConfig/{buildConfigCode}`→`/configuration/{configurationCode}`（旧路径迁移期保留兼容，与 CR-016 baseModel 兼容并存）；US-031 特征-配置反查标题/路径改 Configuration、响应类型 `VmdBuildConfigResponse`→`VmdConfigurationResponse`（旧路径/旧类型兼容），强调反查逻辑仍属 VMD（基于本地投影 + 特征值映射，不强依赖 MDM 运行时）；MDM 事件订阅（F6，新增 entity=configuration）与 Bootstrap 全量同步（F7，entity=configuration\|all）复用现有机制；§2 新增 G7、Configuration 语义统一说明、N10 Configuration 非目标；§4 数据来源标记由六类实体扩展为七类（纳入 Configuration 配置投影）、新增 Configuration 投影约束与字段范围原则两节。**本 CR 不改造 BuildConfigFeatureCode/特征值归属（仅引用键兼容改名）、不改造 FeatureFamily 归属（CR-018）；具体迁移脚本、字段物理改名、Flyway 文件等实现细节留 design.md / tasks.md**。**design.md / tasks.md 需按 SPEC 工作流后续同步落地本 CR** |
+| 2026-06-09 | CR-018 | Modified | **特征族（FeatureFamily）/ 特征值（FeatureCode）重构为 MDM OptionFamily（选项族）/ OptionCode（选项值）本地投影 + 命名迁移**：OptionFamily / OptionCode 主数据 SSOT 上移至 MDM，VMD 保留本地只读投影表（US-008 由「维护特征族 FeatureFamily 及其特征值 FeatureCode」改写为「消费 MDM OptionFamily / OptionCode 主数据本地投影」；新增 US-008b OptionFamily / OptionCode Bootstrap 全量同步（entity=optionFamily \| optionCode \| all）、US-008c 本地维护能力兼容清理 + Feature→Option 命名迁移）；**与 Plant（CR-011）/ Variant（CR-016）/ Configuration（CR-017）同构、区别于 Brand/Platform/CarLine/Model（CR-012~015 命名不变、仅投影化）——本次涉及实体重命名 + 关联键重命名**：MDM 侧 FeatureFamily / FeatureCode 改名为 OptionFamily / OptionCode，VMD 将 `familyCode`→`optionFamilyCode`、`featureCode`→`optionCode`，FeatureFamily / FeatureCode / `familyCode` / `featureCode` / 「特征族」「特征值」转为历史兼容命名（参照 Manufacturer→Plant、BaseModel→Variant、BuildConfig→Configuration）；**命名消歧**——OptionFamily / OptionCode（选项族 / 选项值）区别于 ConfigItem（配置项，US-009）下的「枚举值 Option」、configCenter（配置中心）、VehicleConfig（车辆配置，US-013），易混处用全称限定；新增 §4「OptionFamily / OptionCode 主数据投影约束」与「OptionFamily / OptionCode 投影字段范围原则」（VMD ⊂ MDM，按需最小化投影，含 OptionFamily 与 OptionCode 两张最小投影集，OptionCode 含 `option_family_code` 归属字段）；VMD OptionFamily / OptionCode add/edit/remove 仅作 source=MANUAL 兼容期遗留，对 source=MDM 一律只读（拒绝时抛 `ProductDataReadOnlyException`，错误码 `202014`）；保留并回填 `optionFamilyCode` / `optionCode`，**特征-配置反查（US-031）能力与每台物理车 `configurationCode` 唯一映射不得切断**；**对 Variant 侧（原 BaseModelFeatureCode，CR-016）/ Configuration 侧（原 BuildConfigFeatureCode，CR-017）的特征值引用键 `feature_code` 随实体重命名兼容改名为 `option_code`，仅引用键改名、不改业务语义、不重复接管已随 Variant / Configuration 投影下发的选项值映射数据**（US-004 / US-005 / US-005c 引用键表述同步更新）；US-031 特征-配置反查标题/入参/响应改 OptionFamily-OptionCode（`familyCode`→`optionFamilyCode`、`featureCode`→`optionCode`、响应 `featureCodes`→`optionCodes`，旧入参/旧字段/旧路径兼容），强调反查逻辑仍属 VMD（基于本地投影 + 选项值映射，不强依赖 MDM 运行时）；新接口 `/api/mpt/optionFamily/v1/listAllOptionCode?optionFamilyCode`（旧路径 `/api/mpt/featureFamily/v1/listAllFeatureCode?familyCode` 迁移期保留兼容）；权限点 `completeVehicle:product:featureFamily:*` / `featureCode:*`→`completeVehicle:product:optionFamily:list/query/export` / `optionCode:list/query/export`（`add/edit/remove` 仅兼容期遗留限 source=MANUAL，旧权限点标记 `deprecated` 待后续 CR 下线）；MDM 事件订阅（F6，新增 entity=optionFamily / optionCode）与 Bootstrap 全量同步（F7，entity=optionFamily \| optionCode \| all）复用现有机制；§2 新增 G8、OptionFamily / OptionCode 语义统一说明、N11 非目标；§3.2 章节标题由「特征族 & 配置项域」改为「选项族（OptionFamily） & 配置项域」并加消歧说明；§4 数据来源标记由七类实体扩展为九类（纳入 OptionFamily / OptionCode 投影）；§5 新增 O55~O61。**本 CR 仅做引用键兼容改名，不重复接管 CR-016/CR-017 已下发的选项值映射；具体迁移脚本、字段物理改名、Flyway 文件等实现细节留 design.md / tasks.md**。**design.md / tasks.md 需按 SPEC 工作流后续同步落地本 CR** |
 
