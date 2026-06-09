@@ -34,6 +34,7 @@ import java.util.Map;
 @Slf4j
 @Service
 @RequiredArgsConstructor
+@Deprecated
 public class BaseModelAppService {
 
     private final VehBaseModelRepository vehBaseModelRepository;
@@ -166,7 +167,7 @@ public class BaseModelAppService {
      */
     public List<BaseModelFeatureCodeDto> searchFeatureCode(String baseModelCode, String familyCode) {
         BaseModelFeatureCode example = BaseModelFeatureCode.builder()
-                .baseModelCode(baseModelCode)
+                .variantCode(baseModelCode)
                 .familyCode(familyCode)
                 .build();
         List<BaseModelFeatureCode> list = vehBaseModelRepository.selectFeatureCodeByExample(example);
@@ -215,7 +216,7 @@ public class BaseModelAppService {
             id = -1L;
         }
         List<BaseModelFeatureCode> list = vehBaseModelRepository.selectFeatureCodeByExample(BaseModelFeatureCode.builder()
-                .baseModelCode(baseModelCode)
+                .variantCode(baseModelCode)
                 .familyCode(familyCode)
                 .build());
         return list.isEmpty() || list.get(0).getId().longValue() == id.longValue();

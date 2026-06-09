@@ -29,6 +29,12 @@ public class VmdVehicleModelConfigServiceFallbackFactory implements FallbackFact
             }
 
             @Override
+            public List<VmdBuildConfigResponse> getBuildConfigListByVariantCode(String variantCode) {
+                log.error("车辆车系车型配置服务根据版本代码[{}]获取生产配置列表调用失败", variantCode, throwable);
+                return Collections.emptyList();
+            }
+
+            @Override
             public List<VmdBuildConfigResponse> getBuildConfigListByBaseModelCode(String baseModelCode) {
                 log.error("车辆车系车型配置服务根据基础车型代码[{}]获取生产配置列表调用失败", baseModelCode, throwable);
                 return Collections.emptyList();

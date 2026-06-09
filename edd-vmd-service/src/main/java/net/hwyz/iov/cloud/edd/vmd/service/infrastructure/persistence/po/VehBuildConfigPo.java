@@ -53,4 +53,7 @@ public class VehBuildConfigPo extends BasePo {
 
     @TableField("sort")
     private Integer sort;
+
+    @TableField("variant_code")
+    private String variantCode;
 }

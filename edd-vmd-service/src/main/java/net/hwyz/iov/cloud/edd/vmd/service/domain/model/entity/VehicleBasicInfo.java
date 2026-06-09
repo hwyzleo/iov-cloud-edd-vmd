@@ -66,6 +66,11 @@ public class VehicleBasicInfo implements DomainObj<VehicleBasicInfo> {
     private String baseModelCode;
 
     /**
+     * 版本代码（CR-016新增，承接 baseModelCode 语义）
+     */
+    private String variantCode;
+
+    /**
      * 生产配置代码
      */
     private String buildConfigCode;

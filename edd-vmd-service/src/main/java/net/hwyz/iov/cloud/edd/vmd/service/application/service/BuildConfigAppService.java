@@ -38,6 +38,7 @@ public class BuildConfigAppService {
         map.put("platformCode", query.getPlatformCode());
         map.put("carLineCode", query.getCarLineCode());
         map.put("modelCode", query.getModelCode());
+        map.put("variantCode", query.getVariantCode());
         map.put("baseModelCode", query.getBaseModelCode());
         map.put("code", query.getCode());
         map.put("name", ParamHelper.fuzzyQueryParam(query.getName()));
@@ -47,6 +48,15 @@ public class BuildConfigAppService {
         return PageUtil.convert(buildConfigList, BuildConfigAssembler.INSTANCE::fromDomain);
     }
 
+    public List<BuildConfigDto> getBuildConfigListByVariantCode(String variantCode) {
+        List<BuildConfig> buildConfigList = vehBuildConfigRepository.selectByExample(BuildConfig.builder()
+                .variantCode(variantCode)
+                .enable(true)
+                .build());
+        return PageUtil.convert(buildConfigList, BuildConfigAssembler.INSTANCE::fromDomain);
+    }
+
+    @Deprecated
     public List<BuildConfigDto> getBuildConfigListByBaseModelCode(String baseModelCode) {
         List<BuildConfig> buildConfigList = vehBuildConfigRepository.selectByExample(BuildConfig.builder()
                 .baseModelCode(baseModelCode)

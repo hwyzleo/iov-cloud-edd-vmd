@@ -44,12 +44,26 @@ public class ServiceVehicleModelConfigController extends BaseController {
     }
 
     /**
+     * 根据版本代码获取生产配置列表
+     *
+     * @param variantCode 版本代码
+     * @return 生产配置列表
+     */
+    @GetMapping("/buildConfig/list/{variantCode}")
+    public List<VmdBuildConfigResponse> getBuildConfigListByVariantCode(@PathVariable String variantCode) {
+        log.info("内部服务请求根据版本代码[{}]获取生产配置列表", variantCode);
+        List<BuildConfigDto> dtoList = buildConfigAppService.getBuildConfigListByVariantCode(variantCode);
+        return ServiceBuildConfigAssembler.INSTANCE.toExResponseList(dtoList);
+    }
+
+    /**
      * 根据基础车型代码获取生产配置列表
      *
      * @param baseModelCode 基础车型代码
      * @return 生产配置列表
      */
-    @GetMapping("/buildConfig/list/{baseModelCode}")
+    @Deprecated
+    @GetMapping("/buildConfig/listByBaseModelCode/{baseModelCode}")
     public List<VmdBuildConfigResponse> getBuildConfigListByBaseModelCode(@PathVariable String baseModelCode) {
         log.info("内部服务请求根据基础车型代码[{}]获取生产配置列表", baseModelCode);
         List<BuildConfigDto> dtoList = buildConfigAppService.getBuildConfigListByBaseModelCode(baseModelCode);

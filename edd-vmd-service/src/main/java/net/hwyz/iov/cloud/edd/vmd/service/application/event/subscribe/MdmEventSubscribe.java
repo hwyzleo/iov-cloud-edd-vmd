@@ -6,6 +6,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmBrandEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmPlatformEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmCarLineEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmModelEvent;
+import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmVariantEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.MdmSyncAppService;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -69,6 +70,18 @@ public class MdmEventSubscribe {
         log.info("收到MDM车型事件: type={}, entityId={}, version={}, code={}",
                 event.getEventType(), event.getEntityId(), event.getVersion(), event.getCode());
         mdmSyncAppService.handleModelEvent(event);
+    }
+
+    /**
+     * 订阅 MDM 版本事件
+     *
+     * @param event 版本事件
+     */
+    @EventListener
+    public void onMdmVariantEvent(MdmVariantEvent event) {
+        log.info("收到MDM版本事件: type={}, entityId={}, version={}, code={}",
+                event.getEventType(), event.getEntityId(), event.getVersion(), event.getCode());
+        mdmSyncAppService.handleVariantEvent(event);
     }
 
 }

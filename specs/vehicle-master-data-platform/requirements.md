@@ -5,7 +5,7 @@
 
 ## 1. Overview
 
-`edd-vmd`（车辆主数据 / Vehicle Master Data）是开源车联网（OpenIOV）云端企业数字底座的核心微服务，沉淀从产品定义（品牌→车系→车型→基础车型→生产配置）到物理实例（车辆→零件→设备）再到生命周期事件（生产→密钥→证书→下线→合格证→订单→PDI→交付）的完整车辆主数据，并对外提供管理后台运营能力，以及供下游微服务消费的内部 RPC 契约。
+`edd-vmd`（车辆主数据 / Vehicle Master Data）是开源车联网（OpenIOV）云端企业数字底座的核心微服务，沉淀从产品定义（品牌→车系→车型→版本（Variant，原基础车型）→生产配置）到物理实例（车辆→零件→设备）再到生命周期事件（生产→密钥→证书→下线→合格证→订单→PDI→交付）的完整车辆主数据，并对外提供管理后台运营能力，以及供下游微服务消费的内部 RPC 契约。
 
 ## 2. Background & Goals
 
@@ -18,7 +18,7 @@
 - G2：通过统一 Feign 契约（`Vmd*Service`）对外暴露车辆/零件/设备/车型配置/生命周期五类能力。
 - G3：支持 6 类（PRODUCE/EOL/BTM/CCP/IDCM/TBOX/SIM）批量数据导入并下钻到 TSP/OTA/IDK 等下游服务。
 - G4：对管理后台提供完整 CRUD + 鉴权（`completeVehicle:*` / `iov:configCenter:*` 权限点）能力。
-- G5：在产品树（品牌/车系/平台/车型）主数据上，VMD 作为 edd-mdm 的下游消费方，持有本地投影副本；其中 Brand、CarLine、Platform 与 Model 本地投影均为**只读**视图，VMD 消费 MDM Brand / MDM CarLine / MDM Platform / MDM Model 主数据，通过 Brand 投影支撑车辆查询、产品树关联、导入校验和历史追溯（`brandCode` 作为车辆主档与产品树的品牌关联编码长期保留，VMD 不再承担 Brand 主数据维护职责，CR-012），通过 CarLine 投影支撑车辆查询、产品树关联、导入校验和历史追溯（`carLineCode` 作为车辆主档与产品树的车系关联编码长期保留，车系投影上的 `brandCode` 冗余字段一并保留用于跨域回查，VMD 不再承担 CarLine 主数据维护职责，CR-014），通过 Platform 投影支撑车辆查询、产品树关联、导入校验和历史追溯（`platformCode` 作为车辆主档与产品树的平台关联编码长期保留，VMD 不再承担 Platform 主数据维护职责，CR-013），通过 Model 投影支撑车辆查询、产品树关联（车系→车型→基础车型链路）、导入校验和历史追溯（`modelCode` 作为车辆主档与产品树的车型关联编码长期保留，VMD 不再承担 Model 主数据维护职责，CR-015）。
+- G5：在产品树（品牌/车系/平台/车型）主数据上，VMD 作为 edd-mdm 的下游消费方，持有本地投影副本；其中 Brand、CarLine、Platform 与 Model 本地投影均为**只读**视图，VMD 消费 MDM Brand / MDM CarLine / MDM Platform / MDM Model 主数据，通过 Brand 投影支撑车辆查询、产品树关联、导入校验和历史追溯（`brandCode` 作为车辆主档与产品树的品牌关联编码长期保留，VMD 不再承担 Brand 主数据维护职责，CR-012），通过 CarLine 投影支撑车辆查询、产品树关联、导入校验和历史追溯（`carLineCode` 作为车辆主档与产品树的车系关联编码长期保留，车系投影上的 `brandCode` 冗余字段一并保留用于跨域回查，VMD 不再承担 CarLine 主数据维护职责，CR-014），通过 Platform 投影支撑车辆查询、产品树关联、导入校验和历史追溯（`platformCode` 作为车辆主档与产品树的平台关联编码长期保留，VMD 不再承担 Platform 主数据维护职责，CR-013），通过 Model 投影支撑车辆查询、产品树关联（车系→车型→版本（原基础车型）链路）、导入校验和历史追溯（`modelCode` 作为车辆主档与产品树的车型关联编码长期保留，VMD 不再承担 Model 主数据维护职责，CR-015），通过 Variant（版本，原 BaseModel 基础车型）投影支撑车辆查询、产品树关联（车型→版本链路）、导入校验和历史追溯（`variantCode` 作为车辆主档与产品树的版本关联编码长期保留，承接原 `baseModelCode` 语义，VMD 不再承担 Variant 主数据维护职责，CR-016）。
 - G6：在工厂（Plant）主数据上，VMD 作为 edd-mdm 的下游消费方，持有 Plant 本地投影副本，用于车辆生产工厂追溯；车辆主档使用 `plantCode` 表示生产工厂编码，VMD 不再承担 Plant 主数据治理职责（CR-011）。
 
 > **Plant / 工厂主数据语义统一（CR-011 补充）**：
@@ -57,9 +57,19 @@
 > - Model 主数据的权威来源（SSOT）为 **edd-mdm**，VMD 仅保留 Model 本地投影副本。
 > - 车型与 Brand / Platform / CarLine 同构：车型实体命名不变、`modelCode` 关联键不变，不涉及表/列重命名，区别于 Plant 的命名迁移。**关键差异**：V3（`V3__Add_mdm_source_to_product_tree.sql`）仅为 `veh_brand`/`veh_series`/`veh_platform` 建了 source / external_ref_id / external_version / last_sync_time 字段，**未覆盖 `veh_model`**，故 CR-015 **新增 Flyway 迁移 `V6__Add_mdm_source_to_model.sql`** 为 `veh_model` 补齐上述投影字段与 `UK(external_ref_id)`（区别于 CR-013/CR-014 复用 V3）。
 > - VMD Model 本地投影面向车辆主数据上下文（bounded context），用于车辆主数据查询、车辆详情展示、导入校验、产品树关联、历史追溯，以及 MDM 不可用时的降级查询，不是 MDM Model 的完整副本/镜像表。
-> - VMD 车辆主档与产品树继续使用 `modelCode` 作为车型关联编码长期保留，不因维护权迁移而改名或删除；**`veh_base_model.model_code → veh_model.code` 的「车系→车型→基础车型」引用链不得切断**（BaseModel 当前仍为 VMD 自有，后续 CR 处理）。
+> - VMD 车辆主档与产品树继续使用 `modelCode` 作为车型关联编码长期保留，不因维护权迁移而改名或删除；**`veh_base_model.model_code → veh_model.code` 的「车系→车型→基础车型」引用链不得切断**（BaseModel 当前仍为 VMD 自有，后续 CR 处理；**自 CR-016 起 `veh_base_model`→`veh_variant`、链路表述为「车系→车型→版本（原基础车型）」，语义延续**）。
 > - VMD 不再承担 Model 主数据治理、编码生成、审批、Golden Record、生命周期管理等职责。
 > - VMD Model 投影采用按需最小化字段设计，对 source=MDM 记录保持只读语义。
+
+> **Variant / 版本主数据语义统一（CR-016 补充）**：
+> - Variant（版本）主数据的权威来源（SSOT）为 **edd-mdm**，VMD 仅保留 Variant 本地投影副本。
+> - **本 CR 与 Plant（CR-011）同构、区别于 Brand/Platform/CarLine/Model（CR-012~015 命名不变、仅投影化）**：本次涉及**实体重命名 + 关联键重命名**——MDM 侧实体由 BaseModel 改名为 **Variant（版本）**，VMD 同步将 `veh_base_model` 迁移/重命名为 `veh_variant`、关联键 `baseModelCode` → `variantCode`。BaseModel / `baseModelCode` / 「基础车型」自此为历史兼容命名，新能力统一使用 Variant / `variantCode` / 「版本」（迁移与兼容策略见 US-004c）。
+> - VMD Variant 本地投影面向车辆主数据上下文（bounded context），用于车辆主数据查询、车辆详情展示、导入校验、产品树关联、历史追溯，以及 MDM 不可用时的降级查询，不是 MDM Variant 的完整副本/镜像表。
+> - VMD 车辆主档与产品树使用 `variantCode` 作为版本关联编码长期保留，承接原 `baseModelCode` 语义并回填历史值；**`veh_variant.model_code → veh_model.code` 的「车系→车型→版本（原基础车型）」引用链、以及 `BuildConfig → variantCode` 的引用链不得切断**。
+> - 本 CR 仅处理 BaseModel 本体（投影化 + 改名 Variant）；**BaseModelFeatureCode / 特征值的归属与维护语义本 CR 不变**（仅做随实体重命名所必需的引用键改名与兼容，最终归属留待后续 CR）；**BuildConfig / FeatureFamily 的归属与改造不在本 CR**（CR-017 / CR-018 处理），BuildConfig 本体仍为 VMD 自有。
+> - VMD 不再承担 Variant 主数据治理、编码生成、审批、Golden Record、生命周期管理等职责。
+> - **Flyway 关键差异**：BaseModel 投影字段（source / external_ref_id / external_version / last_sync_time）此前未建立，故 CR-016 **新增 Flyway 迁移 `V7__Migrate_base_model_to_variant.sql`**（表迁移/重命名 + 补齐投影字段 + `UK(external_ref_id)` + 回填 source='MANUAL'）与 **`V8__Migrate_base_model_code_to_variant_code.sql`**（关联键 `base_model_code` → `variant_code` 迁移/回填），接续 CR-015 的 V6。
+> - VMD Variant 投影采用按需最小化字段设计，对 source=MDM 记录保持只读语义。
 
 ### 非目标（Non-Goals，本期不做）
 - N1：不替代账号服务（`ExAccountService`）做用户身份/手机号实名核验。
@@ -70,6 +80,7 @@
 - N6：不再作为 **Platform（平台）**主数据的企业级 SSOT；VMD 不负责 Platform 主数据治理、审批、编码生成、数据质量打分、Golden Record 合并与平台生命周期管理；不要求完整复制 MDM Platform 的全部字段；不承担 MDM Platform 字段变化的自动适配责任，仅当字段变化影响 VMD 的车辆导入、车辆查询、车辆追溯、展示或校验逻辑时，才通过独立 CR 纳入 VMD Platform 投影（CR-013）。
 - N7：不再作为 **CarLine（车系）**主数据的企业级 SSOT；VMD 不负责 CarLine 主数据治理、审批、编码生成、数据质量打分、Golden Record 合并与车系生命周期管理；不要求完整复制 MDM CarLine 的全部字段；不承担 MDM CarLine 字段变化的自动适配责任，仅当字段变化影响 VMD 的车辆导入、车辆查询、车辆追溯、展示或校验逻辑时，才通过独立 CR 纳入 VMD CarLine 投影；车系投影上的 `brandCode` 冗余字段为 VMD 跨域回查所需，长期保留（CR-014）。
 - N8：不再作为 **Model（车型）**主数据的企业级 SSOT；VMD 不负责 Model 主数据治理、审批、编码生成、数据质量打分、Golden Record 合并与车型生命周期管理；不要求完整复制 MDM Model 的全部字段；不承担 MDM Model 字段变化的自动适配责任，仅当字段变化影响 VMD 的车辆导入、车辆查询、车辆追溯、展示或校验逻辑时，才通过独立 CR 纳入 VMD Model 投影；不在本 CR 内改造 BaseModel / BuildConfig / FeatureFamily（后续 CR-016~018 单独处理），不得切断「车系→车型→基础车型」引用链（CR-015）。
+- N9：不再作为 **Variant（版本，原 BaseModel 基础车型）**主数据的企业级 SSOT；VMD 不负责 Variant 主数据治理、审批、编码生成、数据质量打分、Golden Record 合并与版本生命周期管理；不要求完整复制 MDM Variant 的全部字段；不承担 MDM Variant 字段变化的自动适配责任，仅当字段变化影响 VMD 的车辆导入、车辆查询、车辆追溯、展示或校验逻辑时，才通过独立 CR 纳入 VMD Variant 投影；本 CR 不改造 BaseModelFeatureCode / 特征值的归属与维护语义（仅做随实体重命名必需的引用键兼容改名），不改造 BuildConfig / FeatureFamily 的归属（CR-017 / CR-018 处理），不得切断「车系→车型→版本」及 `BuildConfig → variantCode` 引用链（CR-016）。
 
 ## 3. User Stories
 
@@ -169,6 +180,8 @@
 **As a** System, **I want** VMD 从 MDM 同步 Model 主数据并维护本地 Model 投影表, **so that** 每台车辆及产品树可通过 `modelCode` 关联车型信息，同时 VMD 不再承担 Model 主数据维护职责。
 
 > **语义重构（CR-015）**：本 US 由原「US-003 维护车型（Model）」演进而来。Model 主数据 SSOT 上移至 edd-mdm，VMD 仅保留 Model 本地投影副本。与 Brand（CR-012）、Platform（CR-013）、CarLine（CR-014）同构：车型实体命名不变、`modelCode` 关联键不变，不涉及表/列重命名，区别于 Plant 的命名迁移。**关键差异**：CR-010（Flyway V3）只为 `veh_brand`/`veh_series`/`veh_platform` 建了 source / external_ref_id / external_version / last_sync_time 字段，**未覆盖 `veh_model`**，故 CR-015 **新增 Flyway 迁移 `V6__Add_mdm_source_to_model.sql`** 为 `veh_model` 补齐上述投影字段与 `UK(external_ref_id)` 并回填 source='MANUAL'（区别于 CR-013/CR-014 复用 V3）。VMD Model 投影为 MDM Model 在 VMD bounded context 下的按需最小化只读视图，不要求与 MDM Model 主数据字段完全一致（字段范围见 §4「Model 投影字段范围原则」）。`modelCode` 作为车辆主档与产品树的车型关联编码长期保留；**`veh_base_model.model_code → veh_model.code` 的「车系→车型→基础车型」引用链不得切断**（BaseModel 当前仍为 VMD 自有，见 US-004）。VMD Model 的 add/edit/remove 自此为兼容期遗留能力，仅作用于 source=MANUAL 过渡数据，最终下线策略见 US-003c。
+>
+> **CR-016 后续演进**：自 CR-016 起 BaseModel 已投影化并改名为 Variant（版本），`veh_base_model` 迁移/重命名为 `veh_variant`、关联键 `baseModelCode` → `variantCode`，故本 US 中「车系→车型→基础车型」引用链现表述为 **`veh_variant.model_code → veh_model.code` 的「车系→车型→版本（原基础车型）」**引用链，语义延续、不得切断（见 US-004）。
 
 **Acceptance Criteria** (EARS):
 - WHEN MDM 通过 Kafka 推送 ModelCreated / ModelUpdated / ModelDeleted 事件 THE SYSTEM SHALL upsert VMD 本地 Model 投影数据，并写入 source=MDM / external_ref_id / external_version / last_sync_time。
@@ -182,7 +195,7 @@
 - WHEN 查询车辆详情 THE SYSTEM SHALL 可基于本地 Model 投影数据展示或关联车型信息。
 - WHEN MDM 不可用 THEN THE SYSTEM SHALL 使用已同步的本地 Model 投影数据支撑车辆查询、展示和历史追溯，不对 MDM 形成运行时强依赖。
 - IF 本地不存在对应 `modelCode` THEN THE SYSTEM SHALL 不阻断历史车辆查询，但应在展示或校验结果中体现 Model 信息缺失。
-- THE SYSTEM SHALL 不切断 `veh_base_model.model_code → veh_model.code` 的「车系→车型→基础车型」产品树引用链。
+- THE SYSTEM SHALL 不切断 `veh_variant.model_code → veh_model.code` 的「车系→车型→版本（原基础车型）」产品树引用链（自 CR-016 起 `veh_base_model`→`veh_variant`、`baseModelCode`→`variantCode`，语义延续）。
 - THE SYSTEM SHALL 校验调用方持有 `completeVehicle:product:model:list/query/export` 权限点；`completeVehicle:product:model:add/edit/remove` 权限点仅作为兼容期遗留保留（仅可作用于 source=MANUAL 过渡数据），对 source=MDM 记录一律拒绝，并规划后续兼容性清理 CR 下线。
 
 #### US-003b: Bootstrap 时从 MDM 全量同步车型数据
@@ -208,30 +221,75 @@
 - THE SYSTEM SHALL 规划后续兼容性清理 CR，逐步下线或隐藏 VMD Model 本地维护入口、旧权限点（`completeVehicle:product:model:add/edit/remove`）和相关后台操作。
 - THE SYSTEM SHALL 保留 Model 查询能力，包括 `list` / `listByPlatformCodeAndCarLineCode` / `query` / `export` 及车辆详情展示所需查询。
 - THE SYSTEM SHALL 保留 `modelCode` 字段，不因维护权迁移而改名或删除。
-- THE SYSTEM SHALL 保留 `veh_base_model.model_code → veh_model.code` 的「车系→车型→基础车型」引用链，BaseModel 的本地维护能力不在本 CR 收敛范围内（后续 CR 处理）。
+- THE SYSTEM SHALL 保留 `veh_variant.model_code → veh_model.code` 的「车系→车型→版本（原基础车型）」引用链（自 CR-016 起 `veh_base_model`→`veh_variant`），Variant（原 BaseModel）的投影化与命名迁移由 CR-016 处理（见 US-004 / US-004c）。
 
-#### US-004: 维护基础车型（BaseModel）及其特征值（BaseModelFeatureCode）
-**As a** Mpt-User, **I want** 维护基础车型、按"平台+车系+车型"过滤、为基础车型挂特征族特征值, **so that** 形成生产配置上游的完整"车型→基础车型→特征值"骨架。
+#### US-004: 消费 MDM Variant（版本，原 BaseModel 基础车型）主数据本地投影
+**As a** System, **I want** VMD 从 MDM 同步 Variant 主数据并维护本地 Variant 投影表, **so that** 每台车辆及产品树可通过 `variantCode` 关联版本信息，同时 VMD 不再承担 Variant 主数据维护职责。
 
-> **CR-015 说明**：BaseModel 当前仍为 VMD 自有主数据，本 US 查询语义保持不变；其引用的 `modelCode` 自 CR-015 起来自 MDM Model 本地投影（数据来源变为投影），`listByPlatformCodeAndCarLineCodeAndModelCode` 的三参数组合查询语义不变，「车系→车型→基础车型」引用链不得切断。
+> **语义重构 + 命名迁移（CR-016）**：本 US 由原「US-004 维护基础车型（BaseModel）及其特征值（BaseModelFeatureCode）」演进而来。Variant 主数据 SSOT 上移至 edd-mdm，VMD 仅保留 Variant 本地投影副本。**本 CR 与 Plant（CR-011）同构、区别于 Brand/Platform/CarLine/Model（CR-012~015 命名不变、仅投影化）**：MDM 侧实体由 BaseModel 改名为 **Variant（版本）**，VMD 同步将 `veh_base_model` 迁移/重命名为 `veh_variant`、关联键 `baseModelCode` → `variantCode`。BaseModel / `baseModelCode` / 「基础车型」自此为历史兼容命名，新能力统一使用 Variant / `variantCode` / 「版本」（迁移与兼容策略见 US-004c）。**关键差异**：BaseModel 投影字段（source / external_ref_id / external_version / last_sync_time）此前未建立，且涉及表/键重命名，故 CR-016 **新增 Flyway 迁移 `V7__Migrate_base_model_to_variant.sql`** 与 **`V8__Migrate_base_model_code_to_variant_code.sql`**（区别于 CR-013/CR-014 复用 V3、CR-015 新增 V6）。VMD Variant 投影为 MDM Variant 在 VMD bounded context 下的按需最小化只读视图，不要求与 MDM Variant 主数据字段完全一致（字段范围见 §4「Variant 投影字段范围原则」）。保留 `listByPlatformCodeAndCarLineCodeAndModelCode` 三参组合查询语义（数据来源变为投影）；不切断 `veh_variant.model_code → veh_model.code` 的「车系→车型→版本（原基础车型）」引用链。**BaseModelFeatureCode / 特征值的业务语义本 CR 不变**（仍可按既有方式查询/挂载），仅做随实体重命名所必需的引用键改名与兼容（`base_model_code` → `variant_code`），其最终归属留待后续 CR。VMD Variant 的 add/edit/remove 自此为兼容期遗留能力，仅作用于 source=MANUAL 过渡数据，最终下线策略见 US-004c。
+
+**Acceptance Criteria** (EARS):
+- WHEN MDM 通过 Kafka 推送 VariantCreated / VariantUpdated / VariantDeleted 事件 THE SYSTEM SHALL upsert VMD 本地 Variant 投影数据，并写入 source=MDM / external_ref_id / external_version / last_sync_time。
+- WHEN event.version <= local.external_version THEN THE SYSTEM SHALL 忽略该事件，避免乱序事件覆盖较新数据。
+- WHEN 同步 MDM Variant 数据 THE SYSTEM SHALL 仅持久化 VMD 业务场景所需字段（至少 `code`（即 `variantCode` 关联键）/ `name` / `platform_code` / `car_line_code` / `model_code` / `source` / `external_ref_id` / `external_version` / `last_sync_time`），不要求 VMD Variant 投影表结构与 MDM Variant 主数据模型完全一致。
+- WHEN MDM Variant 新增字段但 VMD 未消费该字段 THEN THE SYSTEM SHALL NOT 要求变更 VMD Variant 投影表结构。
+- WHEN MDM Variant 字段变化影响 VMD 的车辆导入、车辆查询、车辆追溯、展示或校验逻辑 THEN THE SYSTEM SHALL 通过独立 CR 调整 VMD Variant 投影模型。
+- WHEN VMD 本地 Variant 记录 source=MDM THEN THE SYSTEM SHALL 拒绝来自 MPT 后台的 add / edit / delete 操作，并返回明确错误（`ProductDataReadOnlyException`，错误码 `202014`）。
+- WHEN 调用 `GET /api/mpt/variant/v1/listByPlatformCodeAndCarLineCodeAndModelCode` THE SYSTEM SHALL 基于本地 Variant 投影支持 `platformCode/carLineCode/modelCode` 三参数任意组合查询（查询语义不变，数据来源变为投影）；迁移期保留旧路径 `GET /api/mpt/baseModel/v1/listByPlatformCodeAndCarLineCodeAndModelCode` 兼容。
+- WHEN VMD 处理车辆生产导入数据 THE SYSTEM SHALL 保留并写入 `variantCode` 字段（承接原 `baseModelCode` 语义），用于车辆版本关联和追溯。
+- WHEN 查询车辆详情 THE SYSTEM SHALL 可基于本地 Variant 投影数据展示或关联版本信息。
+- WHEN MDM 不可用 THEN THE SYSTEM SHALL 使用已同步的本地 Variant 投影数据支撑车辆查询、展示和历史追溯，不对 MDM 形成运行时强依赖。
+- IF 本地不存在对应 `variantCode` THEN THE SYSTEM SHALL 不阻断历史车辆查询，但应在展示或校验结果中体现 Variant 信息缺失。
+- IF 历史数据仅存在 `baseModelCode` 且未完成字段迁移 THEN THE SYSTEM SHALL 支持 `baseModelCode` 到 `variantCode` 的兼容读取或迁移处理。
+- THE SYSTEM SHALL 不切断 `veh_variant.model_code → veh_model.code` 的「车系→车型→版本（原基础车型）」产品树引用链。
+- THE SYSTEM SHALL 保持 BaseModelFeatureCode / 特征值的既有业务语义不变（仍可按既有方式查询/挂载），仅将其引用键 `base_model_code` 随实体重命名兼容改名为 `variant_code`，最终归属留待后续 CR。
+- THE SYSTEM SHALL 校验调用方持有 `completeVehicle:product:variant:list/query/export` 权限点；`completeVehicle:product:variant:add/edit/remove` 权限点仅作为兼容期遗留保留（仅可作用于 source=MANUAL 过渡数据），对 source=MDM 记录一律拒绝；原 `completeVehicle:product:baseModel:*` 权限点标记 `deprecated` 并规划后续兼容性清理 CR 下线。
+
+#### US-004b: Bootstrap 时从 MDM 全量同步 Variant 数据
+**As a** System, **I want** Bootstrap 时从 MDM 全量同步 Variant 数据, **so that** 首次接入、数据丢失或重新初始化后，VMD 可以恢复 Variant 主数据本地投影。
 
 **Acceptance Criteria**:
-- WHEN 调用 `GET /api/mpt/baseModel/v1/listByPlatformCodeAndCarLineCodeAndModelCode` THE SYSTEM SHALL 支持 `platformCode/carLineCode/modelCode` 三参数任意组合查询。
-- WHEN Mpt-User 在基础车型下新增/修改特征值 IF 同一基础车型下同一 `familyCode` 已存在 THEN THE SYSTEM SHALL 返回"基础车型特征值已存在"。
-- WHEN 删除基础车型 IF 其下存在生产配置 OR 存在车辆 THEN THE SYSTEM SHALL 拒绝删除。
+- WHEN VMD 启动时检测本地 source=MDM 的 Variant 投影记录数为 0 THE SYSTEM SHALL 自动调用 MDM Variant 全量快照接口拉取数据并 upsert 本地副本。
+- WHEN Mpt-User 调用 `POST /api/mpt/mdmSync/v1/bootstrap?entity=variant` THE SYSTEM SHALL 调用 MDM Variant 全量快照接口拉取数据并 upsert 本地 Variant 投影副本（不删除本地记录）。
+- WHEN Mpt-User 调用 `POST /api/mpt/mdmSync/v1/bootstrap?entity=all` THE SYSTEM SHALL 在全量同步中包含 Variant 数据。
+- THE SYSTEM SHALL 在 upsert 时写入 source=MDM / external_ref_id / external_version / last_sync_time，并写入 `platformCode` / `carLineCode` / `modelCode` 关联字段以支撑产品树链路。
+- THE SYSTEM SHALL 不因 MDM Variant 快照接口失败而删除或清空本地已有 Variant 投影数据。
+- THE SYSTEM SHALL 支持重复执行 Bootstrap，重复同步时按 external_ref_id / external_version 幂等 upsert。
+- THE SYSTEM SHALL 只同步 VMD Variant 投影所需字段（至少 `code` / `name` / `platform_code` / `car_line_code` / `model_code` / `source` / `external_ref_id` / `external_version` / `last_sync_time`），不要求同步 MDM Variant 的完整字段集。
+
+#### US-004c: Variant 本地维护能力兼容清理与 BaseModel→Variant 命名迁移
+**As a** System, **I want** 将 VMD 现有 BaseModel 本地维护能力收敛为只读 Variant 投影能力，并将 BaseModel / `baseModelCode` 命名迁移为 Variant / `variantCode`, **so that** Variant 主数据维护职责统一回归 MDM、VMD 与 MDM 在版本主数据语义与命名上保持一致，同时历史 source=MANUAL 数据、历史 `baseModelCode` 数据和既有查询能力不受影响。
+
+**Acceptance Criteria**:
+- WHEN 执行数据库迁移 THE SYSTEM SHALL 将原 `veh_base_model`（`tb_veh_base_model`）迁移或重命名为 `veh_variant`（`tb_veh_variant`），保留现有列 `code` / `name` / `platform_code` / `car_line_code` / `model_code` 不变。
+- WHEN 执行数据库迁移 THE SYSTEM SHALL 为 `veh_variant` 新增 `source` / `external_ref_id` / `external_version` / `last_sync_time` 字段，增加 `UK(external_ref_id)`，并回填历史数据 source='MANUAL'。
+- WHEN 执行数据库迁移 THE SYSTEM SHALL 为车辆主档（`veh_basic_info`）新增 `variant_code` 字段，承接原 `base_model_code` 语义并回填历史值。
+- WHEN 执行数据库迁移 THE SYSTEM SHALL 将 BuildConfig 相关表（`veh_build_config`）的 `base_model_code` 迁移/回填为 `variant_code`；将 `veh_base_model_feature_code` 的 `base_model_code` 随实体重命名迁移/回填为 `variant_code`（仅引用键改名，特征值业务语义不变）。
+- WHEN 迁移期间仍存在旧接口、旧字段或旧权限点调用 THE SYSTEM SHALL 提供兼容策略（兼容读取 / 字段映射 / 旧列保留 / 旧接口保留），避免既有调用方立即失败，历史 `base_model_code` / `baseModelCode` 数据不得丢失、历史车辆可继续查询追溯。
+- WHEN 新增或修改 VMD 内部逻辑 THE SYSTEM SHALL 优先使用 Variant / `variantCode` 命名，不再将 VMD Variant 视为权威主数据。
+- WHEN 历史 Variant 记录 source=MANUAL THEN THE SYSTEM SHALL 在兼容期允许保留查询和必要的过渡维护能力。
+- WHEN Variant 记录 source=MDM THEN THE SYSTEM SHALL 禁止通过 VMD MPT 后台新增、修改或删除。
+- WHEN 文档描述历史兼容逻辑 THE SYSTEM SHALL 明确 BaseModel / `baseModelCode` / 「基础车型」为遗留命名，不再作为新能力命名，仅出现在历史兼容、迁移说明或旧字段映射场景。
+- THE SYSTEM SHALL 在迁移完成后逐步废弃 BaseModel 命名的 Controller / AppService / Repository / DTO / VO / API path（如 `/api/mpt/baseModel/**`），迁移为 Variant 命名（如 `/api/mpt/variant/**`），旧接口在兼容期保留。
+- THE SYSTEM SHALL 将原 `completeVehicle:product:baseModel:*` 权限点调整为 `completeVehicle:product:variant:list/query/export`；`add/edit/remove` 仅作兼容期遗留（仅作用于 source=MANUAL 过渡数据，对 source=MDM 一律拒绝），旧 baseModel 权限点标记 `deprecated` 并规划后续下线。
+- THE SYSTEM SHALL 保留 Variant 查询能力，包括 `list` / `listByPlatformCodeAndCarLineCodeAndModelCode` / `query` / `export` 及车辆详情展示所需查询。
+- THE SYSTEM SHALL 保留并回填 `variantCode` 关联键，不因维护权迁移或命名迁移而丢失历史数据；保留 `veh_variant.model_code → veh_model.code` 的「车系→车型→版本」引用链与 `BuildConfig → variantCode` 引用链。
+- THE SYSTEM SHALL 将 BaseModel→Variant、`baseModelCode`→`variantCode` 的重命名影响纳入本次 CR（CR-016）的兼容性说明，旧字段、旧接口、旧权限点的最终下线由后续兼容性清理 CR 完成。
 
 #### US-005: 维护生产配置（BuildConfig）及其特征值（BuildConfigFeatureCode）
-**As a** Mpt-User, **I want** 维护生产配置（CRUD）、按基础车型查询、维护配置下的特征值, **so that** 每台物理车辆都能映射到一个唯一 `buildConfigCode`。
+**As a** Mpt-User, **I want** 维护生产配置（CRUD）、按版本（Variant，原基础车型）查询、维护配置下的特征值, **so that** 每台物理车辆都能映射到一个唯一 `buildConfigCode`。
+
+> **CR-016 说明**：BuildConfig 本体仍为 VMD 自有主数据，本 CR 不改其归属（其投影化/归属改造留待后续 CR-017）。BuildConfig 通过关联键引用版本，自 CR-016 起该键由 `baseModelCode` 改名为 `variantCode`（`veh_build_config.base_model_code` → `variant_code`），查询路径 `listByBaseModelCode/{baseModelCode}` 改名为 `listByVariantCode/{variantCode}`；迁移期保留旧路径/旧字段兼容，`BuildConfig → variantCode` 引用链不得切断。
 
 **Acceptance Criteria**:
-- WHEN 调用 `GET /api/mpt/buildConfig/v1/listByBaseModelCode/{baseModelCode}` THE SYSTEM SHALL 返回该基础车型下全部生产配置。
+- WHEN 调用 `GET /api/mpt/buildConfig/v1/listByVariantCode/{variantCode}` THE SYSTEM SHALL 返回该版本（Variant）下全部生产配置；迁移期保留旧路径 `GET /api/mpt/buildConfig/v1/listByBaseModelCode/{baseModelCode}` 兼容（按 `baseModelCode` → `variantCode` 映射读取）。
 - WHEN 删除某生产配置 IF 其下已存在车辆 THEN THE SYSTEM SHALL 拒绝删除并返回"该生产配置下存在车辆"。
 - WHEN 在某生产配置下新增/修改特征值 IF 同 `familyCode` 已存在 THEN THE SYSTEM SHALL 返回唯一性失败。
 
 #### US-006: 消费 MDM Platform 主数据本地投影
 **As a** System, **I want** VMD 从 MDM 同步 Platform 主数据并维护本地 Platform 投影表, **so that** 每台车辆及产品树可通过 `platformCode` 关联平台信息，同时 VMD 不再承担 Platform 主数据维护职责。
 
-> **语义重构（CR-013）**：本 US 由原「US-006 维护车辆平台（Platform）」演进而来。Platform 主数据 SSOT 上移至 edd-mdm，VMD 仅保留 Platform 本地投影副本。与 Brand（CR-012）同构：平台实体命名不变、`platformCode` 关联键不变，不涉及表/列重命名（直接复用 CR-010 为 `veh_platform` 建好的 source / external_ref_id / external_version / last_sync_time 字段，`veh_platform.code` 即 `platform_code`、`name` 即 `platform_name`）。VMD Platform 投影为 MDM Platform 在 VMD bounded context 下的按需最小化只读视图，不要求与 MDM Platform 主数据字段完全一致（字段范围见 §4「Platform 投影字段范围原则」）。`platformCode` 作为车辆主档（`veh_basic_info.platform_code`）与产品树（`veh_model.platform_code` / `veh_base_model.platform_code`）的平台关联编码长期保留。VMD Platform 的 add/edit/remove 自此为兼容期遗留能力，仅作用于 source=MANUAL 过渡数据，最终下线策略见 US-006c。
+> **语义重构（CR-013）**：本 US 由原「US-006 维护车辆平台（Platform）」演进而来。Platform 主数据 SSOT 上移至 edd-mdm，VMD 仅保留 Platform 本地投影副本。与 Brand（CR-012）同构：平台实体命名不变、`platformCode` 关联键不变，不涉及表/列重命名（直接复用 CR-010 为 `veh_platform` 建好的 source / external_ref_id / external_version / last_sync_time 字段，`veh_platform.code` 即 `platform_code`、`name` 即 `platform_name`）。VMD Platform 投影为 MDM Platform 在 VMD bounded context 下的按需最小化只读视图，不要求与 MDM Platform 主数据字段完全一致（字段范围见 §4「Platform 投影字段范围原则」）。`platformCode` 作为车辆主档（`veh_basic_info.platform_code`）与产品树（`veh_model.platform_code` / `veh_variant.platform_code`，原 `veh_base_model.platform_code`，CR-016）的平台关联编码长期保留。VMD Platform 的 add/edit/remove 自此为兼容期遗留能力，仅作用于 source=MANUAL 过渡数据，最终下线策略见 US-006c。
 
 **Acceptance Criteria** (EARS):
 - WHEN MDM 通过 Kafka 推送 PlatformCreated / PlatformUpdated / PlatformDeleted 事件 THE SYSTEM SHALL upsert VMD 本地 Platform 投影数据，并写入 source=MDM / external_ref_id / external_version / last_sync_time。
@@ -425,7 +483,7 @@
 
 **Acceptance Criteria**:
 - WHEN 解析每条 ITEM IF `VIN` 为空 THEN THE SYSTEM SHALL 计入无效计数并跳过该条；批次结束后 SHALL 对无效计数 > 0 的情况输出 `WARN` 日志。
-- WHEN VIN 已存在 THE SYSTEM SHALL 更新 `plantCode/brandCode/platformCode/carLineCode/modelCode/baseModelCode/buildConfigCode` 七项；不存在则新建。（`plantCode` 承接原 `manufacturerCode` 语义，迁移期对仅存在 `manufacturerCode` 的历史数据按 US-007c 兼容读取/映射处理，参见 CR-011）
+- WHEN VIN 已存在 THE SYSTEM SHALL 更新 `plantCode/brandCode/platformCode/carLineCode/modelCode/variantCode/buildConfigCode` 七项；不存在则新建。（`plantCode` 承接原 `manufacturerCode` 语义，迁移期对仅存在 `manufacturerCode` 的历史数据按 US-007c 兼容读取/映射处理，参见 CR-011；`variantCode` 承接原 `baseModelCode` 语义，迁移期对仅存在 `baseModelCode` 的历史数据按 US-004c 兼容读取/映射处理，参见 CR-016）
 - WHEN 一条记录处理完成 THE SYSTEM SHALL 通过 `VehiclePublish.produce(vin)` 发布 `VehicleProduceEvent`。
 - WHEN 解析完成 THE SYSTEM SHALL 返回 `ImportResult`，包含 `totalCount/successCount/failureCount/invalidCount` 四项计数。IF 单条处理异常 THEN THE SYSTEM SHALL 计入 `failureCount` 并继续处理下一条。
 
@@ -533,7 +591,7 @@
   - `/api/service/part/v1/{pn}` GET / `/listAllFota` GET
   - `/api/service/device/v1/{code}` GET / `/listAllFota` GET
   - `/api/service/vehicleLifecycle/v1/{vin}/recordFirstApply*Node` POST × 8
-  - `/api/service/vehicleModelConfig/v1/buildConfigCode` GET / `/buildConfig/list/{baseModelCode}` GET / `/buildConfig/{buildConfigCode}` GET
+  - `/api/service/vehicleModelConfig/v1/buildConfigCode` GET / `/buildConfig/list/{variantCode}` GET（迁移期保留旧路径 `/buildConfig/list/{baseModelCode}` 兼容，按 `baseModelCode` → `variantCode` 映射，CR-016）/ `/buildConfig/{buildConfigCode}` GET
 
 #### US-031: 内部服务按"特征族-特征值"反查生产配置
 **As a** Service-Caller, **I want** 通过 `GET /api/service/vehicleModelConfig/v1/buildConfigCode?<familyCode>=<featureCode>...` 用任意特征族特征值组合反查生产配置代码, **so that** 在订单/前置库等场景将销售配置翻译为生产配置。
@@ -559,7 +617,7 @@
 - **MDM 同步优先级**：品牌 / 车系 / 平台主数据的 SSOT 优先级为 MDM > VMD 本地；MDM 不可达时降级为只读。
 - **MDM 事件消费**：VMD 通过 Kafka 订阅 MDM 事件，事件 payload schema / topic 命名 / partition 策略 / 重试与死信策略由「edd-mdm 接入规范」定义。
 - **MDM 快照接口**：VMD 通过 Feign 调用 MDM 全量快照接口，路径 / 入参 / 出参由「edd-mdm 接入规范」定义。
-- **数据来源标记**：veh_brand / veh_carLine / veh_platform / **veh_plant** 四张表新增 source 字段（MDM / MANUAL），source=MDM 的记录禁止通过 MPT 后台修改。
+- **数据来源标记**：veh_brand / veh_carLine / veh_platform / **veh_plant** / **veh_model**（CR-015）/ **veh_variant**（原 veh_base_model，CR-016）六张表新增 source 字段（MDM / MANUAL），source=MDM 的记录禁止通过 MPT 后台修改。
 
 ### Plant 主数据投影约束（CR-011）
 - Plant 主数据的权威来源（SSOT）为 **MDM**，VMD 仅保留本地 Plant 投影副本，不作为权威维护入口。
@@ -652,7 +710,7 @@
 ### Platform 主数据投影约束（CR-013）
 - Platform 主数据的权威来源（SSOT）为 **MDM**，VMD 仅保留本地 Platform 投影副本，不作为权威维护入口。
 - 平台与 Brand 同构、区别于 Plant 的命名迁移：平台实体命名不变、`platformCode` 关联键不变，不引入表/列重命名、不新增 Flyway 迁移，直接复用 CR-010（Flyway V3）为 `veh_platform` 建好的 source / external_ref_id / external_version / last_sync_time 字段（`veh_platform.code` 即 `platform_code`、`name` 即 `platform_name`）。
-- VMD 中 `platformCode` 是车辆主档（`veh_basic_info.platform_code`）与产品树（`veh_model.platform_code` / `veh_base_model.platform_code`）的一部分，作为车辆平台关联字段长期保留，不改名、不删除。
+- VMD 中 `platformCode` 是车辆主档（`veh_basic_info.platform_code`）与产品树（`veh_model.platform_code` / `veh_variant.platform_code`，原 `veh_base_model.platform_code`，CR-016）的一部分，作为车辆平台关联字段长期保留，不改名、不删除。
 - VMD 不负责 Platform 主数据治理、审批、合并、编码生成和生命周期管理。
 - MDM 与 VMD 的 Platform 同步协议（Kafka topic、payload schema、快照接口路径、重试与死信策略）由「edd-mdm 接入规范」定义，复用 CR-010 已覆盖的事件订阅（F6）与 Bootstrap 全量同步（F7，entity=platform）链路，不新增链路。
 - VMD Platform 投影采用按需最小化字段设计，不要求与 MDM Platform 主数据模型完全一致；投影字段以车辆查询、车辆详情展示、导入校验、产品树关联、历史追溯和运行时解耦为边界。
@@ -789,13 +847,65 @@
 - Model 主数据合并 / 拆分关系。
 - MDM 内部治理字段、审批字段、流程字段。
 
+### Variant 主数据投影约束（CR-016）
+- Variant（版本，原 BaseModel 基础车型）主数据的权威来源（SSOT）为 **MDM**，VMD 仅保留本地 Variant 投影副本，不作为权威维护入口。
+- **本 CR 与 Plant（CR-011）同构、区别于 Brand/Platform/CarLine/Model（CR-012~015 命名不变、仅投影化）**：本次涉及**实体重命名 + 关联键重命名**——MDM 侧实体由 BaseModel 改名为 Variant，VMD 将 `veh_base_model`（`tb_veh_base_model`）迁移/重命名为 `veh_variant`（`tb_veh_variant`）、关联键 `baseModelCode` → `variantCode`。
+- **关键差异（区别于 CR-013/CR-014 复用 V3、CR-015 新增 V6）**：BaseModel 投影字段此前未建立，且涉及表/键重命名，故 CR-016 **新增 Flyway 迁移 `V7__Migrate_base_model_to_variant.sql`**（表迁移/重命名 + 补齐 source / external_ref_id / external_version / last_sync_time 字段 + `UK(external_ref_id)` + 回填 source='MANUAL'，保持现有列 `code` / `name` / `platform_code` / `car_line_code` / `model_code` 不变）与 **`V8__Migrate_base_model_code_to_variant_code.sql`**（`veh_basic_info` 新增 `variant_code` 回填、`veh_build_config` 与 `veh_base_model_feature_code` 的 `base_model_code` → `variant_code` 迁移/回填，迁移期保留旧列兼容）。
+- VMD 中 `variantCode` 是车辆主档与产品树的一部分，作为车辆版本关联字段长期保留，承接原 `baseModelCode` 语义并回填历史值，不丢失历史数据。
+- **`veh_variant.model_code → veh_model.code` 的「车系→车型→版本（原基础车型）」引用链、以及 `BuildConfig → variantCode` 引用链不得切断**。
+- 本 CR 仅处理 BaseModel 本体（投影化 + 改名 Variant）；**BaseModelFeatureCode / 特征值的归属与维护语义本 CR 不变**（仅做随实体重命名所必需的引用键改名 `base_model_code` → `variant_code` 与兼容，最终归属留待后续 CR）；**BuildConfig / FeatureFamily 的归属与改造不在本 CR**（CR-017 / CR-018 处理），BuildConfig 本体仍为 VMD 自有。
+- VMD 不负责 Variant 主数据治理、审批、合并、编码生成和生命周期管理。
+- MDM 与 VMD 的 Variant 同步协议（Kafka topic、payload schema、快照接口路径、重试与死信策略）由「edd-mdm 接入规范」定义，复用现有事件订阅（F6，新增 entity=variant）与 Bootstrap 全量同步（F7，entity=variant\|all）机制。
+- VMD Variant 投影采用按需最小化字段设计，不要求与 MDM Variant 主数据模型完全一致；投影字段以车辆查询、车辆详情展示、导入校验、产品树关联、历史追溯和运行时解耦为边界。
+- MDM Variant 的完整主数据属性、治理属性、审批属性、生命周期属性不在 VMD 投影模型中强制落库。
+- 如 MDM Variant 后续新增字段，只有当该字段被 VMD 的车辆导入、车辆查询、车辆追溯、展示或校验逻辑消费时，才通过独立 CR 纳入 VMD Variant 投影。
+- VMD 可根据排障或审计需要保留 `raw_payload` / `extension_json` 等原始快照字段，但该字段不应作为 VMD 领域逻辑的主要依赖。
+- 命名约束：新增需求、接口、领域对象、数据表、DTO、VO、文档统一使用 **Variant** / `variantCode` / 「版本」命名；BaseModel / `baseModelCode` / 「基础车型」仅出现在历史兼容、迁移说明或旧字段映射场景中（与 Manufacturer→Plant 的历史兼容命名约定并列）。
+
+### Variant 投影字段范围原则（VMD Variant ⊂ MDM Variant，CR-016）
+> VMD 侧 Variant 投影不要求与 MDM Variant 主数据字段完全一致，应采用**按需最小化投影**原则。VMD Variant 投影是 MDM Variant 在 VMD bounded context 下的只读视图，不是 MDM Variant 的完整副本/镜像表。
+
+**字段设计原则**：
+1. VMD 只保留支撑车辆主数据业务闭环所需的 Variant 字段。
+2. VMD 不复制 MDM Variant 的完整治理模型、审批字段、生命周期状态、组织层级、扩展属性等非 VMD 必需字段。
+3. MDM Variant 字段发生变化时，只有当变化影响 VMD 的车辆导入、车辆查询、车辆追溯、展示或校验逻辑时，才需要同步调整 VMD Variant 投影模型。
+4. VMD Variant 投影是 MDM Variant 在 VMD bounded context 下的只读视图，不是 MDM Variant 的完整副本。
+5. `platform_code` / `car_line_code` / `model_code` 关联字段为产品树「车型→版本」「车系→车型→版本」链路所必需，属于 VMD 业务闭环必备字段，必须保留。
+6. VMD 可以根据排障或审计需要保留 `raw_payload` / `extension_json` 等原始快照字段，但该字段不应作为 VMD 领域逻辑的主要依赖。
+
+**建议 `veh_variant` 至少保留以下字段（最小投影集）**：
+
+| 字段 | 说明 |
+|------|------|
+| `code` | Variant 编码（即 `variantCode` 关联键），车辆主档与产品树版本关联键，承接原 `baseModelCode` |
+| `name` | Variant 名称，用于车辆详情、列表和产品树展示 |
+| `platform_code` | 平台关联字段，产品树「车型→版本」链路所需 |
+| `car_line_code` | 车系关联字段，产品树「车系→车型→版本」链路所需 |
+| `model_code` | 车型关联字段，`veh_variant.model_code → veh_model.code` 引用链所需 |
+| `source` | 数据来源，MDM / MANUAL |
+| `external_ref_id` | MDM Variant 实体 ID |
+| `external_version` | MDM Variant 版本号 |
+| `last_sync_time` | 最近同步时间 |
+| `deleted` / `enabled` / `status` | 可选，用于处理 MDM 删除、停用或不可用状态 |
+| `raw_payload` / `extension_json` | 可选，用于排障、审计或临时兼容 |
+
+**不建议默认同步以下字段（除非 VMD 明确消费，需走独立 CR）**：
+- Variant 审批状态。
+- Variant 生命周期全量状态流转。
+- Variant 组织归属全路径。
+- Variant 营销 / 产品定位属性。
+- Variant 编码生成规则。
+- Variant 数据质量评分。
+- Variant 主数据合并 / 拆分关系。
+- MDM 内部治理字段、审批字段、流程字段。
+
 ### 依赖（外部）
 - **TSP 服务**：`TspVehicleCcpService / TspVehicleIdcmService / TspVehicleNetworkService / TspVehicleTboxService / TspCcpInfoService / TspIdcmInfoService / TspTboxInfoService / TspSimService`。
 - **OTA 服务**：`OtaVehiclePartService`（车辆零件同步）。
 - **IDK 服务**：`IdkBtmInfoService`（蓝牙模块批量导入）。
 - **账号服务（已注释）**：`ExAccountService`（预设车主校验，待启用）。
 - **安全密钥服务（已注释）**：`ExSkService`（IMMO_SK 生成，待启用）。
-- **edd-mdm 服务**：Product MDM 子域，提供品牌 / 车系 / 平台 / **Plant（工厂）**/ **车型（Model）**主数据的 Kafka 事件推送 + Feign 全量快照接口。详见「edd-mdm 接入规范」。
+- **edd-mdm 服务**：Product MDM 子域，提供品牌 / 车系 / 平台 / **Plant（工厂）**/ **车型（Model）**/ **版本（Variant，原 BaseModel 基础车型）**主数据的 Kafka 事件推送 + Feign 全量快照接口。详见「edd-mdm 接入规范」。
 
 ### 前置条件
 - Nacos 中已存在共享配置 `application.yaml / mysql.yaml / redis.yaml`。
@@ -803,6 +913,7 @@
 - API 网关下游路由已将 `edd-vmd` 注册到正确路径前缀。
 - MDM 已完成首版 Product MDM 子域上线，且 Kafka topic 已开通。
 - MDM 已上线 Plant（工厂）主数据实体，且 Plant 事件 Kafka topic 与 Plant 全量快照接口已就绪（CR-011）。
+- MDM 已上线 Variant（版本，原 BaseModel 基础车型）主数据实体，且 Variant 事件 Kafka topic 与 Variant 全量快照接口已就绪（CR-016）。
 - MDM Feign 全量快照接口已就绪，VMD 可通过 Feign 调用。
 - VMD 启动时若本地无 source=MDM 数据，需通过 Bootstrap 流程从 MDM 拉全量。
 
@@ -854,6 +965,14 @@
 - O44：历史 Model 数据 source 回标、清洗、纠错、归并由独立数据治理 CR 处理，本期 spec 不实现（CR-015）。
 - O45：本次 CR 只定义 Model 从本地维护到本地投影的需求语义调整，不要求一次性删除所有 VMD Model add/edit/remove 接口和权限点（`completeVehicle:product:model:add/edit/remove`）；最终下线由后续兼容性清理 CR 完成。**BaseModel / BuildConfig / FeatureFamily 的投影化改造不在本 CR 范围内**（后续 CR-016~018 单独处理），且「车系→车型→基础车型」引用链不得切断（CR-015）。
 - O46：MDM Model 的内部模型设计、生命周期状态、审批流、编码规则不在 VMD 范围内（CR-015）。
+- O47：VMD 不再提供 Variant（版本，原 BaseModel）主数据的长期本地新增、修改、删除能力（source=MANUAL 过渡数据除外，且仅作为兼容期遗留）（CR-016）。
+- O48：VMD 不实现 Variant 主数据的 Golden Record 合并、编码规则生成、主数据审批流程与版本生命周期管理（CR-016）。
+- O49：VMD 不要求完整复制 MDM Variant 的所有字段；不承担 MDM Variant 字段变化的自动同步适配责任（字段变化影响 VMD 业务时走独立 CR）（CR-016）。
+- O50：历史 Variant 数据 source 回标、历史 `baseModelCode` / `base_model_code` 清洗纠错归并由独立数据治理 CR 处理，本期 spec 不实现（CR-016）。
+- O51：本次 CR 只定义 BaseModel→Variant 的投影化、实体重命名与关联键重命名（`baseModelCode`→`variantCode`）及兼容策略，不要求一次性删除所有旧字段（`base_model_code` 等）、旧接口（`/api/mpt/baseModel/**`、`listByBaseModelCode`、`/buildConfig/list/{baseModelCode}`）和旧权限点（`completeVehicle:product:baseModel:*`）；旧资产标记 `deprecated`，最终下线由后续兼容性清理 CR 完成（CR-016）。
+- O52：**不改造 BaseModelFeatureCode / 特征值的归属与维护语义**（留待后续 CR），仅做随实体重命名必需的引用键兼容改名（`base_model_code`→`variant_code`）（CR-016）。
+- O53：**不改造 BuildConfig / FeatureFamily 的归属**（CR-017 / CR-018 处理）；不得切断「车系→车型→版本」及 `BuildConfig → variantCode` 引用链（CR-016）。
+- O54：MDM Variant 的内部模型设计、生命周期状态、审批流、编码规则不在 VMD 范围内（CR-016）。
 
 ## 6. Changelog
 
@@ -872,4 +991,5 @@
 | 2026-06-08 | CR-013 | Modified | **平台主数据重构为 MDM Platform 本地投影**：Platform 主数据 SSOT 上移至 MDM，VMD 保留 Platform 本地投影表（US-006 由「维护车辆平台 Platform」改写为「消费 MDM Platform 主数据本地投影」；强化 US-006b Platform Bootstrap 全量同步，补齐最小字段集/失败不清空/幂等/entity=all 措辞；新增 US-006c Platform 本地维护能力兼容清理）；与 Brand（CR-012）同构、区别于 Plant 命名迁移——平台实体命名不变、`platformCode` 关联键不变，不引入表/列重命名、不新增 Flyway 迁移，直接复用 CR-010 为 `veh_platform` 建好的 source / external_ref_id / external_version / last_sync_time 字段（`veh_platform.code` 即 `platform_code`、`name` 即 `platform_name`）；新增 §4「Platform 主数据投影约束」与「Platform 投影字段范围原则」（VMD Platform ⊂ MDM Platform，按需最小化投影，不要求完整复制 MDM Platform 主数据模型）；VMD Platform add/edit/remove 仅作为 source=MANUAL 兼容期遗留能力，对 source=MDM 记录一律只读；保留 `platformCode` 作为车辆主档（`veh_basic_info.platform_code`）与产品树（`veh_model.platform_code` / `veh_base_model.platform_code`）的平台关联字段（不改名、不删除）；MDM 事件订阅（F6）与 Bootstrap 全量同步（F7，entity=platform）复用 CR-010 已覆盖链路，不新增链路；§2 G5 纳入 Platform「MDM 下游消费方 + 只读本地投影副本」语义并新增 Platform 语义统一说明、新增 N6 Platform 非目标；§5 新增 O26~O32；权限点 `completeVehicle:product:platform:list/query/export` 长期保留，`add/edit/remove` 仅作兼容期遗留（限 source=MANUAL）待后续 CR 下线。**design.md / tasks.md 需按 SPEC 工作流后续同步落地本 CR** |
 | 2026-06-08 | CR-014 | Modified | **车系主数据重构为 MDM CarLine 本地投影**：CarLine 主数据 SSOT 上移至 MDM，VMD 保留 CarLine 本地投影表（US-002 由「维护车系 CarLine」改写为「消费 MDM CarLine 主数据本地投影」；强化 US-002b CarLine Bootstrap 全量同步，补齐最小字段集/失败不清空/幂等 upsert/entity=all/启动时 source=MDM 记录为 0 自动拉全量措辞；新增 US-002c CarLine 本地维护能力兼容清理）；与 Brand（CR-012）、Platform（CR-013）同构、区别于 Plant 命名迁移——车系实体命名不变、`carLineCode` 关联键不变，不引入表/列重命名、不新增 Flyway 迁移，直接复用 CR-010 为 `veh_carLine` 建好的 source / external_ref_id / external_version / last_sync_time 字段；新增 §4「CarLine 主数据投影约束」与「CarLine 投影字段范围原则」（VMD CarLine ⊂ MDM CarLine，按需最小化投影，不要求完整复制 MDM CarLine 主数据模型）；VMD CarLine add/edit/remove 仅作为 source=MANUAL 兼容期遗留能力，对 source=MDM 记录一律只读（拒绝时抛 `ProductDataReadOnlyException`，错误码 `202014`）；保留 `carLineCode` 作为车辆主档与产品树的车系关联字段（不改名、不删除）；**特别保留车系投影上的 `brandCode` 冗余字段（`V2__CarLine_brand_code_migration.sql` 引入），用于跨域回查并支撑 US-031 `getBuildConfig` 在响应中补出 `brandCode`，不得删除或弱化（车系区别于 Brand / Platform 投影的特殊点）**；MDM 事件订阅（F6）与 Bootstrap 全量同步（F7，entity=carLine）复用 CR-010 已覆盖链路，不新增链路；§2 G5 纳入 CarLine「MDM 下游消费方 + 只读本地投影副本」语义并新增 CarLine 语义统一说明、新增 N7 CarLine 非目标；§5 新增 O33~O39；权限点 `completeVehicle:product:carLine:list/query/export`（含 listByBrandCode/listAll）长期保留，`add/edit/remove` 仅作兼容期遗留（限 source=MANUAL）待后续 CR 下线。**design.md / tasks.md 需按 SPEC 工作流后续同步落地本 CR** |
 | 2026-06-08 | CR-015 | Modified | **车型主数据重构为 MDM Model 本地投影**：Model 主数据 SSOT 上移至 MDM，VMD 保留 Model 本地投影表（US-003 由「维护车型 Model」改写为「消费 MDM Model 主数据本地投影」；新增 US-003b Model Bootstrap 全量同步（entity=model\|all），补齐最小字段集/失败不清空/幂等 upsert/启动时 source=MDM 记录为 0 自动拉全量措辞；新增 US-003c Model 本地维护能力兼容清理；US-004 BaseModel 查询语义保持不变，仅其引用的 `modelCode` 数据来源变为投影）；与 Brand（CR-012）、Platform（CR-013）、CarLine（CR-014）同构、区别于 Plant 命名迁移——车型实体命名不变、`modelCode` 关联键不变，不引入表/列重命名；**关键差异：CR-010/V3 仅覆盖 veh_brand/veh_series/veh_platform，未覆盖 `veh_model`，故 CR-015 新增 Flyway 迁移 `V6__Add_mdm_source_to_model.sql` 为 `veh_model` 补齐 source / external_ref_id / external_version / last_sync_time 字段 + UK(external_ref_id) + 回填 source='MANUAL'（区别于 CR-013/CR-014 复用 V3）**，保持现有列 `code`/`name`/`platform_code`/`series_code`(=carLineCode) 不变；新增 §4「Model 主数据投影约束」与「Model 投影字段范围原则」（VMD Model ⊂ MDM Model，按需最小化投影，不要求完整复制 MDM Model 主数据模型）；VMD Model add/edit/remove 仅作为 source=MANUAL 兼容期遗留能力，对 source=MDM 记录一律只读（拒绝时抛 `ProductDataReadOnlyException`，错误码 `202014`）；保留 `modelCode` 作为车辆主档与产品树的车型关联字段（不改名、不删除）；**保留 `veh_base_model.model_code → veh_model.code` 的「车系→车型→基础车型」引用链，不得切断（BaseModel 当前仍为 VMD 自有，BaseModel/BuildConfig/FeatureFamily 改造留待后续 CR-016~018）**；MDM 事件订阅（F6，新增 entity=model）与 Bootstrap 全量同步（F7，entity=model\|all）复用现有机制，新增 `MdmModelQueryClient` Feign 客户端用于运行时按需查询与降级兜底；§2 G5 纳入 Model「MDM 下游消费方 + 只读本地投影副本」语义并新增 Model 语义统一说明、新增 N8 Model 非目标；§5 新增 O40~O46；权限点 `completeVehicle:product:model:list/query/export` 长期保留，`add/edit/remove` 仅作兼容期遗留（限 source=MANUAL）待后续 CR 下线。**design.md / tasks.md 需按 SPEC 工作流后续同步落地本 CR** |
+| 2026-06-09 | CR-016 | Modified | **基础车型（BaseModel）重构为 MDM Variant（版本）本地投影 + 命名迁移**：Variant 主数据 SSOT 上移至 MDM，VMD 保留 Variant 本地投影表（US-004 由「维护基础车型 BaseModel 及其特征值」改写为「消费 MDM Variant 主数据本地投影」；新增 US-004b Variant Bootstrap 全量同步（entity=variant\|all）、US-004c Variant 本地维护能力兼容清理 + BaseModel→Variant 命名迁移）；**与 Plant（CR-011）同构、区别于 Brand/Platform/CarLine/Model（CR-012~015 命名不变、仅投影化）——本次涉及实体重命名 + 关联键重命名**：MDM 侧 BaseModel 改名为 Variant，VMD 将 `veh_base_model`→`veh_variant`、`baseModelCode`→`variantCode`，BaseModel/`baseModelCode`/「基础车型」转为历史兼容命名（参照 Manufacturer→Plant）；新增 §4「Variant 主数据投影约束」与「Variant 投影字段范围原则」（VMD Variant ⊂ MDM Variant，按需最小化投影）；VMD Variant add/edit/remove 仅作 source=MANUAL 兼容期遗留，对 source=MDM 一律只读（拒绝时抛 `ProductDataReadOnlyException`，错误码 `202014`）；保留并回填 `variantCode`，**`veh_variant.model_code → veh_model.code` 的「车系→车型→版本（原基础车型）」与 `BuildConfig → variantCode` 引用链不得切断**；US-005 BuildConfig 引用键 `base_model_code`→`variant_code`、路径 `listByBaseModelCode/{baseModelCode}`→`listByVariantCode/{variantCode}`（保留旧路径兼容，BuildConfig 本体仍为 VMD 自有）；US-019 PRODUCE 解析器七项编码 `baseModelCode`→`variantCode`（含历史兼容读取/映射）；US-030 service 路径 `/buildConfig/list/{baseModelCode}`→`/buildConfig/list/{variantCode}`（保留旧路径兼容）；MDM 事件订阅（F6，新增 entity=variant）与 Bootstrap 全量同步（F7，entity=variant\|all）复用现有机制；§1 产品树链路、§2 G5 纳入 Variant 语义并新增 Variant 语义统一说明、新增 N9 Variant 非目标；§5 新增 O47~O54。**本 CR 不改造 BaseModelFeatureCode/特征值归属（仅引用键兼容改名）、不改造 BuildConfig/FeatureFamily 归属（CR-017/CR-018）**。<br>**受影响清单（供实现对账）**：<br>· 表：`tb_veh_base_model`→`tb_veh_variant`（重命名 + 补 source/external_ref_id/external_version/last_sync_time + UK(external_ref_id)）；`tb_veh_basic_info`（新增 `variant_code` 回填）；`tb_veh_build_config`（`base_model_code`→`variant_code`）；`tb_veh_base_model_feature_code`（`base_model_code`→`variant_code`，仅引用键改名）。<br>· 字段：`base_model_code`/`baseModelCode`→`variant_code`/`variantCode`（保留旧列/旧字段兼容并回填）；`veh_variant` 保留列 `code`/`name`/`platform_code`/`car_line_code`/`model_code` 不变。<br>· 权限点：`completeVehicle:product:baseModel:*`→`completeVehicle:product:variant:list/query/export`；`variant:add/edit/remove` 仅兼容期遗留（限 source=MANUAL）；旧 `baseModel:*` 标记 `deprecated` 待后续 CR 下线。<br>· API path：`/api/mpt/baseModel/**`→`/api/mpt/variant/**`（含 `listByPlatformCodeAndCarLineCodeAndModelCode`）；`/api/mpt/buildConfig/v1/listByBaseModelCode/{baseModelCode}`→`listByVariantCode/{variantCode}`；`/api/service/vehicleModelConfig/v1/buildConfig/list/{baseModelCode}`→`/buildConfig/list/{variantCode}`（旧路径迁移期保留兼容）。<br>· Flyway：新增 `V7__Migrate_base_model_to_variant.sql`（表迁移/重命名 + 投影字段 + UK + 回填 source='MANUAL'）、`V8__Migrate_base_model_code_to_variant_code.sql`（basic_info/build_config/base_model_feature_code 关联键迁移回填），接续 CR-015 的 V6。**design.md / tasks.md 需按 SPEC 工作流后续同步落地本 CR** |
 

@@ -23,6 +23,11 @@ public class BuildConfig implements DomainObj<BuildConfig> {
 
     private String baseModelCode;
 
+    /**
+     * 版本代码（CR-016新增，承接 baseModelCode 语义）
+     */
+    private String variantCode;
+
     private String code;
 
     private String name;

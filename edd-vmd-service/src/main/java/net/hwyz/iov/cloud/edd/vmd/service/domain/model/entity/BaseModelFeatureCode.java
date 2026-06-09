@@ -25,9 +25,25 @@ public class BaseModelFeatureCode implements DomainObj<BaseModelFeatureCode> {
     private Long id;
 
     /**
-     * 基础车型代码
+     * 版本代码（原baseModelCode，CR-016重命名）
      */
-    private String baseModelCode;
+    private String variantCode;
+
+    /**
+     * @deprecated Use {@link #getVariantCode()} instead. Kept for backward compatibility.
+     */
+    @Deprecated
+    public String getBaseModelCode() {
+        return variantCode;
+    }
+
+    /**
+     * @deprecated Use {@link #setVariantCode(String)} instead. Kept for backward compatibility.
+     */
+    @Deprecated
+    public void setBaseModelCode(String baseModelCode) {
+        this.variantCode = baseModelCode;
+    }
 
     /**
      * 特征族代码

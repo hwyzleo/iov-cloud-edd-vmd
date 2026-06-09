@@ -73,7 +73,7 @@ public class ProduceDataParserV1_0 extends BaseParser implements ImportDataParse
                 handleVehicleInfo(itemJson, vehicleBasicInfo, "PLATFORM", "platformCode", "平台数据", batchNum, vin);
                 handleVehicleInfo(itemJson, vehicleBasicInfo, "SERIES", "carLineCode", "车系数据", batchNum, vin);
                 handleVehicleInfo(itemJson, vehicleBasicInfo, "MODEL", "modelCode", "车型数据", batchNum, vin);
-                handleVehicleInfo(itemJson, vehicleBasicInfo, "BASE_MODEL", "baseModelCode", "基础车型数据", batchNum, vin);
+                handleVehicleInfo(itemJson, vehicleBasicInfo, "BASE_MODEL", "variantCode", "版本数据", batchNum, vin);
                 handleVehicleInfo(itemJson, vehicleBasicInfo, "BUILD_CONFIG", "buildConfigCode", "生产配置数据", batchNum, vin);
                 if (ObjUtil.isNull(vehicleBasicInfo.getId())) {
                     vehBasicInfoRepository.insert(vehicleBasicInfo);

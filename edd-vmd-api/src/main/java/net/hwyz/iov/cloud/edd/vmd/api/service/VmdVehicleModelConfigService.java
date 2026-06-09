@@ -29,12 +29,22 @@ public interface VmdVehicleModelConfigService {
     String getVehicleBuildConfigCode(@RequestParam Map<String, String> featureCodeMap);
 
     /**
+     * 根据版本代码获取生产配置列表
+     *
+     * @param variantCode 版本代码
+     * @return 生产配置列表
+     */
+    @GetMapping("/buildConfig/list/{variantCode}")
+    List<VmdBuildConfigResponse> getBuildConfigListByVariantCode(@PathVariable String variantCode);
+
+    /**
      * 根据基础车型代码获取生产配置列表
      *
      * @param baseModelCode 基础车型代码
      * @return 生产配置列表
      */
-    @GetMapping("/buildConfig/list/{baseModelCode}")
+    @Deprecated
+    @GetMapping("/buildConfig/listByBaseModelCode/{baseModelCode}")
     List<VmdBuildConfigResponse> getBuildConfigListByBaseModelCode(@PathVariable String baseModelCode);
 
     /**

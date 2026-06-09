@@ -6,19 +6,23 @@ import net.hwyz.iov.cloud.edd.vmd.api.service.MdmBrandQueryClient;
 import net.hwyz.iov.cloud.edd.vmd.api.service.MdmCarLineQueryClient;
 import net.hwyz.iov.cloud.edd.vmd.api.service.MdmModelQueryClient;
 import net.hwyz.iov.cloud.edd.vmd.api.service.MdmPlatformQueryClient;
+import net.hwyz.iov.cloud.edd.vmd.api.service.MdmVariantQueryClient;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmBrandEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmPlatformEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmCarLineEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmModelEvent;
+import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmVariantEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Brand;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Platform;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.CarLine;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Model;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Variant;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBrandRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehPlatformRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehCarLineRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehModelRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehVariantRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -40,10 +44,12 @@ public class MdmSyncAppService {
     private final VehCarLineRepository vehCarLineRepository;
     private final VehPlatformRepository vehPlatformRepository;
     private final VehModelRepository vehModelRepository;
+    private final VehVariantRepository vehVariantRepository;
     private final MdmBrandQueryClient mdmBrandQueryClient;
     private final MdmCarLineQueryClient mdmCarLineQueryClient;
     private final MdmPlatformQueryClient mdmPlatformQueryClient;
     private final MdmModelQueryClient mdmModelQueryClient;
+    private final MdmVariantQueryClient mdmVariantQueryClient;
 
     /**
      * 处理 MDM 品牌事件
@@ -200,6 +206,51 @@ public class MdmSyncAppService {
             } else {
                 log.info("忽略车型事件（版本不高于本地）: code={}, eventVersion={}, localVersion={}",
                         event.getCode(), event.getVersion(), localModel.getExternalVersion());
+            }
+        }
+    }
+
+    /**
+     * 处理 MDM 版本事件
+     *
+     * <p>CR-016：Variant 投影采用按需最小化只读投影，仅同步 VMD 业务所需字段
+     * （含 platform_code / carLine_code / model_code 关联字段）。</p>
+     *
+     * @param event 版本事件
+     */
+    public void handleVariantEvent(MdmVariantEvent event) {
+        log.info("处理MDM版本事件: entityId={}, version={}", event.getEntityId(), event.getVersion());
+        // 根据 externalRefId 查找本地记录
+        Variant localVariant = vehVariantRepository.selectByExternalRefId(event.getEntityId());
+        if (localVariant == null) {
+            // 本地不存在，新增
+            Variant newVariant = Variant.builder()
+                    .code(event.getCode())
+                    .name(event.getName())
+                    .platformCode(event.getPlatformCode())
+                    .carLineCode(event.getCarLineCode())
+                    .modelCode(event.getModelCode())
+                    .source(SourceType.MDM)
+                    .externalRefId(event.getEntityId())
+                    .externalVersion(event.getVersion())
+                    .lastSyncTime(LocalDateTime.now())
+                    .build();
+            vehVariantRepository.insert(newVariant);
+            log.info("新增版本: code={}", event.getCode());
+        } else {
+            // 本地存在，检查版本
+            if (event.getVersion() > localVariant.getExternalVersion()) {
+                localVariant.setName(event.getName());
+                localVariant.setPlatformCode(event.getPlatformCode());
+                localVariant.setCarLineCode(event.getCarLineCode());
+                localVariant.setModelCode(event.getModelCode());
+                localVariant.setExternalVersion(event.getVersion());
+                localVariant.setLastSyncTime(LocalDateTime.now());
+                vehVariantRepository.updateById(localVariant);
+                log.info("更新版本: code={}, version={}", event.getCode(), event.getVersion());
+            } else {
+                log.info("忽略版本事件（版本不高于本地）: code={}, eventVersion={}, localVersion={}",
+                        event.getCode(), event.getVersion(), localVariant.getExternalVersion());
             }
         }
     }
@@ -380,6 +431,55 @@ public class MdmSyncAppService {
     }
 
     /**
+     * Bootstrap 全量同步版本数据
+     *
+     * <p>当本地 source=MDM 的版本记录数为 0 时，自动调用 MDM Variant 全量快照接口
+     * 拉取数据并 upsert 本地副本。</p>
+     *
+     * <p>CR-016：Variant 投影采用按需最小化只读投影，仅同步 VMD 业务所需字段
+     * （含 platform_code / carLine_code / model_code 关联字段）。</p>
+     */
+    public void bootstrapVariant() {
+        log.info("开始 Bootstrap 版本数据同步");
+        long count = vehVariantRepository.countBySource(SourceType.MDM);
+        if (count == 0) {
+            log.info("本地无 MDM 版本记录（count=0），启动 Bootstrap 同步");
+            try {
+                List<Map<String, Object>> mdmVariants = mdmVariantQueryClient.getAllVariants();
+                for (Map<String, Object> variantData : mdmVariants) {
+                    String code = (String) variantData.get("code");
+                    String name = (String) variantData.get("name");
+                    String platformCode = (String) variantData.get("platformCode");
+                    String carLineCode = (String) variantData.get("carLineCode");
+                    String modelCode = (String) variantData.get("modelCode");
+                    String entityId = (String) variantData.get("id");
+                    Long version = Long.valueOf(variantData.get("version").toString());
+
+                    Variant variant = Variant.builder()
+                            .code(code)
+                            .name(name)
+                            .platformCode(platformCode)
+                            .carLineCode(carLineCode)
+                            .modelCode(modelCode)
+                            .source(SourceType.MDM)
+                            .externalRefId(entityId)
+                            .externalVersion(version)
+                            .lastSyncTime(LocalDateTime.now())
+                            .build();
+                    vehVariantRepository.insert(variant);
+                    log.info("Bootstrap 新增 MDM 版本投影: code={}, platformCode={}, carLineCode={}, modelCode={}", code, platformCode, carLineCode, modelCode);
+                }
+                log.info("Bootstrap 版本数据同步完成，共同步 {} 条", mdmVariants.size());
+            } catch (Exception e) {
+                log.error("Bootstrap 版本数据同步失败", e);
+                // 不清空本地已有数据
+            }
+        } else {
+            log.info("本地已有 MDM 版本数据 {} 条，跳过 Bootstrap", count);
+        }
+    }
+
+    /**
      * Bootstrap 全量同步所有数据
      */
     public void bootstrapAll() {
@@ -388,6 +488,7 @@ public class MdmSyncAppService {
         bootstrapSeries();
         bootstrapPlatform();
         bootstrapModel();
+        bootstrapVariant();
         log.info("Bootstrap全量数据同步完成");
     }
 

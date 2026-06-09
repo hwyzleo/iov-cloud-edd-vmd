@@ -6,19 +6,17 @@ import lombok.Data;
 import java.util.Date;
 
 /**
- * 生产配置查询 DTO
+ * 版本查询 DTO
  *
  * @author hwyz_leo
  */
 @Data
 @Builder
-public class BuildConfigQuery {
+public class VariantQuery {
 
     private String platformCode;
     private String carLineCode;
     private String modelCode;
-    private String variantCode;
-    private String baseModelCode;
     private String code;
     private String name;
     private Date beginTime;

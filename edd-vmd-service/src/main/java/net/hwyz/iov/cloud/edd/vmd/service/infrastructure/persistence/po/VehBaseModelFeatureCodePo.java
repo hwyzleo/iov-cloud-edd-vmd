@@ -39,6 +39,12 @@ public class VehBaseModelFeatureCodePo extends BasePo {
     private String baseModelCode;
 
     /**
+     * 版本代码
+     */
+    @TableField("variant_code")
+    private String variantCode;
+
+    /**
      * 特征族代码
      */
     @TableField("family_code")

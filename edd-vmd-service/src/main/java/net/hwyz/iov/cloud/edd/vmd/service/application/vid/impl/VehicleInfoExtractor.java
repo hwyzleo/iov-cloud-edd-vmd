@@ -35,7 +35,7 @@ public class VehicleInfoExtractor extends BaseParser {
             new FieldMapping("PLATFORM", "platformCode", "平台数据"),
             new FieldMapping("SERIES", "carLineCode", "车系数据"),
             new FieldMapping("MODEL", "modelCode", "车型数据"),
-            new FieldMapping("BASE_MODEL", "baseModelCode", "基础车型数据"),
+            new FieldMapping("BASE_MODEL", "variantCode", "版本数据"),
             new FieldMapping("BUILD_CONFIG", "buildConfigCode", "生产配置数据"),
             new FieldMapping("VEHICLE_BASE_VERSION", "vehicleBaseVersion", "车辆基线版本")
     );

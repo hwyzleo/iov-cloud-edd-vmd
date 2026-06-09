@@ -20,6 +20,8 @@ public class BuildConfigRequest extends BaseRequest {
 
     private String modelCode;
 
+    private String variantCode;
+
     private String baseModelCode;
 
     private String code;

@@ -84,6 +84,12 @@ public class VehBasicInfoPo extends BasePo {
     private String baseModelCode;
 
     /**
+     * 版本代码
+     */
+    @TableField("variant_code")
+    private String variantCode;
+
+    /**
      * 生产配置代码
      */
     @TableField("build_config_code")

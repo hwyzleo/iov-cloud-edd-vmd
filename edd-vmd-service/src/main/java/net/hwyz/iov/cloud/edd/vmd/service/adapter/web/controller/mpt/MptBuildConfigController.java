@@ -43,6 +43,7 @@ public class MptBuildConfigController extends BaseController {
                 .platformCode(buildConfig.getPlatformCode())
                 .carLineCode(buildConfig.getCarLineCode())
                 .modelCode(buildConfig.getModelCode())
+                .variantCode(buildConfig.getVariantCode())
                 .baseModelCode(buildConfig.getBaseModelCode())
                 .code(buildConfig.getCode())
                 .name(buildConfig.getName())
@@ -53,6 +54,15 @@ public class MptBuildConfigController extends BaseController {
         return ApiResponse.ok(getPageResult(PageUtil.convert(buildConfigDtoList, MptBuildConfigAssembler.INSTANCE::fromDto)));
     }
 
+    @RequiresPermissions("completeVehicle:product:buildConfig:list")
+    @GetMapping(value = "/listByVariantCode/{variantCode}")
+    public ApiResponse<List<BuildConfigResponse>> listByVariantCode(@PathVariable String variantCode) {
+        log.info("管理后台用户[{}]根据版本代码[{}]查询生产配置列表", SecurityContextHolder.getUserName(), variantCode);
+        List<BuildConfigDto> buildConfigDtoList = buildConfigAppService.getBuildConfigListByVariantCode(variantCode);
+        return ApiResponse.ok(PageUtil.convert(buildConfigDtoList, MptBuildConfigAssembler.INSTANCE::fromDto));
+    }
+
+    @Deprecated
     @RequiresPermissions("completeVehicle:product:buildConfig:list")
     @GetMapping(value = "/listByBaseModelCode/{baseModelCode}")
     public ApiResponse<List<BuildConfigResponse>> listByBaseModelCode(@PathVariable String baseModelCode) {
