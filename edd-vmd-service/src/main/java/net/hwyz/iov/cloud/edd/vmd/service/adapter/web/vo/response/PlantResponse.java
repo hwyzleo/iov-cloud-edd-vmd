@@ -5,7 +5,7 @@ import lombok.*;
 import java.util.Date;
 
 /**
- * 管理后台车辆厂商
+ * 管理后台生产工厂
  *
  * @author hwyz_leo
  */
@@ -13,8 +13,7 @@ import java.util.Date;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-
-public class ManufacturerResponse {
+public class PlantResponse {
 
     /**
      * 主键
@@ -22,17 +21,17 @@ public class ManufacturerResponse {
     private Long id;
 
     /**
-     * 车辆平台代码
+     * 工厂代码
      */
     private String code;
 
     /**
-     * 车辆平台名称
+     * 工厂名称
      */
     private String name;
 
     /**
-     * 车辆平台英文名称
+     * 工厂英文名称
      */
     private String nameEn;
 

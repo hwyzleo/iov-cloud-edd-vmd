@@ -1,8 +1,8 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.ManufacturerCmd;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ManufacturerDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.ManufacturerQuery;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.PlantCmd;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.PlantDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.PlantQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Plant;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehPlantRepository;
@@ -44,7 +44,7 @@ class PlantAppServiceTest {
     @DisplayName("search方法应返回匹配的工厂列表")
     void search_shouldReturnMatchingPlantList() {
         // Given
-        ManufacturerQuery query = ManufacturerQuery.builder()
+        PlantQuery query = PlantQuery.builder()
                 .code("PLANT001")
                 .name("测试")
                 .build();
@@ -56,7 +56,7 @@ class PlantAppServiceTest {
         when(vehPlantRepository.selectByMap(any(Map.class))).thenReturn(plants);
 
         // When
-        List<ManufacturerDto> result = plantAppService.search(query);
+        List<PlantDto> result = plantAppService.search(query);
 
         // Then
         assertNotNull(result);
@@ -68,14 +68,14 @@ class PlantAppServiceTest {
     @DisplayName("search方法应返回空列表当无匹配时")
     void search_shouldReturnEmptyListWhenNoMatch() {
         // Given
-        ManufacturerQuery query = ManufacturerQuery.builder()
+        PlantQuery query = PlantQuery.builder()
                 .code("NONEXISTENT")
                 .build();
 
         when(vehPlantRepository.selectByMap(any(Map.class))).thenReturn(Collections.emptyList());
 
         // When
-        List<ManufacturerDto> result = plantAppService.search(query);
+        List<PlantDto> result = plantAppService.search(query);
 
         // Then
         assertNotNull(result);
@@ -186,7 +186,7 @@ class PlantAppServiceTest {
         when(vehPlantRepository.selectById(plantId)).thenReturn(plant);
 
         // When
-        ManufacturerDto result = plantAppService.getPlantById(plantId);
+        PlantDto result = plantAppService.getPlantById(plantId);
 
         // Then
         assertNotNull(result);
@@ -222,7 +222,7 @@ class PlantAppServiceTest {
     @DisplayName("createPlant应成功创建工厂")
     void createPlant_shouldSuccessfullyCreatePlant() {
         // Given
-        ManufacturerCmd cmd = ManufacturerCmd.builder()
+        PlantCmd cmd = PlantCmd.builder()
                 .code("PLANT001")
                 .name("新工厂")
                 .build();
@@ -241,7 +241,7 @@ class PlantAppServiceTest {
     @DisplayName("modifyPlant应成功修改工厂")
     void modifyPlant_shouldSuccessfullyModifyPlant() {
         // Given
-        ManufacturerCmd cmd = ManufacturerCmd.builder()
+        PlantCmd cmd = PlantCmd.builder()
                 .id(1L)
                 .code("PLANT001")
                 .name("修改后的工厂")

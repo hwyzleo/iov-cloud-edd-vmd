@@ -6,13 +6,13 @@ import lombok.Data;
 import java.util.Date;
 
 /**
- * 生产厂商查询 DTO
+ * 生产工厂查询 DTO
  *
  * @author hwyz_leo
  */
 @Data
 @Builder
-public class ManufacturerQuery {
+public class PlantQuery {
 
     private String code;
     private String name;

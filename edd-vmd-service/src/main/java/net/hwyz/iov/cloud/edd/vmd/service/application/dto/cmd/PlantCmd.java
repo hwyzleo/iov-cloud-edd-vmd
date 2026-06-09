@@ -6,7 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * 生产厂商 DTO
+ * 生产工厂 CMD
  *
  * @author hwyz_leo
  */
@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class ManufacturerCmd {
+public class PlantCmd {
 
     private Long id;
     private String code;
@@ -22,6 +22,5 @@ public class ManufacturerCmd {
     private String nameEn;
     private Boolean enable;
     private Integer sort;
-    private String description;
 
 }

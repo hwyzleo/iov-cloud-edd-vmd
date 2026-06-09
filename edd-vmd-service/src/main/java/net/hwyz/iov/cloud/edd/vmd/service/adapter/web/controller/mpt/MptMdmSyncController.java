@@ -58,6 +58,9 @@ public class MptMdmSyncController extends BaseController {
             case "platform":
                 mdmSyncAppService.bootstrapPlatform();
                 return ApiResponse.ok("平台数据同步完成");
+            case "plant":
+                mdmSyncAppService.bootstrapPlant();
+                return ApiResponse.ok("工厂数据同步完成");
             case "model":
                 mdmSyncAppService.bootstrapModel();
                 return ApiResponse.ok("车型数据同步完成");

@@ -6,6 +6,7 @@ import net.hwyz.iov.cloud.edd.vmd.api.service.MdmBrandQueryClient;
 import net.hwyz.iov.cloud.edd.vmd.api.service.MdmCarLineQueryClient;
 import net.hwyz.iov.cloud.edd.vmd.api.service.MdmConfigurationQueryClient;
 import net.hwyz.iov.cloud.edd.vmd.api.service.MdmModelQueryClient;
+import net.hwyz.iov.cloud.edd.vmd.api.service.MdmPlantQueryClient;
 import net.hwyz.iov.cloud.edd.vmd.api.service.MdmPlatformQueryClient;
 import net.hwyz.iov.cloud.edd.vmd.api.service.MdmVariantQueryClient;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmBrandEvent;
@@ -13,12 +14,14 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmConfigurati
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmPlatformEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmCarLineEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmModelEvent;
+import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmPlantEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmVariantEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Brand;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Configuration;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Platform;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.CarLine;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Model;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Plant;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Variant;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBrandRepository;
@@ -26,6 +29,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehConfigurationRepo
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehPlatformRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehCarLineRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehModelRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehPlantRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehVariantRepository;
 import org.springframework.stereotype.Service;
 
@@ -49,12 +53,14 @@ public class MdmSyncAppService {
     private final VehConfigurationRepository vehConfigurationRepository;
     private final VehPlatformRepository vehPlatformRepository;
     private final VehModelRepository vehModelRepository;
+    private final VehPlantRepository vehPlantRepository;
     private final VehVariantRepository vehVariantRepository;
     private final MdmBrandQueryClient mdmBrandQueryClient;
     private final MdmCarLineQueryClient mdmCarLineQueryClient;
     private final MdmConfigurationQueryClient mdmConfigurationQueryClient;
-    private final MdmPlatformQueryClient mdmPlatformQueryClient;
     private final MdmModelQueryClient mdmModelQueryClient;
+    private final MdmPlantQueryClient mdmPlantQueryClient;
+    private final MdmPlatformQueryClient mdmPlatformQueryClient;
     private final MdmVariantQueryClient mdmVariantQueryClient;
 
     /**
@@ -600,6 +606,90 @@ public class MdmSyncAppService {
     }
 
     /**
+     * 处理 MDM 工厂事件
+     *
+     * <p>CR-011：Plant 投影采用按需最小化只读投影，仅同步 VMD 业务所需字段。</p>
+     *
+     * @param event 工厂事件
+     */
+    public void handlePlantEvent(MdmPlantEvent event) {
+        log.debug("处理 MDM 工厂事件: eventType={}, entityId={}, code={}",
+                event.getEventType(), event.getEntityId(), event.getCode());
+        // 根据 externalRefId 查找本地记录
+        Plant localPlant = vehPlantRepository.selectByExternalRefId(event.getEntityId());
+        if (localPlant == null) {
+            // 本地不存在，新增 Plant 投影
+            Plant newPlant = Plant.builder()
+                    .code(event.getCode())
+                    .name(event.getName())
+                    .source(SourceType.MDM)
+                    .externalRefId(event.getEntityId())
+                    .externalVersion(event.getVersion())
+                    .lastSyncTime(LocalDateTime.now())
+                    .build();
+            vehPlantRepository.insert(newPlant);
+            log.info("新增 MDM 工厂投影: code={}, name={}", event.getCode(), event.getName());
+        } else {
+            // 本地存在，检查版本
+            if (event.getVersion() > localPlant.getExternalVersion()) {
+                // 更新 Plant 投影（版本更高）
+                localPlant.setName(event.getName());
+                localPlant.setExternalVersion(event.getVersion());
+                localPlant.setLastSyncTime(LocalDateTime.now());
+                vehPlantRepository.update(localPlant);
+                log.info("更新 MDM 工厂投影: code={}, oldVersion={}, newVersion={}",
+                        event.getCode(), localPlant.getExternalVersion(), event.getVersion());
+            } else {
+                // 忽略乱序事件
+                log.debug("忽略 MDM 工厂事件（版本不满足）: code={}, eventVersion={}, localVersion={}",
+                        event.getCode(), event.getVersion(), localPlant.getExternalVersion());
+            }
+        }
+    }
+
+    /**
+     * Bootstrap 全量同步工厂数据
+     *
+     * <p>当本地 source=MDM 的工厂记录数为 0 时，自动调用 MDM Plant 全量快照接口
+     * 拉取数据并 upsert 本地副本。</p>
+     *
+     * <p>CR-011：Plant 投影采用按需最小化只读投影，仅同步 VMD 业务所需字段。</p>
+     */
+    public void bootstrapPlant() {
+        log.info("开始 Bootstrap 工厂数据同步");
+        long count = vehPlantRepository.countBySource(SourceType.MDM.name());
+        if (count == 0) {
+            log.info("本地无 MDM 工厂记录（count=0），启动 Bootstrap 同步");
+            try {
+                List<Map<String, Object>> mdmPlants = mdmPlantQueryClient.getAllPlants();
+                for (Map<String, Object> plantData : mdmPlants) {
+                    String code = (String) plantData.get("code");
+                    String name = (String) plantData.get("name");
+                    String entityId = (String) plantData.get("id");
+                    Long version = Long.valueOf(plantData.get("version").toString());
+
+                    Plant plant = Plant.builder()
+                            .code(code)
+                            .name(name)
+                            .source(SourceType.MDM)
+                            .externalRefId(entityId)
+                            .externalVersion(version)
+                            .lastSyncTime(LocalDateTime.now())
+                            .build();
+                    vehPlantRepository.insert(plant);
+                    log.info("Bootstrap 新增 MDM 工厂投影: code={}", code);
+                }
+                log.info("Bootstrap 工厂数据同步完成，共同步 {} 条", mdmPlants.size());
+            } catch (Exception e) {
+                log.error("Bootstrap 工厂数据同步失败", e);
+                // 不清空本地已有数据
+            }
+        } else {
+            log.info("本地已有 MDM 工厂数据 {} 条，跳过 Bootstrap", count);
+        }
+    }
+
+    /**
      * Bootstrap 全量同步所有数据
      */
     public void bootstrapAll() {
@@ -607,6 +697,7 @@ public class MdmSyncAppService {
         bootstrapBrand();
         bootstrapSeries();
         bootstrapPlatform();
+        bootstrapPlant();
         bootstrapModel();
         bootstrapVariant();
         bootstrapConfiguration();

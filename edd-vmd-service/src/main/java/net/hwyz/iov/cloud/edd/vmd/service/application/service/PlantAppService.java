@@ -4,9 +4,9 @@ import cn.hutool.core.util.ObjUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.PlantAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.ManufacturerCmd;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ManufacturerDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.ManufacturerQuery;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.PlantCmd;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.PlantDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.PlantQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Plant;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehPlantRepository;
@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 生产工厂应用服务类（原ManufacturerAppService）
+ * 生产工厂应用服务类
  *
  * @author hwyz_leo
  */
@@ -37,7 +37,7 @@ public class PlantAppService {
      * @param query 查询 DTO
      * @return 生产工厂列表
      */
-    public List<ManufacturerDto> search(ManufacturerQuery query) {
+    public List<PlantDto> search(PlantQuery query) {
         Map<String, Object> map = new HashMap<>();
         map.put("code", query.getCode());
         map.put("name", ParamHelper.fuzzyQueryParam(query.getName()));
@@ -81,7 +81,7 @@ public class PlantAppService {
      * @param id 主键ID
      * @return 生产工厂 DTO
      */
-    public ManufacturerDto getPlantById(Long id) {
+    public PlantDto getPlantById(Long id) {
         return PlantAssembler.INSTANCE.fromDomain(vehPlantRepository.selectById(id));
     }
 
@@ -98,24 +98,24 @@ public class PlantAppService {
     /**
      * 新增生产工厂
      *
-     * @param manufacturerCmd 生产工厂信息 CMD
-     * @param userId          操作用户ID
+     * @param plantCmd 生产工厂信息 CMD
+     * @param userId   操作用户ID
      * @return 结果
      */
-    public int createPlant(ManufacturerCmd manufacturerCmd, String userId) {
-        Plant plant = PlantAssembler.INSTANCE.toDomain(manufacturerCmd);
+    public int createPlant(PlantCmd plantCmd, String userId) {
+        Plant plant = PlantAssembler.INSTANCE.toDomain(plantCmd);
         return vehPlantRepository.insert(plant);
     }
 
     /**
      * 修改生产工厂
      *
-     * @param manufacturerCmd 生产工厂信息 CMD
-     * @param userId          操作用户ID
+     * @param plantCmd 生产工厂信息 CMD
+     * @param userId   操作用户ID
      * @return 结果
      */
-    public int modifyPlant(ManufacturerCmd manufacturerCmd, String userId) {
-        Plant plant = PlantAssembler.INSTANCE.toDomain(manufacturerCmd);
+    public int modifyPlant(PlantCmd plantCmd, String userId) {
+        Plant plant = PlantAssembler.INSTANCE.toDomain(plantCmd);
         return vehPlantRepository.update(plant);
     }
 

@@ -1,7 +1,7 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.assembler;
 
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.ManufacturerCmd;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ManufacturerDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.PlantCmd;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.PlantDto;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Plant;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
@@ -9,7 +9,7 @@ import org.mapstruct.factory.Mappers;
 import java.util.List;
 
 /**
- * 生产工厂 DTO 转换器（原ManufacturerAssembler）
+ * 生产工厂 DTO 转换器
  *
  * @author hwyz_leo
  */
@@ -24,23 +24,23 @@ public interface PlantAssembler {
      * @param plant 领域对象
      * @return DTO
      */
-    ManufacturerDto fromDomain(Plant plant);
+    PlantDto fromDomain(Plant plant);
 
     /**
      * DTO 转领域对象
      *
-     * @param manufacturerDto DTO
+     * @param plantDto DTO
      * @return 领域对象
      */
-    Plant toDomain(ManufacturerDto manufacturerDto);
+    Plant toDomain(PlantDto plantDto);
 
     /**
      * CMD 转领域对象
      *
-     * @param manufacturerCmd CMD
+     * @param plantCmd CMD
      * @return 领域对象
      */
-    Plant toDomain(ManufacturerCmd manufacturerCmd);
+    Plant toDomain(PlantCmd plantCmd);
 
     /**
      * 领域对象列表转 DTO 列表
@@ -48,6 +48,6 @@ public interface PlantAssembler {
      * @param plantList 领域对象列表
      * @return DTO 列表
      */
-    List<ManufacturerDto> fromDomainList(List<Plant> plantList);
+    List<PlantDto> fromDomainList(List<Plant> plantList);
 
 }

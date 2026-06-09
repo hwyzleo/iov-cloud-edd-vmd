@@ -7,6 +7,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmConfigurati
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmPlatformEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmCarLineEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmModelEvent;
+import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmPlantEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmVariantEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.MdmSyncAppService;
 import org.springframework.context.event.EventListener;
@@ -59,6 +60,18 @@ public class MdmEventSubscribe {
         log.info("收到MDM平台事件: type={}, entityId={}, version={}, code={}",
                 event.getEventType(), event.getEntityId(), event.getVersion(), event.getCode());
         mdmSyncAppService.handlePlatformEvent(event);
+    }
+
+    /**
+     * 订阅 MDM 工厂事件
+     *
+     * @param event 工厂事件
+     */
+    @EventListener
+    public void onMdmPlantEvent(MdmPlantEvent event) {
+        log.info("收到MDM工厂事件: type={}, entityId={}, version={}, code={}",
+                event.getEventType(), event.getEntityId(), event.getVersion(), event.getCode());
+        mdmSyncAppService.handlePlantEvent(event);
     }
 
     /**
