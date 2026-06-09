@@ -23,7 +23,7 @@ import net.hwyz.iov.cloud.framework.mysql.po.BasePo;
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("tb_veh_variant")
+@TableName("tb_mdm_variant")
 public class VehVariantPo extends BasePo {
 
     private static final long serialVersionUID = 1L;

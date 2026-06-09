@@ -13,14 +13,12 @@
         <result column="row_version" property="rowVersion" />
         <result column="row_valid" property="rowValid" />
         <result column="vin" property="vin" />
-        <result column="manufacturer_code" property="manufacturerCode" />
         <result column="plant_code" property="plantCode" />
         <result column="brand_code" property="brandCode" />
         <result column="platform_code" property="platformCode" />
         <result column="car_line_code" property="carLineCode" />
         <result column="model_code" property="modelCode" />
-        <result column="base_model_code" property="baseModelCode" />
-        <result column="build_config_code" property="buildConfigCode" />
+        <result column="configuration_code" property="configurationCode" />
         <result column="eol_time" property="eolTime" />
         <result column="pdi_time" property="pdiTime" />
         <result column="order_num" property="orderNum" />
@@ -29,18 +27,18 @@
 
     <!-- 通用查询结果列 -->
     <sql id="baseColumnList">
-        id, vin, manufacturer_code, plant_code, brand_code, platform_code, car_line_code, model_code, base_model_code, build_config_code, eol_time, pdi_time, order_num, vehicle_base_version,
+        id, vin, plant_code, brand_code, platform_code, car_line_code, model_code, configuration_code, eol_time, pdi_time, order_num, vehicle_base_version,
         description, create_time, create_by, modify_time, modify_by, row_version, row_valid
     </sql>
 
     <!-- 插入 -->
     <insert id="insertPo" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO tb_veh_basic_info (
-            id, vin, manufacturer_code, plant_code, brand_code, platform_code, car_line_code, model_code, base_model_code, build_config_code, eol_time, pdi_time, order_num, vehicle_base_version,
+            id, vin, plant_code, brand_code, platform_code, car_line_code, model_code, configuration_code, eol_time, pdi_time, order_num, vehicle_base_version,
             description, create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
         VALUES (
-            #{id}, #{vin}, #{manufacturerCode}, #{plantCode}, #{brandCode}, #{platformCode}, #{carLineCode}, #{modelCode}, #{baseModelCode}, #{buildConfigCode}, #{eolTime}, #{pdiTime}, #{orderNum}, #{vehicleBaseVersion},
+            #{id}, #{vin}, #{plantCode}, #{brandCode}, #{platformCode}, #{carLineCode}, #{modelCode}, #{configurationCode}, #{eolTime}, #{pdiTime}, #{orderNum}, #{vehicleBaseVersion},
             #{description}, now(), #{createBy}, now(), #{modifyBy}, 1, 1
         )
     </insert>
@@ -48,13 +46,13 @@
     <!-- 批量插入 -->
     <insert id="batchInsertPo" useGeneratedKeys="true" keyProperty="id" parameterType="java.util.List">
         INSERT INTO tb_veh_basic_info (
-            id, vin, manufacturer_code, plant_code, brand_code, platform_code, car_line_code, model_code, base_model_code, build_config_code, eol_time, pdi_time, order_num, vehicle_base_version,
+            id, vin, plant_code, brand_code, platform_code, car_line_code, model_code, configuration_code, eol_time, pdi_time, order_num, vehicle_base_version,
             description, create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
         VALUES
         <foreach collection="list" item="item" index="index" separator=",">
         (
-            #{item.id}, #{item.vin}, #{item.manufacturerCode}, #{item.plantCode}, #{item.brandCode}, #{item.platformCode}, #{item.carLineCode}, #{item.modelCode}, #{item.baseModelCode}, #{item.buildConfigCode}, #{item.eolTime}, #{item.pdiTime}, #{item.orderNum}, #{item.vehicleBaseVersion},
+            #{item.id}, #{item.vin}, #{item.plantCode}, #{item.brandCode}, #{item.platformCode}, #{item.carLineCode}, #{item.modelCode}, #{item.configurationCode}, #{item.eolTime}, #{item.pdiTime}, #{item.orderNum}, #{item.vehicleBaseVersion},
             #{item.description}, now(), #{item.createBy}, now(), #{item.modifyBy}, 1, 1
         )
         </foreach>
@@ -63,9 +61,6 @@
     <!-- 更新 -->
     <update id="updatePo" parameterType="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehBasicInfoPo">
         UPDATE tb_veh_basic_info t SET
-        <if test="manufacturerCode != null and manufacturerCode != ''">
-            t.manufacturer_code = #{manufacturerCode},
-        </if>
         <if test="plantCode != null and plantCode != ''">
             t.plant_code = #{plantCode},
         </if>
@@ -81,11 +76,8 @@
         <if test="modelCode != null and modelCode != ''">
             t.model_code = #{modelCode},
         </if>
-        <if test="baseModelCode != null and baseModelCode != ''">
-            t.base_model_code = #{baseModelCode},
-        </if>
-        <if test="buildConfigCode != null and buildConfigCode != ''">
-            t.build_config_code = #{buildConfigCode},
+        <if test="configurationCode != null and configurationCode != ''">
+            t.configuration_code = #{configurationCode},
         </if>
         <if test="eolTime != null">
             t.eol_time = #{eolTime},
@@ -153,9 +145,6 @@
         <if test="vin != null and vin != ''">
             AND t.vin = #{vin}
         </if>
-        <if test="manufacturerCode != null and manufacturerCode != ''">
-            AND t.manufacturer_code = #{manufacturerCode}
-        </if>
         <if test="brandCode != null and brandCode != ''">
             AND t.brand_code = #{brandCode}
         </if>
@@ -168,11 +157,8 @@
         <if test="modelCode != null and modelCode != ''">
             AND t.model_code = #{modelCode}
         </if>
-        <if test="baseModelCode != null and baseModelCode != ''">
-            AND t.base_model_code = #{baseModelCode}
-        </if>
-        <if test="buildConfigCode != null and buildConfigCode != ''">
-            AND t.build_config_code = #{buildConfigCode}
+        <if test="configurationCode != null and configurationCode != ''">
+            AND t.configuration_code = #{configurationCode}
         </if>
         <if test="eolTime != null">
             AND t.eol_time = #{eolTime}
@@ -216,8 +202,8 @@
         <if test="vin != null and vin != ''">
             AND t.vin LIKE #{vin}
         </if>
-        <if test="buildConfigCode != null and buildConfigCode != ''">
-            AND t.build_config_code = #{buildConfigCode}
+        <if test="configurationCode != null and configurationCode != ''">
+            AND t.configuration_code = #{configurationCode}
         </if>
         <if test="beginTime != null">
             and date_format(t.create_time,'%Y%m%d') &gt;= date_format(#{beginTime},'%Y%m%d')
@@ -259,9 +245,6 @@
         FROM tb_veh_basic_info t
         WHERE t.row_valid = 1
         <!-- 添加自定义条件 -->
-        <if test="manufacturerCode != null and manufacturerCode != ''">
-            AND t.manufacturer_code = #{manufacturerCode}
-        </if>
         <if test="brandCode != null and brandCode != ''">
             AND t.brand_code = #{brandCode}
         </if>
@@ -274,11 +257,8 @@
         <if test="modelCode != null and modelCode != ''">
             AND t.model_code = #{modelCode}
         </if>
-        <if test="baseModelCode != null and baseModelCode != ''">
-            AND t.base_model_code = #{baseModelCode}
-        </if>
-        <if test="buildConfigCode != null and buildConfigCode != ''">
-            AND t.build_config_code = #{buildConfigCode}
+        <if test="configurationCode != null and configurationCode != ''">
+            AND t.configuration_code = #{configurationCode}
         </if>
     </select>
 </mapper>

@@ -31,7 +31,7 @@ public interface VehPlatformMapper extends BaseDao<VehPlatformPo, Long> {
      * @param externalRefId MDM外部引用ID
      * @return 车辆平台信息
      */
-    @Select("SELECT * FROM tb_veh_platform WHERE external_ref_id = #{externalRefId} AND row_valid = 1")
+    @Select("SELECT * FROM tb_mdm_platform WHERE external_ref_id = #{externalRefId} AND row_valid = 1")
     VehPlatformPo selectPoByExternalRefId(@Param("externalRefId") String externalRefId);
 
     /**
@@ -40,7 +40,7 @@ public interface VehPlatformMapper extends BaseDao<VehPlatformPo, Long> {
      * @param source 数据来源
      * @return 数量
      */
-    @Select("SELECT COUNT(*) FROM tb_veh_platform WHERE source = #{source} AND row_valid = 1")
+    @Select("SELECT COUNT(*) FROM tb_mdm_platform WHERE source = #{source} AND row_valid = 1")
     long countPoBySource(@Param("source") String source);
 
 }

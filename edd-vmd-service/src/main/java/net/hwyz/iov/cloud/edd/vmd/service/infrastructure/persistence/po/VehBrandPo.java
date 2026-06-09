@@ -12,7 +12,7 @@ import lombok.*;
 import net.hwyz.iov.cloud.framework.mysql.po.BasePo;
 
 /**
- * 品牌持久化对象 - 对应 tb_veh_brand 表
+ * 品牌持久化对象 - 对应 tb_mdm_brand 表
  * 
  * <p>该表同时承载 MDM Brand 投影数据（source=MDM）和历史手动维护数据（source=MANUAL）。</p>
  * 
@@ -33,7 +33,7 @@ import net.hwyz.iov.cloud.framework.mysql.po.BasePo;
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("tb_veh_brand")
+@TableName("tb_mdm_brand")
 public class VehBrandPo extends BasePo {
 
     private static final long serialVersionUID = 1L;

@@ -12,7 +12,7 @@ import lombok.*;
 import net.hwyz.iov.cloud.framework.mysql.po.BasePo;
 
 /**
- * 平台持久化对象 - 对应 tb_veh_platform 表
+ * 平台持久化对象 - 对应 tb_mdm_platform 表
  * 
  * <p>该表同时承载 MDM Platform 投影数据（source=MDM）和历史手动维护数据（source=MANUAL）。</p>
  * 
@@ -37,7 +37,7 @@ import net.hwyz.iov.cloud.framework.mysql.po.BasePo;
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("tb_veh_platform")
+@TableName("tb_mdm_platform")
 public class VehPlatformPo extends BasePo {
 
     private static final long serialVersionUID = 1L;

@@ -23,7 +23,7 @@ public interface VehVariantMapper extends BaseDao<VehVariantPo, Long> {
      * @param code 版本编码
      * @return 版本信息
      */
-    @Select("SELECT * FROM tb_veh_variant WHERE code = #{code} AND row_valid = 1 LIMIT 1")
+    @Select("SELECT * FROM tb_mdm_variant WHERE code = #{code} AND row_valid = 1 LIMIT 1")
     VehVariantPo selectPoByCode(@Param("code") String code);
 
     /**
@@ -32,7 +32,7 @@ public interface VehVariantMapper extends BaseDao<VehVariantPo, Long> {
      * @param externalRefId MDM外部引用ID
      * @return 版本信息
      */
-    @Select("SELECT * FROM tb_veh_variant WHERE external_ref_id = #{externalRefId} AND row_valid = 1")
+    @Select("SELECT * FROM tb_mdm_variant WHERE external_ref_id = #{externalRefId} AND row_valid = 1")
     VehVariantPo selectPoByExternalRefId(@Param("externalRefId") String externalRefId);
 
     /**
@@ -41,7 +41,7 @@ public interface VehVariantMapper extends BaseDao<VehVariantPo, Long> {
      * @param source 数据来源
      * @return 数量
      */
-    @Select("SELECT COUNT(*) FROM tb_veh_variant WHERE source = #{source} AND row_valid = 1")
+    @Select("SELECT COUNT(*) FROM tb_mdm_variant WHERE source = #{source} AND row_valid = 1")
     long countPoBySource(@Param("source") String source);
 
 }

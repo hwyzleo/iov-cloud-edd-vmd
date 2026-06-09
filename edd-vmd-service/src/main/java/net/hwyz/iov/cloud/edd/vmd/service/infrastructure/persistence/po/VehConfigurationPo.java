@@ -18,7 +18,7 @@ import java.time.LocalDateTime;
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("tb_veh_configuration")
+@TableName("tb_mdm_configuration")
 public class VehConfigurationPo extends BasePo {
 
     private static final long serialVersionUID = 1L;
@@ -34,9 +34,6 @@ public class VehConfigurationPo extends BasePo {
 
     @TableField("model_code")
     private String modelCode;
-
-    @TableField("base_model_code")
-    private String baseModelCode;
 
     @TableField("code")
     private String code;

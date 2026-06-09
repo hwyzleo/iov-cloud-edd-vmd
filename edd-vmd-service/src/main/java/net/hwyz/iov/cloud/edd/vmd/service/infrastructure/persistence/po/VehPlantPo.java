@@ -13,7 +13,7 @@ import net.hwyz.iov.cloud.framework.mysql.po.BasePo;
 
 /**
  * <p>
- * 车辆生产工厂表 持久化对象（原tb_veh_manufacturer）
+ * 车辆生产工厂表 持久化对象（原tb_veh_manufacturer→tb_veh_plant→tb_mdm_plant）
  * </p>
  *
  * @author hwyz_leo
@@ -24,7 +24,7 @@ import net.hwyz.iov.cloud.framework.mysql.po.BasePo;
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("tb_veh_plant")
+@TableName("tb_mdm_plant")
 public class VehPlantPo extends BasePo {
 
     private static final long serialVersionUID = 1L;

@@ -26,7 +26,7 @@
 
     <!-- 插入 -->
     <insert id="insertPo" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO tb_veh_base_model_feature_code (
+        INSERT INTO tb_mdm_variant_option_code (
             id, variant_code, option_family_code, option_code, feature_type,
             description, create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
@@ -38,7 +38,7 @@
 
     <!-- 批量插入 -->
     <insert id="batchInsertPo" useGeneratedKeys="true" keyProperty="id" parameterType="java.util.List">
-        INSERT INTO tb_veh_base_model_feature_code (
+        INSERT INTO tb_mdm_variant_option_code (
             id, variant_code, option_family_code, option_code, feature_type,
             description, create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
@@ -53,7 +53,7 @@
 
     <!-- 更新 -->
     <update id="updatePo" parameterType="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehVariantOptionCodePo">
-        UPDATE tb_veh_base_model_feature_code t SET
+        UPDATE tb_mdm_variant_option_code t SET
         <if test="variantCode != null and variantCode != ''">
             t.variant_code = #{variantCode},
         </if>
@@ -79,7 +79,7 @@
 
     <!-- 逻辑删除 -->
     <update id="logicalDeletePo" parameterType="Long">
-        UPDATE tb_veh_base_model_feature_code t SET
+        UPDATE tb_mdm_variant_option_code t SET
         t.row_version = t.row_version + 1,
         t.modify_time = now(),
         t.row_valid = 0
@@ -88,13 +88,13 @@
 
     <!-- 物理删除 -->
     <delete id="physicalDeletePo" parameterType="Long">
-        DELETE FROM tb_veh_base_model_feature_code t
+        DELETE FROM tb_mdm_variant_option_code t
         WHERE t.id = #{value}
     </delete>
 
     <!-- 批量物理删除 -->
     <delete id="batchPhysicalDeletePo" parameterType="Long">
-        DELETE FROM tb_veh_base_model_feature_code t
+        DELETE FROM tb_mdm_variant_option_code t
         WHERE t.id IN
         <foreach collection="array" item="id" open="(" separator="," close=")">
             #{id}
@@ -104,7 +104,7 @@
     <!-- 根据主键获取对应数据 -->
     <select id="selectPoById" parameterType="Long" resultMap="baseResultMap">
         SELECT <include refid="baseColumnList"/>
-        FROM tb_veh_base_model_feature_code t
+        FROM tb_mdm_variant_option_code t
         WHERE t.id = #{value}
         AND t.row_valid = 1
     </select>
@@ -112,7 +112,7 @@
     <!-- 根据数据对象获取对应数据列表 -->
     <select id="selectPoByExample" parameterType="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehVariantOptionCodePo" resultMap="baseResultMap">
         SELECT <include refid="baseColumnList"/>
-        FROM tb_veh_base_model_feature_code t
+        FROM tb_mdm_variant_option_code t
         WHERE t.row_valid = 1
         <if test="id != null">
             AND t.id = #{id}
@@ -153,7 +153,7 @@
     <!-- 根据Map对象获取对应数据列表 -->
     <select id="selectPoByMap" parameterType="java.util.Map" resultMap="baseResultMap">
         SELECT <include refid="baseColumnList"/>
-        FROM tb_veh_base_model_feature_code t
+        FROM tb_mdm_variant_option_code t
         WHERE t.row_valid = 1
         <!-- 添加自定义条件 -->
         <if test="variantCode != null and variantCode != ''">
@@ -165,7 +165,7 @@
     <!-- 根据版本代码和选项族代码查询 -->
     <select id="selectPoByVariantCodeAndOptionFamilyCode" parameterType="java.util.Map" resultMap="baseResultMap">
         SELECT <include refid="baseColumnList"/>
-        FROM tb_veh_base_model_feature_code t
+        FROM tb_mdm_variant_option_code t
         WHERE t.row_valid = 1
         AND t.variant_code = #{variantCode}
         AND t.option_family_code = #{optionFamilyCode}
@@ -175,7 +175,7 @@
     <!-- 根据Map对象统计记录数 -->
     <select id="countPoByMap" parameterType="java.util.Map" resultType="int">
         SELECT COUNT(*)
-        FROM tb_veh_base_model_feature_code t
+        FROM tb_mdm_variant_option_code t
         WHERE t.row_valid = 1
         <!-- 添加自定义条件 -->
     </select>

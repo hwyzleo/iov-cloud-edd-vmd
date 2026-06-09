@@ -31,7 +31,7 @@ public interface VehCarLineMapper extends BaseDao<VehCarLinePo, Long> {
      * @param externalRefId MDM外部引用ID
      * @return 车系信息
      */
-    @Select("SELECT * FROM tb_veh_car_line WHERE external_ref_id = #{externalRefId} AND row_valid = 1")
+    @Select("SELECT * FROM tb_mdm_car_line WHERE external_ref_id = #{externalRefId} AND row_valid = 1")
     VehCarLinePo selectPoByExternalRefId(@Param("externalRefId") String externalRefId);
 
     /**
@@ -40,7 +40,7 @@ public interface VehCarLineMapper extends BaseDao<VehCarLinePo, Long> {
      * @param source 数据来源
      * @return 数量
      */
-    @Select("SELECT COUNT(*) FROM tb_veh_car_line WHERE source = #{source} AND row_valid = 1")
+    @Select("SELECT COUNT(*) FROM tb_mdm_car_line WHERE source = #{source} AND row_valid = 1")
     long countPoBySource(@Param("source") String source);
 
 }

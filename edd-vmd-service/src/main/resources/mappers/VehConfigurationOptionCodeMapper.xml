@@ -23,7 +23,7 @@
     </sql>
 
     <insert id="insertPo" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO tb_veh_build_config_feature_code (
+        INSERT INTO tb_mdm_configuration_option_code (
             id, configuration_code, option_family_code, option_code, feature_type,
             description, create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
@@ -34,7 +34,7 @@
     </insert>
 
     <insert id="batchInsertPo" useGeneratedKeys="true" keyProperty="id" parameterType="java.util.List">
-        INSERT INTO tb_veh_build_config_feature_code (
+        INSERT INTO tb_mdm_configuration_option_code (
             id, configuration_code, option_family_code, option_code, feature_type,
             description, create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
@@ -48,7 +48,7 @@
     </insert>
 
     <update id="updatePo" parameterType="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehConfigurationOptionCodePo">
-        UPDATE tb_veh_build_config_feature_code t SET
+        UPDATE tb_mdm_configuration_option_code t SET
         <if test="configurationCode != null and configurationCode != ''">
             t.configuration_code = #{configurationCode},
         </if>
@@ -73,7 +73,7 @@
     </update>
 
     <update id="logicalDeletePo" parameterType="Long">
-        UPDATE tb_veh_build_config_feature_code t SET
+        UPDATE tb_mdm_configuration_option_code t SET
         t.row_version = t.row_version + 1,
         t.modify_time = now(),
         t.row_valid = 0
@@ -81,12 +81,12 @@
     </update>
 
     <delete id="physicalDeletePo" parameterType="Long">
-        DELETE FROM tb_veh_build_config_feature_code t
+        DELETE FROM tb_mdm_configuration_option_code t
         WHERE t.id = #{value}
     </delete>
 
     <delete id="batchPhysicalDeletePo" parameterType="Long">
-        DELETE FROM tb_veh_build_config_feature_code t
+        DELETE FROM tb_mdm_configuration_option_code t
         WHERE t.id IN
         <foreach collection="array" item="id" open="(" separator="," close=")">
             #{id}
@@ -95,14 +95,14 @@
 
     <select id="selectPoById" parameterType="Long" resultMap="baseResultMap">
         SELECT <include refid="baseColumnList"/>
-        FROM tb_veh_build_config_feature_code t
+        FROM tb_mdm_configuration_option_code t
         WHERE t.id = #{value}
         AND t.row_valid = 1
     </select>
 
     <select id="selectPoByExample" parameterType="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehConfigurationOptionCodePo" resultMap="baseResultMap">
         SELECT <include refid="baseColumnList"/>
-        FROM tb_veh_build_config_feature_code t
+        FROM tb_mdm_configuration_option_code t
         WHERE t.row_valid = 1
         <if test="id != null">
             AND t.id = #{id}
@@ -142,7 +142,7 @@
 
     <select id="selectPoByMap" parameterType="java.util.Map" resultMap="baseResultMap">
         SELECT <include refid="baseColumnList"/>
-        FROM tb_veh_build_config_feature_code t
+        FROM tb_mdm_configuration_option_code t
         WHERE t.row_valid = 1
         <if test="configurationCode != null and configurationCode != ''">
             AND t.configuration_code = #{configurationCode}
@@ -152,7 +152,7 @@
 
     <select id="selectPoByConfigurationCodeAndOptionFamilyCode" parameterType="java.util.Map" resultMap="baseResultMap">
         SELECT <include refid="baseColumnList"/>
-        FROM tb_veh_build_config_feature_code t
+        FROM tb_mdm_configuration_option_code t
         WHERE t.row_valid = 1
         AND t.configuration_code = #{configurationCode}
         AND t.option_family_code = #{optionFamilyCode}
@@ -161,13 +161,13 @@
 
     <select id="countPoByMap" parameterType="java.util.Map" resultType="int">
         SELECT COUNT(*)
-        FROM tb_veh_build_config_feature_code t
+        FROM tb_mdm_configuration_option_code t
         WHERE t.row_valid = 1
     </select>
 
     <select id="selectConfigurationCodeByOptionCodeMap" parameterType="java.util.Map" resultType="java.lang.String">
         SELECT t.configuration_code
-        FROM tb_veh_build_config_feature_code t
+        FROM tb_mdm_configuration_option_code t
         WHERE t.row_valid = 1
         AND (
         <foreach collection="optionCodeMap.entrySet()" item="optionCode" index="optionFamilyCode" separator=" OR ">

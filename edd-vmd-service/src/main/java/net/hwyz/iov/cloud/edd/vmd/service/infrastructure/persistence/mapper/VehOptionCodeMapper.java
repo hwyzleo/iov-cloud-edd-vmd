@@ -31,7 +31,7 @@ public interface VehOptionCodeMapper extends BaseDao<VehOptionCodePo, Long> {
      * @param externalRefId 外部引用ID
      * @return 车辆选装值信息
      */
-    @Select("SELECT * FROM tb_veh_option_code WHERE external_ref_id = #{externalRefId} AND row_valid = 1")
+    @Select("SELECT * FROM tb_mdm_option_code WHERE external_ref_id = #{externalRefId} AND row_valid = 1")
     VehOptionCodePo selectPoByExternalRefId(@Param("externalRefId") String externalRefId);
 
     /**
@@ -40,7 +40,7 @@ public interface VehOptionCodeMapper extends BaseDao<VehOptionCodePo, Long> {
      * @param source 数据来源
      * @return 数量
      */
-    @Select("SELECT COUNT(*) FROM tb_veh_option_code WHERE source = #{source} AND row_valid = 1")
+    @Select("SELECT COUNT(*) FROM tb_mdm_option_code WHERE source = #{source} AND row_valid = 1")
     long countPoBySource(@Param("source") String source);
 
 }

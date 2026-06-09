@@ -42,13 +42,7 @@ public class VehBasicInfoPo extends BasePo {
     private String vin;
 
     /**
-     * 工厂代码（历史遗留，兼容期保留）
-     */
-    @TableField("manufacturer_code")
-    private String manufacturerCode;
-
-    /**
-     * 生产工厂代码（CR-011新增，承接manufacturer_code语义）
+     * 生产工厂代码
      */
     @TableField("plant_code")
     private String plantCode;
@@ -78,22 +72,16 @@ public class VehBasicInfoPo extends BasePo {
     private String modelCode;
 
     /**
-     * 基础车型代码
-     */
-    @TableField("base_model_code")
-    private String baseModelCode;
-
-    /**
      * 版本代码
      */
     @TableField("variant_code")
     private String variantCode;
 
     /**
-     * 生产配置代码
+     * 配置代码
      */
-    @TableField("build_config_code")
-    private String buildConfigCode;
+    @TableField("configuration_code")
+    private String configurationCode;
 
     /**
      * 车辆下线时间

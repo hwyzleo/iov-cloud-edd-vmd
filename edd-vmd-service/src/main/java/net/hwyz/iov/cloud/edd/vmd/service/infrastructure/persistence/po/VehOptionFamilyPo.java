@@ -13,7 +13,7 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("tb_veh_option_family")
+@TableName("tb_mdm_option_family")
 public class VehOptionFamilyPo extends BasePo {
 
     private static final long serialVersionUID = 1L;

@@ -24,7 +24,7 @@ import net.hwyz.iov.cloud.framework.mysql.po.BasePo;
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("tb_veh_model")
+@TableName("tb_mdm_model")
 public class VehModelPo extends BasePo {
 
     private static final long serialVersionUID = 1L;

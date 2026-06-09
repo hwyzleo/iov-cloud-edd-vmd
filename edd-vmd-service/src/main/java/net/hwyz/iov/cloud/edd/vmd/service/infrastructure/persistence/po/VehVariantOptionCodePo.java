@@ -10,7 +10,7 @@ import lombok.experimental.SuperBuilder;
 
 /**
  * <p>
- * 车辆版本选项值关系表 持久化对象（原VehBaseModelFeatureCodePo→VehVariantFeatureCodePo，CR-018重命名）
+ * 车辆版本选项值关系表 持久化对象（原tb_veh_base_model_feature_code→tb_mdm_variant_option_code，CR-019重命名）
  * </p>
  *
  * @author hwyz_leo
@@ -21,7 +21,7 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("tb_veh_base_model_feature_code")
+@TableName("tb_mdm_variant_option_code")
 public class VehVariantOptionCodePo extends BasePo {
 
     private static final long serialVersionUID = 1L;

@@ -33,7 +33,7 @@
 
     <!-- 插入 -->
     <insert id="insertPo" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO tb_veh_car_line (
+        INSERT INTO tb_mdm_car_line (
             id, brand_code, code, name, name_en, enable, sort, 
             description, source, external_ref_id, external_version, last_sync_time,
             create_time, create_by, modify_time, modify_by, row_version, row_valid
@@ -47,7 +47,7 @@
 
     <!-- 批量插入 -->
     <insert id="batchInsertPo" useGeneratedKeys="true" keyProperty="id" parameterType="java.util.List">
-        INSERT INTO tb_veh_car_line (
+        INSERT INTO tb_mdm_car_line (
             id, brand_code, code, name, name_en, enable, sort, 
             description, source, external_ref_id, external_version, last_sync_time,
             create_time, create_by, modify_time, modify_by, row_version, row_valid
@@ -64,7 +64,7 @@
 
     <!-- 更新 -->
     <update id="updatePo" parameterType="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehCarLinePo">
-        UPDATE tb_veh_car_line t SET
+        UPDATE tb_mdm_car_line t SET
         <if test="brandCode != null and brandCode != ''">
             t.brand_code = #{brandCode},
         </if>
@@ -105,7 +105,7 @@
 
     <!-- 逻辑删除 -->
     <update id="logicalDeletePo" parameterType="Long">
-        UPDATE tb_veh_car_line t SET
+        UPDATE tb_mdm_car_line t SET
         t.row_version = t.row_version + 1,
         t.modify_time = now(),
         t.row_valid = 0
@@ -114,13 +114,13 @@
 
     <!-- 物理删除 -->
     <delete id="physicalDeletePo" parameterType="Long">
-        DELETE FROM tb_veh_car_line t
+        DELETE FROM tb_mdm_car_line t
         WHERE t.id = #{value}
     </delete>
 
     <!-- 批量物理删除车系信息 -->
     <delete id="batchPhysicalDeletePo" parameterType="Long">
-        DELETE FROM tb_veh_car_line t
+        DELETE FROM tb_mdm_car_line t
         WHERE t.id IN
         <foreach collection="array" item="id" open="(" separator="," close=")">
             #{id}
@@ -130,7 +130,7 @@
     <!-- 根据主键获取对应数据 -->
     <select id="selectPoById" parameterType="Long" resultMap="baseResultMap">
         SELECT <include refid="baseColumnList"/>
-        FROM tb_veh_car_line t
+        FROM tb_mdm_car_line t
         WHERE t.id = #{value}
         AND t.row_valid = 1
     </select>
@@ -138,7 +138,7 @@
     <!-- 根据数据对象获取对应数据列表 -->
     <select id="selectPoByExample" parameterType="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehCarLinePo" resultMap="baseResultMap">
         SELECT <include refid="baseColumnList"/>
-        FROM tb_veh_car_line t
+        FROM tb_mdm_car_line t
         WHERE t.row_valid = 1
         <if test="id != null">
             AND t.id = #{id}
@@ -185,7 +185,7 @@
     <!-- 根据Map对象获取对应数据列表 -->
     <select id="selectPoByMap" parameterType="java.util.Map" resultMap="baseResultMap">
         SELECT <include refid="baseColumnList"/>
-        FROM tb_veh_car_line t
+        FROM tb_mdm_car_line t
         WHERE t.row_valid = 1
         <!-- 添加自定义条件 -->
         <if test="brandCode != null and brandCode != ''">
@@ -209,7 +209,7 @@
     <!-- 通过code查询车系信息 -->
     <select id="selectPoByCode" parameterType="java.util.Map" resultMap="baseResultMap">
         SELECT <include refid="baseColumnList"/>
-        FROM tb_veh_car_line t
+        FROM tb_mdm_car_line t
         WHERE t.row_valid = 1
         AND t.code = #{code}
         LIMIT 1
@@ -218,7 +218,7 @@
     <!-- 根据Map对象统计记录数 -->
     <select id="countPoByMap" parameterType="java.util.Map" resultType="int">
         SELECT COUNT(*)
-        FROM tb_veh_car_line t
+        FROM tb_mdm_car_line t
         WHERE t.row_valid = 1
         <!-- 添加自定义条件 -->
         <if test="brandCode != null and brandCode != ''">

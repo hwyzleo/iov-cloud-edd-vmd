@@ -31,7 +31,7 @@ public interface VehModelMapper extends BaseDao<VehModelPo, Long> {
      * @param externalRefId MDM外部引用ID
      * @return 车型信息
      */
-    @Select("SELECT * FROM tb_veh_model WHERE external_ref_id = #{externalRefId} AND row_valid = 1")
+    @Select("SELECT * FROM tb_mdm_model WHERE external_ref_id = #{externalRefId} AND row_valid = 1")
     VehModelPo selectPoByExternalRefId(@Param("externalRefId") String externalRefId);
 
     /**
@@ -40,7 +40,7 @@ public interface VehModelMapper extends BaseDao<VehModelPo, Long> {
      * @param source 数据来源
      * @return 数量
      */
-    @Select("SELECT COUNT(*) FROM tb_veh_model WHERE source = #{source} AND row_valid = 1")
+    @Select("SELECT COUNT(*) FROM tb_mdm_model WHERE source = #{source} AND row_valid = 1")
     long countPoBySource(@Param("source") String source);
 
 }
