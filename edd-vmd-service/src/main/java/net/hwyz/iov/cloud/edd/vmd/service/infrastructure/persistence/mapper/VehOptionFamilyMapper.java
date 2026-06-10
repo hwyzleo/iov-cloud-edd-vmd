@@ -31,7 +31,6 @@ public interface VehOptionFamilyMapper extends BaseDao<VehOptionFamilyPo, Long> 
      * @param externalRefId 外部引用ID
      * @return 车辆选装族信息
      */
-    @Select("SELECT * FROM tb_mdm_option_family WHERE external_ref_id = #{externalRefId} AND row_valid = 1")
     VehOptionFamilyPo selectPoByExternalRefId(@Param("externalRefId") String externalRefId);
 
     /**
