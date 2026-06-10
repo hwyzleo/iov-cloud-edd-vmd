@@ -56,11 +56,15 @@
         <result column="sale_note" property="saleNote" />
         <result column="first_production_date" property="firstProductionDate" />
         <result column="initial_model" property="initialModel" />
+        <result column="source" property="source" />
+        <result column="external_ref_id" property="externalRefId" />
+        <result column="external_version" property="externalVersion" />
+        <result column="last_sync_time" property="lastSyncTime" />
     </resultMap>
 
     <!-- 通用查询结果列 -->
     <sql id="baseColumnList">
-        id, pn, name, name_en, type, ffa, status, digital_model, unit, frame_part, nature_part, color_area, nature_pn, regulatory_part, key_part, accurately_traced, aftersale_part, standard_part_class, wrench_type, rod_type, head_shape, end_shape, washer, washer_type, diameter, length, pitch, dental_form, strength_grade, mechanical_property, surface_treatment, structure_character, device_form, device_code, designer, designer_dept, non_repair_reason, color_repair, primer_repair, electrophoresis_repair, production_code, spare_property, sale_note, first_production_date, initial_model, 
+        id, pn, name, name_en, type, ffa, status, digital_model, unit, frame_part, nature_part, color_area, nature_pn, regulatory_part, key_part, accurately_traced, aftersale_part, standard_part_class, wrench_type, rod_type, head_shape, end_shape, washer, washer_type, diameter, length, pitch, dental_form, strength_grade, mechanical_property, surface_treatment, structure_character, device_form, device_code, designer, designer_dept, non_repair_reason, color_repair, primer_repair, electrophoresis_repair, production_code, spare_property, sale_note, first_production_date, initial_model, source, external_ref_id, external_version, last_sync_time,
         description, create_time, create_by, modify_time, modify_by, row_version, row_valid
     </sql>
 
@@ -490,4 +494,74 @@
         WHERE t.row_valid = 1
         <!-- 添加自定义条件 -->
     </select>
+
+    <!-- 根据MDM外部引用ID查询零件 -->
+    <select id="selectPoByExternalRefId" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList"/>
+        FROM tb_part t
+        WHERE t.external_ref_id = #{externalRefId}
+        AND t.row_valid = 1
+        LIMIT 1
+    </select>
+
+    <!-- 根据数据来源统计零件数量 -->
+    <select id="countPoBySource" resultType="long">
+        SELECT COUNT(*)
+        FROM tb_part t
+        WHERE t.source = #{source}
+        AND t.row_valid = 1
+    </select>
+
+    <!-- 根据主键ID修改零件 -->
+    <update id="updatePoById">
+        UPDATE tb_part
+        SET name = #{part.name},
+            name_en = #{part.nameEn},
+            type = #{part.type},
+            ffa = #{part.ffa},
+            status = #{part.status},
+            digital_model = #{part.digitalModel},
+            unit = #{part.unit},
+            frame_part = #{part.framePart},
+            nature_part = #{part.naturePart},
+            color_area = #{part.colorArea},
+            nature_pn = #{part.naturePn},
+            regulatory_part = #{part.regulatoryPart},
+            key_part = #{part.keyPart},
+            accurately_traced = #{part.accuratelyTraced},
+            aftersale_part = #{part.aftersalePart},
+            standard_part_class = #{part.standardPartClass},
+            wrench_type = #{part.wrenchType},
+            rod_type = #{part.rodType},
+            head_shape = #{part.headShape},
+            end_shape = #{part.endShape},
+            washer = #{part.washer},
+            washer_type = #{part.washerType},
+            diameter = #{part.diameter},
+            length = #{part.length},
+            pitch = #{part.pitch},
+            dental_form = #{part.dentalForm},
+            strength_grade = #{part.strengthGrade},
+            mechanical_property = #{part.mechanicalProperty},
+            surface_treatment = #{part.surfaceTreatment},
+            structure_character = #{part.structureCharacter},
+            device_form = #{part.deviceForm},
+            device_code = #{part.deviceCode},
+            designer = #{part.designer},
+            designer_dept = #{part.designerDept},
+            non_repair_reason = #{part.nonRepairReason},
+            color_repair = #{part.colorRepair},
+            primer_repair = #{part.primerRepair},
+            electrophoresis_repair = #{part.electrophoresisRepair},
+            production_code = #{part.productionCode},
+            spare_property = #{part.spareProperty},
+            sale_note = #{part.saleNote},
+            first_production_date = #{part.firstProductionDate},
+            initial_model = #{part.initialModel},
+            source = #{part.source},
+            external_ref_id = #{part.externalRefId},
+            external_version = #{part.externalVersion},
+            last_sync_time = #{part.lastSyncTime}
+        WHERE id = #{part.id}
+    </update>
 </mapper>

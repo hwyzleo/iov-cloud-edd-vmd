@@ -60,4 +60,28 @@ public interface PartRepository {
      */
     int batchPhysicalDelete(Long[] ids);
 
+    /**
+     * 根据MDM外部引用ID查询零件
+     *
+     * @param externalRefId MDM外部引用ID
+     * @return 零件
+     */
+    Part selectByExternalRefId(String externalRefId);
+
+    /**
+     * 根据数据来源统计零件数量
+     *
+     * @param source 数据来源
+     * @return 数量
+     */
+    long countBySource(String source);
+
+    /**
+     * 根据主键ID修改零件
+     *
+     * @param part 零件
+     * @return 影响行数
+     */
+    int updateById(Part part);
+
 }

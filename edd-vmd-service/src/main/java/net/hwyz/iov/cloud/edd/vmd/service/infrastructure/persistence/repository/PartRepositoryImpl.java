@@ -56,4 +56,19 @@ public class PartRepositoryImpl implements PartRepository {
         return partMapper.batchPhysicalDeletePo(ids);
     }
 
+    @Override
+    public Part selectByExternalRefId(String externalRefId) {
+        return PartConverter.INSTANCE.toDomain(partMapper.selectPoByExternalRefId(externalRefId));
+    }
+
+    @Override
+    public long countBySource(String source) {
+        return partMapper.countPoBySource(source);
+    }
+
+    @Override
+    public int updateById(Part part) {
+        return partMapper.updatePoById(PartConverter.INSTANCE.fromDomain(part));
+    }
+
 }
