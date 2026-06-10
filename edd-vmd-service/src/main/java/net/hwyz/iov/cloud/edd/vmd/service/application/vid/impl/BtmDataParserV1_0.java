@@ -8,7 +8,9 @@ import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ImportResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParser;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParserRegistry;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartInfo;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehiclePart;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.PartInstanceState;
 import net.hwyz.iov.cloud.framework.common.enums.DeviceItem;
 import net.hwyz.iov.cloud.framework.common.util.StrUtil;
 import net.hwyz.iov.cloud.iov.idk.api.service.IdkBtmInfoService;
@@ -64,7 +66,6 @@ public class BtmDataParserV1_0 extends BaseParser implements ImportDataParser {
         BatchImportBtmRequest request = new BatchImportBtmRequest();
         request.setBatchNum(batchNum);
         request.setSupplierCode(supplier);
-        List<VehiclePart> vehiclePartList = new ArrayList<>();
         List<BtmVo> btmList = new ArrayList<>();
         for (Object item : items) {
             JSONObject itemJson = JSONUtil.parseObj(item);
@@ -79,15 +80,26 @@ public class BtmDataParserV1_0 extends BaseParser implements ImportDataParser {
             Map<String, Object> extra = new HashMap<>(2);
             extra.put("HSM", hsm);
             extra.put("MAC", mac);
-            vehiclePartList.add(VehiclePart.builder()
-                    .pn(pn)
-                    .deviceCode("BTM_M")
-                    .deviceItem(DeviceItem.BTM.name())
+            // 步骤1: 先按 (partCode, sn) upsert part_info（幂等）
+            PartInfo partInfo = PartInfo.builder()
+                    .partCode(pn)
+                    .sn(sn)
+                    .vehicleNodeCode("BTM_M")
                     .supplierCode(supplier)
                     .batchNum(batchNum)
-                    .sn(sn)
                     .extra(JSONUtil.toJsonStr(extra))
-                    .build());
+                    .instanceState(PartInstanceState.IN_STOCK.value)
+                    .build();
+            upsertPartInfo(partInfo);
+
+            // 步骤2: 创建绑定关系
+            VehiclePart vehiclePart = VehiclePart.builder()
+                    .vehicleNodeCode("BTM_M")
+                    .deviceItem(DeviceItem.BTM.name())
+                    .bindOrg("MES")
+                    .build();
+            bindVehiclePart(vehiclePart);
+
             btmList.add(BtmVo.builder()
                     .sn(sn)
                     .no(pn)
@@ -99,7 +111,6 @@ public class BtmDataParserV1_0 extends BaseParser implements ImportDataParser {
             log.warn("蓝牙模块导入数据批次号[{}]存在无效蓝牙模块数据[{}]", batchNum, invalidCount);
         }
         int successCount = btmList.size();
-        createVehiclePart(vehiclePartList);
         request.setBtmList(btmList);
         idkBtmInfoService.batchImport(request);
         return ImportResult.builder()

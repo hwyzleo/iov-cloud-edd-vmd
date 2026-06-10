@@ -12,11 +12,11 @@ import lombok.experimental.SuperBuilder;
 
 /**
  * <p>
- * 车辆零件表 持久化对象
+ * 车辆-零件绑定关系表 持久化对象
  * </p>
  *
  * @author hwyz_leo
- * @since 2026-01-27
+ * @since 2026-06-10
  */
 @Getter
 @Setter
@@ -35,82 +35,28 @@ public class VehiclePartPo extends BasePo {
     private Long id;
 
     /**
-     * 零件编号
-     */
-    @TableField("pn")
-    private String pn;
-
-    /**
-     * 车架号
+     * 车架号（关联tb_veh_basic_info.vin）
      */
     @TableField("vin")
     private String vin;
 
     /**
-     * 设备代码
+     * 零件实例ID（关联tb_part_info.id）
      */
-    @TableField("device_code")
-    private String deviceCode;
+    @TableField("part_id")
+    private Long partId;
 
     /**
-     * 设备项
+     * 车载节点代码（关联tb_mdm_vehicle_node.code）
+     */
+    @TableField("vehicle_node_code")
+    private String vehicleNodeCode;
+
+    /**
+     * 设备项（安装位置快照）
      */
     @TableField("device_item")
     private String deviceItem;
-
-    /**
-     * 零件序列号
-     */
-    @TableField("sn")
-    private String sn;
-
-    /**
-     * 配置字
-     */
-    @TableField("config_word")
-    private String configWord;
-
-    /**
-     * 供应商编码
-     */
-    @TableField("supplier_code")
-    private String supplierCode;
-
-    /**
-     * 批次号
-     */
-    @TableField("batch_num")
-    private String batchNum;
-
-    /**
-     * 硬件版本号
-     */
-    @TableField("hardware_ver")
-    private String hardwareVer;
-
-    /**
-     * 软件版本号
-     */
-    @TableField("software_ver")
-    private String softwareVer;
-
-    /**
-     * 硬件零件号
-     */
-    @TableField("hardware_pn")
-    private String hardwarePn;
-
-    /**
-     * 软件零件号
-     */
-    @TableField("software_pn")
-    private String softwarePn;
-
-    /**
-     * 附加信息
-     */
-    @TableField("extra")
-    private String extra;
 
     /**
      * 绑定时间
@@ -161,8 +107,26 @@ public class VehiclePartPo extends BasePo {
     private String unbindOrg;
 
     /**
-     * 零件状态：0-待绑定，1-在用，2-待更换，3-已报废
+     * 绑定状态：0-已解绑，1-绑定中
      */
-    @TableField("part_state")
-    private Integer partState;
+    @TableField("bind_state")
+    private Integer bindState;
+
+    /**
+     * 换件溯源：被替换的绑定ID
+     */
+    @TableField("replace_of_binding_id")
+    private Long replaceOfBindingId;
+
+    /**
+     * 生成列：active时的part_id，用于唯一约束
+     */
+    @TableField("active_part_id")
+    private Long activePartId;
+
+    /**
+     * 生成列：active时的vin+vehicle_node_code，用于唯一约束
+     */
+    @TableField("active_vin_node")
+    private String activeVinNode;
 }

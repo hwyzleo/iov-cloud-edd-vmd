@@ -12,19 +12,19 @@ import lombok.experimental.SuperBuilder;
 
 /**
  * <p>
- * 车辆零件变更历史表 持久化对象
+ * 物理零件实例本体表 持久化对象
  * </p>
  *
  * @author hwyz_leo
- * @since 2026-01-27
+ * @since 2026-06-10
  */
 @Getter
 @Setter
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("tb_vehicle_part_history")
-public class VehiclePartHistoryPo extends BasePo {
+@TableName("tb_part_info")
+public class PartInfoPo extends BasePo {
 
     private static final long serialVersionUID = 1L;
 
@@ -35,34 +35,22 @@ public class VehiclePartHistoryPo extends BasePo {
     private Long id;
 
     /**
-     * 零件编号
+     * 零件编码（关联tb_mdm_part.pn）
      */
-    @TableField("pn")
-    private String pn;
-
-    /**
-     * 车架号
-     */
-    @TableField("vin")
-    private String vin;
-
-    /**
-     * 设备代码
-     */
-    @TableField("device_code")
-    private String deviceCode;
-
-    /**
-     * 设备项
-     */
-    @TableField("device_item")
-    private String deviceItem;
+    @TableField("part_code")
+    private String partCode;
 
     /**
      * 零件序列号
      */
     @TableField("sn")
     private String sn;
+
+    /**
+     * 车载节点代码（关联tb_mdm_vehicle_node.code）
+     */
+    @TableField("vehicle_node_code")
+    private String vehicleNodeCode;
 
     /**
      * 配置字
@@ -113,56 +101,14 @@ public class VehiclePartHistoryPo extends BasePo {
     private String extra;
 
     /**
-     * 绑定时间
+     * 实例状态：0-在库，1-在用，2-待更换，3-已报废
      */
-    @TableField("bind_time")
-    private Instant bindTime;
+    @TableField("instance_state")
+    private Integer instanceState;
 
     /**
-     * 绑定类型
+     * 首次入库时间
      */
-    @TableField("bind_type")
-    private String bindType;
-
-    /**
-     * 绑定者
-     */
-    @TableField("bind_by")
-    private String bindBy;
-
-    /**
-     * 绑定机构
-     */
-    @TableField("bind_org")
-    private String bindOrg;
-
-    /**
-     * 解绑时间
-     */
-    @TableField("unbind_time")
-    private Instant unbindTime;
-
-    /**
-     * 解绑理由
-     */
-    @TableField("unbind_reason")
-    private String unbindReason;
-
-    /**
-     * 解绑者
-     */
-    @TableField("unbind_by")
-    private String unbindBy;
-
-    /**
-     * 解绑机构
-     */
-    @TableField("unbind_org")
-    private String unbindOrg;
-
-    /**
-     * 零件状态：1-在用，2-待更换，3-已报废
-     */
-    @TableField("part_state")
-    private Integer partState;
+    @TableField("first_seen_time")
+    private Instant firstSeenTime;
 }

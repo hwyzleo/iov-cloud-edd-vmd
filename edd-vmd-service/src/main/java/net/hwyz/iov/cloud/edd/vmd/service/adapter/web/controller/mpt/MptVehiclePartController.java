@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 /**
- * 车辆零件相关管理接口实现类
+ * 车辆-零件绑定关系相关管理接口实现类
  *
  * @author hwyz_leo
  */
@@ -37,15 +37,15 @@ public class MptVehiclePartController extends BaseController {
     private final VehiclePartAppService vehiclePartAppService;
 
     /**
-     * 分页查询车辆零件
+     * 分页查询绑定关系
      *
-     * @param vehiclePart 车辆零件
-     * @return 车辆零件列表
+     * @param vehiclePart 绑定关系
+     * @return 绑定关系列表
      */
     @RequiresPermissions("completeVehicle:vehicle:vehiclePart:list")
     @GetMapping(value = "/list")
     public ApiResponse<PageResult<VehiclePartResponse>> list(VehiclePartRequest vehiclePart) {
-        log.info("管理后台用户[{}]分页查询车辆零件", SecurityContextHolder.getUserName());
+        log.info("管理后台用户[{}]分页查询绑定关系", SecurityContextHolder.getUserName());
         startPage();
         VehiclePartQuery query = VehiclePartQuery.builder()
                 .vin(vehiclePart.getVin())
@@ -58,78 +58,72 @@ public class MptVehiclePartController extends BaseController {
     }
 
     /**
-     * 导出车辆零件
+     * 导出绑定关系
      *
-     * @param response    响应
-     * @param vehiclePart 车辆零件
+     * @param response 响应
+     * @param vehiclePart 绑定关系
      */
-    @Log(title = "车辆零件管理", businessType = BusinessType.EXPORT)
+    @Log(title = "绑定关系管理", businessType = BusinessType.EXPORT)
     @RequiresPermissions("completeVehicle:vehicle:vehiclePart:export")
     @PostMapping("/export")
     public void export(HttpServletResponse response, VehiclePartRequest vehiclePart) {
-        log.info("管理后台用户[{}]导出车辆零件", SecurityContextHolder.getUserName());
+        log.info("管理后台用户[{}]导出绑定关系", SecurityContextHolder.getUserName());
     }
 
     /**
-     * 根据车辆零件ID获取车辆零件
+     * 根据绑定关系ID获取绑定关系
      *
-     * @param vehiclePartId 车辆零件ID
-     * @return 车辆零件
+     * @param vehiclePartId 绑定关系ID
+     * @return 绑定关系
      */
     @RequiresPermissions("completeVehicle:vehicle:vehiclePart:query")
     @GetMapping(value = "/{vehiclePartId}")
     public ApiResponse<VehiclePartResponse> getInfo(@PathVariable Long vehiclePartId) {
-        log.info("管理后台用户[{}]根据车辆零件ID[{}]获取车辆零件", SecurityContextHolder.getUserName(), vehiclePartId);
+        log.info("管理后台用户[{}]根据绑定关系ID[{}]获取绑定关系", SecurityContextHolder.getUserName(), vehiclePartId);
         return ApiResponse.ok(MptVehiclePartAssembler.INSTANCE.fromDto(vehiclePartAppService.getVehiclePartById(vehiclePartId)));
     }
 
     /**
-     * 新增车辆零件
+     * 新增绑定关系
      *
-     * @param vehiclePart 车辆零件
+     * @param vehiclePart 绑定关系
      * @return 结果
      */
-    @Log(title = "车辆零件管理", businessType = BusinessType.INSERT)
+    @Log(title = "绑定关系管理", businessType = BusinessType.INSERT)
     @RequiresPermissions("completeVehicle:vehicle:vehiclePart:add")
     @PostMapping
     public ApiResponse<Void> add(@Validated @RequestBody VehiclePartRequest vehiclePart) {
-        log.info("管理后台用户[{}]新增车辆[{}]零件[{}:{}]", SecurityContextHolder.getUserName(), vehiclePart.getVin(), vehiclePart.getPn(), vehiclePart.getSn());
-        if (!vehiclePartAppService.checkPnAndSnUnique(vehiclePart.getId(), vehiclePart.getPn(), vehiclePart.getSn())) {
-            return ApiResponse.fail("新增车辆零件'" + vehiclePart.getPn() + "'失败，车辆零件已存在");
-        }
+        log.info("管理后台用户[{}]新增车辆[{}]绑定关系[{}]", SecurityContextHolder.getUserName(), vehiclePart.getVin(), vehiclePart.getPn());
         vehiclePartAppService.createVehiclePart(MptVehiclePartAssembler.INSTANCE.toCmd(vehiclePart), SecurityUtils.getUserId().toString());
         return ApiResponse.ok();
     }
 
     /**
-     * 修改保存车辆零件
+     * 修改保存绑定关系
      *
-     * @param vehiclePart 车辆零件
+     * @param vehiclePart 绑定关系
      * @return 结果
      */
-    @Log(title = "车辆零件管理", businessType = BusinessType.UPDATE)
+    @Log(title = "绑定关系管理", businessType = BusinessType.UPDATE)
     @RequiresPermissions("completeVehicle:vehicle:vehiclePart:edit")
     @PutMapping
     public ApiResponse<Void> edit(@Validated @RequestBody VehiclePartRequest vehiclePart) {
-        log.info("管理后台用户[{}]修改保存车辆[{}]零件[{}:{}]", SecurityContextHolder.getUserName(), vehiclePart.getVin(), vehiclePart.getPn(), vehiclePart.getSn());
-        if (!vehiclePartAppService.checkPnAndSnUnique(vehiclePart.getId(), vehiclePart.getPn(), vehiclePart.getSn())) {
-            return ApiResponse.fail("修改保存车辆零件'" + vehiclePart.getPn() + "'失败，车辆零件已存在");
-        }
+        log.info("管理后台用户[{}]修改保存车辆[{}]绑定关系[{}]", SecurityContextHolder.getUserName(), vehiclePart.getVin(), vehiclePart.getPn());
         vehiclePartAppService.modifyVehiclePart(MptVehiclePartAssembler.INSTANCE.toCmd(vehiclePart), SecurityUtils.getUserId().toString());
         return ApiResponse.ok();
     }
 
     /**
-     * 删除车辆零件
+     * 删除绑定关系
      *
-     * @param vehiclePartIds 车辆零件ID数组
+     * @param vehiclePartIds 绑定关系ID数组
      * @return 结果
      */
-    @Log(title = "车辆零件管理", businessType = BusinessType.DELETE)
+    @Log(title = "绑定关系管理", businessType = BusinessType.DELETE)
     @RequiresPermissions("completeVehicle:vehicle:vehiclePart:remove")
     @DeleteMapping("/{vehiclePartIds}")
     public ApiResponse<Void> remove(@PathVariable Long[] vehiclePartIds) {
-        log.info("管理后台用户[{}]删除车辆零件[{}]", SecurityContextHolder.getUserName(), vehiclePartIds);
+        log.info("管理后台用户[{}]删除绑定关系[{}]", SecurityContextHolder.getUserName(), vehiclePartIds);
         return vehiclePartAppService.deleteVehiclePartByIds(vehiclePartIds) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
     }
 

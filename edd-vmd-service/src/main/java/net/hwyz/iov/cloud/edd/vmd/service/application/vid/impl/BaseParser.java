@@ -4,9 +4,12 @@ import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.json.JSONObject;
 import lombok.extern.slf4j.Slf4j;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartInfoAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehiclePartAppService;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartInfo;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleDetail;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehiclePart;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.PartInstanceState;
 import net.hwyz.iov.cloud.framework.common.util.StrUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -20,6 +23,9 @@ import java.util.Map;
  */
 @Slf4j
 public class BaseParser {
+
+    @Autowired
+    private PartInfoAppService partInfoAppService;
 
     @Autowired
     private VehiclePartAppService vehiclePartAppService;
@@ -119,13 +125,22 @@ public class BaseParser {
     }
 
     /**
-     * 创建车辆零件
+     * 创建物理零件实例（upsert，幂等）
      *
-     * @param vehiclePartList 车辆零件列表
+     * @param partInfo 物理零件实例
      * @return 创建结果
      */
-    protected int createVehiclePart(List<VehiclePart> vehiclePartList) {
-        return vehiclePartAppService.createVehiclePart(vehiclePartList);
+    protected int upsertPartInfo(PartInfo partInfo) {
+        return partInfoAppService.upsertPartInfo(partInfo);
+    }
+
+    /**
+     * 绑定车辆零件
+     *
+     * @param vehiclePart 绑定关系
+     */
+    protected void bindVehiclePart(VehiclePart vehiclePart) {
+        vehiclePartAppService.bindVehiclePart(vehiclePart);
     }
 
 }

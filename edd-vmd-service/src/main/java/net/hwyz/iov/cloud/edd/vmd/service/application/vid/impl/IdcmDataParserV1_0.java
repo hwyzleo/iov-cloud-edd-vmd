@@ -8,7 +8,9 @@ import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ImportResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParser;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParserRegistry;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartInfo;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehiclePart;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.PartInstanceState;
 import net.hwyz.iov.cloud.framework.common.enums.DeviceItem;
 import net.hwyz.iov.cloud.framework.common.util.StrUtil;
 import net.hwyz.iov.cloud.iov.tsp.api.service.TspIdcmInfoService;
@@ -64,7 +66,6 @@ public class IdcmDataParserV1_0 extends BaseParser implements ImportDataParser {
         BatchImportIdcmRequest request = new BatchImportIdcmRequest();
         request.setBatchNum(batchNum);
         request.setSupplierCode(supplier);
-        List<VehiclePart> vehiclePartList = new ArrayList<>();
         List<IdcmVo> idcmList = new ArrayList<>();
         for (Object item : items) {
             JSONObject itemJson = JSONUtil.parseObj(item);
@@ -79,15 +80,26 @@ public class IdcmDataParserV1_0 extends BaseParser implements ImportDataParser {
             Map<String, Object> extra = new HashMap<>(2);
             extra.put("HSM", hsm);
             extra.put("MAC", mac);
-            vehiclePartList.add(VehiclePart.builder()
-                    .pn(pn)
-                    .deviceCode(DeviceItem.IDCM.name())
-                    .deviceItem(DeviceItem.IDCM.name())
+            // 步骤1: 先按 (partCode, sn) upsert part_info（幂等）
+            PartInfo partInfo = PartInfo.builder()
+                    .partCode(pn)
+                    .sn(sn)
+                    .vehicleNodeCode(DeviceItem.IDCM.name())
                     .supplierCode(supplier)
                     .batchNum(batchNum)
-                    .sn(sn)
                     .extra(JSONUtil.toJsonStr(extra))
-                    .build());
+                    .instanceState(PartInstanceState.IN_STOCK.value)
+                    .build();
+            upsertPartInfo(partInfo);
+
+            // 步骤2: 创建绑定关系
+            VehiclePart vehiclePart = VehiclePart.builder()
+                    .vehicleNodeCode(DeviceItem.IDCM.name())
+                    .deviceItem(DeviceItem.IDCM.name())
+                    .bindOrg("MES")
+                    .build();
+            bindVehiclePart(vehiclePart);
+
             idcmList.add(IdcmVo.builder()
                     .sn(sn)
                     .no(pn)
@@ -99,7 +111,6 @@ public class IdcmDataParserV1_0 extends BaseParser implements ImportDataParser {
             log.warn("信息娱乐模块导入数据批次号[{}]存在无效信息娱乐模块数据[{}]", batchNum, invalidCount);
         }
         int successCount = idcmList.size();
-        createVehiclePart(vehiclePartList);
         request.setIdcmList(idcmList);
         tspIdcmInfoService.batchImport(request);
         return ImportResult.builder()

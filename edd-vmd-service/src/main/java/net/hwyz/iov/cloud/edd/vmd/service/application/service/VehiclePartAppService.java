@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 车辆零件应用服务类
+ * 车辆-零件绑定关系应用服务类
  *
  * @author hwyz_leo
  */
@@ -30,10 +30,10 @@ public class VehiclePartAppService {
     private final VehiclePartRepository vehiclePartRepository;
 
     /**
-     * 查询车辆零件信息
+     * 查询绑定关系信息
      *
      * @param query 查询 DTO
-     * @return 车辆零件 DTO 列表
+     * @return 绑定关系 DTO 列表
      */
     public List<VehiclePartDto> search(VehiclePartQuery query) {
         Map<String, Object> map = new HashMap<>();
@@ -48,35 +48,51 @@ public class VehiclePartAppService {
     }
 
     /**
-     * 检查零件号和序列号是否唯一
+     * 根据主键ID获取绑定关系信息
      *
      * @param id 主键ID
-     * @param pn 零件号
-     * @param sn 序列号
-     * @return 结果
-     */
-    public Boolean checkPnAndSnUnique(Long id, String pn, String sn) {
-        if (ObjUtil.isNull(id)) {
-            id = -1L;
-        }
-        VehiclePart vehiclePart = vehiclePartRepository.selectByPnAndSn(pn, sn);
-        return !ObjUtil.isNotNull(vehiclePart) || vehiclePart.getId().longValue() == id.longValue();
-    }
-
-    /**
-     * 根据主键ID获取车辆零件信息
-     *
-     * @param id 主键ID
-     * @return 车辆零件 DTO
+     * @return 绑定关系 DTO
      */
     public VehiclePartDto getVehiclePartById(Long id) {
         return VehiclePartAssembler.INSTANCE.fromDomain(vehiclePartRepository.selectById(id));
     }
 
     /**
-     * 创建车辆零件
+     * 根据车架号和零件实例ID获取活跃绑定
      *
-     * @param vehiclePartList 车辆零件列表
+     * @param vin 车架号
+     * @param partId 零件实例ID
+     * @return 绑定关系 DTO
+     */
+    public VehiclePartDto getActiveByVinAndPartId(String vin, Long partId) {
+        return VehiclePartAssembler.INSTANCE.fromDomain(vehiclePartRepository.selectActiveByVinAndPartId(vin, partId));
+    }
+
+    /**
+     * 根据车架号和车载节点代码获取活跃绑定
+     *
+     * @param vin 车架号
+     * @param vehicleNodeCode 车载节点代码
+     * @return 绑定关系 DTO
+     */
+    public VehiclePartDto getActiveByVinAndVehicleNodeCode(String vin, String vehicleNodeCode) {
+        return VehiclePartAssembler.INSTANCE.fromDomain(vehiclePartRepository.selectActiveByVinAndVehicleNodeCode(vin, vehicleNodeCode));
+    }
+
+    /**
+     * 根据零件实例ID获取活跃绑定
+     *
+     * @param partId 零件实例ID
+     * @return 绑定关系 DTO
+     */
+    public VehiclePartDto getActiveByPartId(Long partId) {
+        return VehiclePartAssembler.INSTANCE.fromDomain(vehiclePartRepository.selectActiveByPartId(partId));
+    }
+
+    /**
+     * 创建绑定关系
+     *
+     * @param vehiclePartList 绑定关系列表
      * @return 结果
      */
     public int createVehiclePart(List<VehiclePart> vehiclePartList) {
@@ -84,10 +100,10 @@ public class VehiclePartAppService {
     }
 
     /**
-     * 新增车辆零件
+     * 新增绑定关系
      *
-     * @param vehiclePartDto 车辆零件信息 DTO
-     * @param userId        操作用户ID
+     * @param vehiclePartCmd 绑定关系信息 DTO
+     * @param userId 操作用户ID
      * @return 结果
      */
     public int createVehiclePart(VehiclePartCmd vehiclePartCmd, String userId) {
@@ -96,10 +112,10 @@ public class VehiclePartAppService {
     }
 
     /**
-     * 修改车辆零件
+     * 修改绑定关系
      *
-     * @param vehiclePartDto 车辆零件信息 DTO
-     * @param userId        操作用户ID
+     * @param vehiclePartCmd 绑定关系信息 DTO
+     * @param userId 操作用户ID
      * @return 结果
      */
     public int modifyVehiclePart(VehiclePartCmd vehiclePartCmd, String userId) {
@@ -108,9 +124,9 @@ public class VehiclePartAppService {
     }
 
     /**
-     * 批量删除车辆零件
+     * 批量删除绑定关系
      *
-     * @param ids 车辆零件ID数组
+     * @param ids 主键ID数组
      * @return 结果
      */
     public int deleteVehiclePartByIds(Long[] ids) {
@@ -118,14 +134,25 @@ public class VehiclePartAppService {
     }
 
     /**
-     * 绑定车辆零件
+     * 绑定车辆零件（新建 active 绑定）
      *
-     * @param vehiclePart 车辆零件
+     * @param vehiclePart 绑定关系
      */
     public void bindVehiclePart(VehiclePart vehiclePart) {
-        vehiclePart.setPartState(1); // 1-在用
+        vehiclePart.setBindState(1); // 1-绑定中
         vehiclePart.setBindTime(Instant.now());
         vehiclePartRepository.insert(vehiclePart);
+    }
+
+    /**
+     * 解绑车辆零件（设置为 inactive）
+     *
+     * @param vehiclePart 绑定关系
+     */
+    public void unbindVehiclePart(VehiclePart vehiclePart) {
+        vehiclePart.setBindState(0); // 0-已解绑
+        vehiclePart.setUnbindTime(Instant.now());
+        vehiclePartRepository.update(vehiclePart);
     }
 
 }

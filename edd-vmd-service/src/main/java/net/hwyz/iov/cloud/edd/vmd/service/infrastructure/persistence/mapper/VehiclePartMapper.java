@@ -6,22 +6,39 @@ import org.apache.ibatis.annotations.Mapper;
 
 /**
  * <p>
- * 车辆零件表 DAO
+ * 车辆-零件绑定关系表 DAO
  * </p>
  *
  * @author hwyz_leo
- * @since 2026-01-27
+ * @since 2026-06-10
  */
 @Mapper
 public interface VehiclePartMapper extends BaseDao<VehiclePartPo, Long> {
 
     /**
-     * 根据零件编号和序列号查询
+     * 根据车架号和零件实例ID查询活跃绑定
      *
-     * @param pn 零件编号
-     * @param sn 序列号
-     * @return 零件信息
+     * @param vin 车架号
+     * @param partId 零件实例ID
+     * @return 绑定信息
      */
-    VehiclePartPo selectPoByPnAndSn(String pn, String sn);
+    VehiclePartPo selectActiveByVinAndPartId(String vin, Long partId);
+
+    /**
+     * 根据车架号和车载节点代码查询活跃绑定
+     *
+     * @param vin 车架号
+     * @param vehicleNodeCode 车载节点代码
+     * @return 绑定信息
+     */
+    VehiclePartPo selectActiveByVinAndVehicleNodeCode(String vin, String vehicleNodeCode);
+
+    /**
+     * 根据零件实例ID查询活跃绑定
+     *
+     * @param partId 零件实例ID
+     * @return 绑定信息
+     */
+    VehiclePartPo selectActiveByPartId(Long partId);
 
 }

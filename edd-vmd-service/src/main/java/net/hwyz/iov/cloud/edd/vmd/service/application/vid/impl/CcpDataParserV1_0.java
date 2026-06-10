@@ -8,7 +8,9 @@ import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ImportResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParser;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParserRegistry;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartInfo;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehiclePart;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.PartInstanceState;
 import net.hwyz.iov.cloud.framework.common.enums.DeviceItem;
 import net.hwyz.iov.cloud.framework.common.util.StrUtil;
 import net.hwyz.iov.cloud.iov.tsp.api.service.TspCcpInfoService;
@@ -64,7 +66,6 @@ public class CcpDataParserV1_0 extends BaseParser implements ImportDataParser {
         BatchImportCcpRequest request = new BatchImportCcpRequest();
         request.setBatchNum(batchNum);
         request.setSupplierCode(supplier);
-        List<VehiclePart> vehiclePartList = new ArrayList<>();
         List<CcpVo> ccpList = new ArrayList<>();
         for (Object item : items) {
             JSONObject itemJson = JSONUtil.parseObj(item);
@@ -77,15 +78,26 @@ public class CcpDataParserV1_0 extends BaseParser implements ImportDataParser {
             }
             Map<String, Object> extra = new HashMap<>(1);
             extra.put("HSM", hsm);
-            vehiclePartList.add(VehiclePart.builder()
-                    .pn(pn)
-                    .deviceCode(DeviceItem.CCP.name())
-                    .deviceItem(DeviceItem.CCP.name())
+            // 步骤1: 先按 (partCode, sn) upsert part_info（幂等）
+            PartInfo partInfo = PartInfo.builder()
+                    .partCode(pn)
+                    .sn(sn)
+                    .vehicleNodeCode(DeviceItem.CCP.name())
                     .supplierCode(supplier)
                     .batchNum(batchNum)
-                    .sn(sn)
                     .extra(JSONUtil.toJsonStr(extra))
-                    .build());
+                    .instanceState(PartInstanceState.IN_STOCK.value)
+                    .build();
+            upsertPartInfo(partInfo);
+
+            // 步骤2: 创建绑定关系
+            VehiclePart vehiclePart = VehiclePart.builder()
+                    .vehicleNodeCode(DeviceItem.CCP.name())
+                    .deviceItem(DeviceItem.CCP.name())
+                    .bindOrg("MES")
+                    .build();
+            bindVehiclePart(vehiclePart);
+
             ccpList.add(CcpVo.builder()
                     .sn(sn)
                     .no(pn)
@@ -96,7 +108,6 @@ public class CcpDataParserV1_0 extends BaseParser implements ImportDataParser {
             log.warn("中央计算平台导入数据批次号[{}]存在无效中央计算平台数据[{}]", batchNum, invalidCount);
         }
         int successCount = ccpList.size();
-        createVehiclePart(vehiclePartList);
         request.setCcpList(ccpList);
         tspCcpInfoService.batchImport(request);
         return ImportResult.builder()

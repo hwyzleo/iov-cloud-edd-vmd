@@ -10,7 +10,10 @@ import net.hwyz.iov.cloud.framework.common.domain.DomainObj;
 import java.time.Instant;
 
 /**
- * 车辆零件领域对象
+ * 车辆-零件绑定关系领域对象
+ * <p>
+ * 纯绑定关系，承载装车位置、时间、状态、换件溯源
+ * 实例本体属性在 PartInfo 中
  *
  * @author hwyz_leo
  */
@@ -26,69 +29,24 @@ public class VehiclePart implements DomainObj<VehiclePart> {
     private Long id;
 
     /**
-     * 零件编号
-     */
-    private String pn;
-
-    /**
-     * 车架号
+     * 车架号（关联tb_veh_basic_info.vin）
      */
     private String vin;
 
     /**
-     * 设备代码
+     * 零件实例ID（关联tb_part_info.id）
      */
-    private String deviceCode;
+    private Long partId;
 
     /**
-     * 设备项
+     * 车载节点代码（关联tb_mdm_vehicle_node.code）
+     */
+    private String vehicleNodeCode;
+
+    /**
+     * 设备项（安装位置快照）
      */
     private String deviceItem;
-
-    /**
-     * 零件序列号
-     */
-    private String sn;
-
-    /**
-     * 配置字
-     */
-    private String configWord;
-
-    /**
-     * 供应商编码
-     */
-    private String supplierCode;
-
-    /**
-     * 批次号
-     */
-    private String batchNum;
-
-    /**
-     * 硬件版本号
-     */
-    private String hardwareVer;
-
-    /**
-     * 软件版本号
-     */
-    private String softwareVer;
-
-    /**
-     * 硬件零件号
-     */
-    private String hardwarePn;
-
-    /**
-     * 软件零件号
-     */
-    private String softwarePn;
-
-    /**
-     * 附加信息
-     */
-    private String extra;
 
     /**
      * 绑定时间
@@ -131,8 +89,13 @@ public class VehiclePart implements DomainObj<VehiclePart> {
     private String unbindOrg;
 
     /**
-     * 零件状态
+     * 绑定状态：0-已解绑，1-绑定中
      */
-    private Integer partState;
+    private Integer bindState;
+
+    /**
+     * 换件溯源：被替换的绑定ID
+     */
+    private Long replaceOfBindingId;
 
 }

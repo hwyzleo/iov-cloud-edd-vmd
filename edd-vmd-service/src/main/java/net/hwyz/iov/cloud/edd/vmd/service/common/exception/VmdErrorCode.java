@@ -19,7 +19,11 @@ public enum VmdErrorCode implements ErrorCode {
     PART_NOT_EXIST("202011", "零件不存在"),
     PART_NOT_ALLOW_BIND("202012", "零件不允许绑定"),
     PARSER_NOT_FOUND("202013", "导入数据解析器不存在"),
-    PRODUCT_DATA_READ_ONLY("202014", "产品数据只读，不允许通过VMD后台修改");
+    PRODUCT_DATA_READ_ONLY("202014", "产品数据只读，不允许通过VMD后台修改"),
+    SUPPLIER_MAINTENANCE_RETIRED("202015", "供应商本地维护已下线"),
+    PART_INSTANCE_ALREADY_EXISTS("202016", "物理零件实例已存在"),
+    PART_BINDING_CONFLICT("202017", "零件绑定冲突"),
+    PART_INSTANCE_NOT_EXIST("202018", "物理零件实例不存在");
 
     private final String code;
     private final String message;

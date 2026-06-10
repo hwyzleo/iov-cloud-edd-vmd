@@ -5,26 +5,10 @@
     <!-- 通用查询映射结果 -->
     <resultMap id="baseResultMap" type="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehiclePartPo">
         <id column="id" property="id" />
-        <result column="description" property="description" />
-        <result column="create_time" property="createTime" />
-        <result column="create_by" property="createBy" />
-        <result column="modify_time" property="modifyTime" />
-        <result column="modify_by" property="modifyBy" />
-        <result column="row_version" property="rowVersion" />
-        <result column="row_valid" property="rowValid" />
-        <result column="pn" property="pn" />
         <result column="vin" property="vin" />
-        <result column="device_code" property="deviceCode" />
+        <result column="part_id" property="partId" />
+        <result column="vehicle_node_code" property="vehicleNodeCode" />
         <result column="device_item" property="deviceItem" />
-        <result column="sn" property="sn" />
-        <result column="config_word" property="configWord" />
-        <result column="supplier_code" property="supplierCode" />
-        <result column="batch_num" property="batchNum" />
-        <result column="hardware_ver" property="hardwareVer" />
-        <result column="software_ver" property="softwareVer" />
-        <result column="hardware_pn" property="hardwarePn" />
-        <result column="software_pn" property="softwarePn" />
-        <result column="extra" property="extra" />
         <result column="bind_time" property="bindTime" />
         <result column="bind_type" property="bindType" />
         <result column="bind_by" property="bindBy" />
@@ -33,23 +17,31 @@
         <result column="unbind_reason" property="unbindReason" />
         <result column="unbind_by" property="unbindBy" />
         <result column="unbind_org" property="unbindOrg" />
-        <result column="part_state" property="partState" />
+        <result column="bind_state" property="bindState" />
+        <result column="replace_of_binding_id" property="replaceOfBindingId" />
+        <result column="description" property="description" />
+        <result column="create_time" property="createTime" />
+        <result column="create_by" property="createBy" />
+        <result column="modify_time" property="modifyTime" />
+        <result column="modify_by" property="modifyBy" />
+        <result column="row_version" property="rowVersion" />
+        <result column="row_valid" property="rowValid" />
     </resultMap>
 
     <!-- 通用查询结果列 -->
     <sql id="baseColumnList">
-        id, pn, vin, device_code, device_item, sn, config_word, supplier_code, batch_num, hardware_ver, software_ver, hardware_pn, software_pn, extra, bind_time, bind_type, bind_by, bind_org, unbind_time, unbind_reason, unbind_by, unbind_org, part_state,
+        id, vin, part_id, vehicle_node_code, device_item, bind_time, bind_type, bind_by, bind_org, unbind_time, unbind_reason, unbind_by, unbind_org, bind_state, replace_of_binding_id,
         description, create_time, create_by, modify_time, modify_by, row_version, row_valid
     </sql>
 
     <!-- 插入 -->
     <insert id="insertPo" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO tb_vehicle_part (
-            id, pn, vin, device_code, device_item, sn, config_word, supplier_code, batch_num, hardware_ver, software_ver, hardware_pn, software_pn, extra, bind_time, bind_type, bind_by, bind_org, unbind_time, unbind_reason, unbind_by, unbind_org, part_state,
+            id, vin, part_id, vehicle_node_code, device_item, bind_time, bind_type, bind_by, bind_org, unbind_time, unbind_reason, unbind_by, unbind_org, bind_state, replace_of_binding_id,
             description, create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
         VALUES (
-            #{id}, #{pn}, #{vin}, #{deviceCode}, #{deviceItem}, #{sn}, #{configWord}, #{supplierCode}, #{batchNum}, #{hardwareVer}, #{softwareVer}, #{hardwarePn}, #{softwarePn}, #{extra}, #{bindTime}, #{bindType}, #{bindBy}, #{bindOrg}, #{unbindTime}, #{unbindReason}, #{unbindBy}, #{unbindOrg}, #{partState},
+            #{id}, #{vin}, #{partId}, #{vehicleNodeCode}, #{deviceItem}, #{bindTime}, #{bindType}, #{bindBy}, #{bindOrg}, #{unbindTime}, #{unbindReason}, #{unbindBy}, #{unbindOrg}, #{bindState}, #{replaceOfBindingId},
             #{description}, now(), #{createBy}, now(), #{modifyBy}, 1, 1
         )
     </insert>
@@ -57,13 +49,13 @@
     <!-- 批量插入 -->
     <insert id="batchInsertPo" useGeneratedKeys="true" keyProperty="id" parameterType="java.util.List">
         INSERT INTO tb_vehicle_part (
-            id, pn, vin, device_code, device_item, sn, config_word, supplier_code, batch_num, hardware_ver, software_ver, hardware_pn, software_pn, extra, bind_time, bind_type, bind_by, bind_org, unbind_time, unbind_reason, unbind_by, unbind_org, part_state,
+            id, vin, part_id, vehicle_node_code, device_item, bind_time, bind_type, bind_by, bind_org, unbind_time, unbind_reason, unbind_by, unbind_org, bind_state, replace_of_binding_id,
             description, create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
         VALUES
         <foreach collection="list" item="item" index="index" separator=",">
         (
-            #{item.id}, #{item.pn}, #{item.vin}, #{item.deviceCode}, #{item.deviceItem}, #{item.sn}, #{item.configWord}, #{item.supplierCode}, #{item.batchNum}, #{item.hardwareVer}, #{item.softwareVer}, #{item.hardwarePn}, #{item.softwarePn}, #{item.extra}, #{item.bindTime}, #{item.bindType}, #{item.bindBy}, #{item.bindOrg}, #{item.unbindTime}, #{item.unbindReason}, #{item.unbindBy}, #{item.unbindOrg}, #{item.partState},
+            #{item.id}, #{item.vin}, #{item.partId}, #{item.vehicleNodeCode}, #{item.deviceItem}, #{item.bindTime}, #{item.bindType}, #{item.bindBy}, #{item.bindOrg}, #{item.unbindTime}, #{item.unbindReason}, #{item.unbindBy}, #{item.unbindOrg}, #{item.bindState}, #{item.replaceOfBindingId},
             #{item.description}, now(), #{item.createBy}, now(), #{item.modifyBy}, 1, 1
         )
         </foreach>
@@ -72,44 +64,17 @@
     <!-- 更新 -->
     <update id="updatePo" parameterType="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehiclePartPo">
         UPDATE tb_vehicle_part t SET
-        <if test="pn != null and pn != ''">
-            t.pn = #{pn},
-        </if>
         <if test="vin != null and vin != ''">
             t.vin = #{vin},
         </if>
-        <if test="deviceCode != null and deviceCode != ''">
-            t.device_code = #{deviceCode},
+        <if test="partId != null">
+            t.part_id = #{partId},
+        </if>
+        <if test="vehicleNodeCode != null and vehicleNodeCode != ''">
+            t.vehicle_node_code = #{vehicleNodeCode},
         </if>
         <if test="deviceItem != null and deviceItem != ''">
             t.device_item = #{deviceItem},
-        </if>
-        <if test="sn != null and sn != ''">
-            t.sn = #{sn},
-        </if>
-        <if test="configWord != null and configWord != ''">
-            t.config_word = #{configWord},
-        </if>
-        <if test="supplierCode != null and supplierCode != ''">
-            t.supplier_code = #{supplierCode},
-        </if>
-        <if test="batchNum != null and batchNum != ''">
-            t.batch_num = #{batchNum},
-        </if>
-        <if test="hardwareVer != null and hardwareVer != ''">
-            t.hardware_ver = #{hardwareVer},
-        </if>
-        <if test="softwareVer != null and softwareVer != ''">
-            t.software_ver = #{softwareVer},
-        </if>
-        <if test="hardwarePn != null and hardwarePn != ''">
-            t.hardware_pn = #{hardwarePn},
-        </if>
-        <if test="softwarePn != null and softwarePn != ''">
-            t.software_pn = #{softwarePn},
-        </if>
-        <if test="extra != null and extra != ''">
-            t.extra = #{extra},
         </if>
         <if test="bindTime != null">
             t.bind_time = #{bindTime},
@@ -135,8 +100,11 @@
         <if test="unbindOrg != null and unbindOrg != ''">
             t.unbind_org = #{unbindOrg},
         </if>
-        <if test="partState != null">
-            t.part_state = #{partState},
+        <if test="bindState != null">
+            t.bind_state = #{bindState},
+        </if>
+        <if test="replaceOfBindingId != null">
+            t.replace_of_binding_id = #{replaceOfBindingId},
         </if>
         <if test="description != null and description != ''">
             t.description = #{description},
@@ -189,71 +157,17 @@
         <if test="id != null">
             AND t.id = #{id}
         </if>
-        <if test="pn != null and pn != ''">
-            AND t.pn = #{pn}
-        </if>
         <if test="vin != null and vin != ''">
             AND t.vin = #{vin}
         </if>
-        <if test="deviceCode != null and deviceCode != ''">
-            AND t.device_code = #{deviceCode}
+        <if test="partId != null">
+            AND t.part_id = #{partId}
         </if>
-        <if test="deviceItem != null and deviceItem != ''">
-            AND t.device_item = #{deviceItem}
+        <if test="vehicleNodeCode != null and vehicleNodeCode != ''">
+            AND t.vehicle_node_code = #{vehicleNodeCode}
         </if>
-        <if test="sn != null and sn != ''">
-            AND t.sn = #{sn}
-        </if>
-        <if test="configWord != null and configWord != ''">
-            AND t.config_word = #{configWord}
-        </if>
-        <if test="supplierCode != null and supplierCode != ''">
-            AND t.supplier_code = #{supplierCode}
-        </if>
-        <if test="batchNum != null and batchNum != ''">
-            AND t.batch_num = #{batchNum}
-        </if>
-        <if test="hardwareVer != null and hardwareVer != ''">
-            AND t.hardware_ver = #{hardwareVer}
-        </if>
-        <if test="softwareVer != null and softwareVer != ''">
-            AND t.software_ver = #{softwareVer}
-        </if>
-        <if test="hardwarePn != null and hardwarePn != ''">
-            AND t.hardware_pn = #{hardwarePn}
-        </if>
-        <if test="softwarePn != null and softwarePn != ''">
-            AND t.software_pn = #{softwarePn}
-        </if>
-        <if test="extra != null and extra != ''">
-            AND t.extra = #{extra}
-        </if>
-        <if test="bindTime != null">
-            AND t.bind_time = #{bindTime}
-        </if>
-        <if test="bindType != null and bindType != ''">
-            AND t.bind_type = #{bindType}
-        </if>
-        <if test="bindBy != null and bindBy != ''">
-            AND t.bind_by = #{bindBy}
-        </if>
-        <if test="bindOrg != null and bindOrg != ''">
-            AND t.bind_org = #{bindOrg}
-        </if>
-        <if test="unbindTime != null">
-            AND t.unbind_time = #{unbindTime}
-        </if>
-        <if test="unbindReason != null and unbindReason != ''">
-            AND t.unbind_reason = #{unbindReason}
-        </if>
-        <if test="unbindBy != null and unbindBy != ''">
-            AND t.unbind_by = #{unbindBy}
-        </if>
-        <if test="unbindOrg != null and unbindOrg != ''">
-            AND t.unbind_org = #{unbindOrg}
-        </if>
-        <if test="partState != null">
-            AND t.part_state = #{partState}
+        <if test="bindState != null">
+            AND t.bind_state = #{bindState}
         </if>
         <if test="description != null and description != ''">
             AND t.description = #{description}
@@ -282,27 +196,49 @@
         FROM tb_vehicle_part t
         WHERE t.row_valid = 1
         <!-- 添加自定义条件 -->
-        <if test="pn != null and pn != ''">
-            AND t.pn LIKE #{pn}
-        </if>
         <if test="vin != null and vin != ''">
             AND t.vin = #{vin}
+        </if>
+        <if test="pn != null and pn != ''">
+            AND EXISTS (SELECT 1 FROM tb_part_info pi WHERE pi.id = t.part_id AND pi.part_code = #{pn})
+        </if>
+        <if test="bindState != null">
+            AND t.bind_state = #{bindState}
         </if>
         ORDER BY t.id DESC
     </select>
 
-    <!-- 根据零件编号和序列号查询 -->
-    <select id="selectPoByPnAndSn" parameterType="java.util.Map" resultMap="baseResultMap">
+    <!-- 根据车架号和零件实例ID查询活跃绑定 -->
+    <select id="selectActiveByVinAndPartId" parameterType="java.util.Map" resultMap="baseResultMap">
         SELECT <include refid="baseColumnList"/>
         FROM tb_vehicle_part t
         WHERE t.row_valid = 1
-        AND t.pn = #{pn}
-        <if test="sn != null and sn != ''">
-            AND t.sn = #{sn}
-        </if>
-        <if test="sn == null">
-            AND t.sn IS NULL
-        </if>
+        AND t.vin = #{vin}
+        AND t.part_id = #{partId}
+        AND t.bind_state = 1
+        ORDER BY t.id DESC
+        LIMIT 1
+    </select>
+
+    <!-- 根据车架号和车载节点代码查询活跃绑定 -->
+    <select id="selectActiveByVinAndVehicleNodeCode" parameterType="java.util.Map" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList"/>
+        FROM tb_vehicle_part t
+        WHERE t.row_valid = 1
+        AND t.vin = #{vin}
+        AND t.vehicle_node_code = #{vehicleNodeCode}
+        AND t.bind_state = 1
+        ORDER BY t.id DESC
+        LIMIT 1
+    </select>
+
+    <!-- 根据零件实例ID查询活跃绑定 -->
+    <select id="selectActiveByPartId" parameterType="Long" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList"/>
+        FROM tb_vehicle_part t
+        WHERE t.row_valid = 1
+        AND t.part_id = #{partId}
+        AND t.bind_state = 1
         ORDER BY t.id DESC
         LIMIT 1
     </select>

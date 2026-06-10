@@ -10,7 +10,11 @@ import net.hwyz.iov.cloud.framework.common.domain.DomainObj;
 import java.time.Instant;
 
 /**
- * 车辆零件历史领域对象
+ * 物理零件实例本体领域对象
+ * <p>
+ * 持有不随装车改变的本体属性
+ * 允许未绑定VIN时独立存在（游离零件）
+ * UK (partCode, sn)
  *
  * @author hwyz_leo
  */
@@ -18,7 +22,7 @@ import java.time.Instant;
 @Getter
 @Setter
 @SuperBuilder
-public class VehiclePartHistory implements DomainObj<VehiclePartHistory> {
+public class PartInfo implements DomainObj<PartInfo> {
 
     /**
      * 主键
@@ -26,29 +30,19 @@ public class VehiclePartHistory implements DomainObj<VehiclePartHistory> {
     private Long id;
 
     /**
-     * 零件编号
+     * 零件编码（关联tb_mdm_part.pn）
      */
-    private String pn;
-
-    /**
-     * 车架号
-     */
-    private String vin;
-
-    /**
-     * 设备代码
-     */
-    private String deviceCode;
-
-    /**
-     * 设备项
-     */
-    private String deviceItem;
+    private String partCode;
 
     /**
      * 零件序列号
      */
     private String sn;
+
+    /**
+     * 车载节点代码（关联tb_mdm_vehicle_node.code）
+     */
+    private String vehicleNodeCode;
 
     /**
      * 配置字
@@ -91,48 +85,13 @@ public class VehiclePartHistory implements DomainObj<VehiclePartHistory> {
     private String extra;
 
     /**
-     * 绑定时间
+     * 实例状态
      */
-    private Instant bindTime;
+    private Integer instanceState;
 
     /**
-     * 绑定类型
+     * 首次入库时间
      */
-    private String bindType;
-
-    /**
-     * 绑定者
-     */
-    private String bindBy;
-
-    /**
-     * 绑定机构
-     */
-    private String bindOrg;
-
-    /**
-     * 解绑时间
-     */
-    private Instant unbindTime;
-
-    /**
-     * 解绑理由
-     */
-    private String unbindReason;
-
-    /**
-     * 解绑者
-     */
-    private String unbindBy;
-
-    /**
-     * 解绑机构
-     */
-    private String unbindOrg;
-
-    /**
-     * 零件状态
-     */
-    private Integer partState;
+    private Instant firstSeenTime;
 
 }

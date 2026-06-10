@@ -29,6 +29,7 @@
 - G9：在供应商（Supplier）主数据上，VMD **彻底下线本地维护能力**（`Supplier` 聚合 + `tb_supplier` 表 + 增删改查 API + 契约及附属物），供应商主数据 SSOT 上移至 **edd-mdm 的 Party 子域**（MDM CR-006）；**与产品树各实体（CR-012~CR-018）的按需最小化只读投影策略不同，VMD 明确不为供应商建立任何本地只读投影**，仅保留零部件 / 设备 / 导入记录上的 `supplier_code` 作为溯源属性透传（CR-019）。
 - G10：在车载节点（VehicleNode，原 Device 设备）字典 / 类型主数据上，VMD 作为 edd-mdm **EEAD 子域**的下游消费方，持有 VehicleNode 本地**只读**投影副本，用于车辆导入校验、车辆 / 设备详情展示、下游 RPC 暴露、历史追溯与 MDM 不可用时的降级查询；车辆物理设备实例继续使用 `vehicleNodeCode`（承接原 `deviceCode` 语义）作为节点关联编码长期保留，VMD 不再承担车载节点字典主数据维护职责。本 CR 仅处理「车载节点字典 / 类型层」主数据（节点定义、类型、功能域等「车上应有什么」），**VMD 自有的物理设备实例 + 绑定关系（VIN 绑定的 TBOX/IDCU/CCU/ADCU/TCU 实例及其 SN/part_number/hardware_vsn、绑车激活 / 下线 / 密钥 / 证书等生命周期事件）属于 VMD 事务 / 实例数据，不上移、不投影化、保持留在 VMD，不切断「车辆→零件→设备→生命周期」链路**（CR-020）。
 - G11：在零件（Part）字典 / 类型层主数据上，VMD 作为 edd-mdm Part 子域的下游消费方，持有 Part 本地**只读**投影副本，用于零件 / 车辆导入校验、零件 / 车辆详情展示、下游 RPC 暴露、历史追溯与 MDM 不可用时的降级只读查询；车辆物理零件实例继续使用 `partCode` 作为零件关联编码长期保留，VMD 不再承担 Part 字典 / 类型层主数据维护职责。本 CR 仅处理「Part 字典 / 类型层」主数据（零件定义、零件类型、规格、part_number 字典等「车上应有哪些零件」），**本期投影范围仅 P0 必投字段集 + 投影管理字段**（P1 / P2 字段不投影，留待后续按需 CR 增量升投）；**VMD 自有的物理零件实例 + 绑定关系（VIN 绑定的物理零件实例及其 SN / part_number / hardware 等实例属性，零件→设备挂载关系，装车 / 换件 / 下线 / 密钥 / 证书等生命周期事件）属于 VMD 事务 / 实例数据，不上移、不投影化、保持留在 VMD，不切断「车辆→零件→设备→生命周期」链路**（CR-021）。
+- G12：在**物理零件实例层**上，VMD 将「零件实例本体」与「车辆—零件绑定关系」显式分离为 `PartInfo` / `VehiclePart` 两个概念（车辆主档 `VehicleInfo` 沿用并瘦身），以干净支撑**游离零件（零件先于 VIN 到达）、换件历史、零件实例独立状态、异步乱序绑定**四类现模型无法表达的场景；该层为 VMD 自有事务 / 实例数据，**不上移、不投影化**，区别于字典 / 类型层（CR-011~021）（CR-022）。
 
 > **Plant / 工厂主数据语义统一（CR-011 补充）**：
 > - VMD 中 Plant 本地投影用于支撑车辆生产工厂追溯，不再承担 Plant 主数据治理职责。
@@ -129,6 +130,12 @@
 > - VMD 不再承担 Part 字典 / 类型层主数据治理、审批、合并、编码生成、数据质量打分和生命周期管理。
 > - VMD Part 投影采用按需最小化字段设计，对 source=MDM 记录保持只读语义。
 
+> **物理实例层语义统一（CR-022 补充）**：
+> - 本 CR 的处理对象是 **VMD 自有物理实例层**（VIN 绑定的物理零件实例及其 SN / part_number / hardware 等本体属性、零件→设备挂载、装车 / 换件 / 下线 / 密钥 / 证书等事件所依附的绑定关系），即 CR-020（US-015c）/ CR-021（US-014d）反复声明「留 VMD、不上移、不投影化」的那一层。
+> - **与字典 / 类型层（CR-011~021）正交**：Part（零件字典，CR-021）/ VehicleNode（车载节点字典，CR-020）的 MDM 只读投影**一律不动、不拉回、不改归属**；`part_info` / `vehicle_part` 仅以 `part_code` → `tb_mdm_part.pn`、`vehicle_node_code` → `tb_mdm_vehicle_node.code` 持有**引用键**，不复制任何字典字段、不建本地外键。
+> - **命名消歧**：`PartInfo`（物理零件实例本体）区别于 Part（零件字典 / 类型，CR-021）；`VehiclePart`（车辆—零件绑定关系）区别于物理设备实例与 VehicleNode（车载节点字典，CR-020）；`VehicleInfo`（车辆主档）区别于 VehicleConfig（车辆配置，US-013）。易混处用全称限定。
+> - **不切断链路**：「车辆（VehicleInfo）→零件实例（PartInfo）→设备（VehicleNode 引用）→生命周期（VehicleLifecycle）」链路语义保持不变。
+
 ### 非目标（Non-Goals，本期不做）
 - N1：不替代账号服务（`ExAccountService`）做用户身份/手机号实名核验。
 - N2：不替代安全密钥服务（`ExSkService`）执行 IMMO_SK 的实际生成。
@@ -144,6 +151,7 @@
 - N12：VMD 不再作为 **Supplier（供应商）**主数据的维护入口或 SSOT；供应商主数据治理、审批、编码生成、生命周期管理由 edd-mdm Party 子域承担。**区别于产品树各实体（CR-011~CR-018），VMD 不为供应商建立任何本地只读投影**，彻底下线供应商本地维护能力（`Supplier` 聚合、`tb_supplier` 表、`/api/mpt/supplier/v1/**` CRUD API 及附属物）；仅保留 `supplier_code` 作为溯源属性透传，`supplier_code` 及其导入写入逻辑不在下线 / 清退范围（CR-019）。
 - N13：VMD 不再作为 **VehicleNode（车载节点字典，原 Device 设备）**主数据的企业级 SSOT；VMD 不负责节点字典治理、审批、编码生成、数据质量打分、Golden Record 合并与节点生命周期管理；不要求完整复制 MDM VehicleNode 的全部字段；不承担 MDM VehicleNode 字段变化的自动适配责任，仅当字段变化影响 VMD 的车辆导入、查询、追溯、展示或校验逻辑时，才通过独立 CR 纳入 VMD VehicleNode 投影；**不纳入 EEAD 外延的通讯矩阵 / 诊断架构 / 刷写 OTA 拓扑 / 安全架构四块**；**物理设备实例与绑定关系（含 SN/part_number/hardware_vsn 及绑车 / 激活 / 下线 / 密钥 / 证书生命周期）不在投影范围、不上移**（CR-020）。
 - N14：VMD 不再作为 **Part（零件）**字典 / 类型层主数据的企业级 SSOT；VMD 不负责 Part 字典 / 类型层主数据治理、审批、编码生成、数据质量打分、Golden Record 合并与零件生命周期管理；不要求完整复制 MDM Part（`mdm_material_part`）的全部字段；不承担 MDM Part 字段变化的自动适配责任，仅当字段变化影响 VMD 的零件 / 车辆导入、查询、追溯、展示或校验逻辑时，才通过独立 CR 调整 VMD Part 投影模型（含将某 P1 字段升入投影）；**本期仅投影 P0 必投字段集 + 投影管理字段，不投影 P1 按需字段（如 `name_local` / `description` / `category_code` / `is_safety_critical` / `is_key_part` / `is_regulatory_part` / `is_frame_part` / `lifecycle_stage` / `substitute_part_code` / `production_code` / `ffa_code`）与 P2 字段（MDM 内部主键 / 乐观锁、接入血缘、审计、设计 PLM / 物流 / 履历、时效区间等）**；**VMD 自有的物理零件实例 + 绑定关系（VIN 绑定物理零件实例及其 SN / part_number / hardware 等实例属性、零件→设备挂载、装车 / 换件 / 下线 / 密钥 / 证书生命周期）不上移、不投影化、保持留在 VMD，不切断「车辆→零件→设备→生命周期」链路**（CR-021）。
+- N15：VMD 物理实例层重构**不触及字典 / 类型层主数据归属**——不把 Part / VehicleNode / 产品树各实体从 MDM 投影拉回 VMD，不改其只读投影性质；**不为 `part_info` / `vehicle_part` 建立指向字典投影表的物理外键**（仅引用键透传）；不引入零件实例的独立生命周期事件表（留后续 CR）；不改造 SIM 链路（仍走 TSP）（CR-022）。
 
 ## 3. User Stories
 
@@ -709,13 +717,89 @@
 
 ### 3.6 车辆零件绑定域
 
-#### US-017: 维护车辆零件（VehiclePart）
-**As a** Mpt-User, **I want** 车辆零件 CRUD（按 VIN/PN 查询）, **so that** 手工修复或追加零件绑定关系。
+#### US-017: 维护车辆—零件绑定关系（VehiclePart）
+
+> **数据模型重构（CR-022）**：本 US 由原「US-017 维护车辆零件（VehiclePart）」演进而来。原单表 `tb_vehicle_part` 同时承载「零件实例本体」与「装车绑定关系」，自 CR-022 起拆分——**实例本体属性迁入 `PartInfo`（US-032），本 US 的 `VehiclePart` 收敛为纯绑定关系**，承载装车位置（`vehicleNodeCode` / `deviceItem` 安装位置快照）、时间（`bindTime` / `unbindTime`）、状态（`bindState`：active / inactive）、换件溯源（`replaceOfBindingId`）。从未启用的 `tb_vehicle_part_history` 废弃，换件历史改由同一 (vin, 节点位) 下多条绑定的时间线表达。⚠️ 命名消歧：VehiclePart（绑定关系）区别于 PartInfo（实例本体，US-032）、物理设备实例、VehicleNode（车载节点字典，CR-020）。
+
+**As a** Mpt-User / System, **I want** 车辆与零件实例之间的绑定关系 CRUD（按 VIN / part_id / SN 查询）, **so that** 可登记、查询、修复车辆装车关系并支撑换件与追溯。
 
 **Acceptance Criteria**:
-- WHEN 创建/修改车辆零件 IF (`pn`,`sn`) 组合已存在 THEN THE SYSTEM SHALL 返回"车辆零件已存在"。
-- WHEN 调用 `GET /api/mpt/vehiclePart/v1/list` THE SYSTEM SHALL 按 `vin/pn/beginTime/endTime` 过滤并分页。
-- WHEN System 通过 `bindVehiclePart()` 绑定零件 THE SYSTEM SHALL 将 `partState` 置为 `1`（在用）并记录 `bindTime=Instant.now()`。
+- WHEN System 通过 `bindVehiclePart()` 绑定零件 THE SYSTEM SHALL 在 `vehicle_part` 新建一条绑定，置 `bindState=active`、`bindTime=Instant.now()`，并将所引用 `part_info.instanceState` 置为「在用」。
+- IF 待绑定的实例（`part_id`）当前已存在一条 `active` 绑定 THEN THE SYSTEM SHALL 拒绝并返回 `PART_BINDING_CONFLICT`（`VmdErrorCode`，错误码 `202017`）。
+- IF 目标车辆同一节点位（`vin` + `vehicleNodeCode` + `deviceItem`）当前已存在一条 `active` 绑定 THEN THE SYSTEM SHALL 拒绝并返回 `PART_BINDING_CONFLICT`（`202017`）。
+- IF 绑定引用的实例（`part_id` / `(part_code, sn)`）不存在 THEN THE SYSTEM SHALL 返回 `PART_INSTANCE_NOT_EXIST`（`202018`）。
+- THE SYSTEM SHALL 在数据库层保证「同一实例同时仅一条 active 绑定」「同一车同一节点位同时仅一条 active 绑定」两项约束（实现手段留 design.md）。
+- WHEN 调用 `GET /api/mpt/vehiclePart/v1/list` THE SYSTEM SHALL 按 `vin / partCode / sn / bindState / beginTime / endTime` 过滤并分页（`startPage`+`getPageResult`）。
+- THE SYSTEM SHALL 校验调用方持有 `completeVehicle:vehicle:vehiclePart:{list/query/export}` 权限点（保持 `vehicle` 命名空间，不迁 product）。
+- THE SYSTEM SHALL 保持 EOL 发布的 `VehicleEolPartBoundEvent`（`PartMeta` 结构）契约不变，TSP/OTA 异步订阅链路语义不变。
+
+#### US-032: 维护物理零件实例本体（PartInfo）与游离零件
+
+> **新增（CR-022）**：物理零件实例本体为 VMD 自有事务 / 实例数据，以 `(partCode, sn)` 唯一标识一颗物理零件，**允许在尚未绑定 VIN 时独立存在（游离零件）**。仅以 `partCode` 持 Part 字典（CR-021，`tb_mdm_part`）引用键，不复制字典字段、不建物理外键。
+
+**As a** System / Mpt-User, **I want** 以 `(partCode, sn)` 唯一标识一颗物理零件实例并独立登记其本体属性, **so that** 零件可在尚未绑定 VIN 时独立存在（游离零件），且同一颗零件在多次导入中稳定收敛为同一实例。
+
+**Acceptance Criteria**:
+- THE SYSTEM SHALL 在数据库层对 `tb_part_info` 施加 `UNIQUE KEY (part_code, sn)`，保证同一零件号下序列号唯一。
+- THE SYSTEM SHALL 在 `part_info` 持久化实例本体属性：`part_code`（→ `tb_mdm_part.pn` 引用键，NOT NULL）、`sn`、`vehicle_node_code`（节点归属，→ `tb_mdm_vehicle_node.code` 引用键）、`hardware_ver` / `software_ver` / `hardware_pn` / `software_pn` / `config_word` / `batch_num` / `supplier_code`（透传溯源）/ `extra`（IMEI/ICCID/HSM/MAC 等 JSON）/ `instance_state`（在库 / 在用 / 待更换 / 已报废）/ `first_seen_time`。
+- WHEN 零件实例数据到达且对应 VIN / 装车位置尚未就绪 THE SYSTEM SHALL 仅落 `part_info`（不建 `vehicle_part`），形成游离实例，`instanceState` 置为「在库」。
+- WHEN 同一 `(part_code, sn)` 实例重复到达 THE SYSTEM SHALL 以 upsert 幂等处理，更新本体非空字段，不产生重复实例行。
+- IF 通过 MPT 后台新增实例时 `(part_code, sn)` 已存在 THEN THE SYSTEM SHALL 返回 `PART_INSTANCE_ALREADY_EXISTS`（`202016`）。
+- THE SYSTEM SHALL NOT 为 `part_info` 复制 Part 字典字段（定义 / 类型 / 规格 / FOTA 能力等），仅持 `part_code` 引用键；不建指向 `tb_mdm_part` 的物理外键。
+- WHEN 调用 `GET /api/mpt/partInfo/v1/list` THE SYSTEM SHALL 按 `partCode / sn / vehicleNodeCode / instanceState` 过滤并分页。
+- THE SYSTEM SHALL 校验调用方持有 `completeVehicle:vehicle:partInfo:{list/query/export}` 权限点；`add/edit/remove` 仅供手工修复使用。
+
+#### US-033: 零件换件（解绑旧件 + 绑定新件 + 换件溯源）
+
+> **新增（CR-022）**：换件 = 解绑旧绑定 + 为新实例建 active 绑定 + 记录换件溯源链，保证任一时刻同一 (vin, 节点位) 仅一颗在用零件；换件历史由绑定时间线表达（不依赖独立历史表）。
+
+**As a** System / Mpt-User, **I want** 在同一车同一节点位用新零件实例替换旧零件实例, **so that** 换件全过程可被记录与追溯，且任一时刻该位置只有一颗在用零件。
+
+**Acceptance Criteria**:
+- WHEN 对某 (vin, 节点位) 执行换件 THE SYSTEM SHALL 将该位置当前 `active` 绑定置为 `bindState=inactive` 并写入 `unbindTime` / `unbindReason` / `unbindBy` / `unbindOrg`，同时将旧实例 `instanceState` 置为「待更换」或「已报废」。
+- WHEN 旧绑定解绑后 THE SYSTEM SHALL 为新零件实例新建一条 `active` 绑定，并将其 `replaceOfBindingId` 指向被替换的旧绑定。
+- THE SYSTEM SHALL 保证换件操作后该 (vin, 节点位) 仍满足「同时仅一条 active 绑定」约束。
+- WHEN 查询某 (vin, 节点位) 的换件历史 THE SYSTEM SHALL 基于 `vehicle_part` 按 `bindTime` 排序返回该位置历经的全部绑定（含 active 与 inactive）及其所引用实例，无需依赖独立历史表。
+- IF 换件时新实例不存在 THEN THE SYSTEM SHALL 先按 US-032 upsert `part_info` 再建绑定，或返回 `PART_INSTANCE_NOT_EXIST`（`202018`，视调用入参是否携带实例本体而定）。
+
+#### US-034: 零件导入异步乱序绑定兜底
+
+> **新增（CR-022）**：各导入解析器改为「先 upsert 实例本体、再建车辆绑定」两步，并对「零件先到 / 车后到」具备乱序兜底（与现有 MDM 投影乱序收敛思路一致）。
+
+**As a** System, **I want** 各导入解析器先 upsert 零件实例本体、再建立车辆绑定，且对「零件先到 / 车后到」具备乱序兜底, **so that** 导入到达次序不影响最终一致的车辆—零件关系。
+
+**Acceptance Criteria**:
+- THE SYSTEM SHALL 改造 EOL（US-020）/ BTM（US-021）/ TBOX（US-022）/ CCP（US-023）/ IDCM（US-024）解析器与 `VehiclePartBinder.bindParts()`：先按 `(partCode, sn)` upsert `part_info`，再在 VIN + 安装位置就绪时 upsert `vehicle_part` 绑定。
+- WHEN 零件实例先于其 VIN 到达 THE SYSTEM SHALL 落游离 `part_info`；WHEN 该 VIN 的车辆登记 / 绑定信息随后到达 THE SYSTEM SHALL 按 `sn` 回扫匹配的游离实例并补建 `vehicle_part`。
+- WHEN 车辆先于零件到达 THE SYSTEM SHALL 沿用现有流程，零件到达后 upsert 实例并建绑定。
+- THE SYSTEM SHALL 保证导入 upsert 幂等：重复 / 乱序到达不产生重复实例与重复 active 绑定。
+- THE SYSTEM SHALL 保持 SIM 解析器（US-025）不写 `part_info` / `vehicle_part`，仍走 TSP。
+- THE SYSTEM SHALL 保持 US-018~025 的 `ImportResult`（`totalCount/successCount/failureCount/invalidCount`）计数语义不变。
+
+#### US-035: 死表清退与车辆主档瘦身
+
+> **新增（CR-022）**：清退已无任何代码 / 写入路径的死表与死 VO，使车辆主档（VehicleInfo）模型收敛清晰。外饰 / 内饰 / 轮毂 / 选装语义由版本（Variant）+ 配置（Configuration）→ 选项值（OptionCode）表达。
+
+**As a** System Maintainer, **I want** 清退已无任何代码 / 写入路径的死表, **so that** 车辆主档模型收敛清晰、消除遗留债。
+
+**Acceptance Criteria**:
+- THE SYSTEM SHALL 下线并删除以下死表：`tb_veh_exterior` / `tb_veh_interior` / `tb_veh_wheel` / `tb_veh_optional` / `tb_veh_ecu` / `tb_veh_activation`，及遗留 `tb_mes_vehicle_data` / `tb_bom_part` / `tb_bom_part_nove` / `tr_veh_model_config_*` / `tr_veh_user_relation` / `tb_veh_user`。
+- THE SYSTEM SHALL 同步下线对应死代码资产（如 `InteriorRequest/Response`、`WheelRequest/Response` 等无持久化支撑的遗留 VO）。
+- THE SYSTEM SHALL 保留活表 `tb_veh_basic_info`（车辆主档）与 `tb_veh_detail_info`（EOL 详细字段 KV）、`tb_veh_preset_owner`（预设车主，US-026）不变。
+- THE SYSTEM SHALL 明确外饰 / 内饰 / 轮毂 / 选装语义由版本（Variant）+ 配置（Configuration）→ 选项值（OptionCode）表达，不再依赖上述死表。
+- THE SYSTEM SHALL NOT 触及任何字典 / 类型层投影表（`tb_mdm_*`）。
+
+#### US-036: 物理实例层重构的查询 / RPC / 权限 / 错误码影响
+
+> **新增（CR-022）**：声明重构后查询、RPC 契约、权限点与错误码的兼容与新增，确保上下游平滑过渡。
+
+**As a** Service-Caller / Mpt-User, **I want** 重构后查询、RPC 契约、权限点与错误码保持可预期, **so that** 上下游无感、调用方平滑过渡。
+
+**Acceptance Criteria**:
+- THE SYSTEM SHALL 保持 `/api/mpt/vehiclePart/v1/**` 路径与响应形态兼容：旧响应字段（如 `partState`）由 `part_info.instanceState` + `vehicle_part.bindState` 推导回填。
+- THE SYSTEM SHALL 保持 `VmdPartService`（`/api/service/part`，查 Part 字典投影 `tb_mdm_part`）契约不受本重构影响。
+- THE SYSTEM SHALL 在 `vehicle` 命名空间维护权限点：`completeVehicle:vehicle:vehiclePart:{list/query/export/add/edit/remove}`（沿用）与新增 `completeVehicle:vehicle:partInfo:{list/query/export/add/edit/remove}`；**不迁 product 命名空间**。
+- THE SYSTEM SHALL 在 `VmdErrorCode` 接续新增 `202016 PART_INSTANCE_ALREADY_EXISTS` / `202017 PART_BINDING_CONFLICT` / `202018 PART_INSTANCE_NOT_EXIST`，复用 `202011 PART_NOT_EXIST` / `202012 PART_NOT_ALLOW_BIND`。
 
 ### 3.7 车辆数据导入域
 
@@ -1451,6 +1535,15 @@
 - MDM Feign 全量快照接口已就绪，VMD 可通过 Feign 调用。
 - VMD 启动时若本地无 source=MDM 数据，需通过 Bootstrap 流程从 MDM 拉全量。
 
+### PartInfo / VehiclePart 物理实例层模型约束（CR-022）
+- 物理实例层（`part_info` / `vehicle_part`）为 **VMD 自有事务 / 实例数据**，权威来源在 VMD，不上移、不投影化、不消费 MDM 同步。
+- `part_info` 唯一键为 `(part_code, sn)`；`part_code` NOT NULL。
+- `vehicle_part` 为纯绑定关系，必含 `vin`（→ `vehicle_info`）与 `part_id`（→ `part_info`），施加「同一实例 / 同一车同一节点位 仅一条 active 绑定」约束。
+- 实例属性归位准则：本体属性（不随装车改变）→ `part_info`；绑定属性（随装车 / 位置 / 时间 / 状态 / 换件变化）→ `vehicle_part`；字典属性（「应有什么」）→ `tb_mdm_part` / `tb_mdm_vehicle_node`（不动）。
+- `part_info` / `vehicle_part` 仅以 `part_code` / `vehicle_node_code` / `supplier_code` 持引用键，**不复制字典字段、不建物理外键**。
+- 换件历史由 `vehicle_part` 绑定时间线表达，`tb_vehicle_part_history` 废弃。
+- 无历史数据，结构干净重建，不做数据回迁。
+
 ## 5. Out of Scope
 
 - O1：解析器 V2.0+。当前所有解析器均为 V1.0；新版本需走 §6 变更流程。
@@ -1535,6 +1628,14 @@
 - O80：历史 Part 数据 source 回标、清洗、纠错、归并由独立数据治理 CR 处理，本期 spec 不实现（CR-021）。
 - O81：本次 CR 只定义 Part 从本地维护到本地只读投影的需求语义调整（实体 / 关联键命名不变、不做表 / 列重命名），不要求一次性删除所有 VMD Part add/edit/remove 接口和权限点；权限点 `completeVehicle:vehicle:part:*` 迁入 `product` 命名空间为 `completeVehicle:product:part:list/query/export`（`add/edit/remove` 仅兼容期遗留限 source=MANUAL），旧 `vehicle:part` 权限点标记 `deprecated`，最终下线由后续兼容性清理 CR 完成（CR-021）。
 - O82：Part 相关 Flyway 迁移脚本（为 `tb_part` 补齐 source / external_ref_id / external_version / last_sync_time + `UK(external_ref_id)` + 回填 source='MANUAL'）、字段物理补齐、代码改造等实现细节留 design.md / tasks.md；MDM Part 的内部模型设计、生命周期状态、审批流、编码规则不在 VMD 范围内（CR-021）。
+- O83：本 CR 不把 Part / VehicleNode / 产品树各实体从 MDM 投影拉回 VMD，不改其只读投影归属（CR-022）。
+- O84：本 CR 不为 `part_info` / `vehicle_part` 建立指向 `tb_mdm_*` 的物理外键（仅引用键透传）（CR-022）。
+- O85：本 CR 不引入零件实例独立生命周期事件表，零件实例状态由 `part_info.instanceState` + `vehicle_part` 时间线覆盖，独立事件表留后续 CR（CR-022）。
+- O86：本 CR 不改造 SIM 链路（仍走 TSP，不入物理实例层）（CR-022）。
+- O87：因无历史数据，本 CR 不实现旧表数据拆分迁移、`tb_vehicle_part_history` 回灌与旧本体列兼容读（CR-022）。
+- O88：MySQL「仅一条 active 绑定」约束的物理实现手段（生成列 / NULL 技巧等）属 design.md / tasks.md，本 CR 仅声明约束目标（CR-022）。
+- O89：死表 / 死 VO 的具体删除脚本、Flyway 文件（建议 `V18__Drop_dead_tables` / `V19__Create_part_info` / `V20__Rebuild_vehicle_part_as_binding`，接续 V17）等实现细节留 design.md / tasks.md（CR-022）。
+- O90：历史车辆数据治理、SN 脏数据清洗、source 回标等不在本 CR（本 CR 假设无历史数据）（CR-022）。
 
 ## 6. Changelog
 
@@ -1560,3 +1661,4 @@
 | 2026-06-10 | CR-020 | Modified | **设备（Device）字典 / 类型主数据重构为 MDM VehicleNode（车载节点）本地只读投影 + 命名迁移**：VehicleNode 字典 / 类型主数据 SSOT 上移至 **edd-mdm EEAD 子域**（MDM CR-007），VMD 保留 VehicleNode 本地只读投影表（US-015 由「维护设备信息 Device」改写为「消费 MDM VehicleNode 主数据本地投影」；新增 US-015b VehicleNode Bootstrap 全量同步（entity=vehicleNode \| all）、US-015c 本地维护能力兼容清理 + Device→VehicleNode 命名迁移）；**与 Plant（CR-011）/ Variant（CR-016）/ Configuration（CR-017）同构、区别于 Brand/Platform/CarLine/Model（CR-012~015 命名不变、仅投影化）——本次涉及实体重命名 + 关联键重命名**：MDM 侧 Device 改名为 VehicleNode，VMD 将设备字典实体与关联键 `deviceCode`→`vehicleNodeCode`，Device / `deviceCode` / 「设备」转为历史兼容命名（参照 Manufacturer→Plant、BaseModel→Variant、BuildConfig→Configuration、FeatureFamily→OptionFamily）；**关键边界**——本 CR 仅处理「车载节点字典 / 类型层」主数据（节点定义、类型、功能域），**VMD 自有的物理设备实例 + 绑定关系（VIN 绑定的 TBOX/IDCU/CCU/ADCU/TCU 实例，含 SN/part_number/hardware_vsn 及绑车 / 激活 / 下线 / 密钥 / 证书生命周期）不上移、不投影化、保持留在 VMD，不切断「车辆→零件→设备→生命周期」链路**，物理实例上的节点引用键由 `device_code` 兼容改名为 `vehicle_node_code`（仅改名、不改业务语义）；**命名消歧**——VehicleNode（车载节点）区别于物理设备实例（VehiclePart 绑定的具体设备，US-017）、ConfigItem（配置项，US-009）、configCenter（配置中心）；**与供应商（CR-019 彻底下线、不建投影）不同**，车载节点属「车上有什么」（EEAD）、是 VMD 车辆主数据语义核心，按产品树模式建只读投影；新增 §4「VehicleNode 主数据投影约束」与「VehicleNode 投影字段范围原则」（VMD VehicleNode ⊂ MDM VehicleNode，按需最小化投影，最小字段集 = A 治理元字段（source/external_ref_id/external_version/last_sync_time）+ B 关联键 / 标识（code（即 vehicleNodeCode）/name）+ C 业务属性（vehicle_node_type/domain/status），明确排除审批 / Golden Record / 质量打分 / 生命周期 / 负责人 / EEAD 外延 / 物理实例字段）；VMD VehicleNode add/edit/remove 仅作 source=MANUAL 兼容期遗留，对 source=MDM 一律只读（拒绝时抛 `ProductDataReadOnlyException`，错误码 `202014`）；保留并回填 `vehicleNodeCode`，**物理设备实例 → 节点引用链不得切断**；US-015 service 路径 `/api/service/device/v1/{code}`+`/listAllFota`→`/api/service/vehicleNode/v1/**`（旧路径迁移期保留兼容）；US-014 零件 `deviceCode` 过滤键→`vehicleNodeCode`（含历史兼容读取）；US-021 BTM 解析器 `VehiclePart.deviceCode`→`vehicleNodeCode`（仅引用键改名）；US-030 `VmdDeviceService`→`VmdVehicleNodeService`、`DeviceExResponse`→`VehicleNodeExResponse`、路径 `/api/service/device/v1`→`/api/service/vehicleNode/v1`（旧契约 / 旧路径 / 旧响应类型迁移期保留兼容）；权限点 `completeVehicle:vehicle:device:*`（现状处于 `vehicle` 命名空间）→`completeVehicle:product:vehicleNode:list/query/export`（迁入 `product` 命名空间，与产品树各实体 CR-011~018 一致；`add/edit/remove` 仅兼容期遗留限 source=MANUAL，旧 device 权限点标记 `deprecated` 待后续 CR 下线）；MDM 事件订阅（F6，新增 entity=vehicleNode）与 Bootstrap 全量同步（F7，entity=vehicleNode \| all）复用现有机制；§1 Overview 新增 CR-020 兼容说明、§2 新增 G10、VehicleNode 语义统一说明、N13 非目标；§3.5 章节加 CR-020 消歧说明；§4 数据来源标记由九类实体扩展为十类（纳入 mdm_vehicle_node 车载节点投影）、edd-mdm 依赖纳入 EEAD 子域 VehicleNode、前置条件新增 MDM VehicleNode 就绪；§5 新增 O68~O75。<br>**受影响清单（供实现对账）**：<br>· 表：`tb_device`→`mdm_vehicle_node`（重命名 + 补 source/external_ref_id/external_version/last_sync_time + UK(external_ref_id) + 回填 source='MANUAL'，保留 code/name/node_type/func_domain/device_item/type 等列）；`tb_vehicle_part` / `tb_vehicle_part_history` / `tb_part`（`device_code`→`vehicle_node_code`，仅引用键改名 + 回填，保留旧列兼容）。<br>· 字段：`device_code`/`deviceCode`→`vehicle_node_code`/`vehicleNodeCode`（保留旧列 / 旧字段兼容并回填）。<br>· 权限点：`completeVehicle:vehicle:device:*`→`completeVehicle:product:vehicleNode:list/query/export`；`vehicleNode:add/edit/remove` 仅兼容期遗留（限 source=MANUAL）；旧 `device:*` 标记 `deprecated` 待后续 CR 下线。<br>· API path：`/api/mpt/device/**`→`/api/mpt/vehicleNode/**`（含 list/listAllDevice→listAll/listAllDeviceItem/export/{id}/add/edit/remove）；`/api/service/device/v1/{code}`+`/listAllFota`→`/api/service/vehicleNode/v1/**`（旧路径迁移期保留兼容）。<br>· Feign：`VmdDeviceService`→`VmdVehicleNodeService`、`DeviceExResponse`→`VehicleNodeExResponse`（旧契约 / 旧类型迁移期保留兼容）。<br>· Flyway：新增 `V15__Migrate_device_to_vehicle_node.sql`（表迁移 / 重命名 + 投影字段 + UK + 回填 source='MANUAL'）、`V16__Migrate_device_code_to_vehicle_node_code.sql`（vehicle_part/vehicle_part_history/part 引用键迁移回填），接续 CR-019 的 V14。**design.md / tasks.md 需按 SPEC 工作流后续同步落地本 CR** |
 | 2026-06-10 | CR-021 | Modified | **零件（Part）字典 / 类型主数据重构为 MDM Part 本地只读投影（不改名、按需最小化、本期仅 P0 投影）**：Part 字典 / 类型主数据 SSOT 上移至 **edd-mdm Part 子域**，VMD 保留 Part 本地只读投影表（US-014 由「维护零件信息 Part」改写为「消费 MDM Part 主数据本地投影」；新增 US-014b Part Bootstrap 全量同步（entity=part \| all）、US-014c 本地维护能力兼容清理、US-014d 物理零件实例 + 绑定关系 + 生命周期边界声明（留 VMD））；**与 Brand/Platform/CarLine/Model（CR-012~CR-015）同构、区别于 Plant(CR-011)/Variant(CR-016)/Configuration(CR-017)/VehicleNode(CR-020) 的命名迁移——Part 实体命名不变、关联键 `partCode` 不变、不做表 / 列重命名**，Part 复用现有 `veh_part`（`tb_part`）；**关键差异：CR-010/V3 未覆盖 `tb_part`，故 CR-021 参照 Model（CR-015）需新增一条 Flyway 迁移为 `tb_part` 补齐 source/external_ref_id/external_version/last_sync_time + UK(external_ref_id) + 回填 source='MANUAL'（接续 CR-020 序列；脚本与文件名留 design.md / tasks.md）**；**双层边界**——投影层为 Part 字典 / 类型主数据（零件定义、零件类型、规格、part_number 字典等「车上应有哪些零件」），留 VMD 层为 VIN 绑定的物理零件实例 + 绑定关系 + 生命周期（SN/part_number/hardware 等实例属性、零件→设备挂载、装车/换件/下线/密钥/证书生命周期），不上移、不投影化、不切断「车辆→零件→设备→生命周期」链路；**与供应商（CR-019 彻底下线、不建投影）不同**——Part 属「车上有什么」、是车辆主数据语义核心、处于「车辆→零件→设备」链路，故按产品树 / VehicleNode 模式建只读投影；**命名消歧**——Part（零件实体 / 字典）区别于 VehicleNode（车载节点，CR-020）、物理设备实例（US-017）、ConfigItem（配置项，US-009）、configCenter（配置中心）、VehicleConfig（车辆配置，US-013）；新增 §4「Part 主数据投影约束」与「Part 投影字段范围原则」（VMD Part ⊂ MDM Part，按需最小化投影，**本期投影范围 = P0 必投字段集（`code`(partCode)/`name`/`part_type`/`vehicle_node_code`/`supplier_code`/`is_software`/`fota_upgradeable`/`is_accurately_traced`/`status`）+ 投影管理字段（source/external_ref_id/external_version/last_sync_time）**，明确不投影 P1 按需字段与 P2（MDM 内部主键 / 乐观锁、接入血缘、审计、设计 PLM / 物流 / 履历、时效区间）及物理实例字段，后续按需独立 CR 增量升投）；VMD Part add/edit/remove 仅作 source=MANUAL 兼容期遗留，对 source=MDM 一律只读（拒绝时抛 `ProductDataReadOnlyException`，错误码 `202014`）；保留并长期沿用 `partCode`，零件上的 `vehicleNodeCode`（承接原 `deviceCode`，CR-020）/ `supplier_code`（透传溯源，CR-019）一并保留，**物理零件实例 → Part 引用链不得切断**；US-014 零件查询（`GET /api/service/part/v1/{partCode}`、`listAllFota`、`/api/mpt/part/v1/list` 按 `key/pn/name/part_type/vehicleNodeCode` 过滤）数据来源变为本地投影；权限点 `completeVehicle:vehicle:part:*`（现状处于 `vehicle` 命名空间）→`completeVehicle:product:part:list/query/export`（迁入 `product` 命名空间，与产品树各实体 CR-011~020 一致；`add/edit/remove` 仅兼容期遗留限 source=MANUAL，旧 `vehicle:part` 权限点标记 `deprecated` 待后续 CR 下线）；MDM 事件订阅（F6，新增 entity=part）与 Bootstrap 全量同步（F7，entity=part \| all）复用现有机制；§1 Overview 新增 CR-021 兼容说明、§2 新增 G11、Part 语义统一说明、N14 非目标；§3.5 章节加 CR-021 消歧说明；§4 数据来源标记由十类实体扩展为十一类（纳入 veh_part（tb_part）Part 零件投影）、edd-mdm 依赖纳入 Part 子域、前置条件新增 MDM Part 就绪；§5 新增 O76~O82。<br>**受影响清单（供实现对账）**：<br>· 表：`veh_part`（`tb_part`）补齐 source/external_ref_id/external_version/last_sync_time + UK(external_ref_id) + 回填 source='MANUAL'，保留现有业务列不变、不改名。<br>· 字段：新增投影管理字段 4 列 + UK；P0 业务字段沿用既有列（`vehicle_node_code` 承接 CR-020 改名后的引用键、`supplier_code` 延续 CR-019 透传）。<br>· 权限点：`completeVehicle:vehicle:part:*`→`completeVehicle:product:part:list/query/export`；`product:part:add/edit/remove` 仅兼容期遗留（限 source=MANUAL）；旧 `vehicle:part:*` 标记 `deprecated` 待后续 CR 下线。<br>· API path：`/api/mpt/part/v1/**`、`/api/service/part/v1/**` 命名 / 路径不变，查询数据来源变为本地投影；新增 Bootstrap entity=part。<br>· Flyway：需新增一条迁移为 `tb_part` 补齐投影字段 + UK + 回填 source='MANUAL'（接续 CR-020 的 V16；文件名与脚本细节留 design.md / tasks.md）。**本 CR 仅处理 Part 字典 / 类型层投影化，不改造物理零件实例 + 绑定关系 + 生命周期（US-014d 边界声明，留 VMD）；具体迁移脚本、字段物理补齐、Flyway 文件等实现细节留 design.md / tasks.md**。**design.md / tasks.md 需按 SPEC 工作流后续同步落地本 CR** |
 
+| 2026-06-10 | CR-022 | Modified | **车辆—零件物理实例层数据模型重构为三表**：将现「实例+绑定」混血单表 `tb_vehicle_part` 拆分为 `tb_part_info`（物理零件实例本体，唯一键 `(part_code, sn)`，允许未绑定 VIN 时独立存在=游离零件）+ `tb_vehicle_part`（纯车辆—零件绑定关系，承载装车位置 `vehicleNodeCode`/`deviceItem` 快照、时间 `bindTime`/`unbindTime`、状态 `bindState`、换件溯源 `replaceOfBindingId`）；废弃从未启用的 `tb_vehicle_part_history`（换件历史改由同一 (vin,节点位) 绑定时间线表达）。US-017 由「维护车辆零件」演进为「维护车辆—零件绑定关系」；新增 US-032（物理零件实例本体 PartInfo 与游离零件）、US-033（换件：解绑旧+绑新+溯源）、US-034（导入异步乱序绑定兜底，零件先到游离落库+按 sn 回扫补绑）、US-035（死表清退与车辆主档瘦身：删 `tb_veh_exterior/interior/wheel/optional/ecu/activation` 及遗留 `tb_mes_vehicle_data`/`tb_bom_part`/`tb_bom_part_nove`/`tr_veh_model_config_*`/`tr_veh_user_relation`/`tb_veh_user`，外饰/内饰/轮毂/选装语义由 Variant+Configuration→OptionCode 表达）、US-036（查询/RPC/权限/错误码影响）。实例属性归位准则：本体属性→`part_info`、绑定属性→`vehicle_part`、字典属性→`tb_mdm_part`/`tb_mdm_vehicle_node`（不动）；约束「同一实例/同一车同一节点位 仅一条 active 绑定」；权限点 `vehicle_part` 沿用 `completeVehicle:vehicle:vehiclePart:*`、新增 `completeVehicle:vehicle:partInfo:*`，**均留 `vehicle` 命名空间不迁 product**；错误码接续新增 `202016 PART_INSTANCE_ALREADY_EXISTS`/`202017 PART_BINDING_CONFLICT`/`202018 PART_INSTANCE_NOT_EXIST`。§2 新增 G12、物理实例层语义统一补充、N15；§3.6 重构 US-017 + 新增 US-032~036；§4 新增「PartInfo / VehiclePart 物理实例层模型约束」；§5 新增 O83~O90。**本 CR 仅处理 VMD 自有物理实例层，不动字典/类型层（CR-011~021 MDM 投影）、不切断「车辆→零件→设备→生命周期」链路；无历史数据，结构干净重建、不做数据回迁；Flyway 建议 V18 删死表 / V19 建 part_info / V20 重建 vehicle_part（接续 V17），脚本与 active 约束物理实现（MySQL 生成列/NULL 技巧）等细节留 design.md / tasks.md**。**design.md / tasks.md 需按 SPEC 工作流后续同步落地本 CR** |

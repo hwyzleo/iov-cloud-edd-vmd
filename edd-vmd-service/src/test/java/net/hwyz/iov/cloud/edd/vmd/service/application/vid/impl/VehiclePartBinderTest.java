@@ -4,8 +4,10 @@ import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.VehicleEolPartBoundEvent;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartInfoAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleNodeAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehiclePartAppService;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartInfo;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleNode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehiclePart;
 import org.junit.jupiter.api.Test;
@@ -22,6 +24,9 @@ import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class VehiclePartBinderTest {
+
+    @Mock
+    private PartInfoAppService partInfoAppService;
 
     @Mock
     private VehiclePartAppService vehiclePartAppService;
@@ -64,6 +69,7 @@ class VehiclePartBinderTest {
         assertEquals("PN001", meta.getPn());
         assertEquals("TBOX001", meta.getDeviceCode());
         assertEquals("TBOX", meta.getDeviceItem());
+        verify(partInfoAppService).upsertPartInfo(any(PartInfo.class));
         verify(vehiclePartAppService).bindVehiclePart(any(VehiclePart.class));
     }
 
@@ -78,6 +84,7 @@ class VehiclePartBinderTest {
         List<VehicleEolPartBoundEvent.PartMeta> result = binder.bindParts(parts, VIN, BATCH_NUM);
 
         assertTrue(result.isEmpty());
+        verify(partInfoAppService, never()).upsertPartInfo(any());
         verify(vehiclePartAppService, never()).bindVehiclePart(any());
     }
 
@@ -92,6 +99,7 @@ class VehiclePartBinderTest {
         List<VehicleEolPartBoundEvent.PartMeta> result = binder.bindParts(parts, VIN, BATCH_NUM);
 
         assertTrue(result.isEmpty());
+        verify(partInfoAppService, never()).upsertPartInfo(any());
         verify(vehiclePartAppService, never()).bindVehiclePart(any());
     }
 
@@ -111,6 +119,7 @@ class VehiclePartBinderTest {
 
         assertEquals(1, result.size());
         assertNull(result.get(0).getDeviceItem());
+        verify(partInfoAppService).upsertPartInfo(any(PartInfo.class));
         verify(vehiclePartAppService).bindVehiclePart(any(VehiclePart.class));
     }
 
@@ -141,6 +150,7 @@ class VehiclePartBinderTest {
 
         // Both parts still added to meta list (add happens before bind attempt)
         assertEquals(2, result.size());
-        verify(vehiclePartAppService, times(2)).bindVehiclePart(any());
+        verify(partInfoAppService, times(2)).upsertPartInfo(any(PartInfo.class));
+        verify(vehiclePartAppService, times(2)).bindVehiclePart(any(VehiclePart.class));
     }
 }
