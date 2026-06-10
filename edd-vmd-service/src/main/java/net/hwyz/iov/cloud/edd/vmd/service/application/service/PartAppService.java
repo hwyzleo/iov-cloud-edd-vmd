@@ -7,6 +7,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.PartAssembler;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.PartDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.PartQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Part;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartRepository;
 import net.hwyz.iov.cloud.framework.common.util.ParamHelper;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
@@ -74,6 +75,16 @@ public class PartAppService {
     }
 
     /**
+     * 根据主键ID获取零件领域对象
+     *
+     * @param id 主键ID
+     * @return 零件领域对象
+     */
+    public Part getPartEntityById(Long id) {
+        return partRepository.selectById(id);
+    }
+
+    /**
      * 根据零件号获取零件信息
      *
      * @param pn 零件号
@@ -105,6 +116,13 @@ public class PartAppService {
      * @return 结果
      */
     public int createPart(PartCmd partCmd, String userId) {
+        // CR-021: source=MDM 只读保护
+        if (partCmd.getId() != null) {
+            Part existingPart = partRepository.selectById(partCmd.getId());
+            if (existingPart != null && SourceType.MDM.name().equals(existingPart.getSource())) {
+                throw new RuntimeException("零件'" + partCmd.getPn() + "'来源为MDM，不允许通过VMD后台修改/删除");
+            }
+        }
         Part part = PartAssembler.INSTANCE.toDomain(partCmd);
         return partRepository.insert(part);
     }
@@ -117,6 +135,11 @@ public class PartAppService {
      * @return 结果
      */
     public int modifyPart(PartCmd partCmd, String userId) {
+        // CR-021: source=MDM 只读保护
+        Part existingPart = partRepository.selectById(partCmd.getId());
+        if (existingPart != null && SourceType.MDM.name().equals(existingPart.getSource())) {
+            throw new RuntimeException("零件'" + partCmd.getPn() + "'来源为MDM，不允许通过VMD后台修改/删除");
+        }
         Part part = PartAssembler.INSTANCE.toDomain(partCmd);
         return partRepository.update(part);
     }
@@ -128,6 +151,13 @@ public class PartAppService {
      * @return 结果
      */
     public int deletePartByIds(Long[] ids) {
+        // CR-021: source=MDM 只读保护
+        for (Long id : ids) {
+            Part existingPart = partRepository.selectById(id);
+            if (existingPart != null && SourceType.MDM.name().equals(existingPart.getSource())) {
+                throw new RuntimeException("零件'" + existingPart.getPn() + "'来源为MDM，不允许通过VMD后台修改/删除");
+            }
+        }
         return partRepository.batchPhysicalDelete(ids);
     }
 

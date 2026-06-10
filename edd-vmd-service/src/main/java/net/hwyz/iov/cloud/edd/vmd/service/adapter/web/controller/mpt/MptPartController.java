@@ -9,6 +9,8 @@ import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.MptPartAssembler
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.PartDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.PartQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartAppService;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Part;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
 import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
 import net.hwyz.iov.cloud.framework.common.bean.ApiResponse;
@@ -42,7 +44,7 @@ public class MptPartController extends BaseController {
      * @param part 零件信息
      * @return 零件信息列表
      */
-    @RequiresPermissions("completeVehicle:vehicle:part:list")
+    @RequiresPermissions("completeVehicle:product:part:list")
     @GetMapping(value = "/list")
     public ApiResponse<PageResult<PartResponse>> list(PartRequest part) {
         log.info("管理后台用户[{}]分页查询零件信息", SecurityContextHolder.getUserName());
@@ -67,7 +69,7 @@ public class MptPartController extends BaseController {
      * @param part     设备信息
      */
     @Log(title = "零件信息管理", businessType = BusinessType.EXPORT)
-    @RequiresPermissions("completeVehicle:vehicle:part:export")
+    @RequiresPermissions("completeVehicle:product:part:export")
     @PostMapping("/export")
     public void export(HttpServletResponse response, PartRequest part) {
         log.info("管理后台用户[{}]导出零件信息", SecurityContextHolder.getUserName());
@@ -79,7 +81,7 @@ public class MptPartController extends BaseController {
      * @param partId 零件信息ID
      * @return 零件信息信息
      */
-    @RequiresPermissions("completeVehicle:vehicle:part:query")
+    @RequiresPermissions("completeVehicle:product:part:query")
     @GetMapping(value = "/{partId}")
     public ApiResponse<PartResponse> getInfo(@PathVariable Long partId) {
         log.info("管理后台用户[{}]根据零件信息ID[{}]获取零件信息", SecurityContextHolder.getUserName(), partId);
@@ -93,12 +95,16 @@ public class MptPartController extends BaseController {
      * @return 结果
      */
     @Log(title = "零件信息管理", businessType = BusinessType.INSERT)
-    @RequiresPermissions("completeVehicle:vehicle:part:add")
+    @RequiresPermissions("completeVehicle:product:part:add")
     @PostMapping
     public ApiResponse<Void> add(@Validated @RequestBody PartRequest part) {
         log.info("管理后台用户[{}]新增零件信息[{}]", SecurityContextHolder.getUserName(), part.getPn());
         if (!partAppService.checkPnUnique(part.getId(), part.getPn())) {
             return ApiResponse.fail("新增零件信息'" + part.getPn() + "'失败，零件号已存在");
+        }
+        Part existingPart = partAppService.getPartByPn(part.getPn());
+        if (existingPart != null && SourceType.MDM.name().equals(existingPart.getSource())) {
+            return ApiResponse.fail("零件'" + part.getPn() + "'来源为MDM，不允许通过VMD后台修改/删除");
         }
         partAppService.createPart(MptPartAssembler.INSTANCE.toCmd(part), SecurityUtils.getUserId().toString());
         return ApiResponse.ok();
@@ -111,12 +117,16 @@ public class MptPartController extends BaseController {
      * @return 结果
      */
     @Log(title = "零件信息管理", businessType = BusinessType.UPDATE)
-    @RequiresPermissions("completeVehicle:vehicle:part:edit")
+    @RequiresPermissions("completeVehicle:product:part:edit")
     @PutMapping
     public ApiResponse<Void> edit(@Validated @RequestBody PartRequest part) {
         log.info("管理后台用户[{}]修改保存零件信息[{}]", SecurityContextHolder.getUserName(), part.getPn());
         if (!partAppService.checkPnUnique(part.getId(), part.getPn())) {
             return ApiResponse.fail("修改保存零件信息'" + part.getPn() + "'失败，零件号已存在");
+        }
+        Part existingPart = partAppService.getPartByPn(part.getPn());
+        if (existingPart != null && SourceType.MDM.name().equals(existingPart.getSource())) {
+            return ApiResponse.fail("零件'" + part.getPn() + "'来源为MDM，不允许通过VMD后台修改/删除");
         }
         partAppService.modifyPart(MptPartAssembler.INSTANCE.toCmd(part), SecurityUtils.getUserId().toString());
         return ApiResponse.ok();
@@ -129,10 +139,16 @@ public class MptPartController extends BaseController {
      * @return 结果
      */
     @Log(title = "零件信息管理", businessType = BusinessType.DELETE)
-    @RequiresPermissions("completeVehicle:vehicle:part:remove")
+    @RequiresPermissions("completeVehicle:product:part:remove")
     @DeleteMapping("/{partIds}")
     public ApiResponse<Void> remove(@PathVariable Long[] partIds) {
         log.info("管理后台用户[{}]删除零件信息[{}]", SecurityContextHolder.getUserName(), partIds);
+        for (Long partId : partIds) {
+            Part existingPart = partAppService.getPartEntityById(partId);
+            if (existingPart != null && SourceType.MDM.name().equals(existingPart.getSource())) {
+                return ApiResponse.fail("零件'" + existingPart.getPn() + "'来源为MDM，不允许通过VMD后台修改/删除");
+            }
+        }
         return partAppService.deletePartByIds(partIds) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
     }
 
