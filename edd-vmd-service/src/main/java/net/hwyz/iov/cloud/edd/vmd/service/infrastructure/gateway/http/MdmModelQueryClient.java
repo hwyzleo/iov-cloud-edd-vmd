@@ -1,6 +1,6 @@
-package net.hwyz.iov.cloud.edd.vmd.api.service;
+package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http;
 
-import net.hwyz.iov.cloud.edd.vmd.api.fallback.MdmModelQueryClientFallbackFactory;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.fallback.MdmModelQueryClientFallbackFactory;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 

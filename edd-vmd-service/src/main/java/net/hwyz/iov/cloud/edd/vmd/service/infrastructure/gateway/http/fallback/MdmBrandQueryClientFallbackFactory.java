@@ -1,7 +1,7 @@
-package net.hwyz.iov.cloud.edd.vmd.api.fallback;
+package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.fallback;
 
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.edd.vmd.api.service.MdmBrandQueryClient;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmBrandQueryClient;
 import org.springframework.cloud.openfeign.FallbackFactory;
 import org.springframework.stereotype.Component;
 

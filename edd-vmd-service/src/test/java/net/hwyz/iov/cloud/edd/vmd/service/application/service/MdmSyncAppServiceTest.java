@@ -1,14 +1,14 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 
-import net.hwyz.iov.cloud.edd.vmd.api.service.MdmBrandQueryClient;
-import net.hwyz.iov.cloud.edd.vmd.api.service.MdmCarLineQueryClient;
-import net.hwyz.iov.cloud.edd.vmd.api.service.MdmConfigurationQueryClient;
-import net.hwyz.iov.cloud.edd.vmd.api.service.MdmModelQueryClient;
-import net.hwyz.iov.cloud.edd.vmd.api.service.MdmOptionCodeQueryClient;
-import net.hwyz.iov.cloud.edd.vmd.api.service.MdmOptionFamilyQueryClient;
-import net.hwyz.iov.cloud.edd.vmd.api.service.MdmPlantQueryClient;
-import net.hwyz.iov.cloud.edd.vmd.api.service.MdmPlatformQueryClient;
-import net.hwyz.iov.cloud.edd.vmd.api.service.MdmVariantQueryClient;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmBrandQueryClient;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmCarLineQueryClient;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmConfigurationQueryClient;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmModelQueryClient;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmOptionCodeQueryClient;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmOptionFamilyQueryClient;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmPlantQueryClient;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmPlatformQueryClient;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmVariantQueryClient;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmBrandEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmCarLineEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmModelEvent;
