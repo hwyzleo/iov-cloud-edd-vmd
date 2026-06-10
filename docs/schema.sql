@@ -203,10 +203,10 @@ CREATE TABLE IF NOT EXISTS `tb_mes_vehicle_data` (
   UNIQUE KEY `batch_num` (`batch_num`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='MES车辆数据表';
 
--- 零件信息表
-CREATE TABLE IF NOT EXISTS `tb_part` (
+-- 零件信息表（MDM投影，CR-021重命名自tb_part）
+CREATE TABLE IF NOT EXISTS `tb_mdm_part` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
-  `pn` varchar(20) NOT NULL COMMENT '零件号',
+  `pn` varchar(20) NOT NULL COMMENT '零件号（partCode关联键）',
   `name` varchar(255) NOT NULL COMMENT '零件中文名称',
   `name_en` varchar(255) DEFAULT NULL COMMENT '零件英文名称',
   `type` varchar(20) DEFAULT NULL COMMENT '零件类型',
@@ -238,7 +238,9 @@ CREATE TABLE IF NOT EXISTS `tb_part` (
   `surface_treatment` varchar(20) DEFAULT NULL COMMENT '表面处理',
   `structure_character` varchar(20) DEFAULT NULL COMMENT '结构特征',
   `device_form` varchar(20) DEFAULT NULL COMMENT '设备形态',
-  `device_code` varchar(20) DEFAULT NULL COMMENT '设备代码',
+  `device_code` varchar(20) DEFAULT NULL COMMENT '设备代码（vehicleNodeCode关联键）',
+  `supplier_code` varchar(50) DEFAULT NULL COMMENT '供应商代码（溯源透传）',
+  `fota_upgradeable` tinyint DEFAULT '0' COMMENT '是否支持FOTA升级',
   `designer` varchar(20) DEFAULT NULL COMMENT '设计工程师',
   `designer_dept` varchar(20) DEFAULT NULL COMMENT '设计工程师部门',
   `non_repair_reason` varchar(20) DEFAULT NULL COMMENT '不作为备件原因',
@@ -251,6 +253,10 @@ CREATE TABLE IF NOT EXISTS `tb_part` (
   `first_production_date` varchar(20) DEFAULT NULL COMMENT '首次投产时间',
   `initial_model` varchar(20) DEFAULT NULL COMMENT '初始车型',
   `description` varchar(255) DEFAULT NULL COMMENT '备注',
+  `source` varchar(16) NOT NULL DEFAULT 'MANUAL' COMMENT '数据来源：MDM=来自MDM系统，MANUAL=本地手动维护',
+  `external_ref_id` varchar(64) DEFAULT NULL COMMENT 'MDM侧实体主键ID',
+  `external_version` bigint DEFAULT 0 COMMENT 'MDM侧实体版本号',
+  `last_sync_time` datetime DEFAULT NULL COMMENT '最后一次同步时间',
   `create_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `create_by` varchar(64) DEFAULT NULL COMMENT '创建者',
   `modify_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '修改时间',
@@ -258,8 +264,9 @@ CREATE TABLE IF NOT EXISTS `tb_part` (
   `row_version` int DEFAULT '1' COMMENT '记录版本',
   `row_valid` tinyint DEFAULT '1' COMMENT '记录是否有效',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `pn` (`pn`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='零件信息表';
+  UNIQUE KEY `pn` (`pn`),
+  UNIQUE KEY `uk_external_ref_id` (`external_ref_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='零件（Part）字典主数据本地投影';
 
 -- 供应商表
 CREATE TABLE IF NOT EXISTS `tb_supplier` (

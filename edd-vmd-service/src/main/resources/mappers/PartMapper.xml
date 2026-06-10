@@ -70,7 +70,7 @@
 
     <!-- 插入 -->
     <insert id="insertPo" useGeneratedKeys="true" keyProperty="id">
-        INSERT INTO tb_part (
+        INSERT INTO tb_mdm_part (
             id, pn, name, name_en, type, ffa, status, digital_model, unit, frame_part, nature_part, color_area, nature_pn, regulatory_part, key_part, accurately_traced, aftersale_part, standard_part_class, wrench_type, rod_type, head_shape, end_shape, washer, washer_type, diameter, length, pitch, dental_form, strength_grade, mechanical_property, surface_treatment, structure_character, device_form, device_code, designer, designer_dept, non_repair_reason, color_repair, primer_repair, electrophoresis_repair, production_code, spare_property, sale_note, first_production_date, initial_model, 
             description, create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
@@ -82,7 +82,7 @@
 
     <!-- 批量插入 -->
     <insert id="batchInsertPo" useGeneratedKeys="true" keyProperty="id" parameterType="java.util.List">
-        INSERT INTO tb_part (
+        INSERT INTO tb_mdm_part (
             id, pn, name, name_en, type, ffa, status, digital_model, unit, frame_part, nature_part, color_area, nature_pn, regulatory_part, key_part, accurately_traced, aftersale_part, standard_part_class, wrench_type, rod_type, head_shape, end_shape, washer, washer_type, diameter, length, pitch, dental_form, strength_grade, mechanical_property, surface_treatment, structure_character, device_form, device_code, designer, designer_dept, non_repair_reason, color_repair, primer_repair, electrophoresis_repair, production_code, spare_property, sale_note, first_production_date, initial_model, 
             description, create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
@@ -97,7 +97,7 @@
 
     <!-- 更新 -->
     <update id="updatePo" parameterType="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.PartPo">
-        UPDATE tb_part t SET
+        UPDATE tb_mdm_part t SET
         <if test="pn != null and pn != ''">
             t.pn = #{pn},
         </if>
@@ -243,7 +243,7 @@
 
     <!-- 逻辑删除 -->
     <update id="logicalDeletePo" parameterType="Long">
-        UPDATE tb_part t SET
+        UPDATE tb_mdm_part t SET
         t.row_version = t.row_version + 1,
         t.modify_time = now(),
         t.row_valid = 0
@@ -252,13 +252,13 @@
 
     <!-- 物理删除 -->
     <delete id="physicalDeletePo" parameterType="Long">
-        DELETE FROM tb_part t
+        DELETE FROM tb_mdm_part t
         WHERE t.id = #{value}
     </delete>
 
     <!-- 批量物理删除 -->
     <delete id="batchPhysicalDeletePo" parameterType="Long">
-        DELETE FROM tb_part t
+        DELETE FROM tb_mdm_part t
         WHERE t.id IN
         <foreach collection="array" item="id" open="(" separator="," close=")">
             #{id}
@@ -268,7 +268,7 @@
     <!-- 根据主键获取对应数据 -->
     <select id="selectPoById" parameterType="Long" resultMap="baseResultMap">
         SELECT <include refid="baseColumnList"/>
-        FROM tb_part t
+        FROM tb_mdm_part t
         WHERE t.id = #{value}
         AND t.row_valid = 1
     </select>
@@ -276,7 +276,7 @@
     <!-- 根据数据对象获取对应数据列表 -->
     <select id="selectPoByExample" parameterType="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.PartPo" resultMap="baseResultMap">
         SELECT <include refid="baseColumnList"/>
-        FROM tb_part t
+        FROM tb_mdm_part t
         WHERE t.row_valid = 1
         <if test="id != null">
             AND t.id = #{id}
@@ -437,7 +437,7 @@
     <!-- 根据Map对象获取对应数据列表 -->
     <select id="selectPoByMap" parameterType="java.util.Map" resultMap="baseResultMap">
         SELECT <include refid="baseColumnList"/>
-        FROM tb_part t
+        FROM tb_mdm_part t
         WHERE t.row_valid = 1
         <!-- 添加自定义条件 -->
         <if test="key != null and key != ''">
@@ -461,7 +461,7 @@
     <!-- 根据零件号查询零件信息 -->
     <select id="selectPoByPn" parameterType="java.util.Map" resultMap="baseResultMap">
         SELECT <include refid="baseColumnList"/>
-        FROM tb_part t
+        FROM tb_mdm_part t
         WHERE t.row_valid = 1
         AND t.pn = #{pn}
         LIMIT 1
@@ -470,7 +470,7 @@
     <!-- 获取所有FOTA升级零件 -->
     <select id="selectAllFotaPo" parameterType="java.util.Map" resultMap="baseResultMap">
         SELECT <include refid="baseColumnList"/>
-        FROM tb_part t
+        FROM tb_mdm_part t
         WHERE t.row_valid = 1
         AND t.device_code IN (
             SELECT code FROM tb_device
@@ -490,7 +490,7 @@
     <!-- 根据Map对象统计记录数 -->
     <select id="countPoByMap" parameterType="java.util.Map" resultType="int">
         SELECT COUNT(*)
-        FROM tb_part t
+        FROM tb_mdm_part t
         WHERE t.row_valid = 1
         <!-- 添加自定义条件 -->
     </select>
@@ -498,7 +498,7 @@
     <!-- 根据MDM外部引用ID查询零件 -->
     <select id="selectPoByExternalRefId" resultMap="baseResultMap">
         SELECT <include refid="baseColumnList"/>
-        FROM tb_part t
+        FROM tb_mdm_part t
         WHERE t.external_ref_id = #{externalRefId}
         AND t.row_valid = 1
         LIMIT 1
@@ -507,14 +507,14 @@
     <!-- 根据数据来源统计零件数量 -->
     <select id="countPoBySource" resultType="long">
         SELECT COUNT(*)
-        FROM tb_part t
+        FROM tb_mdm_part t
         WHERE t.source = #{source}
         AND t.row_valid = 1
     </select>
 
     <!-- 根据主键ID修改零件 -->
     <update id="updatePoById">
-        UPDATE tb_part t SET
+        UPDATE tb_mdm_part t SET
         t.pn = #{part.pn},
         t.name = #{part.name},
         t.name_en = #{part.nameEn},

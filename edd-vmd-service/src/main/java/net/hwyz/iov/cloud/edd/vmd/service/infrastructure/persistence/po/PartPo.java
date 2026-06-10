@@ -23,7 +23,7 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("tb_part")
+@TableName("tb_mdm_part")
 public class PartPo extends BasePo {
 
     private static final long serialVersionUID = 1L;
