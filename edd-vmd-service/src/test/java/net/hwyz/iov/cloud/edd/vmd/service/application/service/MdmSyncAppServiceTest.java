@@ -6,14 +6,17 @@ import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmConfigu
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmModelQueryClient;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmOptionCodeQueryClient;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmOptionFamilyQueryClient;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmPartQueryClient;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmPlantQueryClient;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmPlatformQueryClient;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmVariantQueryClient;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmVehicleNodeQueryClient;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmBrandEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmCarLineEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmModelEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmOptionCodeEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmOptionFamilyEvent;
+import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmPartEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmPlatformEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Brand;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.CarLine;
@@ -21,6 +24,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Configuration;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Model;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.OptionCode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.OptionFamily;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Part;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Plant;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Platform;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Variant;
@@ -30,9 +34,11 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmCarLineRepository
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmConfigurationRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmModelRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmOptionFamilyRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmPartRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmPlantRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmPlatformRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmVariantRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmVehicleNodeRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -85,6 +91,9 @@ class MdmSyncAppServiceTest {
     private MdmVariantRepository mdmVariantRepository;
 
     @Mock
+    private MdmVehicleNodeRepository mdmVehicleNodeRepository;
+
+    @Mock
     private MdmBrandQueryClient mdmBrandQueryClient;
 
     @Mock
@@ -110,6 +119,12 @@ class MdmSyncAppServiceTest {
 
     @Mock
     private MdmVariantQueryClient mdmVariantQueryClient;
+
+    @Mock
+    private MdmPartRepository mdmPartRepository;
+
+    @Mock
+    private MdmPartQueryClient mdmPartQueryClient;
 
     @InjectMocks
     private MdmSyncAppService mdmSyncAppService;
@@ -887,5 +902,153 @@ class MdmSyncAppServiceTest {
         // Then
         verify(mdmOptionFamilyRepository).selectOptionCodeByExternalRefId("mdm-oc-003");
         verify(mdmOptionFamilyRepository, never()).updateOptionCodeById(any(OptionCode.class));
+    }
+
+    // ==================== Part Event Tests ====================
+
+    @Test
+    @DisplayName("handlePartEvent应新增本地不存在的零件投影")
+    void handlePartEvent_shouldInsertWhenLocalPartNotExists() {
+        // Given
+        MdmPartEvent event = new MdmPartEvent("CREATED", "mdm-part-001", 1L, "PART001",
+                "零件1", "NORMAL", "NODE001", "SUPPLIER001", true, true, true, "PRODUCTION", LocalDateTime.now());
+
+        when(mdmPartRepository.selectByExternalRefId("mdm-part-001")).thenReturn(null);
+        when(mdmPartRepository.insert(any(Part.class))).thenReturn(1);
+
+        // When
+        mdmSyncAppService.handlePartEvent(event);
+
+        // Then
+        verify(mdmPartRepository).selectByExternalRefId("mdm-part-001");
+        verify(mdmPartRepository).insert(any(Part.class));
+    }
+
+    @Test
+    @DisplayName("handlePartEvent应更新本地已存在且版本更高的零件投影")
+    void handlePartEvent_shouldUpdateWhenLocalPartExistsAndVersionHigher() {
+        // Given
+        MdmPartEvent event = new MdmPartEvent("UPDATED", "mdm-part-002", 2L, "PART002",
+                "更新后的零件", "NORMAL", "NODE002", "SUPPLIER002", true, true, true, "PRODUCTION", LocalDateTime.now());
+
+        Part localPart = Part.builder()
+                .id(1L)
+                .pn("PART002")
+                .name("原始零件")
+                .source(SourceType.MDM)
+                .externalRefId("mdm-part-002")
+                .externalVersion(1L)
+                .build();
+
+        when(mdmPartRepository.selectByExternalRefId("mdm-part-002")).thenReturn(localPart);
+        when(mdmPartRepository.updateById(any(Part.class))).thenReturn(1);
+
+        // When
+        mdmSyncAppService.handlePartEvent(event);
+
+        // Then
+        verify(mdmPartRepository).selectByExternalRefId("mdm-part-002");
+        verify(mdmPartRepository).updateById(any(Part.class));
+    }
+
+    @Test
+    @DisplayName("handlePartEvent应忽略版本不高于本地的零件事件")
+    void handlePartEvent_shouldIgnoreWhenVersionNotHigher() {
+        // Given
+        MdmPartEvent event = new MdmPartEvent("UPDATED", "mdm-part-003", 1L, "PART003",
+                "旧版本零件", "NORMAL", "NODE003", "SUPPLIER003", true, true, true, "PRODUCTION", LocalDateTime.now());
+
+        Part localPart = Part.builder()
+                .id(1L)
+                .pn("PART003")
+                .name("本地零件")
+                .source(SourceType.MDM)
+                .externalRefId("mdm-part-003")
+                .externalVersion(2L)
+                .build();
+
+        when(mdmPartRepository.selectByExternalRefId("mdm-part-003")).thenReturn(localPart);
+
+        // When
+        mdmSyncAppService.handlePartEvent(event);
+
+        // Then
+        verify(mdmPartRepository).selectByExternalRefId("mdm-part-003");
+        verify(mdmPartRepository, never()).updateById(any(Part.class));
+    }
+
+    @Test
+    @DisplayName("bootstrapPart应跳过当本地已有MDM零件数据时")
+    void bootstrapPart_shouldSkipWhenLocalMdmPartsExist() {
+        // Given
+        when(mdmPartRepository.countBySource(SourceType.MDM)).thenReturn(5L);
+
+        // When
+        mdmSyncAppService.bootstrapPart();
+
+        // Then
+        verify(mdmPartRepository).countBySource(SourceType.MDM);
+        verify(mdmPartQueryClient, never()).getAllParts();
+    }
+
+    @Test
+    @DisplayName("bootstrapPart应同步当本地无MDM零件数据时")
+    void bootstrapPart_shouldSyncWhenNoLocalMdmParts() {
+        // Given
+        when(mdmPartRepository.countBySource(SourceType.MDM)).thenReturn(0L);
+
+        Map<String, Object> partData1 = new HashMap<>();
+        partData1.put("id", "mdm-part-001");
+        partData1.put("code", "PART001");
+        partData1.put("name", "零件1");
+        partData1.put("partType", "NORMAL");
+        partData1.put("vehicleNodeCode", "NODE001");
+        partData1.put("supplierCode", "SUPPLIER001");
+        partData1.put("isSoftware", true);
+        partData1.put("fotaUpgradeable", true);
+        partData1.put("isAccuratelyTraced", true);
+        partData1.put("status", "PRODUCTION");
+        partData1.put("version", 1);
+
+        Map<String, Object> partData2 = new HashMap<>();
+        partData2.put("id", "mdm-part-002");
+        partData2.put("code", "PART002");
+        partData2.put("name", "零件2");
+        partData2.put("partType", "NORMAL");
+        partData2.put("vehicleNodeCode", "NODE002");
+        partData2.put("supplierCode", "SUPPLIER002");
+        partData2.put("isSoftware", false);
+        partData2.put("fotaUpgradeable", false);
+        partData2.put("isAccuratelyTraced", false);
+        partData2.put("status", "PRODUCTION");
+        partData2.put("version", 1);
+
+        List<Map<String, Object>> mdmParts = Arrays.asList(partData1, partData2);
+        when(mdmPartQueryClient.getAllParts()).thenReturn(mdmParts);
+        when(mdmPartRepository.insert(any(Part.class))).thenReturn(1);
+
+        // When
+        mdmSyncAppService.bootstrapPart();
+
+        // Then
+        verify(mdmPartRepository).countBySource(SourceType.MDM);
+        verify(mdmPartQueryClient).getAllParts();
+        verify(mdmPartRepository, times(2)).insert(any(Part.class));
+    }
+
+    @Test
+    @DisplayName("bootstrapPart应处理MDM接口异常并不清空本地数据")
+    void bootstrapPart_shouldHandleMdmClientExceptionAndNotClearLocalData() {
+        // Given
+        when(mdmPartRepository.countBySource(SourceType.MDM)).thenReturn(0L);
+        when(mdmPartQueryClient.getAllParts()).thenThrow(new RuntimeException("MDM服务不可用"));
+
+        // When
+        mdmSyncAppService.bootstrapPart();
+
+        // Then
+        verify(mdmPartRepository).countBySource(SourceType.MDM);
+        verify(mdmPartQueryClient).getAllParts();
+        verify(mdmPartRepository, never()).insert(any(Part.class));
     }
 }
