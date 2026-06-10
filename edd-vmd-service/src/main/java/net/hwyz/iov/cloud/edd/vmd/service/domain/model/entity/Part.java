@@ -5,8 +5,10 @@ import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
 
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.framework.common.domain.DomainObj;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.LocalDateTime;
 
 /**
@@ -248,7 +250,7 @@ public class Part implements DomainObj<Part> {
     /**
      * 数据来源：MDM=来自MDM系统，MANUAL=本地手动维护
      */
-    private String source;
+    private SourceType source;
 
     /**
      * MDM侧实体主键ID
