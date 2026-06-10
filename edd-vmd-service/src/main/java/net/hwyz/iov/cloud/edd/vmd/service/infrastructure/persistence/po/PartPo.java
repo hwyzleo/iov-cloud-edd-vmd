@@ -5,6 +5,7 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import java.io.Serializable;
+import java.time.LocalDateTime;
 import net.hwyz.iov.cloud.framework.mysql.po.BasePo;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -296,4 +297,28 @@ public class PartPo extends BasePo {
      */
     @TableField("initial_model")
     private String initialModel;
+
+    /**
+     * 数据来源：MDM=来自MDM系统，MANUAL=本地手动维护
+     */
+    @TableField("source")
+    private String source;
+
+    /**
+     * MDM侧实体主键ID
+     */
+    @TableField("external_ref_id")
+    private String externalRefId;
+
+    /**
+     * MDM侧实体版本号
+     */
+    @TableField("external_version")
+    private Long externalVersion;
+
+    /**
+     * 最后一次同步时间
+     */
+    @TableField("last_sync_time")
+    private LocalDateTime lastSyncTime;
 }

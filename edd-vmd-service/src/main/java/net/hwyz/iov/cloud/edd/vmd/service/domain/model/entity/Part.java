@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import net.hwyz.iov.cloud.framework.common.domain.DomainObj;
 import java.time.Instant;
+import java.time.LocalDateTime;
 
 /**
  * 零件领域对象
@@ -243,5 +244,25 @@ public class Part implements DomainObj<Part> {
      * 初始车型
      */
     private String initialModel;
+
+    /**
+     * 数据来源：MDM=来自MDM系统，MANUAL=本地手动维护
+     */
+    private String source;
+
+    /**
+     * MDM侧实体主键ID
+     */
+    private String externalRefId;
+
+    /**
+     * MDM侧实体版本号
+     */
+    private Long externalVersion;
+
+    /**
+     * 最后一次同步时间
+     */
+    private LocalDateTime lastSyncTime;
 
 }
