@@ -12,6 +12,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmOptionF
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmOptionCodeQueryClient;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmVariantQueryClient;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmVehicleNodeQueryClient;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmPartQueryClient;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmBrandEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmConfigurationEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmOptionFamilyEvent;
@@ -82,6 +83,7 @@ public class MdmSyncAppService {
     private final MdmOptionFamilyQueryClient mdmOptionFamilyQueryClient;
     private final MdmOptionCodeQueryClient mdmOptionCodeQueryClient;
     private final MdmVehicleNodeQueryClient mdmVehicleNodeQueryClient;
+    private final MdmPartQueryClient mdmPartQueryClient;
 
     /**
      * 处理 MDM 品牌事件
@@ -970,8 +972,12 @@ public class MdmSyncAppService {
                     .pn(event.getCode())
                     .name(event.getName())
                     .type(event.getPartType())
-                    .status(event.getStatus())
+                    .deviceCode(event.getVehicleNodeCode())
+                    .supplierCode(event.getSupplierCode())
+                    .naturePart(event.getIsSoftware())
+                    .fotaUpgradeable(event.getFotaUpgradeable())
                     .accuratelyTraced(event.getIsAccuratelyTraced())
+                    .status(event.getStatus())
                     .source(SourceType.MDM)
                     .externalRefId(event.getEntityId())
                     .externalVersion(event.getVersion())
@@ -983,8 +989,12 @@ public class MdmSyncAppService {
             if (event.getVersion() > localPart.getExternalVersion()) {
                 localPart.setName(event.getName());
                 localPart.setType(event.getPartType());
-                localPart.setStatus(event.getStatus());
+                localPart.setDeviceCode(event.getVehicleNodeCode());
+                localPart.setSupplierCode(event.getSupplierCode());
+                localPart.setNaturePart(event.getIsSoftware());
+                localPart.setFotaUpgradeable(event.getFotaUpgradeable());
                 localPart.setAccuratelyTraced(event.getIsAccuratelyTraced());
+                localPart.setStatus(event.getStatus());
                 localPart.setExternalVersion(event.getVersion());
                 localPart.setLastSyncTime(LocalDateTime.now());
                 mdmPartRepository.updateById(localPart);
@@ -1057,6 +1067,63 @@ public class MdmSyncAppService {
     }
 
     /**
+     * Bootstrap 全量同步零件数据
+     *
+     * <p>当本地 source=MDM 的零件记录数为 0 时，自动调用 MDM Part 全量快照接口
+     * 拉取数据并 upsert 本地副本。</p>
+     *
+     * <p>CR-021：Part 投影采用按需最小化只读投影，仅同步 VMD 业务所需的 P0 必投字段集。
+     * 来自 edd-mdm Part 子域，区别于产品树各实体的 Product MDM 子域。</p>
+     */
+    public void bootstrapPart() {
+        log.info("开始 Bootstrap 零件数据同步");
+        long count = mdmPartRepository.countBySource(SourceType.MDM);
+        if (count == 0) {
+            log.info("本地无 MDM 零件记录（count=0），启动 Bootstrap 同步");
+            try {
+                List<Map<String, Object>> mdmParts = mdmPartQueryClient.getAllParts();
+                for (Map<String, Object> partData : mdmParts) {
+                    String code = (String) partData.get("code");
+                    String name = (String) partData.get("name");
+                    String partType = (String) partData.get("partType");
+                    String vehicleNodeCode = (String) partData.get("vehicleNodeCode");
+                    String supplierCode = (String) partData.get("supplierCode");
+                    Boolean isSoftware = (Boolean) partData.get("isSoftware");
+                    Boolean fotaUpgradeable = (Boolean) partData.get("fotaUpgradeable");
+                    Boolean isAccuratelyTraced = (Boolean) partData.get("isAccuratelyTraced");
+                    String status = (String) partData.get("status");
+                    String entityId = (String) partData.get("id");
+                    Long version = Long.valueOf(partData.get("version").toString());
+
+                    Part part = Part.builder()
+                            .pn(code)
+                            .name(name)
+                            .type(partType)
+                            .deviceCode(vehicleNodeCode)
+                            .supplierCode(supplierCode)
+                            .naturePart(isSoftware)
+                            .fotaUpgradeable(fotaUpgradeable)
+                            .accuratelyTraced(isAccuratelyTraced)
+                            .status(status)
+                            .source(SourceType.MDM)
+                            .externalRefId(entityId)
+                            .externalVersion(version)
+                            .lastSyncTime(LocalDateTime.now())
+                            .build();
+                    mdmPartRepository.insert(part);
+                    log.info("Bootstrap 新增 MDM 零件投影: pn={}", code);
+                }
+                log.info("Bootstrap 零件数据同步完成，共同步 {} 条", mdmParts.size());
+            } catch (Exception e) {
+                log.error("Bootstrap 零件数据同步失败", e);
+                // 不清空本地已有数据
+            }
+        } else {
+            log.info("本地已有 MDM 零件数据 {} 条，跳过 Bootstrap", count);
+        }
+    }
+
+    /**
      * Bootstrap 全量同步所有数据
      */
     public void bootstrapAll() {
@@ -1071,6 +1138,7 @@ public class MdmSyncAppService {
         bootstrapOptionFamily();
         bootstrapOptionCode();
         bootstrapVehicleNode();
+        bootstrapPart();
         log.info("Bootstrap全量数据同步完成");
     }
 

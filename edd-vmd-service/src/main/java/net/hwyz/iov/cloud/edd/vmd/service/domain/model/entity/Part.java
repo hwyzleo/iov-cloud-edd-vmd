@@ -193,6 +193,16 @@ public class Part implements DomainObj<Part> {
     private String deviceCode;
 
     /**
+     * 供应商代码
+     */
+    private String supplierCode;
+
+    /**
+     * 是否支持FOTA升级
+     */
+    private Boolean fotaUpgradeable;
+
+    /**
      * 设计工程师
      */
     private String designer;
