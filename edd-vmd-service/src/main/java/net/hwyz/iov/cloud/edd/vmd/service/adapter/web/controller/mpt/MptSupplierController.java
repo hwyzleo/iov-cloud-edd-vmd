@@ -6,9 +6,9 @@ import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.SupplierRequest;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.SupplierResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.MptSupplierAssembler;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.SupplierDto;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.SupplierQuery;
-import net.hwyz.iov.cloud.edd.vmd.service.application.service.SupplierAppService;
+// import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.SupplierDto; // TODO: CR-019 - SupplierDto已删除
+// import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.SupplierQuery; // TODO: CR-019 - SupplierQuery已删除
+// import net.hwyz.iov.cloud.edd.vmd.service.application.service.SupplierAppService; // TODO: CR-019 - SupplierAppService已删除
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
 import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
 import net.hwyz.iov.cloud.framework.common.bean.ApiResponse;
@@ -34,7 +34,7 @@ import java.util.List;
 @RequestMapping(value = "/api/mpt/supplier/v1")
 public class MptSupplierController extends BaseController {
 
-    private final SupplierAppService supplierAppService;
+    // private final SupplierAppService supplierAppService; // TODO: CR-019 - SupplierAppService已删除
 
     // TODO: CR-019 - 待迁移
     // /**

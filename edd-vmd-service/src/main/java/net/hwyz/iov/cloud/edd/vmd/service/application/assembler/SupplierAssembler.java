@@ -1,10 +1,10 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.assembler;
 
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.SupplierDto;
+// import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.SupplierDto; // TODO: CR-019 - SupplierDto已删除
 // import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Supplier; // TODO: CR-019 - Supplier领域对象已删除
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.SupplierCmd;
+// import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.SupplierCmd; // TODO: CR-019 - SupplierCmd已删除
 
 import java.util.List;
 
