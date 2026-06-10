@@ -1,7 +1,7 @@
 package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter;
 
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.ConfigurationOptionCode;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehConfigurationOptionCodePo;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.MdmConfigurationOptionCodePo;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 
@@ -23,7 +23,7 @@ public interface ConfigurationOptionCodeConverter {
      * @param po PO
      * @return 领域对象
      */
-    ConfigurationOptionCode toDomain(VehConfigurationOptionCodePo po);
+    ConfigurationOptionCode toDomain(MdmConfigurationOptionCodePo po);
 
     /**
      * PO 列表转领域对象列表
@@ -31,7 +31,7 @@ public interface ConfigurationOptionCodeConverter {
      * @param poList PO 列表
      * @return 领域对象列表
      */
-    List<ConfigurationOptionCode> toDomainList(List<VehConfigurationOptionCodePo> poList);
+    List<ConfigurationOptionCode> toDomainList(List<MdmConfigurationOptionCodePo> poList);
 
     /**
      * 领域对象转 PO
@@ -39,5 +39,5 @@ public interface ConfigurationOptionCodeConverter {
      * @param domain 领域对象
      * @return PO
      */
-    VehConfigurationOptionCodePo fromDomain(ConfigurationOptionCode domain);
+    MdmConfigurationOptionCodePo fromDomain(ConfigurationOptionCode domain);
 }

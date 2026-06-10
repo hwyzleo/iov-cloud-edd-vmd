@@ -17,8 +17,8 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Variant;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VariantOptionCode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehConfigurationRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehVariantRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmConfigurationRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmVariantRepository;
 import net.hwyz.iov.cloud.framework.common.util.ParamHelper;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Service;
@@ -37,9 +37,9 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class VariantAppService {
 
-    private final VehVariantRepository vehVariantRepository;
+    private final MdmVariantRepository mdmVariantRepository;
     private final VehBasicInfoRepository vehBasicInfoRepository;
-    private final VehConfigurationRepository vehConfigurationRepository;
+    private final MdmConfigurationRepository mdmConfigurationRepository;
     private final OptionFamilyAppService optionFamilyAppService;
 
     // ==================== 版本 ====================
@@ -59,7 +59,7 @@ public class VariantAppService {
         map.put("name", ParamHelper.fuzzyQueryParam(query.getName()));
         map.put("beginTime", query.getBeginTime());
         map.put("endTime", query.getEndTime());
-        List<Variant> variantList = vehVariantRepository.selectByMap(map);
+        List<Variant> variantList = mdmVariantRepository.selectByMap(map);
         return PageUtil.convert(variantList, VariantAssembler.INSTANCE::fromDomain);
     }
 
@@ -85,10 +85,10 @@ public class VariantAppService {
      * @return 结果
      */
     public Boolean checkVariantBuildConfigExist(Long variantId) {
-        Variant variant = vehVariantRepository.selectById(variantId);
+        Variant variant = mdmVariantRepository.selectById(variantId);
         Map<String, Object> map = new HashMap<>();
         map.put("variantCode", variant.getCode());
-        return vehConfigurationRepository.countByMap(map) > 0;
+        return mdmConfigurationRepository.countByMap(map) > 0;
     }
 
     /**
@@ -98,7 +98,7 @@ public class VariantAppService {
      * @return 结果
      */
     public Boolean checkVariantVehicleExist(Long variantId) {
-        Variant variant = vehVariantRepository.selectById(variantId);
+        Variant variant = mdmVariantRepository.selectById(variantId);
         Map<String, Object> map = new HashMap<>();
         map.put("variantCode", variant.getCode());
         return vehBasicInfoRepository.countByMap(map) > 0;
@@ -111,7 +111,7 @@ public class VariantAppService {
      * @return 版本信息
      */
     public VariantDto getVariantById(Long id) {
-        return VariantAssembler.INSTANCE.fromDomain(vehVariantRepository.selectById(id));
+        return VariantAssembler.INSTANCE.fromDomain(mdmVariantRepository.selectById(id));
     }
 
     /**
@@ -121,7 +121,7 @@ public class VariantAppService {
      * @return 版本领域对象
      */
     public Variant getVariantByCode(String code) {
-        return vehVariantRepository.selectByCode(code);
+        return mdmVariantRepository.selectByCode(code);
     }
 
     /**
@@ -136,7 +136,7 @@ public class VariantAppService {
         if (variant.getSource() == SourceType.MDM) {
             throw new ProductDataReadOnlyException("版本", variant.getCode());
         }
-        return vehVariantRepository.insert(variant);
+        return mdmVariantRepository.insert(variant);
     }
 
     /**
@@ -146,13 +146,13 @@ public class VariantAppService {
      * @return 结果
      */
     public int modifyVariant(VariantCmd variantCmd) {
-        Variant variant = vehVariantRepository.selectById(variantCmd.getId());
+        Variant variant = mdmVariantRepository.selectById(variantCmd.getId());
         // 检查是否为 MDM 来源数据
         if (variant != null && variant.getSource() == SourceType.MDM) {
             throw new ProductDataReadOnlyException("版本", variant.getCode());
         }
         Variant updateVariant = VariantAssembler.INSTANCE.toDomain(variantCmd);
-        return vehVariantRepository.update(updateVariant);
+        return mdmVariantRepository.update(updateVariant);
     }
 
     /**
@@ -164,12 +164,12 @@ public class VariantAppService {
     public int deleteVariantByIds(Long[] ids) {
         // 检查是否为 MDM 来源数据
         for (Long id : ids) {
-            Variant variant = vehVariantRepository.selectById(id);
+            Variant variant = mdmVariantRepository.selectById(id);
             if (variant != null && variant.getSource() == SourceType.MDM) {
                 throw new ProductDataReadOnlyException("版本", variant.getCode());
             }
         }
-        return vehVariantRepository.batchPhysicalDelete(ids);
+        return mdmVariantRepository.batchPhysicalDelete(ids);
     }
 
     // ==================== 版本选项值 ====================
@@ -186,7 +186,7 @@ public class VariantAppService {
                 .variantCode(variantCode)
                 .optionFamilyCode(optionFamilyCode)
                 .build();
-        List<VariantOptionCode> list = vehVariantRepository.selectOptionCodeByExample(example);
+        List<VariantOptionCode> list = mdmVariantRepository.selectOptionCodeByExample(example);
         List<VariantOptionCodeDto> dtoList = PageUtil.convert(list, VariantOptionCodeAssembler.INSTANCE::fromDomain);
         dtoList.forEach(dto -> {
             OptionFamilyDto optionFamily = optionFamilyAppService.getOptionFamilyByCode(dto.getOptionFamilyCode());
@@ -215,7 +215,7 @@ public class VariantAppService {
      * @return 版本选项值关系信息
      */
     public VariantOptionCodeDto getVariantOptionCodeById(Long id) {
-        List<VariantOptionCode> list = vehVariantRepository.selectOptionCodeByExample(VariantOptionCode.builder().id(id).build());
+        List<VariantOptionCode> list = mdmVariantRepository.selectOptionCodeByExample(VariantOptionCode.builder().id(id).build());
         return list.isEmpty() ? null : VariantOptionCodeAssembler.INSTANCE.fromDomain(list.get(0));
     }
 
@@ -231,7 +231,7 @@ public class VariantAppService {
         if (ObjUtil.isNull(id)) {
             id = -1L;
         }
-        List<VariantOptionCode> list = vehVariantRepository.selectOptionCodeByExample(VariantOptionCode.builder()
+        List<VariantOptionCode> list = mdmVariantRepository.selectOptionCodeByExample(VariantOptionCode.builder()
                 .variantCode(variantCode)
                 .optionFamilyCode(optionFamilyCode)
                 .build());
@@ -246,7 +246,7 @@ public class VariantAppService {
      */
     public int createVariantOptionCode(VariantOptionCodeCmd optionCodeCmd) {
         VariantOptionCode optionCode = VariantOptionCodeAssembler.INSTANCE.toDomain(optionCodeCmd);
-        return vehVariantRepository.batchInsertOptionCode(List.of(optionCode));
+        return mdmVariantRepository.batchInsertOptionCode(List.of(optionCode));
     }
 
     /**
@@ -257,7 +257,7 @@ public class VariantAppService {
      */
     public int modifyVariantOptionCode(VariantOptionCodeCmd optionCodeCmd) {
         VariantOptionCode optionCode = VariantOptionCodeAssembler.INSTANCE.toDomain(optionCodeCmd);
-        return vehVariantRepository.updateOptionCode(optionCode);
+        return mdmVariantRepository.updateOptionCode(optionCode);
     }
 
     /**
@@ -267,7 +267,7 @@ public class VariantAppService {
      * @return 结果
      */
     public int deleteVariantOptionCodeByIds(Long[] ids) {
-        return vehVariantRepository.batchPhysicalDeleteOptionCode(ids);
+        return mdmVariantRepository.batchPhysicalDeleteOptionCode(ids);
     }
 
 }

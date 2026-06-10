@@ -7,8 +7,8 @@ import net.hwyz.iov.cloud.edd.vmd.service.common.exception.ProductDataReadOnlyEx
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Brand;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBrandRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehCarLineRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmBrandRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmCarLineRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,10 +35,10 @@ import static org.mockito.Mockito.*;
 class BrandAppServiceTest {
 
     @Mock
-    private VehBrandRepository vehBrandRepository;
+    private MdmBrandRepository mdmBrandRepository;
 
     @Mock
-    private VehCarLineRepository vehCarLineRepository;
+    private MdmCarLineRepository mdmCarLineRepository;
 
     @Mock
     private VehBasicInfoRepository vehBasicInfoRepository;
@@ -59,7 +59,7 @@ class BrandAppServiceTest {
         Brand brand2 = Brand.builder().id(2L).code("BRAND002").name("测试品牌2").build();
         List<Brand> brands = Arrays.asList(brand1, brand2);
 
-        when(vehBrandRepository.selectByMap(any(Map.class))).thenReturn(brands);
+        when(mdmBrandRepository.selectByMap(any(Map.class))).thenReturn(brands);
 
         // When
         List<BrandDto> result = brandAppService.search(query);
@@ -67,7 +67,7 @@ class BrandAppServiceTest {
         // Then
         assertNotNull(result);
         assertEquals(2, result.size());
-        verify(vehBrandRepository).selectByMap(any(Map.class));
+        verify(mdmBrandRepository).selectByMap(any(Map.class));
     }
 
     @Test
@@ -78,7 +78,7 @@ class BrandAppServiceTest {
                 .code("NONEXISTENT")
                 .build();
 
-        when(vehBrandRepository.selectByMap(any(Map.class))).thenReturn(Collections.emptyList());
+        when(mdmBrandRepository.selectByMap(any(Map.class))).thenReturn(Collections.emptyList());
 
         // When
         List<BrandDto> result = brandAppService.search(query);
@@ -86,7 +86,7 @@ class BrandAppServiceTest {
         // Then
         assertNotNull(result);
         assertTrue(result.isEmpty());
-        verify(vehBrandRepository).selectByMap(any(Map.class));
+        verify(mdmBrandRepository).selectByMap(any(Map.class));
     }
 
     @Test
@@ -94,14 +94,14 @@ class BrandAppServiceTest {
     void checkCodeUnique_shouldReturnTrueWhenCodeIsUnique() {
         // Given
         String code = "BRAND001";
-        when(vehBrandRepository.selectByCode(code)).thenReturn(null);
+        when(mdmBrandRepository.selectByCode(code)).thenReturn(null);
 
         // When
         Boolean result = brandAppService.checkCodeUnique(1L, code);
 
         // Then
         assertTrue(result);
-        verify(vehBrandRepository).selectByCode(code);
+        verify(mdmBrandRepository).selectByCode(code);
     }
 
     @Test
@@ -112,14 +112,14 @@ class BrandAppServiceTest {
         String code = "BRAND001";
         Brand existingBrand = Brand.builder().id(brandId).code(code).build();
 
-        when(vehBrandRepository.selectByCode(code)).thenReturn(existingBrand);
+        when(mdmBrandRepository.selectByCode(code)).thenReturn(existingBrand);
 
         // When
         Boolean result = brandAppService.checkCodeUnique(brandId, code);
 
         // Then
         assertTrue(result);
-        verify(vehBrandRepository).selectByCode(code);
+        verify(mdmBrandRepository).selectByCode(code);
     }
 
     @Test
@@ -130,14 +130,14 @@ class BrandAppServiceTest {
         String code = "BRAND001";
         Brand existingBrand = Brand.builder().id(2L).code(code).build();
 
-        when(vehBrandRepository.selectByCode(code)).thenReturn(existingBrand);
+        when(mdmBrandRepository.selectByCode(code)).thenReturn(existingBrand);
 
         // When
         Boolean result = brandAppService.checkCodeUnique(brandId, code);
 
         // Then
         assertFalse(result);
-        verify(vehBrandRepository).selectByCode(code);
+        verify(mdmBrandRepository).selectByCode(code);
     }
 
     @Test
@@ -147,16 +147,16 @@ class BrandAppServiceTest {
         Long brandId = 1L;
         Brand brand = Brand.builder().id(brandId).code("BRAND001").build();
 
-        when(vehBrandRepository.selectById(brandId)).thenReturn(brand);
-        when(vehCarLineRepository.countByMap(any(Map.class))).thenReturn(5);
+        when(mdmBrandRepository.selectById(brandId)).thenReturn(brand);
+        when(mdmCarLineRepository.countByMap(any(Map.class))).thenReturn(5);
 
         // When
         Boolean result = brandAppService.checkBrandSeriesExist(brandId);
 
         // Then
         assertTrue(result);
-        verify(vehBrandRepository).selectById(brandId);
-        verify(vehCarLineRepository).countByMap(any(Map.class));
+        verify(mdmBrandRepository).selectById(brandId);
+        verify(mdmCarLineRepository).countByMap(any(Map.class));
     }
 
     @Test
@@ -166,16 +166,16 @@ class BrandAppServiceTest {
         Long brandId = 1L;
         Brand brand = Brand.builder().id(brandId).code("BRAND001").build();
 
-        when(vehBrandRepository.selectById(brandId)).thenReturn(brand);
-        when(vehCarLineRepository.countByMap(any(Map.class))).thenReturn(0);
+        when(mdmBrandRepository.selectById(brandId)).thenReturn(brand);
+        when(mdmCarLineRepository.countByMap(any(Map.class))).thenReturn(0);
 
         // When
         Boolean result = brandAppService.checkBrandSeriesExist(brandId);
 
         // Then
         assertFalse(result);
-        verify(vehBrandRepository).selectById(brandId);
-        verify(vehCarLineRepository).countByMap(any(Map.class));
+        verify(mdmBrandRepository).selectById(brandId);
+        verify(mdmCarLineRepository).countByMap(any(Map.class));
     }
 
     @Test
@@ -185,7 +185,7 @@ class BrandAppServiceTest {
         Long brandId = 1L;
         Brand brand = Brand.builder().id(brandId).code("BRAND001").build();
 
-        when(vehBrandRepository.selectById(brandId)).thenReturn(brand);
+        when(mdmBrandRepository.selectById(brandId)).thenReturn(brand);
         when(vehBasicInfoRepository.countByMap(any(Map.class))).thenReturn(5);
 
         // When
@@ -193,7 +193,7 @@ class BrandAppServiceTest {
 
         // Then
         assertTrue(result);
-        verify(vehBrandRepository).selectById(brandId);
+        verify(mdmBrandRepository).selectById(brandId);
         verify(vehBasicInfoRepository).countByMap(any(Map.class));
     }
 
@@ -204,7 +204,7 @@ class BrandAppServiceTest {
         Long brandId = 1L;
         Brand brand = Brand.builder().id(brandId).code("BRAND001").build();
 
-        when(vehBrandRepository.selectById(brandId)).thenReturn(brand);
+        when(mdmBrandRepository.selectById(brandId)).thenReturn(brand);
         when(vehBasicInfoRepository.countByMap(any(Map.class))).thenReturn(0);
 
         // When
@@ -212,7 +212,7 @@ class BrandAppServiceTest {
 
         // Then
         assertFalse(result);
-        verify(vehBrandRepository).selectById(brandId);
+        verify(mdmBrandRepository).selectById(brandId);
         verify(vehBasicInfoRepository).countByMap(any(Map.class));
     }
 
@@ -227,7 +227,7 @@ class BrandAppServiceTest {
                 .name("测试品牌")
                 .build();
 
-        when(vehBrandRepository.selectById(brandId)).thenReturn(brand);
+        when(mdmBrandRepository.selectById(brandId)).thenReturn(brand);
 
         // When
         BrandDto result = brandAppService.getBrandById(brandId);
@@ -237,7 +237,7 @@ class BrandAppServiceTest {
         assertEquals(brandId, result.getId());
         assertEquals("BRAND001", result.getCode());
         assertEquals("测试品牌", result.getName());
-        verify(vehBrandRepository).selectById(brandId);
+        verify(mdmBrandRepository).selectById(brandId);
     }
 
     @Test
@@ -251,7 +251,7 @@ class BrandAppServiceTest {
                 .name("测试品牌")
                 .build();
 
-        when(vehBrandRepository.selectByCode(code)).thenReturn(brand);
+        when(mdmBrandRepository.selectByCode(code)).thenReturn(brand);
 
         // When
         Brand result = brandAppService.getBrandByCode(code);
@@ -259,7 +259,7 @@ class BrandAppServiceTest {
         // Then
         assertNotNull(result);
         assertEquals(code, result.getCode());
-        verify(vehBrandRepository).selectByCode(code);
+        verify(mdmBrandRepository).selectByCode(code);
     }
 
     @Test
@@ -271,14 +271,14 @@ class BrandAppServiceTest {
                 .name("新品牌")
                 .build();
 
-        when(vehBrandRepository.insert(any(Brand.class))).thenReturn(1);
+        when(mdmBrandRepository.insert(any(Brand.class))).thenReturn(1);
 
         // When
         int result = brandAppService.createBrand(cmd, "user1");
 
         // Then
         assertEquals(1, result);
-        verify(vehBrandRepository).insert(any(Brand.class));
+        verify(mdmBrandRepository).insert(any(Brand.class));
     }
 
     @Test
@@ -317,16 +317,16 @@ class BrandAppServiceTest {
                 .source(SourceType.MANUAL)
                 .build();
 
-        when(vehBrandRepository.selectById(1L)).thenReturn(existingBrand);
-        when(vehBrandRepository.update(any(Brand.class))).thenReturn(1);
+        when(mdmBrandRepository.selectById(1L)).thenReturn(existingBrand);
+        when(mdmBrandRepository.update(any(Brand.class))).thenReturn(1);
 
         // When
         int result = brandAppService.modifyBrand(cmd, "user1");
 
         // Then
         assertEquals(1, result);
-        verify(vehBrandRepository).selectById(1L);
-        verify(vehBrandRepository).update(any(Brand.class));
+        verify(mdmBrandRepository).selectById(1L);
+        verify(mdmBrandRepository).update(any(Brand.class));
     }
 
     @Test
@@ -346,14 +346,14 @@ class BrandAppServiceTest {
                 .source(SourceType.MDM)
                 .build();
 
-        when(vehBrandRepository.selectById(1L)).thenReturn(existingBrand);
+        when(mdmBrandRepository.selectById(1L)).thenReturn(existingBrand);
 
         // When & Then
         assertThrows(ProductDataReadOnlyException.class, () -> {
             brandAppService.modifyBrand(cmd, "user1");
         });
-        verify(vehBrandRepository).selectById(1L);
-        verify(vehBrandRepository, never()).update(any(Brand.class));
+        verify(mdmBrandRepository).selectById(1L);
+        verify(mdmBrandRepository, never()).update(any(Brand.class));
     }
 
     @Test
@@ -366,20 +366,20 @@ class BrandAppServiceTest {
         Brand brand2 = Brand.builder().id(2L).code("BRAND002").source(SourceType.MANUAL).build();
         Brand brand3 = Brand.builder().id(3L).code("BRAND003").source(SourceType.MANUAL).build();
 
-        when(vehBrandRepository.selectById(1L)).thenReturn(brand1);
-        when(vehBrandRepository.selectById(2L)).thenReturn(brand2);
-        when(vehBrandRepository.selectById(3L)).thenReturn(brand3);
-        when(vehBrandRepository.batchPhysicalDelete(ids)).thenReturn(3);
+        when(mdmBrandRepository.selectById(1L)).thenReturn(brand1);
+        when(mdmBrandRepository.selectById(2L)).thenReturn(brand2);
+        when(mdmBrandRepository.selectById(3L)).thenReturn(brand3);
+        when(mdmBrandRepository.batchPhysicalDelete(ids)).thenReturn(3);
 
         // When
         int result = brandAppService.deleteBrandByIds(ids);
 
         // Then
         assertEquals(3, result);
-        verify(vehBrandRepository).selectById(1L);
-        verify(vehBrandRepository).selectById(2L);
-        verify(vehBrandRepository).selectById(3L);
-        verify(vehBrandRepository).batchPhysicalDelete(ids);
+        verify(mdmBrandRepository).selectById(1L);
+        verify(mdmBrandRepository).selectById(2L);
+        verify(mdmBrandRepository).selectById(3L);
+        verify(mdmBrandRepository).batchPhysicalDelete(ids);
     }
 
     @Test
@@ -391,16 +391,16 @@ class BrandAppServiceTest {
         Brand brand1 = Brand.builder().id(1L).code("BRAND001").source(SourceType.MANUAL).build();
         Brand brand2 = Brand.builder().id(2L).code("BRAND_MDM").source(SourceType.MDM).build();
 
-        when(vehBrandRepository.selectById(1L)).thenReturn(brand1);
-        when(vehBrandRepository.selectById(2L)).thenReturn(brand2);
+        when(mdmBrandRepository.selectById(1L)).thenReturn(brand1);
+        when(mdmBrandRepository.selectById(2L)).thenReturn(brand2);
 
         // When & Then
         assertThrows(ProductDataReadOnlyException.class, () -> {
             brandAppService.deleteBrandByIds(ids);
         });
-        verify(vehBrandRepository).selectById(1L);
-        verify(vehBrandRepository).selectById(2L);
-        verify(vehBrandRepository, never()).batchPhysicalDelete(any(Long[].class));
+        verify(mdmBrandRepository).selectById(1L);
+        verify(mdmBrandRepository).selectById(2L);
+        verify(mdmBrandRepository, never()).batchPhysicalDelete(any(Long[].class));
     }
 
     @Test
@@ -414,15 +414,15 @@ class BrandAppServiceTest {
                 .externalRefId(externalRefId)
                 .build();
 
-        when(vehBrandRepository.selectByExternalRefId(externalRefId)).thenReturn(brand);
+        when(mdmBrandRepository.selectByExternalRefId(externalRefId)).thenReturn(brand);
 
         // When
-        Brand result = vehBrandRepository.selectByExternalRefId(externalRefId);
+        Brand result = mdmBrandRepository.selectByExternalRefId(externalRefId);
 
         // Then
         assertNotNull(result);
         assertEquals(externalRefId, result.getExternalRefId());
-        verify(vehBrandRepository).selectByExternalRefId(externalRefId);
+        verify(mdmBrandRepository).selectByExternalRefId(externalRefId);
     }
 
     @Test
@@ -430,13 +430,13 @@ class BrandAppServiceTest {
     void countBySource_shouldReturnCountForSource() {
         // Given
         SourceType source = SourceType.MDM;
-        when(vehBrandRepository.countBySource(source)).thenReturn(5L);
+        when(mdmBrandRepository.countBySource(source)).thenReturn(5L);
 
         // When
-        long result = vehBrandRepository.countBySource(source);
+        long result = mdmBrandRepository.countBySource(source);
 
         // Then
         assertEquals(5L, result);
-        verify(vehBrandRepository).countBySource(source);
+        verify(mdmBrandRepository).countBySource(source);
     }
 }

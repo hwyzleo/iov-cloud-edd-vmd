@@ -13,7 +13,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.ConfigurationQue
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Configuration;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.ConfigurationOptionCode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehConfigurationRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmConfigurationRepository;
 import net.hwyz.iov.cloud.framework.common.util.ParamHelper;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Service;
@@ -29,7 +29,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ConfigurationAppService {
 
-    private final VehConfigurationRepository vehConfigurationRepository;
+    private final MdmConfigurationRepository mdmConfigurationRepository;
     private final VehBasicInfoRepository vehBasicInfoRepository;
     private final OptionFamilyAppService optionFamilyAppService;
 
@@ -44,12 +44,12 @@ public class ConfigurationAppService {
         map.put("name", ParamHelper.fuzzyQueryParam(query.getName()));
         map.put("beginTime", query.getBeginTime());
         map.put("endTime", query.getEndTime());
-        List<Configuration> configurationList = vehConfigurationRepository.selectByMap(map);
+        List<Configuration> configurationList = mdmConfigurationRepository.selectByMap(map);
         return PageUtil.convert(configurationList, ConfigurationAssembler.INSTANCE::fromDomain);
     }
 
     public List<ConfigurationDto> getConfigurationListByVariantCode(String variantCode) {
-        List<Configuration> configurationList = vehConfigurationRepository.selectByExample(Configuration.builder()
+        List<Configuration> configurationList = mdmConfigurationRepository.selectByExample(Configuration.builder()
                 .variantCode(variantCode)
                 .enable(true)
                 .build());
@@ -58,7 +58,7 @@ public class ConfigurationAppService {
 
     @Deprecated
     public List<ConfigurationDto> getConfigurationListByBaseModelCode(String baseModelCode) {
-        List<Configuration> configurationList = vehConfigurationRepository.selectByExample(Configuration.builder()
+        List<Configuration> configurationList = mdmConfigurationRepository.selectByExample(Configuration.builder()
                 .variantCode(baseModelCode)
                 .enable(true)
                 .build());
@@ -66,12 +66,12 @@ public class ConfigurationAppService {
     }
 
     public ConfigurationDto getConfigurationByCode(String code) {
-        Configuration configuration = vehConfigurationRepository.selectByCode(code);
+        Configuration configuration = mdmConfigurationRepository.selectByCode(code);
         return ConfigurationAssembler.INSTANCE.fromDomain(configuration);
     }
 
     public Configuration getConfigurationEntityByCode(String code) {
-        return vehConfigurationRepository.selectByCode(code);
+        return mdmConfigurationRepository.selectByCode(code);
     }
 
     public Boolean checkCodeUnique(Long configurationId, String code) {
@@ -83,28 +83,28 @@ public class ConfigurationAppService {
     }
 
     public Boolean checkConfigurationVehicleExist(Long configurationId) {
-        Configuration configuration = vehConfigurationRepository.selectById(configurationId);
+        Configuration configuration = mdmConfigurationRepository.selectById(configurationId);
         Map<String, Object> map = new HashMap<>();
         map.put("configurationCode", configuration.getCode());
         return vehBasicInfoRepository.countByMap(map) > 0;
     }
 
     public ConfigurationDto getConfigurationById(Long id) {
-        return ConfigurationAssembler.INSTANCE.fromDomain(vehConfigurationRepository.selectById(id));
+        return ConfigurationAssembler.INSTANCE.fromDomain(mdmConfigurationRepository.selectById(id));
     }
 
     public int createConfiguration(ConfigurationCmd configurationCmd, String userId) {
         Configuration configuration = ConfigurationAssembler.INSTANCE.toDomain(configurationCmd);
-        return vehConfigurationRepository.insert(configuration);
+        return mdmConfigurationRepository.insert(configuration);
     }
 
     public int modifyConfiguration(ConfigurationCmd configurationCmd, String userId) {
         Configuration configuration = ConfigurationAssembler.INSTANCE.toDomain(configurationCmd);
-        return vehConfigurationRepository.update(configuration);
+        return mdmConfigurationRepository.update(configuration);
     }
 
     public int deleteConfigurationByIds(Long[] ids) {
-        return vehConfigurationRepository.batchPhysicalDelete(ids);
+        return mdmConfigurationRepository.batchPhysicalDelete(ids);
     }
 
     public List<ConfigurationOptionCodeDto> searchOptionCode(String configurationCode, String optionFamilyCode) {
@@ -112,7 +112,7 @@ public class ConfigurationAppService {
                 .configurationCode(configurationCode)
                 .optionFamilyCode(optionFamilyCode)
                 .build();
-        List<ConfigurationOptionCode> list = vehConfigurationRepository.selectOptionCodeByExample(example);
+        List<ConfigurationOptionCode> list = mdmConfigurationRepository.selectOptionCodeByExample(example);
         List<ConfigurationOptionCodeDto> dtoList = PageUtil.convert(list, ConfigurationOptionCodeAssembler.INSTANCE::fromDomain);
         dtoList.forEach(dto -> {
             OptionFamilyDto optionFamily = optionFamilyAppService.getOptionFamilyByCode(dto.getOptionFamilyCode());
@@ -135,7 +135,7 @@ public class ConfigurationAppService {
     }
 
     public ConfigurationOptionCodeDto getConfigurationOptionCodeById(Long id) {
-        List<ConfigurationOptionCode> list = vehConfigurationRepository.selectOptionCodeByExample(ConfigurationOptionCode.builder().id(id).build());
+        List<ConfigurationOptionCode> list = mdmConfigurationRepository.selectOptionCodeByExample(ConfigurationOptionCode.builder().id(id).build());
         return list.isEmpty() ? null : ConfigurationOptionCodeAssembler.INSTANCE.fromDomain(list.get(0));
     }
 
@@ -143,7 +143,7 @@ public class ConfigurationAppService {
         if (ObjUtil.isNull(id)) {
             id = -1L;
         }
-        List<ConfigurationOptionCode> list = vehConfigurationRepository.selectOptionCodeByExample(ConfigurationOptionCode.builder()
+        List<ConfigurationOptionCode> list = mdmConfigurationRepository.selectOptionCodeByExample(ConfigurationOptionCode.builder()
                 .configurationCode(configurationCode)
                 .optionFamilyCode(optionFamilyCode)
                 .build());
@@ -152,16 +152,16 @@ public class ConfigurationAppService {
 
     public int createConfigurationOptionCode(ConfigurationOptionCodeCmd optionCodeCmd) {
         ConfigurationOptionCode optionCode = ConfigurationOptionCodeAssembler.INSTANCE.toDomain(optionCodeCmd);
-        return vehConfigurationRepository.batchInsertOptionCode(List.of(optionCode));
+        return mdmConfigurationRepository.batchInsertOptionCode(List.of(optionCode));
     }
 
     public int modifyConfigurationOptionCode(ConfigurationOptionCodeCmd optionCodeCmd) {
         ConfigurationOptionCode optionCode = ConfigurationOptionCodeAssembler.INSTANCE.toDomain(optionCodeCmd);
-        return vehConfigurationRepository.updateOptionCode(optionCode);
+        return mdmConfigurationRepository.updateOptionCode(optionCode);
     }
 
     public int deleteConfigurationOptionCodeByIds(Long[] ids) {
-        return vehConfigurationRepository.batchPhysicalDeleteOptionCode(ids);
+        return mdmConfigurationRepository.batchPhysicalDeleteOptionCode(ids);
     }
 
 }

@@ -10,7 +10,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.common.exception.ProductDataReadOnlyEx
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Variant;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter.VariantConverter;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehVariantPo;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.MdmVariantPo;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -167,7 +167,7 @@ class VariantIntegrationTest {
     @Test
     @DisplayName("VariantConverter应正确将PO转为领域对象")
     void testVariantConverter_toDomain() {
-        VehVariantPo po = VehVariantPo.builder()
+        MdmVariantPo po = MdmVariantPo.builder()
                 .id(1L)
                 .platformCode("P001")
                 .carLineCode("CL001")
@@ -214,7 +214,7 @@ class VariantIntegrationTest {
                 .lastSyncTime(LocalDateTime.now())
                 .build();
 
-        VehVariantPo po = VariantConverter.INSTANCE.fromDomain(variant);
+        MdmVariantPo po = VariantConverter.INSTANCE.fromDomain(variant);
 
         assertNotNull(po);
         assertEquals(1L, po.getId());

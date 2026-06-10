@@ -11,8 +11,8 @@ import net.hwyz.iov.cloud.edd.vmd.service.common.exception.ProductDataReadOnlyEx
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Brand;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBrandRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehCarLineRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmBrandRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmCarLineRepository;
 import net.hwyz.iov.cloud.framework.common.util.ParamHelper;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Service;
@@ -36,8 +36,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class BrandAppService {
 
-    private final VehBrandRepository vehBrandRepository;
-    private final VehCarLineRepository vehCarLineRepository;
+    private final MdmBrandRepository mdmBrandRepository;
+    private final MdmCarLineRepository mdmCarLineRepository;
     private final VehBasicInfoRepository vehBasicInfoRepository;
 
     /**
@@ -52,7 +52,7 @@ public class BrandAppService {
         map.put("name", ParamHelper.fuzzyQueryParam(query.getName()));
         map.put("beginTime", query.getBeginTime());
         map.put("endTime", query.getEndTime());
-        List<Brand> brandList = vehBrandRepository.selectByMap(map);
+        List<Brand> brandList = mdmBrandRepository.selectByMap(map);
         return PageUtil.convert(brandList, BrandAssembler.INSTANCE::fromDomain);
     }
 
@@ -78,10 +78,10 @@ public class BrandAppService {
      * @return 结果
      */
     public Boolean checkBrandSeriesExist(Long brandId) {
-        Brand brand = vehBrandRepository.selectById(brandId);
+        Brand brand = mdmBrandRepository.selectById(brandId);
         Map<String, Object> map = new HashMap<>();
         map.put("brandCode", brand.getCode());
-        return vehCarLineRepository.countByMap(map) > 0;
+        return mdmCarLineRepository.countByMap(map) > 0;
     }
 
     /**
@@ -91,7 +91,7 @@ public class BrandAppService {
      * @return 结果
      */
     public Boolean checkBrandVehicleExist(Long brandId) {
-        Brand brand = vehBrandRepository.selectById(brandId);
+        Brand brand = mdmBrandRepository.selectById(brandId);
         Map<String, Object> map = new HashMap<>();
         map.put("brandCode", brand.getCode());
         return vehBasicInfoRepository.countByMap(map) > 0;
@@ -104,7 +104,7 @@ public class BrandAppService {
      * @return 品牌 DTO
      */
     public BrandDto getBrandById(Long id) {
-        return BrandAssembler.INSTANCE.fromDomain(vehBrandRepository.selectById(id));
+        return BrandAssembler.INSTANCE.fromDomain(mdmBrandRepository.selectById(id));
     }
 
     /**
@@ -114,7 +114,7 @@ public class BrandAppService {
      * @return 品牌领域对象
      */
     public Brand getBrandByCode(String code) {
-        return vehBrandRepository.selectByCode(code);
+        return mdmBrandRepository.selectByCode(code);
     }
 
     /**
@@ -136,7 +136,7 @@ public class BrandAppService {
         if (brand.getSource() == SourceType.MDM) {
             throw new ProductDataReadOnlyException("品牌", brand.getCode());
         }
-        return vehBrandRepository.insert(brand);
+        return mdmBrandRepository.insert(brand);
     }
 
     /**
@@ -153,13 +153,13 @@ public class BrandAppService {
      */
     @Deprecated
     public int modifyBrand(BrandCmd brandCmd, String userId) {
-        Brand brand = vehBrandRepository.selectById(brandCmd.getId());
+        Brand brand = mdmBrandRepository.selectById(brandCmd.getId());
         // Source=MDM 只读限制（CR-012）
         if (brand.getSource() == SourceType.MDM) {
             throw new ProductDataReadOnlyException("品牌", brand.getCode());
         }
         Brand updateBrand = BrandAssembler.INSTANCE.toDomain(brandCmd);
-        return vehBrandRepository.update(updateBrand);
+        return mdmBrandRepository.update(updateBrand);
     }
 
     /**
@@ -177,12 +177,12 @@ public class BrandAppService {
     public int deleteBrandByIds(Long[] ids) {
         // Source=MDM 只读限制（CR-012）
         for (Long id : ids) {
-            Brand brand = vehBrandRepository.selectById(id);
+            Brand brand = mdmBrandRepository.selectById(id);
             if (brand != null && brand.getSource() == SourceType.MDM) {
                 throw new ProductDataReadOnlyException("品牌", brand.getCode());
             }
         }
-        return vehBrandRepository.batchPhysicalDelete(ids);
+        return mdmBrandRepository.batchPhysicalDelete(ids);
     }
 
 }

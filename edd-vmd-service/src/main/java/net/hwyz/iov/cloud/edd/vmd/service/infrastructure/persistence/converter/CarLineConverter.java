@@ -1,7 +1,7 @@
 package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter;
 
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.CarLine;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehCarLinePo;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.MdmCarLinePo;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 
@@ -20,18 +20,18 @@ public interface CarLineConverter {
     /**
      * PO 转领域对象
      *
-     * @param vehCarLinePo PO
+     * @param mdmCarLinePo PO
      * @return 领域对象
      */
-    CarLine toDomain(VehCarLinePo vehCarLinePo);
+    CarLine toDomain(MdmCarLinePo mdmCarLinePo);
 
     /**
      * PO 列表转领域对象列表
      *
-     * @param vehCarLinePoList PO 列表
+     * @param mdmCarLinePoList PO 列表
      * @return 领域对象列表
      */
-    List<CarLine> toDomainList(List<VehCarLinePo> vehCarLinePoList);
+    List<CarLine> toDomainList(List<MdmCarLinePo> mdmCarLinePoList);
 
     /**
      * 领域对象转 PO
@@ -39,5 +39,5 @@ public interface CarLineConverter {
      * @param carLine 领域对象
      * @return PO
      */
-    VehCarLinePo fromDomain(CarLine carLine);
+    MdmCarLinePo fromDomain(CarLine carLine);
 }

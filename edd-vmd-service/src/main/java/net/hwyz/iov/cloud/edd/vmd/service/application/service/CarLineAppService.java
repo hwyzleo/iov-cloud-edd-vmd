@@ -10,8 +10,8 @@ import net.hwyz.iov.cloud.edd.vmd.service.common.exception.ProductDataReadOnlyEx
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.CarLine;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehModelRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehCarLineRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmModelRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmCarLineRepository;
 import net.hwyz.iov.cloud.framework.common.util.ParamHelper;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Service;
@@ -31,8 +31,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class CarLineAppService {
 
-    private final VehCarLineRepository vehCarLineRepository;
-    private final VehModelRepository vehModelRepository;
+    private final MdmCarLineRepository mdmCarLineRepository;
+    private final MdmModelRepository mdmModelRepository;
     private final VehBasicInfoRepository vehBasicInfoRepository;
 
     /**
@@ -48,7 +48,7 @@ public class CarLineAppService {
         map.put("name", ParamHelper.fuzzyQueryParam(query.getName()));
         map.put("beginTime", query.getBeginTime());
         map.put("endTime", query.getEndTime());
-        List<CarLine> carLineList = vehCarLineRepository.selectByMap(map);
+        List<CarLine> carLineList = mdmCarLineRepository.selectByMap(map);
         return PageUtil.convert(carLineList, CarLineAssembler.INSTANCE::fromDomain);
     }
 
@@ -63,7 +63,7 @@ public class CarLineAppService {
         if (ObjUtil.isNull(seriesId)) {
             seriesId = -1L;
         }
-        CarLine carLine = vehCarLineRepository.selectByCode(code);
+        CarLine carLine = mdmCarLineRepository.selectByCode(code);
         return !ObjUtil.isNotNull(carLine) || carLine.getId().longValue() == seriesId.longValue();
     }
 
@@ -74,10 +74,10 @@ public class CarLineAppService {
      * @return 结果
      */
     public Boolean checkSeriesModelExist(Long seriesId) {
-        CarLine carLine = vehCarLineRepository.selectById(seriesId);
+        CarLine carLine = mdmCarLineRepository.selectById(seriesId);
         Map<String, Object> map = new HashMap<>();
         map.put("carLineCode", carLine.getCode());
-        return vehModelRepository.countByMap(map) > 0;
+        return mdmModelRepository.countByMap(map) > 0;
     }
 
     /**
@@ -87,7 +87,7 @@ public class CarLineAppService {
      * @return 结果
      */
     public Boolean checkSeriesVehicleExist(Long seriesId) {
-        CarLine carLine = vehCarLineRepository.selectById(seriesId);
+        CarLine carLine = mdmCarLineRepository.selectById(seriesId);
         Map<String, Object> map = new HashMap<>();
         map.put("carLineCode", carLine.getCode());
         return vehBasicInfoRepository.countByMap(map) > 0;
@@ -100,7 +100,7 @@ public class CarLineAppService {
      * @return 车系 DTO
      */
     public CarLineDto getSeriesById(Long id) {
-        return CarLineAssembler.INSTANCE.fromDomain(vehCarLineRepository.selectById(id));
+        return CarLineAssembler.INSTANCE.fromDomain(mdmCarLineRepository.selectById(id));
     }
 
     /**
@@ -110,7 +110,7 @@ public class CarLineAppService {
      * @return 车系领域对象
      */
     public CarLine getSeriesByCode(String code) {
-        return vehCarLineRepository.selectByCode(code);
+        return mdmCarLineRepository.selectByCode(code);
     }
 
     /**
@@ -126,7 +126,7 @@ public class CarLineAppService {
         if (carLine.getSource() == SourceType.MDM) {
             throw new ProductDataReadOnlyException("车系", carLine.getCode());
         }
-        return vehCarLineRepository.insert(carLine);
+        return mdmCarLineRepository.insert(carLine);
     }
 
     /**
@@ -137,13 +137,13 @@ public class CarLineAppService {
      * @return 结果
      */
     public int modifySeries(CarLineCmd seriesCmd, String userId) {
-        CarLine carLine = vehCarLineRepository.selectById(seriesCmd.getId());
+        CarLine carLine = mdmCarLineRepository.selectById(seriesCmd.getId());
         // 检查是否为 MDM 来源数据
         if (carLine.getSource() == SourceType.MDM) {
             throw new ProductDataReadOnlyException("车系", carLine.getCode());
         }
         CarLine updateCarLine = CarLineAssembler.INSTANCE.toDomain(seriesCmd);
-        return vehCarLineRepository.update(updateCarLine);
+        return mdmCarLineRepository.update(updateCarLine);
     }
 
     /**
@@ -155,12 +155,12 @@ public class CarLineAppService {
     public int deleteSeriesByIds(Long[] ids) {
         // 检查是否为 MDM 来源数据
         for (Long id : ids) {
-            CarLine carLine = vehCarLineRepository.selectById(id);
+            CarLine carLine = mdmCarLineRepository.selectById(id);
             if (carLine != null && carLine.getSource() == SourceType.MDM) {
                 throw new ProductDataReadOnlyException("车系", carLine.getCode());
             }
         }
-        return vehCarLineRepository.batchPhysicalDelete(ids);
+        return mdmCarLineRepository.batchPhysicalDelete(ids);
     }
 
 }

@@ -30,14 +30,14 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Model;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Plant;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Variant;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBrandRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehConfigurationRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehOptionFamilyRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehPlatformRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehCarLineRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehModelRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehPlantRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehVariantRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmBrandRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmConfigurationRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmOptionFamilyRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmPlatformRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmCarLineRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmModelRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmPlantRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmVariantRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -55,14 +55,14 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class MdmSyncAppService {
 
-    private final VehBrandRepository vehBrandRepository;
-    private final VehCarLineRepository vehCarLineRepository;
-    private final VehConfigurationRepository vehConfigurationRepository;
-    private final VehPlatformRepository vehPlatformRepository;
-    private final VehModelRepository vehModelRepository;
-    private final VehPlantRepository vehPlantRepository;
-    private final VehVariantRepository vehVariantRepository;
-    private final VehOptionFamilyRepository vehOptionFamilyRepository;
+    private final MdmBrandRepository mdmBrandRepository;
+    private final MdmCarLineRepository mdmCarLineRepository;
+    private final MdmConfigurationRepository mdmConfigurationRepository;
+    private final MdmPlatformRepository mdmPlatformRepository;
+    private final MdmModelRepository mdmModelRepository;
+    private final MdmPlantRepository mdmPlantRepository;
+    private final MdmVariantRepository mdmVariantRepository;
+    private final MdmOptionFamilyRepository mdmOptionFamilyRepository;
     private final MdmBrandQueryClient mdmBrandQueryClient;
     private final MdmCarLineQueryClient mdmCarLineQueryClient;
     private final MdmConfigurationQueryClient mdmConfigurationQueryClient;
@@ -84,7 +84,7 @@ public class MdmSyncAppService {
         log.debug("处理 MDM 品牌事件: eventType={}, entityId={}, code={}", 
                 event.getEventType(), event.getEntityId(), event.getCode());
         // 根据 externalRefId 查找本地记录
-        Brand localBrand = vehBrandRepository.selectByExternalRefId(event.getEntityId());
+        Brand localBrand = mdmBrandRepository.selectByExternalRefId(event.getEntityId());
         if (localBrand == null) {
             // 本地不存在，新增 Brand 投影
             Brand newBrand = Brand.builder()
@@ -95,7 +95,7 @@ public class MdmSyncAppService {
                     .externalVersion(event.getVersion())
                     .lastSyncTime(LocalDateTime.now())
                     .build();
-            vehBrandRepository.insert(newBrand);
+            mdmBrandRepository.insert(newBrand);
             log.info("新增 MDM 品牌投影: code={}, name={}", event.getCode(), event.getName());
         } else {
             // 本地存在，检查版本
@@ -104,7 +104,7 @@ public class MdmSyncAppService {
                 localBrand.setName(event.getName());
                 localBrand.setExternalVersion(event.getVersion());
                 localBrand.setLastSyncTime(LocalDateTime.now());
-                vehBrandRepository.updateById(localBrand);
+                mdmBrandRepository.updateById(localBrand);
                 log.info("更新 MDM 品牌投影: code={}, oldVersion={}, newVersion={}", 
                         event.getCode(), localBrand.getExternalVersion(), event.getVersion());
             } else {
@@ -123,7 +123,7 @@ public class MdmSyncAppService {
     public void handleSeriesEvent(MdmCarLineEvent event) {
         log.info("处理MDM车系事件: entityId={}, version={}", event.getEntityId(), event.getVersion());
         // 根据 externalRefId 查找本地记录
-        CarLine localCarLine = vehCarLineRepository.selectByExternalRefId(event.getEntityId());
+        CarLine localCarLine = mdmCarLineRepository.selectByExternalRefId(event.getEntityId());
         if (localCarLine == null) {
             // 本地不存在，新增
             CarLine newCarLine = CarLine.builder()
@@ -135,7 +135,7 @@ public class MdmSyncAppService {
                     .externalVersion(event.getVersion())
                     .lastSyncTime(LocalDateTime.now())
                     .build();
-            vehCarLineRepository.insert(newCarLine);
+            mdmCarLineRepository.insert(newCarLine);
             log.info("新增车系: code={}", event.getCode());
         } else {
             // 本地存在，检查版本
@@ -144,7 +144,7 @@ public class MdmSyncAppService {
                 localCarLine.setBrandCode(event.getBrandCode());
                 localCarLine.setExternalVersion(event.getVersion());
                 localCarLine.setLastSyncTime(LocalDateTime.now());
-                vehCarLineRepository.updateById(localCarLine);
+                mdmCarLineRepository.updateById(localCarLine);
                 log.info("更新车系: code={}, version={}", event.getCode(), event.getVersion());
             } else {
                 log.info("忽略车系事件（版本不高于本地）: code={}, eventVersion={}, localVersion={}",
@@ -161,7 +161,7 @@ public class MdmSyncAppService {
     public void handlePlatformEvent(MdmPlatformEvent event) {
         log.info("处理MDM平台事件: entityId={}, version={}", event.getEntityId(), event.getVersion());
         // 根据 externalRefId 查找本地记录
-        Platform localPlatform = vehPlatformRepository.selectByExternalRefId(event.getEntityId());
+        Platform localPlatform = mdmPlatformRepository.selectByExternalRefId(event.getEntityId());
         if (localPlatform == null) {
             // 本地不存在，新增
             Platform newPlatform = Platform.builder()
@@ -172,7 +172,7 @@ public class MdmSyncAppService {
                     .externalVersion(event.getVersion())
                     .lastSyncTime(LocalDateTime.now())
                     .build();
-            vehPlatformRepository.insert(newPlatform);
+            mdmPlatformRepository.insert(newPlatform);
             log.info("新增平台: code={}", event.getCode());
         } else {
             // 本地存在，检查版本
@@ -180,7 +180,7 @@ public class MdmSyncAppService {
                 localPlatform.setName(event.getName());
                 localPlatform.setExternalVersion(event.getVersion());
                 localPlatform.setLastSyncTime(LocalDateTime.now());
-                vehPlatformRepository.updateById(localPlatform);
+                mdmPlatformRepository.updateById(localPlatform);
                 log.info("更新平台: code={}, version={}", event.getCode(), event.getVersion());
             } else {
                 log.info("忽略平台事件（版本不高于本地）: code={}, eventVersion={}, localVersion={}",
@@ -200,7 +200,7 @@ public class MdmSyncAppService {
     public void handleModelEvent(MdmModelEvent event) {
         log.info("处理MDM车型事件: entityId={}, version={}", event.getEntityId(), event.getVersion());
         // 根据 externalRefId 查找本地记录
-        Model localModel = vehModelRepository.selectByExternalRefId(event.getEntityId());
+        Model localModel = mdmModelRepository.selectByExternalRefId(event.getEntityId());
         if (localModel == null) {
             // 本地不存在，新增
             Model newModel = Model.builder()
@@ -213,7 +213,7 @@ public class MdmSyncAppService {
                     .externalVersion(event.getVersion())
                     .lastSyncTime(LocalDateTime.now())
                     .build();
-            vehModelRepository.insert(newModel);
+            mdmModelRepository.insert(newModel);
             log.info("新增车型: code={}", event.getCode());
         } else {
             // 本地存在，检查版本
@@ -223,7 +223,7 @@ public class MdmSyncAppService {
                 localModel.setCarLineCode(event.getCarLineCode());
                 localModel.setExternalVersion(event.getVersion());
                 localModel.setLastSyncTime(LocalDateTime.now());
-                vehModelRepository.updateById(localModel);
+                mdmModelRepository.updateById(localModel);
                 log.info("更新车型: code={}, version={}", event.getCode(), event.getVersion());
             } else {
                 log.info("忽略车型事件（版本不高于本地）: code={}, eventVersion={}, localVersion={}",
@@ -243,7 +243,7 @@ public class MdmSyncAppService {
     public void handleVariantEvent(MdmVariantEvent event) {
         log.info("处理MDM版本事件: entityId={}, version={}", event.getEntityId(), event.getVersion());
         // 根据 externalRefId 查找本地记录
-        Variant localVariant = vehVariantRepository.selectByExternalRefId(event.getEntityId());
+        Variant localVariant = mdmVariantRepository.selectByExternalRefId(event.getEntityId());
         if (localVariant == null) {
             // 本地不存在，新增
             Variant newVariant = Variant.builder()
@@ -257,7 +257,7 @@ public class MdmSyncAppService {
                     .externalVersion(event.getVersion())
                     .lastSyncTime(LocalDateTime.now())
                     .build();
-            vehVariantRepository.insert(newVariant);
+            mdmVariantRepository.insert(newVariant);
             log.info("新增版本: code={}", event.getCode());
         } else {
             // 本地存在，检查版本
@@ -268,7 +268,7 @@ public class MdmSyncAppService {
                 localVariant.setModelCode(event.getModelCode());
                 localVariant.setExternalVersion(event.getVersion());
                 localVariant.setLastSyncTime(LocalDateTime.now());
-                vehVariantRepository.updateById(localVariant);
+                mdmVariantRepository.updateById(localVariant);
                 log.info("更新版本: code={}, version={}", event.getCode(), event.getVersion());
             } else {
                 log.info("忽略版本事件（版本不高于本地）: code={}, eventVersion={}, localVersion={}",
@@ -288,7 +288,7 @@ public class MdmSyncAppService {
     public void handleConfigurationEvent(MdmConfigurationEvent event) {
         log.info("处理MDM配置事件: entityId={}, version={}", event.getEntityId(), event.getVersion());
         // 根据 externalRefId 查找本地记录
-        Configuration localConfiguration = vehConfigurationRepository.selectByExternalRefId(event.getEntityId());
+        Configuration localConfiguration = mdmConfigurationRepository.selectByExternalRefId(event.getEntityId());
         if (localConfiguration == null) {
             // 本地不存在，新增
             Configuration newConfiguration = Configuration.builder()
@@ -307,7 +307,7 @@ public class MdmSyncAppService {
                     .externalVersion(event.getVersion())
                     .lastSyncTime(LocalDateTime.now())
                     .build();
-            vehConfigurationRepository.insert(newConfiguration);
+            mdmConfigurationRepository.insert(newConfiguration);
             log.info("新增配置: code={}", event.getCode());
         } else {
             // 本地存在，检查版本
@@ -323,7 +323,7 @@ public class MdmSyncAppService {
                 localConfiguration.setSort(event.getSort());
                 localConfiguration.setExternalVersion(event.getVersion());
                 localConfiguration.setLastSyncTime(LocalDateTime.now());
-                vehConfigurationRepository.updateById(localConfiguration);
+                mdmConfigurationRepository.updateById(localConfiguration);
                 log.info("更新配置: code={}, version={}", event.getCode(), event.getVersion());
             } else {
                 log.info("忽略配置事件（版本不高于本地）: code={}, eventVersion={}, localVersion={}",
@@ -342,7 +342,7 @@ public class MdmSyncAppService {
      */
     public void bootstrapBrand() {
         log.info("开始 Bootstrap 品牌数据同步");
-        long count = vehBrandRepository.countBySource(SourceType.MDM);
+        long count = mdmBrandRepository.countBySource(SourceType.MDM);
         if (count == 0) {
             log.info("本地无 MDM 品牌记录（count=0），启动 Bootstrap 同步");
             try {
@@ -361,7 +361,7 @@ public class MdmSyncAppService {
                             .externalVersion(version)
                             .lastSyncTime(LocalDateTime.now())
                             .build();
-                    vehBrandRepository.insert(brand);
+                    mdmBrandRepository.insert(brand);
                     log.info("Bootstrap 新增 MDM 品牌投影: code={}", code);
                 }
                 log.info("Bootstrap 品牌数据同步完成，共同步 {} 条", mdmBrands.size());
@@ -384,7 +384,7 @@ public class MdmSyncAppService {
      */
     public void bootstrapSeries() {
         log.info("开始 Bootstrap 车系数据同步");
-        long count = vehCarLineRepository.countBySource(SourceType.MDM);
+        long count = mdmCarLineRepository.countBySource(SourceType.MDM);
         if (count == 0) {
             log.info("本地无 MDM 车系记录（count=0），启动 Bootstrap 同步");
             try {
@@ -405,7 +405,7 @@ public class MdmSyncAppService {
                             .externalVersion(version)
                             .lastSyncTime(LocalDateTime.now())
                             .build();
-                    vehCarLineRepository.insert(carLine);
+                    mdmCarLineRepository.insert(carLine);
                     log.info("Bootstrap 新增 MDM 车系投影: code={}, brandCode={}", code, brandCode);
                 }
                 log.info("Bootstrap 车系数据同步完成，共同步 {} 条", mdmCarLines.size());
@@ -428,7 +428,7 @@ public class MdmSyncAppService {
      */
     public void bootstrapPlatform() {
         log.info("开始 Bootstrap 平台数据同步");
-        long count = vehPlatformRepository.countBySource(SourceType.MDM);
+        long count = mdmPlatformRepository.countBySource(SourceType.MDM);
         if (count == 0) {
             log.info("本地无 MDM 平台记录（count=0），启动 Bootstrap 同步");
             try {
@@ -447,7 +447,7 @@ public class MdmSyncAppService {
                             .externalVersion(version)
                             .lastSyncTime(LocalDateTime.now())
                             .build();
-                    vehPlatformRepository.insert(platform);
+                    mdmPlatformRepository.insert(platform);
                     log.info("Bootstrap 新增 MDM 平台投影: code={}", code);
                 }
                 log.info("Bootstrap 平台数据同步完成，共同步 {} 条", mdmPlatforms.size());
@@ -471,7 +471,7 @@ public class MdmSyncAppService {
      */
     public void bootstrapModel() {
         log.info("开始 Bootstrap 车型数据同步");
-        long count = vehModelRepository.countBySource(SourceType.MDM);
+        long count = mdmModelRepository.countBySource(SourceType.MDM);
         if (count == 0) {
             log.info("本地无 MDM 车型记录（count=0），启动 Bootstrap 同步");
             try {
@@ -494,7 +494,7 @@ public class MdmSyncAppService {
                             .externalVersion(version)
                             .lastSyncTime(LocalDateTime.now())
                             .build();
-                    vehModelRepository.insert(model);
+                    mdmModelRepository.insert(model);
                     log.info("Bootstrap 新增 MDM 车型投影: code={}, platformCode={}, carLineCode={}", code, platformCode, carLineCode);
                 }
                 log.info("Bootstrap 车型数据同步完成，共同步 {} 条", mdmModels.size());
@@ -518,7 +518,7 @@ public class MdmSyncAppService {
      */
     public void bootstrapVariant() {
         log.info("开始 Bootstrap 版本数据同步");
-        long count = vehVariantRepository.countBySource(SourceType.MDM);
+        long count = mdmVariantRepository.countBySource(SourceType.MDM);
         if (count == 0) {
             log.info("本地无 MDM 版本记录（count=0），启动 Bootstrap 同步");
             try {
@@ -543,7 +543,7 @@ public class MdmSyncAppService {
                             .externalVersion(version)
                             .lastSyncTime(LocalDateTime.now())
                             .build();
-                    vehVariantRepository.insert(variant);
+                    mdmVariantRepository.insert(variant);
                     log.info("Bootstrap 新增 MDM 版本投影: code={}, platformCode={}, carLineCode={}, modelCode={}", code, platformCode, carLineCode, modelCode);
                 }
                 log.info("Bootstrap 版本数据同步完成，共同步 {} 条", mdmVariants.size());
@@ -567,7 +567,7 @@ public class MdmSyncAppService {
      */
     public void bootstrapConfiguration() {
         log.info("开始 Bootstrap 配置数据同步");
-        long count = vehConfigurationRepository.countBySource(SourceType.MDM);
+        long count = mdmConfigurationRepository.countBySource(SourceType.MDM);
         if (count == 0) {
             log.info("本地无 MDM 配置记录（count=0），启动 Bootstrap 同步");
             try {
@@ -602,7 +602,7 @@ public class MdmSyncAppService {
                             .externalVersion(version)
                             .lastSyncTime(LocalDateTime.now())
                             .build();
-                    vehConfigurationRepository.insert(configuration);
+                    mdmConfigurationRepository.insert(configuration);
                     log.info("Bootstrap 新增 MDM 配置投影: code={}, variantCode={}", code, variantCode);
                 }
                 log.info("Bootstrap 配置数据同步完成，共同步 {} 条", mdmConfigurations.size());
@@ -624,7 +624,7 @@ public class MdmSyncAppService {
      */
     public void handleOptionFamilyEvent(MdmOptionFamilyEvent event) {
         log.info("处理MDM选项族事件: entityId={}, version={}", event.getEntityId(), event.getVersion());
-        OptionFamily localOptionFamily = vehOptionFamilyRepository.selectByExternalRefId(event.getEntityId());
+        OptionFamily localOptionFamily = mdmOptionFamilyRepository.selectByExternalRefId(event.getEntityId());
         if (localOptionFamily == null) {
             OptionFamily newOptionFamily = OptionFamily.builder()
                     .code(event.getCode())
@@ -639,7 +639,7 @@ public class MdmSyncAppService {
                     .externalVersion(event.getVersion())
                     .lastSyncTime(LocalDateTime.now())
                     .build();
-            vehOptionFamilyRepository.insert(newOptionFamily);
+            mdmOptionFamilyRepository.insert(newOptionFamily);
             log.info("新增选项族: code={}", event.getCode());
         } else {
             if (event.getVersion() > localOptionFamily.getExternalVersion()) {
@@ -651,7 +651,7 @@ public class MdmSyncAppService {
                 localOptionFamily.setSort(event.getSort());
                 localOptionFamily.setExternalVersion(event.getVersion());
                 localOptionFamily.setLastSyncTime(LocalDateTime.now());
-                vehOptionFamilyRepository.updateById(localOptionFamily);
+                mdmOptionFamilyRepository.updateById(localOptionFamily);
                 log.info("更新选项族: code={}, version={}", event.getCode(), event.getVersion());
             } else {
                 log.info("忽略选项族事件（版本不高于本地）: code={}, eventVersion={}, localVersion={}",
@@ -669,7 +669,7 @@ public class MdmSyncAppService {
      */
     public void handleOptionCodeEvent(MdmOptionCodeEvent event) {
         log.info("处理MDM选项值事件: entityId={}, version={}", event.getEntityId(), event.getVersion());
-        OptionCode localOptionCode = vehOptionFamilyRepository.selectOptionCodeByExternalRefId(event.getEntityId());
+        OptionCode localOptionCode = mdmOptionFamilyRepository.selectOptionCodeByExternalRefId(event.getEntityId());
         if (localOptionCode == null) {
             OptionCode newOptionCode = OptionCode.builder()
                     .code(event.getCode())
@@ -684,7 +684,7 @@ public class MdmSyncAppService {
                     .externalVersion(event.getVersion())
                     .lastSyncTime(LocalDateTime.now())
                     .build();
-            vehOptionFamilyRepository.insertOptionCode(newOptionCode);
+            mdmOptionFamilyRepository.insertOptionCode(newOptionCode);
             log.info("新增选项值: code={}", event.getCode());
         } else {
             if (event.getVersion() > localOptionCode.getExternalVersion()) {
@@ -696,7 +696,7 @@ public class MdmSyncAppService {
                 localOptionCode.setSort(event.getSort());
                 localOptionCode.setExternalVersion(event.getVersion());
                 localOptionCode.setLastSyncTime(LocalDateTime.now());
-                vehOptionFamilyRepository.updateOptionCodeById(localOptionCode);
+                mdmOptionFamilyRepository.updateOptionCodeById(localOptionCode);
                 log.info("更新选项值: code={}, version={}", event.getCode(), event.getVersion());
             } else {
                 log.info("忽略选项值事件（版本不高于本地）: code={}, eventVersion={}, localVersion={}",
@@ -715,7 +715,7 @@ public class MdmSyncAppService {
      */
     public void bootstrapOptionFamily() {
         log.info("开始 Bootstrap 选项族数据同步");
-        long count = vehOptionFamilyRepository.countBySource(SourceType.MDM.name());
+        long count = mdmOptionFamilyRepository.countBySource(SourceType.MDM.name());
         if (count == 0) {
             log.info("本地无 MDM 选项族记录（count=0），启动 Bootstrap 同步");
             try {
@@ -744,7 +744,7 @@ public class MdmSyncAppService {
                             .externalVersion(version)
                             .lastSyncTime(LocalDateTime.now())
                             .build();
-                    vehOptionFamilyRepository.insert(optionFamily);
+                    mdmOptionFamilyRepository.insert(optionFamily);
                     log.info("Bootstrap 新增 MDM 选项族投影: code={}", code);
                 }
                 log.info("Bootstrap 选项族数据同步完成，共同步 {} 条", mdmOptionFamilies.size());
@@ -766,7 +766,7 @@ public class MdmSyncAppService {
      */
     public void bootstrapOptionCode() {
         log.info("开始 Bootstrap 选项值数据同步");
-        long count = vehOptionFamilyRepository.countOptionCodeBySource(SourceType.MDM.name());
+        long count = mdmOptionFamilyRepository.countOptionCodeBySource(SourceType.MDM.name());
         if (count == 0) {
             log.info("本地无 MDM 选项值记录（count=0），启动 Bootstrap 同步");
             try {
@@ -795,7 +795,7 @@ public class MdmSyncAppService {
                             .externalVersion(version)
                             .lastSyncTime(LocalDateTime.now())
                             .build();
-                    vehOptionFamilyRepository.insertOptionCode(optionCode);
+                    mdmOptionFamilyRepository.insertOptionCode(optionCode);
                     log.info("Bootstrap 新增 MDM 选项值投影: code={}", code);
                 }
                 log.info("Bootstrap 选项值数据同步完成，共同步 {} 条", mdmOptionCodes.size());
@@ -818,7 +818,7 @@ public class MdmSyncAppService {
         log.debug("处理 MDM 工厂事件: eventType={}, entityId={}, code={}",
                 event.getEventType(), event.getEntityId(), event.getCode());
         // 根据 externalRefId 查找本地记录
-        Plant localPlant = vehPlantRepository.selectByExternalRefId(event.getEntityId());
+        Plant localPlant = mdmPlantRepository.selectByExternalRefId(event.getEntityId());
         if (localPlant == null) {
             // 本地不存在，新增 Plant 投影
             Plant newPlant = Plant.builder()
@@ -829,7 +829,7 @@ public class MdmSyncAppService {
                     .externalVersion(event.getVersion())
                     .lastSyncTime(LocalDateTime.now())
                     .build();
-            vehPlantRepository.insert(newPlant);
+            mdmPlantRepository.insert(newPlant);
             log.info("新增 MDM 工厂投影: code={}, name={}", event.getCode(), event.getName());
         } else {
             // 本地存在，检查版本
@@ -838,7 +838,7 @@ public class MdmSyncAppService {
                 localPlant.setName(event.getName());
                 localPlant.setExternalVersion(event.getVersion());
                 localPlant.setLastSyncTime(LocalDateTime.now());
-                vehPlantRepository.update(localPlant);
+                mdmPlantRepository.update(localPlant);
                 log.info("更新 MDM 工厂投影: code={}, oldVersion={}, newVersion={}",
                         event.getCode(), localPlant.getExternalVersion(), event.getVersion());
             } else {
@@ -859,7 +859,7 @@ public class MdmSyncAppService {
      */
     public void bootstrapPlant() {
         log.info("开始 Bootstrap 工厂数据同步");
-        long count = vehPlantRepository.countBySource(SourceType.MDM.name());
+        long count = mdmPlantRepository.countBySource(SourceType.MDM.name());
         if (count == 0) {
             log.info("本地无 MDM 工厂记录（count=0），启动 Bootstrap 同步");
             try {
@@ -878,7 +878,7 @@ public class MdmSyncAppService {
                             .externalVersion(version)
                             .lastSyncTime(LocalDateTime.now())
                             .build();
-                    vehPlantRepository.insert(plant);
+                    mdmPlantRepository.insert(plant);
                     log.info("Bootstrap 新增 MDM 工厂投影: code={}", code);
                 }
                 log.info("Bootstrap 工厂数据同步完成，共同步 {} 条", mdmPlants.size());

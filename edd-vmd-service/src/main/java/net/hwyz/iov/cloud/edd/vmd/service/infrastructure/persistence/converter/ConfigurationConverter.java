@@ -1,7 +1,7 @@
 package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter;
 
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Configuration;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehConfigurationPo;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.MdmConfigurationPo;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 
@@ -23,15 +23,15 @@ public interface ConfigurationConverter {
      * @param vehConfigurationPo PO
      * @return 领域对象
      */
-    Configuration toDomain(VehConfigurationPo vehConfigurationPo);
+    Configuration toDomain(MdmConfigurationPo mdmConfigurationPo);
 
     /**
      * PO 列表转领域对象列表
      *
-     * @param vehConfigurationPoList PO 列表
+     * @param mdmConfigurationPoList PO 列表
      * @return 领域对象列表
      */
-    List<Configuration> toDomainList(List<VehConfigurationPo> vehConfigurationPoList);
+    List<Configuration> toDomainList(List<MdmConfigurationPo> mdmConfigurationPoList);
 
     /**
      * 领域对象转 PO
@@ -39,5 +39,5 @@ public interface ConfigurationConverter {
      * @param configuration 领域对象
      * @return PO
      */
-    VehConfigurationPo fromDomain(Configuration configuration);
+    MdmConfigurationPo fromDomain(Configuration configuration);
 }

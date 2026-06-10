@@ -1,7 +1,7 @@
 package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter;
 
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Brand;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehBrandPo;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.MdmBrandPo;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.factory.Mappers;
@@ -21,18 +21,18 @@ public interface BrandConverter {
     /**
      * PO 转领域对象
      *
-     * @param vehBrandPo PO
+     * @param mdmBrandPo PO
      * @return 领域对象
      */
-    Brand toDomain(VehBrandPo vehBrandPo);
+    Brand toDomain(MdmBrandPo mdmBrandPo);
 
     /**
      * PO 列表转领域对象列表
      *
-     * @param vehBrandPoList PO 列表
+     * @param mdmBrandPoList PO 列表
      * @return 领域对象列表
      */
-    List<Brand> toDomainList(List<VehBrandPo> vehBrandPoList);
+    List<Brand> toDomainList(List<MdmBrandPo> mdmBrandPoList);
 
     /**
      * 领域对象转 PO
@@ -40,5 +40,5 @@ public interface BrandConverter {
      * @param brand 领域对象
      * @return PO
      */
-    VehBrandPo fromDomain(Brand brand);
+    MdmBrandPo fromDomain(Brand brand);
 }

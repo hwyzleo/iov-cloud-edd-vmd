@@ -6,7 +6,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ConfigurationDt
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Configuration;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehConfigurationRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmConfigurationRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,7 +27,7 @@ import static org.mockito.Mockito.*;
 class ConfigurationAppServiceTest {
 
     @Mock
-    private VehConfigurationRepository vehConfigurationRepository;
+    private MdmConfigurationRepository mdmConfigurationRepository;
 
     @Mock
     private VehBasicInfoRepository vehBasicInfoRepository;
@@ -54,13 +54,13 @@ class ConfigurationAppServiceTest {
         Configuration c1 = Configuration.builder().id(1L).code("C001").name("配置1").build();
         Configuration c2 = Configuration.builder().id(2L).code("C002").name("配置2").build();
 
-        when(vehConfigurationRepository.selectByMap(any(Map.class))).thenReturn(Arrays.asList(c1, c2));
+        when(mdmConfigurationRepository.selectByMap(any(Map.class))).thenReturn(Arrays.asList(c1, c2));
 
         List<ConfigurationDto> result = configurationAppService.search(query);
 
         assertNotNull(result);
         assertEquals(2, result.size());
-        verify(vehConfigurationRepository).selectByMap(any(Map.class));
+        verify(mdmConfigurationRepository).selectByMap(any(Map.class));
     }
 
     @Test
@@ -70,13 +70,13 @@ class ConfigurationAppServiceTest {
                 .platformCode("P001")
                 .build();
 
-        when(vehConfigurationRepository.selectByMap(any(Map.class))).thenReturn(Collections.emptyList());
+        when(mdmConfigurationRepository.selectByMap(any(Map.class))).thenReturn(Collections.emptyList());
 
         List<ConfigurationDto> result = configurationAppService.search(query);
 
         assertNotNull(result);
         assertTrue(result.isEmpty());
-        verify(vehConfigurationRepository).selectByMap(any(Map.class));
+        verify(mdmConfigurationRepository).selectByMap(any(Map.class));
     }
 
     @Test
@@ -86,13 +86,13 @@ class ConfigurationAppServiceTest {
         Configuration c1 = Configuration.builder().id(1L).code("C001").variantCode(variantCode).enable(true).build();
         Configuration c2 = Configuration.builder().id(2L).code("C002").variantCode(variantCode).enable(true).build();
 
-        when(vehConfigurationRepository.selectByExample(any(Configuration.class))).thenReturn(Arrays.asList(c1, c2));
+        when(mdmConfigurationRepository.selectByExample(any(Configuration.class))).thenReturn(Arrays.asList(c1, c2));
 
         List<ConfigurationDto> result = configurationAppService.getConfigurationListByVariantCode(variantCode);
 
         assertNotNull(result);
         assertEquals(2, result.size());
-        verify(vehConfigurationRepository).selectByExample(any(Configuration.class));
+        verify(mdmConfigurationRepository).selectByExample(any(Configuration.class));
     }
 
     @Test
@@ -100,13 +100,13 @@ class ConfigurationAppServiceTest {
     void testGetConfigurationListByVariantCode_noResult() {
         String variantCode = "V001";
 
-        when(vehConfigurationRepository.selectByExample(any(Configuration.class))).thenReturn(Collections.emptyList());
+        when(mdmConfigurationRepository.selectByExample(any(Configuration.class))).thenReturn(Collections.emptyList());
 
         List<ConfigurationDto> result = configurationAppService.getConfigurationListByVariantCode(variantCode);
 
         assertNotNull(result);
         assertTrue(result.isEmpty());
-        verify(vehConfigurationRepository).selectByExample(any(Configuration.class));
+        verify(mdmConfigurationRepository).selectByExample(any(Configuration.class));
     }
 
     @Test
@@ -115,13 +115,13 @@ class ConfigurationAppServiceTest {
         String code = "C001";
         Configuration configuration = Configuration.builder().id(1L).code(code).name("配置1").build();
 
-        when(vehConfigurationRepository.selectByCode(code)).thenReturn(configuration);
+        when(mdmConfigurationRepository.selectByCode(code)).thenReturn(configuration);
 
         ConfigurationDto result = configurationAppService.getConfigurationByCode(code);
 
         assertNotNull(result);
         assertEquals(code, result.getCode());
-        verify(vehConfigurationRepository).selectByCode(code);
+        verify(mdmConfigurationRepository).selectByCode(code);
     }
 
     @Test
@@ -129,12 +129,12 @@ class ConfigurationAppServiceTest {
     void testGetConfigurationByCode_notFound() {
         String code = "C001";
 
-        when(vehConfigurationRepository.selectByCode(code)).thenReturn(null);
+        when(mdmConfigurationRepository.selectByCode(code)).thenReturn(null);
 
         ConfigurationDto result = configurationAppService.getConfigurationByCode(code);
 
         assertNull(result);
-        verify(vehConfigurationRepository).selectByCode(code);
+        verify(mdmConfigurationRepository).selectByCode(code);
     }
 
     @Test
@@ -143,25 +143,25 @@ class ConfigurationAppServiceTest {
         String code = "C001";
         Configuration configuration = Configuration.builder().id(1L).code(code).name("配置1").build();
 
-        when(vehConfigurationRepository.selectByCode(code)).thenReturn(configuration);
+        when(mdmConfigurationRepository.selectByCode(code)).thenReturn(configuration);
 
         Configuration result = configurationAppService.getConfigurationEntityByCode(code);
 
         assertNotNull(result);
         assertEquals(code, result.getCode());
-        verify(vehConfigurationRepository).selectByCode(code);
+        verify(mdmConfigurationRepository).selectByCode(code);
     }
 
     @Test
     @DisplayName("checkCodeUnique应返回true当代码唯一时")
     void testCheckCodeUnique() {
         String code = "C001";
-        when(vehConfigurationRepository.selectByCode(code)).thenReturn(null);
+        when(mdmConfigurationRepository.selectByCode(code)).thenReturn(null);
 
         Boolean result = configurationAppService.checkCodeUnique(1L, code);
 
         assertTrue(result);
-        verify(vehConfigurationRepository).selectByCode(code);
+        verify(mdmConfigurationRepository).selectByCode(code);
     }
 
     @Test
@@ -170,12 +170,12 @@ class ConfigurationAppServiceTest {
         String code = "C001";
         Configuration existing = Configuration.builder().id(1L).code(code).build();
 
-        when(vehConfigurationRepository.selectByCode(code)).thenReturn(existing);
+        when(mdmConfigurationRepository.selectByCode(code)).thenReturn(existing);
 
         Boolean result = configurationAppService.checkCodeUnique(1L, code);
 
         assertTrue(result);
-        verify(vehConfigurationRepository).selectByCode(code);
+        verify(mdmConfigurationRepository).selectByCode(code);
     }
 
     @Test
@@ -184,24 +184,24 @@ class ConfigurationAppServiceTest {
         String code = "C001";
         Configuration existing = Configuration.builder().id(2L).code(code).build();
 
-        when(vehConfigurationRepository.selectByCode(code)).thenReturn(existing);
+        when(mdmConfigurationRepository.selectByCode(code)).thenReturn(existing);
 
         Boolean result = configurationAppService.checkCodeUnique(1L, code);
 
         assertFalse(result);
-        verify(vehConfigurationRepository).selectByCode(code);
+        verify(mdmConfigurationRepository).selectByCode(code);
     }
 
     @Test
     @DisplayName("checkCodeUnique应返回true当configurationId为null时且代码不存在")
     void testCheckCodeUnique_nullId() {
         String code = "C001";
-        when(vehConfigurationRepository.selectByCode(code)).thenReturn(null);
+        when(mdmConfigurationRepository.selectByCode(code)).thenReturn(null);
 
         Boolean result = configurationAppService.checkCodeUnique(null, code);
 
         assertTrue(result);
-        verify(vehConfigurationRepository).selectByCode(code);
+        verify(mdmConfigurationRepository).selectByCode(code);
     }
 
     @Test
@@ -210,13 +210,13 @@ class ConfigurationAppServiceTest {
         Long configurationId = 1L;
         Configuration configuration = Configuration.builder().id(configurationId).code("C001").build();
 
-        when(vehConfigurationRepository.selectById(configurationId)).thenReturn(configuration);
+        when(mdmConfigurationRepository.selectById(configurationId)).thenReturn(configuration);
         when(vehBasicInfoRepository.countByMap(any(Map.class))).thenReturn(5);
 
         Boolean result = configurationAppService.checkConfigurationVehicleExist(configurationId);
 
         assertTrue(result);
-        verify(vehConfigurationRepository).selectById(configurationId);
+        verify(mdmConfigurationRepository).selectById(configurationId);
         verify(vehBasicInfoRepository).countByMap(any(Map.class));
     }
 
@@ -226,13 +226,13 @@ class ConfigurationAppServiceTest {
         Long configurationId = 1L;
         Configuration configuration = Configuration.builder().id(configurationId).code("C001").build();
 
-        when(vehConfigurationRepository.selectById(configurationId)).thenReturn(configuration);
+        when(mdmConfigurationRepository.selectById(configurationId)).thenReturn(configuration);
         when(vehBasicInfoRepository.countByMap(any(Map.class))).thenReturn(0);
 
         Boolean result = configurationAppService.checkConfigurationVehicleExist(configurationId);
 
         assertFalse(result);
-        verify(vehConfigurationRepository).selectById(configurationId);
+        verify(mdmConfigurationRepository).selectById(configurationId);
         verify(vehBasicInfoRepository).countByMap(any(Map.class));
     }
 
@@ -242,13 +242,13 @@ class ConfigurationAppServiceTest {
         Long id = 1L;
         Configuration configuration = Configuration.builder().id(id).code("C001").name("配置1").build();
 
-        when(vehConfigurationRepository.selectById(id)).thenReturn(configuration);
+        when(mdmConfigurationRepository.selectById(id)).thenReturn(configuration);
 
         ConfigurationDto result = configurationAppService.getConfigurationById(id);
 
         assertNotNull(result);
         assertEquals(id, result.getId());
-        verify(vehConfigurationRepository).selectById(id);
+        verify(mdmConfigurationRepository).selectById(id);
     }
 
     @Test
@@ -264,12 +264,12 @@ class ConfigurationAppServiceTest {
                 .enable(true)
                 .build();
 
-        when(vehConfigurationRepository.insert(any(Configuration.class))).thenReturn(1);
+        when(mdmConfigurationRepository.insert(any(Configuration.class))).thenReturn(1);
 
         int result = configurationAppService.createConfiguration(cmd, "user1");
 
         assertEquals(1, result);
-        verify(vehConfigurationRepository).insert(any(Configuration.class));
+        verify(mdmConfigurationRepository).insert(any(Configuration.class));
     }
 
     @Test
@@ -286,12 +286,12 @@ class ConfigurationAppServiceTest {
                 .enable(true)
                 .build();
 
-        when(vehConfigurationRepository.update(any(Configuration.class))).thenReturn(1);
+        when(mdmConfigurationRepository.update(any(Configuration.class))).thenReturn(1);
 
         int result = configurationAppService.modifyConfiguration(cmd, "user1");
 
         assertEquals(1, result);
-        verify(vehConfigurationRepository).update(any(Configuration.class));
+        verify(mdmConfigurationRepository).update(any(Configuration.class));
     }
 
     @Test
@@ -299,12 +299,12 @@ class ConfigurationAppServiceTest {
     void testDeleteConfigurationByIds() {
         Long[] ids = {1L, 2L, 3L};
 
-        when(vehConfigurationRepository.batchPhysicalDelete(ids)).thenReturn(3);
+        when(mdmConfigurationRepository.batchPhysicalDelete(ids)).thenReturn(3);
 
         int result = configurationAppService.deleteConfigurationByIds(ids);
 
         assertEquals(3, result);
-        verify(vehConfigurationRepository).batchPhysicalDelete(ids);
+        verify(mdmConfigurationRepository).batchPhysicalDelete(ids);
     }
 
     @Test
@@ -312,11 +312,11 @@ class ConfigurationAppServiceTest {
     void testDeleteConfigurationByIds_noDeleted() {
         Long[] ids = {999L};
 
-        when(vehConfigurationRepository.batchPhysicalDelete(ids)).thenReturn(0);
+        when(mdmConfigurationRepository.batchPhysicalDelete(ids)).thenReturn(0);
 
         int result = configurationAppService.deleteConfigurationByIds(ids);
 
         assertEquals(0, result);
-        verify(vehConfigurationRepository).batchPhysicalDelete(ids);
+        verify(mdmConfigurationRepository).batchPhysicalDelete(ids);
     }
 }

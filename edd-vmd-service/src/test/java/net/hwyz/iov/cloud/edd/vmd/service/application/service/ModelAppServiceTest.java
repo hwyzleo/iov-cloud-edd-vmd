@@ -7,10 +7,10 @@ import net.hwyz.iov.cloud.edd.vmd.service.common.exception.ProductDataReadOnlyEx
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Model;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.CarLine;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehVariantRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmVariantRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehModelRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehCarLineRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmModelRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmCarLineRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -37,13 +37,13 @@ import static org.mockito.Mockito.*;
 class ModelAppServiceTest {
 
     @Mock
-    private VehModelRepository vehModelRepository;
+    private MdmModelRepository mdmModelRepository;
 
     @Mock
-    private VehCarLineRepository vehCarLineRepository;
+    private MdmCarLineRepository mdmCarLineRepository;
 
     @Mock
-    private VehVariantRepository vehVariantRepository;
+    private MdmVariantRepository mdmVariantRepository;
 
     @Mock
     private VehBasicInfoRepository vehBasicInfoRepository;
@@ -66,7 +66,7 @@ class ModelAppServiceTest {
         Model model2 = Model.builder().id(2L).code("MODEL002").name("测试车型2").build();
         List<Model> models = Arrays.asList(model1, model2);
 
-        when(vehModelRepository.selectByMap(any(Map.class))).thenReturn(models);
+        when(mdmModelRepository.selectByMap(any(Map.class))).thenReturn(models);
 
         // When
         List<ModelDto> result = modelAppService.search(query);
@@ -74,7 +74,7 @@ class ModelAppServiceTest {
         // Then
         assertNotNull(result);
         assertEquals(2, result.size());
-        verify(vehModelRepository).selectByMap(any(Map.class));
+        verify(mdmModelRepository).selectByMap(any(Map.class));
     }
 
     @Test
@@ -85,7 +85,7 @@ class ModelAppServiceTest {
                 .code("NONEXISTENT")
                 .build();
 
-        when(vehModelRepository.selectByMap(any(Map.class))).thenReturn(Collections.emptyList());
+        when(mdmModelRepository.selectByMap(any(Map.class))).thenReturn(Collections.emptyList());
 
         // When
         List<ModelDto> result = modelAppService.search(query);
@@ -93,7 +93,7 @@ class ModelAppServiceTest {
         // Then
         assertNotNull(result);
         assertTrue(result.isEmpty());
-        verify(vehModelRepository).selectByMap(any(Map.class));
+        verify(mdmModelRepository).selectByMap(any(Map.class));
     }
 
     @Test
@@ -101,14 +101,14 @@ class ModelAppServiceTest {
     void checkCodeUnique_shouldReturnTrueWhenCodeIsUnique() {
         // Given
         String code = "MODEL001";
-        when(vehModelRepository.selectByCode(code)).thenReturn(null);
+        when(mdmModelRepository.selectByCode(code)).thenReturn(null);
 
         // When
         Boolean result = modelAppService.checkCodeUnique(1L, code);
 
         // Then
         assertTrue(result);
-        verify(vehModelRepository).selectByCode(code);
+        verify(mdmModelRepository).selectByCode(code);
     }
 
     @Test
@@ -119,14 +119,14 @@ class ModelAppServiceTest {
         String code = "MODEL001";
         Model existingModel = Model.builder().id(modelId).code(code).build();
 
-        when(vehModelRepository.selectByCode(code)).thenReturn(existingModel);
+        when(mdmModelRepository.selectByCode(code)).thenReturn(existingModel);
 
         // When
         Boolean result = modelAppService.checkCodeUnique(modelId, code);
 
         // Then
         assertTrue(result);
-        verify(vehModelRepository).selectByCode(code);
+        verify(mdmModelRepository).selectByCode(code);
     }
 
     @Test
@@ -137,14 +137,14 @@ class ModelAppServiceTest {
         String code = "MODEL001";
         Model existingModel = Model.builder().id(2L).code(code).build();
 
-        when(vehModelRepository.selectByCode(code)).thenReturn(existingModel);
+        when(mdmModelRepository.selectByCode(code)).thenReturn(existingModel);
 
         // When
         Boolean result = modelAppService.checkCodeUnique(modelId, code);
 
         // Then
         assertFalse(result);
-        verify(vehModelRepository).selectByCode(code);
+        verify(mdmModelRepository).selectByCode(code);
     }
 
     @Test
@@ -154,16 +154,16 @@ class ModelAppServiceTest {
         Long modelId = 1L;
         Model model = Model.builder().id(modelId).code("MODEL001").build();
 
-        when(vehModelRepository.selectById(modelId)).thenReturn(model);
-        when(vehVariantRepository.countByMap(any(Map.class))).thenReturn(5);
+        when(mdmModelRepository.selectById(modelId)).thenReturn(model);
+        when(mdmVariantRepository.countByMap(any(Map.class))).thenReturn(5);
 
         // When
         Boolean result = modelAppService.checkModelVariantExist(modelId);
 
         // Then
         assertTrue(result);
-        verify(vehModelRepository).selectById(modelId);
-        verify(vehVariantRepository).countByMap(any(Map.class));
+        verify(mdmModelRepository).selectById(modelId);
+        verify(mdmVariantRepository).countByMap(any(Map.class));
     }
 
     @Test
@@ -173,16 +173,16 @@ class ModelAppServiceTest {
         Long modelId = 1L;
         Model model = Model.builder().id(modelId).code("MODEL001").build();
 
-        when(vehModelRepository.selectById(modelId)).thenReturn(model);
-        when(vehVariantRepository.countByMap(any(Map.class))).thenReturn(0);
+        when(mdmModelRepository.selectById(modelId)).thenReturn(model);
+        when(mdmVariantRepository.countByMap(any(Map.class))).thenReturn(0);
 
         // When
         Boolean result = modelAppService.checkModelVariantExist(modelId);
 
         // Then
         assertFalse(result);
-        verify(vehModelRepository).selectById(modelId);
-        verify(vehVariantRepository).countByMap(any(Map.class));
+        verify(mdmModelRepository).selectById(modelId);
+        verify(mdmVariantRepository).countByMap(any(Map.class));
     }
 
     @Test
@@ -192,7 +192,7 @@ class ModelAppServiceTest {
         Long modelId = 1L;
         Model model = Model.builder().id(modelId).code("MODEL001").build();
 
-        when(vehModelRepository.selectById(modelId)).thenReturn(model);
+        when(mdmModelRepository.selectById(modelId)).thenReturn(model);
         when(vehBasicInfoRepository.countByMap(any(Map.class))).thenReturn(5);
 
         // When
@@ -200,7 +200,7 @@ class ModelAppServiceTest {
 
         // Then
         assertTrue(result);
-        verify(vehModelRepository).selectById(modelId);
+        verify(mdmModelRepository).selectById(modelId);
         verify(vehBasicInfoRepository).countByMap(any(Map.class));
     }
 
@@ -211,7 +211,7 @@ class ModelAppServiceTest {
         Long modelId = 1L;
         Model model = Model.builder().id(modelId).code("MODEL001").build();
 
-        when(vehModelRepository.selectById(modelId)).thenReturn(model);
+        when(mdmModelRepository.selectById(modelId)).thenReturn(model);
         when(vehBasicInfoRepository.countByMap(any(Map.class))).thenReturn(0);
 
         // When
@@ -219,7 +219,7 @@ class ModelAppServiceTest {
 
         // Then
         assertFalse(result);
-        verify(vehModelRepository).selectById(modelId);
+        verify(mdmModelRepository).selectById(modelId);
         verify(vehBasicInfoRepository).countByMap(any(Map.class));
     }
 
@@ -241,8 +241,8 @@ class ModelAppServiceTest {
                 .brandCode("BRAND001")
                 .build();
 
-        when(vehModelRepository.selectById(modelId)).thenReturn(model);
-        when(vehCarLineRepository.selectByCode("CARLINE001")).thenReturn(carLine);
+        when(mdmModelRepository.selectById(modelId)).thenReturn(model);
+        when(mdmCarLineRepository.selectByCode("CARLINE001")).thenReturn(carLine);
 
         // When
         ModelDto result = modelAppService.getModelById(modelId);
@@ -253,8 +253,8 @@ class ModelAppServiceTest {
         assertEquals("MODEL001", result.getCode());
         assertEquals("测试车型", result.getName());
         assertEquals("BRAND001", result.getBrandCode());
-        verify(vehModelRepository).selectById(modelId);
-        verify(vehCarLineRepository).selectByCode("CARLINE001");
+        verify(mdmModelRepository).selectById(modelId);
+        verify(mdmCarLineRepository).selectByCode("CARLINE001");
     }
 
     @Test
@@ -270,8 +270,8 @@ class ModelAppServiceTest {
                 .carLineCode("CARLINE001")
                 .build();
 
-        when(vehModelRepository.selectById(modelId)).thenReturn(model);
-        when(vehCarLineRepository.selectByCode("CARLINE001")).thenReturn(null);
+        when(mdmModelRepository.selectById(modelId)).thenReturn(model);
+        when(mdmCarLineRepository.selectByCode("CARLINE001")).thenReturn(null);
 
         // When
         ModelDto result = modelAppService.getModelById(modelId);
@@ -281,8 +281,8 @@ class ModelAppServiceTest {
         assertEquals(modelId, result.getId());
         assertEquals("MODEL001", result.getCode());
         assertNull(result.getBrandCode());
-        verify(vehModelRepository).selectById(modelId);
-        verify(vehCarLineRepository).selectByCode("CARLINE001");
+        verify(mdmModelRepository).selectById(modelId);
+        verify(mdmCarLineRepository).selectByCode("CARLINE001");
     }
 
     @Test
@@ -296,7 +296,7 @@ class ModelAppServiceTest {
                 .name("测试车型")
                 .build();
 
-        when(vehModelRepository.selectByCode(code)).thenReturn(model);
+        when(mdmModelRepository.selectByCode(code)).thenReturn(model);
 
         // When
         Model result = modelAppService.getModelByCode(code);
@@ -304,7 +304,7 @@ class ModelAppServiceTest {
         // Then
         assertNotNull(result);
         assertEquals(code, result.getCode());
-        verify(vehModelRepository).selectByCode(code);
+        verify(mdmModelRepository).selectByCode(code);
     }
 
     @Test
@@ -318,14 +318,14 @@ class ModelAppServiceTest {
                 .carLineCode("CARLINE001")
                 .build();
 
-        when(vehModelRepository.insert(any(Model.class))).thenReturn(1);
+        when(mdmModelRepository.insert(any(Model.class))).thenReturn(1);
 
         // When
         int result = modelAppService.createModel(cmd, "user1");
 
         // Then
         assertEquals(1, result);
-        verify(vehModelRepository).insert(any(Model.class));
+        verify(mdmModelRepository).insert(any(Model.class));
     }
 
     @Test
@@ -339,14 +339,14 @@ class ModelAppServiceTest {
                 .carLineCode("CARLINE001")
                 .build();
 
-        when(vehModelRepository.insert(any(Model.class))).thenReturn(1);
+        when(mdmModelRepository.insert(any(Model.class))).thenReturn(1);
 
         // When
         int result = modelAppService.createModel(cmd, "user1");
 
         // Then
         assertEquals(1, result);
-        verify(vehModelRepository).insert(any(Model.class));
+        verify(mdmModelRepository).insert(any(Model.class));
     }
 
     @Test
@@ -368,16 +368,16 @@ class ModelAppServiceTest {
                 .source(SourceType.MANUAL)
                 .build();
 
-        when(vehModelRepository.selectById(1L)).thenReturn(existingModel);
-        when(vehModelRepository.update(any(Model.class))).thenReturn(1);
+        when(mdmModelRepository.selectById(1L)).thenReturn(existingModel);
+        when(mdmModelRepository.update(any(Model.class))).thenReturn(1);
 
         // When
         int result = modelAppService.modifyModel(cmd, "user1");
 
         // Then
         assertEquals(1, result);
-        verify(vehModelRepository).selectById(1L);
-        verify(vehModelRepository).update(any(Model.class));
+        verify(mdmModelRepository).selectById(1L);
+        verify(mdmModelRepository).update(any(Model.class));
     }
 
     @Test
@@ -397,14 +397,14 @@ class ModelAppServiceTest {
                 .source(SourceType.MDM)
                 .build();
 
-        when(vehModelRepository.selectById(1L)).thenReturn(existingModel);
+        when(mdmModelRepository.selectById(1L)).thenReturn(existingModel);
 
         // When & Then
         assertThrows(ProductDataReadOnlyException.class, () -> {
             modelAppService.modifyModel(cmd, "user1");
         });
-        verify(vehModelRepository).selectById(1L);
-        verify(vehModelRepository, never()).update(any(Model.class));
+        verify(mdmModelRepository).selectById(1L);
+        verify(mdmModelRepository, never()).update(any(Model.class));
     }
 
     @Test
@@ -417,20 +417,20 @@ class ModelAppServiceTest {
         Model model2 = Model.builder().id(2L).code("MODEL002").source(SourceType.MANUAL).build();
         Model model3 = Model.builder().id(3L).code("MODEL003").source(SourceType.MANUAL).build();
 
-        when(vehModelRepository.selectById(1L)).thenReturn(model1);
-        when(vehModelRepository.selectById(2L)).thenReturn(model2);
-        when(vehModelRepository.selectById(3L)).thenReturn(model3);
-        when(vehModelRepository.batchPhysicalDelete(ids)).thenReturn(3);
+        when(mdmModelRepository.selectById(1L)).thenReturn(model1);
+        when(mdmModelRepository.selectById(2L)).thenReturn(model2);
+        when(mdmModelRepository.selectById(3L)).thenReturn(model3);
+        when(mdmModelRepository.batchPhysicalDelete(ids)).thenReturn(3);
 
         // When
         int result = modelAppService.deleteModelByIds(ids);
 
         // Then
         assertEquals(3, result);
-        verify(vehModelRepository).selectById(1L);
-        verify(vehModelRepository).selectById(2L);
-        verify(vehModelRepository).selectById(3L);
-        verify(vehModelRepository).batchPhysicalDelete(ids);
+        verify(mdmModelRepository).selectById(1L);
+        verify(mdmModelRepository).selectById(2L);
+        verify(mdmModelRepository).selectById(3L);
+        verify(mdmModelRepository).batchPhysicalDelete(ids);
     }
 
     @Test
@@ -442,16 +442,16 @@ class ModelAppServiceTest {
         Model model1 = Model.builder().id(1L).code("MODEL001").source(SourceType.MANUAL).build();
         Model model2 = Model.builder().id(2L).code("MODEL_MDM").source(SourceType.MDM).build();
 
-        when(vehModelRepository.selectById(1L)).thenReturn(model1);
-        when(vehModelRepository.selectById(2L)).thenReturn(model2);
+        when(mdmModelRepository.selectById(1L)).thenReturn(model1);
+        when(mdmModelRepository.selectById(2L)).thenReturn(model2);
 
         // When & Then
         assertThrows(ProductDataReadOnlyException.class, () -> {
             modelAppService.deleteModelByIds(ids);
         });
-        verify(vehModelRepository).selectById(1L);
-        verify(vehModelRepository).selectById(2L);
-        verify(vehModelRepository, never()).batchPhysicalDelete(any(Long[].class));
+        verify(mdmModelRepository).selectById(1L);
+        verify(mdmModelRepository).selectById(2L);
+        verify(mdmModelRepository, never()).batchPhysicalDelete(any(Long[].class));
     }
 
     @Test
@@ -465,15 +465,15 @@ class ModelAppServiceTest {
                 .externalRefId(externalRefId)
                 .build();
 
-        when(vehModelRepository.selectByExternalRefId(externalRefId)).thenReturn(model);
+        when(mdmModelRepository.selectByExternalRefId(externalRefId)).thenReturn(model);
 
         // When
-        Model result = vehModelRepository.selectByExternalRefId(externalRefId);
+        Model result = mdmModelRepository.selectByExternalRefId(externalRefId);
 
         // Then
         assertNotNull(result);
         assertEquals(externalRefId, result.getExternalRefId());
-        verify(vehModelRepository).selectByExternalRefId(externalRefId);
+        verify(mdmModelRepository).selectByExternalRefId(externalRefId);
     }
 
     @Test
@@ -481,13 +481,13 @@ class ModelAppServiceTest {
     void countBySource_shouldReturnCountForSource() {
         // Given
         SourceType source = SourceType.MDM;
-        when(vehModelRepository.countBySource(source)).thenReturn(5L);
+        when(mdmModelRepository.countBySource(source)).thenReturn(5L);
 
         // When
-        long result = vehModelRepository.countBySource(source);
+        long result = mdmModelRepository.countBySource(source);
 
         // Then
         assertEquals(5L, result);
-        verify(vehModelRepository).countBySource(source);
+        verify(mdmModelRepository).countBySource(source);
     }
 }

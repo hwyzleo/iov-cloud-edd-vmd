@@ -10,8 +10,8 @@ import net.hwyz.iov.cloud.edd.vmd.service.common.exception.ProductDataReadOnlyEx
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Platform;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehPlatformRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehCarLineRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmPlatformRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmCarLineRepository;
 import net.hwyz.iov.cloud.framework.common.util.ParamHelper;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Service;
@@ -36,8 +36,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class PlatformAppService {
 
-    private final VehPlatformRepository vehPlatformRepository;
-    private final VehCarLineRepository vehCarLineRepository;
+    private final MdmPlatformRepository mdmPlatformRepository;
+    private final MdmCarLineRepository mdmCarLineRepository;
     private final VehBasicInfoRepository vehBasicInfoRepository;
 
     /**
@@ -52,7 +52,7 @@ public class PlatformAppService {
         map.put("name", ParamHelper.fuzzyQueryParam(query.getName()));
         map.put("beginTime", query.getBeginTime());
         map.put("endTime", query.getEndTime());
-        List<Platform> platformList = vehPlatformRepository.selectByMap(map);
+        List<Platform> platformList = mdmPlatformRepository.selectByMap(map);
         return PageUtil.convert(platformList, PlatformAssembler.INSTANCE::fromDomain);
     }
 
@@ -67,7 +67,7 @@ public class PlatformAppService {
         if (ObjUtil.isNull(platformId)) {
             platformId = -1L;
         }
-        Platform platform = vehPlatformRepository.selectByCode(code);
+        Platform platform = mdmPlatformRepository.selectByCode(code);
         return !ObjUtil.isNotNull(platform) || platform.getId().longValue() == platformId.longValue();
     }
 
@@ -78,10 +78,10 @@ public class PlatformAppService {
      * @return 结果
      */
     public Boolean checkPlatformSeriesExist(Long platformId) {
-        Platform platform = vehPlatformRepository.selectById(platformId);
+        Platform platform = mdmPlatformRepository.selectById(platformId);
         Map<String, Object> map = new HashMap<>();
         map.put("platformCode", platform.getCode());
-        return vehCarLineRepository.countByMap(map) > 0;
+        return mdmCarLineRepository.countByMap(map) > 0;
     }
 
     /**
@@ -91,7 +91,7 @@ public class PlatformAppService {
      * @return 结果
      */
     public Boolean checkPlatformVehicleExist(Long platformId) {
-        Platform platform = vehPlatformRepository.selectById(platformId);
+        Platform platform = mdmPlatformRepository.selectById(platformId);
         Map<String, Object> map = new HashMap<>();
         map.put("platformCode", platform.getCode());
         return vehBasicInfoRepository.countByMap(map) > 0;
@@ -104,7 +104,7 @@ public class PlatformAppService {
      * @return 车辆平台 DTO
      */
     public PlatformDto getPlatformById(Long id) {
-        return PlatformAssembler.INSTANCE.fromDomain(vehPlatformRepository.selectById(id));
+        return PlatformAssembler.INSTANCE.fromDomain(mdmPlatformRepository.selectById(id));
     }
 
     /**
@@ -114,7 +114,7 @@ public class PlatformAppService {
      * @return 车辆平台领域对象
      */
     public Platform getPlatformByCode(String code) {
-        return vehPlatformRepository.selectByCode(code);
+        return mdmPlatformRepository.selectByCode(code);
     }
 
     /**
@@ -136,7 +136,7 @@ public class PlatformAppService {
         if (platform.getSource() == SourceType.MDM) {
             throw new ProductDataReadOnlyException("平台", platform.getCode());
         }
-        return vehPlatformRepository.insert(platform);
+        return mdmPlatformRepository.insert(platform);
     }
 
     /**
@@ -153,13 +153,13 @@ public class PlatformAppService {
      */
     @Deprecated
     public int modifyPlatform(PlatformCmd platformCmd, String userId) {
-        Platform platform = vehPlatformRepository.selectById(platformCmd.getId());
+        Platform platform = mdmPlatformRepository.selectById(platformCmd.getId());
         // Source=MDM 只读限制（CR-013）
         if (platform.getSource() == SourceType.MDM) {
             throw new ProductDataReadOnlyException("平台", platform.getCode());
         }
         Platform updatePlatform = PlatformAssembler.INSTANCE.toDomain(platformCmd);
-        return vehPlatformRepository.update(updatePlatform);
+        return mdmPlatformRepository.update(updatePlatform);
     }
 
     /**
@@ -177,12 +177,12 @@ public class PlatformAppService {
     public int deletePlatformByIds(Long[] ids) {
         // Source=MDM 只读限制（CR-013）
         for (Long id : ids) {
-            Platform platform = vehPlatformRepository.selectById(id);
+            Platform platform = mdmPlatformRepository.selectById(id);
             if (platform != null && platform.getSource() == SourceType.MDM) {
                 throw new ProductDataReadOnlyException("平台", platform.getCode());
             }
         }
-        return vehPlatformRepository.batchPhysicalDelete(ids);
+        return mdmPlatformRepository.batchPhysicalDelete(ids);
     }
 
 }

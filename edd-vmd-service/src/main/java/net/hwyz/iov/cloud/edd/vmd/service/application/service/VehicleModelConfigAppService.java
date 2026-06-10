@@ -2,7 +2,7 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehConfigurationRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmConfigurationRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -13,7 +13,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class VehicleModelConfigAppService {
 
-    private final VehConfigurationRepository vehConfigurationRepository;
+    private final MdmConfigurationRepository mdmConfigurationRepository;
 
     public String getVehicleBuildConfigCode(Map<String, String> optionCodeMap) {
         log.info("根据选项族选项值[{}]匹配生产配置代码", optionCodeMap);
@@ -21,7 +21,7 @@ public class VehicleModelConfigAppService {
             log.warn("选项族选项值为空，无法匹配生产配置代码");
             return null;
         }
-        List<String> buildConfigCodes = vehConfigurationRepository.selectConfigurationCodeByOptionCodeMap(optionCodeMap);
+        List<String> buildConfigCodes = mdmConfigurationRepository.selectConfigurationCodeByOptionCodeMap(optionCodeMap);
         if (buildConfigCodes == null || buildConfigCodes.isEmpty()) {
             log.warn("未匹配到任何生产配置代码，选项族选项值为[{}]", optionCodeMap);
             return null;

@@ -1,7 +1,7 @@
 package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter;
 
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Platform;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehPlatformPo;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.MdmPlatformPo;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.factory.Mappers;
@@ -21,18 +21,18 @@ public interface PlatformConverter {
     /**
      * PO 转领域对象
      *
-     * @param vehPlatformPo PO
+     * @param mdmPlatformPo PO
      * @return 领域对象
      */
-    Platform toDomain(VehPlatformPo vehPlatformPo);
+    Platform toDomain(MdmPlatformPo mdmPlatformPo);
 
     /**
      * PO 列表转领域对象列表
      *
-     * @param vehPlatformPoList PO 列表
+     * @param mdmPlatformPoList PO 列表
      * @return 领域对象列表
      */
-    List<Platform> toDomainList(List<VehPlatformPo> vehPlatformPoList);
+    List<Platform> toDomainList(List<MdmPlatformPo> mdmPlatformPoList);
 
     /**
      * 领域对象转 PO
@@ -40,5 +40,5 @@ public interface PlatformConverter {
      * @param platform 领域对象
      * @return PO
      */
-    VehPlatformPo fromDomain(Platform platform);
+    MdmPlatformPo fromDomain(Platform platform);
 }

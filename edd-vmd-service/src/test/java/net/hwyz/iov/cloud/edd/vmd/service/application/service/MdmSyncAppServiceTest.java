@@ -25,14 +25,14 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Plant;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Platform;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Variant;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBrandRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehCarLineRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehConfigurationRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehModelRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehOptionFamilyRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehPlantRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehPlatformRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehVariantRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmBrandRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmCarLineRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmConfigurationRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmModelRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmOptionFamilyRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmPlantRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmPlatformRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmVariantRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -61,28 +61,28 @@ import static org.mockito.Mockito.*;
 class MdmSyncAppServiceTest {
 
     @Mock
-    private VehBrandRepository vehBrandRepository;
+    private MdmBrandRepository mdmBrandRepository;
 
     @Mock
-    private VehCarLineRepository vehCarLineRepository;
+    private MdmCarLineRepository mdmCarLineRepository;
 
     @Mock
-    private VehPlatformRepository vehPlatformRepository;
+    private MdmPlatformRepository mdmPlatformRepository;
 
     @Mock
-    private VehModelRepository vehModelRepository;
+    private MdmModelRepository mdmModelRepository;
 
     @Mock
-    private VehOptionFamilyRepository vehOptionFamilyRepository;
+    private MdmOptionFamilyRepository mdmOptionFamilyRepository;
 
     @Mock
-    private VehConfigurationRepository vehConfigurationRepository;
+    private MdmConfigurationRepository mdmConfigurationRepository;
 
     @Mock
-    private VehPlantRepository vehPlantRepository;
+    private MdmPlantRepository mdmPlantRepository;
 
     @Mock
-    private VehVariantRepository vehVariantRepository;
+    private MdmVariantRepository mdmVariantRepository;
 
     @Mock
     private MdmBrandQueryClient mdmBrandQueryClient;
@@ -120,15 +120,15 @@ class MdmSyncAppServiceTest {
         // Given
         MdmBrandEvent event = new MdmBrandEvent("CREATED", "mdm-brand-001", 1L, "BRAND001", "新品牌", LocalDateTime.now());
 
-        when(vehBrandRepository.selectByExternalRefId("mdm-brand-001")).thenReturn(null);
-        when(vehBrandRepository.insert(any(Brand.class))).thenReturn(1);
+        when(mdmBrandRepository.selectByExternalRefId("mdm-brand-001")).thenReturn(null);
+        when(mdmBrandRepository.insert(any(Brand.class))).thenReturn(1);
 
         // When
         mdmSyncAppService.handleBrandEvent(event);
 
         // Then
-        verify(vehBrandRepository).selectByExternalRefId("mdm-brand-001");
-        verify(vehBrandRepository).insert(any(Brand.class));
+        verify(mdmBrandRepository).selectByExternalRefId("mdm-brand-001");
+        verify(mdmBrandRepository).insert(any(Brand.class));
     }
 
     @Test
@@ -146,15 +146,15 @@ class MdmSyncAppServiceTest {
                 .externalVersion(1L)
                 .build();
 
-        when(vehBrandRepository.selectByExternalRefId("mdm-brand-002")).thenReturn(localBrand);
-        when(vehBrandRepository.updateById(any(Brand.class))).thenReturn(1);
+        when(mdmBrandRepository.selectByExternalRefId("mdm-brand-002")).thenReturn(localBrand);
+        when(mdmBrandRepository.updateById(any(Brand.class))).thenReturn(1);
 
         // When
         mdmSyncAppService.handleBrandEvent(event);
 
         // Then
-        verify(vehBrandRepository).selectByExternalRefId("mdm-brand-002");
-        verify(vehBrandRepository).updateById(any(Brand.class));
+        verify(mdmBrandRepository).selectByExternalRefId("mdm-brand-002");
+        verify(mdmBrandRepository).updateById(any(Brand.class));
     }
 
     @Test
@@ -172,14 +172,14 @@ class MdmSyncAppServiceTest {
                 .externalVersion(2L)
                 .build();
 
-        when(vehBrandRepository.selectByExternalRefId("mdm-brand-003")).thenReturn(localBrand);
+        when(mdmBrandRepository.selectByExternalRefId("mdm-brand-003")).thenReturn(localBrand);
 
         // When
         mdmSyncAppService.handleBrandEvent(event);
 
         // Then
-        verify(vehBrandRepository).selectByExternalRefId("mdm-brand-003");
-        verify(vehBrandRepository, never()).updateById(any(Brand.class));
+        verify(mdmBrandRepository).selectByExternalRefId("mdm-brand-003");
+        verify(mdmBrandRepository, never()).updateById(any(Brand.class));
     }
 
     @Test
@@ -188,15 +188,15 @@ class MdmSyncAppServiceTest {
         // Given
         MdmCarLineEvent event = new MdmCarLineEvent("CREATED", "mdm-carline-001", 1L, "CARLINE001", "新车系", "BRAND001", LocalDateTime.now());
 
-        when(vehCarLineRepository.selectByExternalRefId("mdm-carline-001")).thenReturn(null);
-        when(vehCarLineRepository.insert(any(CarLine.class))).thenReturn(1);
+        when(mdmCarLineRepository.selectByExternalRefId("mdm-carline-001")).thenReturn(null);
+        when(mdmCarLineRepository.insert(any(CarLine.class))).thenReturn(1);
 
         // When
         mdmSyncAppService.handleSeriesEvent(event);
 
         // Then
-        verify(vehCarLineRepository).selectByExternalRefId("mdm-carline-001");
-        verify(vehCarLineRepository).insert(any(CarLine.class));
+        verify(mdmCarLineRepository).selectByExternalRefId("mdm-carline-001");
+        verify(mdmCarLineRepository).insert(any(CarLine.class));
     }
 
     @Test
@@ -215,15 +215,15 @@ class MdmSyncAppServiceTest {
                 .externalVersion(1L)
                 .build();
 
-        when(vehCarLineRepository.selectByExternalRefId("mdm-carline-002")).thenReturn(localCarLine);
-        when(vehCarLineRepository.updateById(any(CarLine.class))).thenReturn(1);
+        when(mdmCarLineRepository.selectByExternalRefId("mdm-carline-002")).thenReturn(localCarLine);
+        when(mdmCarLineRepository.updateById(any(CarLine.class))).thenReturn(1);
 
         // When
         mdmSyncAppService.handleSeriesEvent(event);
 
         // Then
-        verify(vehCarLineRepository).selectByExternalRefId("mdm-carline-002");
-        verify(vehCarLineRepository).updateById(any(CarLine.class));
+        verify(mdmCarLineRepository).selectByExternalRefId("mdm-carline-002");
+        verify(mdmCarLineRepository).updateById(any(CarLine.class));
     }
 
     @Test
@@ -242,14 +242,14 @@ class MdmSyncAppServiceTest {
                 .externalVersion(2L)
                 .build();
 
-        when(vehCarLineRepository.selectByExternalRefId("mdm-carline-003")).thenReturn(localCarLine);
+        when(mdmCarLineRepository.selectByExternalRefId("mdm-carline-003")).thenReturn(localCarLine);
 
         // When
         mdmSyncAppService.handleSeriesEvent(event);
 
         // Then
-        verify(vehCarLineRepository).selectByExternalRefId("mdm-carline-003");
-        verify(vehCarLineRepository, never()).updateById(any(CarLine.class));
+        verify(mdmCarLineRepository).selectByExternalRefId("mdm-carline-003");
+        verify(mdmCarLineRepository, never()).updateById(any(CarLine.class));
     }
 
     @Test
@@ -258,15 +258,15 @@ class MdmSyncAppServiceTest {
         // Given
         MdmPlatformEvent event = new MdmPlatformEvent("CREATED", "mdm-platform-001", 1L, "PLATFORM001", "新平台", LocalDateTime.now());
 
-        when(vehPlatformRepository.selectByExternalRefId("mdm-platform-001")).thenReturn(null);
-        when(vehPlatformRepository.insert(any(Platform.class))).thenReturn(1);
+        when(mdmPlatformRepository.selectByExternalRefId("mdm-platform-001")).thenReturn(null);
+        when(mdmPlatformRepository.insert(any(Platform.class))).thenReturn(1);
 
         // When
         mdmSyncAppService.handlePlatformEvent(event);
 
         // Then
-        verify(vehPlatformRepository).selectByExternalRefId("mdm-platform-001");
-        verify(vehPlatformRepository).insert(any(Platform.class));
+        verify(mdmPlatformRepository).selectByExternalRefId("mdm-platform-001");
+        verify(mdmPlatformRepository).insert(any(Platform.class));
     }
 
     @Test
@@ -284,15 +284,15 @@ class MdmSyncAppServiceTest {
                 .externalVersion(1L)
                 .build();
 
-        when(vehPlatformRepository.selectByExternalRefId("mdm-platform-002")).thenReturn(localPlatform);
-        when(vehPlatformRepository.updateById(any(Platform.class))).thenReturn(1);
+        when(mdmPlatformRepository.selectByExternalRefId("mdm-platform-002")).thenReturn(localPlatform);
+        when(mdmPlatformRepository.updateById(any(Platform.class))).thenReturn(1);
 
         // When
         mdmSyncAppService.handlePlatformEvent(event);
 
         // Then
-        verify(vehPlatformRepository).selectByExternalRefId("mdm-platform-002");
-        verify(vehPlatformRepository).updateById(any(Platform.class));
+        verify(mdmPlatformRepository).selectByExternalRefId("mdm-platform-002");
+        verify(mdmPlatformRepository).updateById(any(Platform.class));
     }
 
     @Test
@@ -310,27 +310,27 @@ class MdmSyncAppServiceTest {
                 .externalVersion(2L)
                 .build();
 
-        when(vehPlatformRepository.selectByExternalRefId("mdm-platform-003")).thenReturn(localPlatform);
+        when(mdmPlatformRepository.selectByExternalRefId("mdm-platform-003")).thenReturn(localPlatform);
 
         // When
         mdmSyncAppService.handlePlatformEvent(event);
 
         // Then
-        verify(vehPlatformRepository).selectByExternalRefId("mdm-platform-003");
-        verify(vehPlatformRepository, never()).updateById(any(Platform.class));
+        verify(mdmPlatformRepository).selectByExternalRefId("mdm-platform-003");
+        verify(mdmPlatformRepository, never()).updateById(any(Platform.class));
     }
 
     @Test
     @DisplayName("bootstrapBrand应跳过当本地已有MDM品牌数据时")
     void bootstrapBrand_shouldSkipWhenLocalMdmBrandsExist() {
         // Given
-        when(vehBrandRepository.countBySource(SourceType.MDM)).thenReturn(5L);
+        when(mdmBrandRepository.countBySource(SourceType.MDM)).thenReturn(5L);
 
         // When
         mdmSyncAppService.bootstrapBrand();
 
         // Then
-        verify(vehBrandRepository).countBySource(SourceType.MDM);
+        verify(mdmBrandRepository).countBySource(SourceType.MDM);
         verify(mdmBrandQueryClient, never()).getAllBrands();
     }
 
@@ -338,7 +338,7 @@ class MdmSyncAppServiceTest {
     @DisplayName("bootstrapBrand应同步当本地无MDM品牌数据时")
     void bootstrapBrand_shouldSyncWhenNoLocalMdmBrands() {
         // Given
-        when(vehBrandRepository.countBySource(SourceType.MDM)).thenReturn(0L);
+        when(mdmBrandRepository.countBySource(SourceType.MDM)).thenReturn(0L);
 
         Map<String, Object> brandData1 = new HashMap<>();
         brandData1.put("id", "mdm-brand-001");
@@ -354,28 +354,28 @@ class MdmSyncAppServiceTest {
 
         List<Map<String, Object>> mdmBrands = Arrays.asList(brandData1, brandData2);
         when(mdmBrandQueryClient.getAllBrands()).thenReturn(mdmBrands);
-        when(vehBrandRepository.insert(any(Brand.class))).thenReturn(1);
+        when(mdmBrandRepository.insert(any(Brand.class))).thenReturn(1);
 
         // When
         mdmSyncAppService.bootstrapBrand();
 
         // Then
-        verify(vehBrandRepository).countBySource(SourceType.MDM);
+        verify(mdmBrandRepository).countBySource(SourceType.MDM);
         verify(mdmBrandQueryClient).getAllBrands();
-        verify(vehBrandRepository, times(2)).insert(any(Brand.class));
+        verify(mdmBrandRepository, times(2)).insert(any(Brand.class));
     }
 
     @Test
     @DisplayName("bootstrapSeries应跳过当本地已有MDM车系数据时")
     void bootstrapSeries_shouldSkipWhenLocalMdmCarLinesExist() {
         // Given
-        when(vehCarLineRepository.countBySource(SourceType.MDM)).thenReturn(5L);
+        when(mdmCarLineRepository.countBySource(SourceType.MDM)).thenReturn(5L);
 
         // When
         mdmSyncAppService.bootstrapSeries();
 
         // Then
-        verify(vehCarLineRepository).countBySource(SourceType.MDM);
+        verify(mdmCarLineRepository).countBySource(SourceType.MDM);
         verify(mdmCarLineQueryClient, never()).getAllSeries();
     }
 
@@ -383,7 +383,7 @@ class MdmSyncAppServiceTest {
     @DisplayName("bootstrapSeries应同步当本地无MDM车系数据时")
     void bootstrapSeries_shouldSyncWhenNoLocalMdmCarLines() {
         // Given
-        when(vehCarLineRepository.countBySource(SourceType.MDM)).thenReturn(0L);
+        when(mdmCarLineRepository.countBySource(SourceType.MDM)).thenReturn(0L);
 
         Map<String, Object> carLineData1 = new HashMap<>();
         carLineData1.put("id", "mdm-carline-001");
@@ -401,28 +401,28 @@ class MdmSyncAppServiceTest {
 
         List<Map<String, Object>> mdmCarLines = Arrays.asList(carLineData1, carLineData2);
         when(mdmCarLineQueryClient.getAllSeries()).thenReturn(mdmCarLines);
-        when(vehCarLineRepository.insert(any(CarLine.class))).thenReturn(1);
+        when(mdmCarLineRepository.insert(any(CarLine.class))).thenReturn(1);
 
         // When
         mdmSyncAppService.bootstrapSeries();
 
         // Then
-        verify(vehCarLineRepository).countBySource(SourceType.MDM);
+        verify(mdmCarLineRepository).countBySource(SourceType.MDM);
         verify(mdmCarLineQueryClient).getAllSeries();
-        verify(vehCarLineRepository, times(2)).insert(any(CarLine.class));
+        verify(mdmCarLineRepository, times(2)).insert(any(CarLine.class));
     }
 
     @Test
     @DisplayName("bootstrapPlatform应跳过当本地已有MDM平台数据时")
     void bootstrapPlatform_shouldSkipWhenLocalMdmPlatformsExist() {
         // Given
-        when(vehPlatformRepository.countBySource(SourceType.MDM)).thenReturn(5L);
+        when(mdmPlatformRepository.countBySource(SourceType.MDM)).thenReturn(5L);
 
         // When
         mdmSyncAppService.bootstrapPlatform();
 
         // Then
-        verify(vehPlatformRepository).countBySource(SourceType.MDM);
+        verify(mdmPlatformRepository).countBySource(SourceType.MDM);
         verify(mdmPlatformQueryClient, never()).getAllPlatforms();
     }
 
@@ -430,7 +430,7 @@ class MdmSyncAppServiceTest {
     @DisplayName("bootstrapPlatform应同步当本地无MDM平台数据时")
     void bootstrapPlatform_shouldSyncWhenNoLocalMdmPlatforms() {
         // Given
-        when(vehPlatformRepository.countBySource(SourceType.MDM)).thenReturn(0L);
+        when(mdmPlatformRepository.countBySource(SourceType.MDM)).thenReturn(0L);
 
         Map<String, Object> platformData1 = new HashMap<>();
         platformData1.put("id", "mdm-platform-001");
@@ -446,92 +446,92 @@ class MdmSyncAppServiceTest {
 
         List<Map<String, Object>> mdmPlatforms = Arrays.asList(platformData1, platformData2);
         when(mdmPlatformQueryClient.getAllPlatforms()).thenReturn(mdmPlatforms);
-        when(vehPlatformRepository.insert(any(Platform.class))).thenReturn(1);
+        when(mdmPlatformRepository.insert(any(Platform.class))).thenReturn(1);
 
         // When
         mdmSyncAppService.bootstrapPlatform();
 
         // Then
-        verify(vehPlatformRepository).countBySource(SourceType.MDM);
+        verify(mdmPlatformRepository).countBySource(SourceType.MDM);
         verify(mdmPlatformQueryClient).getAllPlatforms();
-        verify(vehPlatformRepository, times(2)).insert(any(Platform.class));
+        verify(mdmPlatformRepository, times(2)).insert(any(Platform.class));
     }
 
     @Test
     @DisplayName("bootstrapAll应调用所有bootstrap方法")
     void bootstrapAll_shouldCallAllBootstrapMethods() {
         // Given
-        when(vehBrandRepository.countBySource(SourceType.MDM)).thenReturn(1L);
-        when(vehCarLineRepository.countBySource(SourceType.MDM)).thenReturn(1L);
-        when(vehPlatformRepository.countBySource(SourceType.MDM)).thenReturn(1L);
-        when(vehPlantRepository.countBySource(SourceType.MDM.name())).thenReturn(1);
-        when(vehModelRepository.countBySource(SourceType.MDM)).thenReturn(1L);
-        when(vehVariantRepository.countBySource(SourceType.MDM)).thenReturn(1L);
-        when(vehConfigurationRepository.countBySource(SourceType.MDM)).thenReturn(1L);
-        when(vehOptionFamilyRepository.countBySource(SourceType.MDM.name())).thenReturn(1L);
-        when(vehOptionFamilyRepository.countOptionCodeBySource(SourceType.MDM.name())).thenReturn(1L);
+        when(mdmBrandRepository.countBySource(SourceType.MDM)).thenReturn(1L);
+        when(mdmCarLineRepository.countBySource(SourceType.MDM)).thenReturn(1L);
+        when(mdmPlatformRepository.countBySource(SourceType.MDM)).thenReturn(1L);
+        when(mdmPlantRepository.countBySource(SourceType.MDM.name())).thenReturn(1);
+        when(mdmModelRepository.countBySource(SourceType.MDM)).thenReturn(1L);
+        when(mdmVariantRepository.countBySource(SourceType.MDM)).thenReturn(1L);
+        when(mdmConfigurationRepository.countBySource(SourceType.MDM)).thenReturn(1L);
+        when(mdmOptionFamilyRepository.countBySource(SourceType.MDM.name())).thenReturn(1L);
+        when(mdmOptionFamilyRepository.countOptionCodeBySource(SourceType.MDM.name())).thenReturn(1L);
 
         // When
         mdmSyncAppService.bootstrapAll();
 
         // Then
-        verify(vehBrandRepository).countBySource(SourceType.MDM);
-        verify(vehCarLineRepository).countBySource(SourceType.MDM);
-        verify(vehPlatformRepository).countBySource(SourceType.MDM);
-        verify(vehPlantRepository).countBySource(SourceType.MDM.name());
-        verify(vehModelRepository).countBySource(SourceType.MDM);
-        verify(vehVariantRepository).countBySource(SourceType.MDM);
-        verify(vehConfigurationRepository).countBySource(SourceType.MDM);
-        verify(vehOptionFamilyRepository).countBySource(SourceType.MDM.name());
-        verify(vehOptionFamilyRepository).countOptionCodeBySource(SourceType.MDM.name());
+        verify(mdmBrandRepository).countBySource(SourceType.MDM);
+        verify(mdmCarLineRepository).countBySource(SourceType.MDM);
+        verify(mdmPlatformRepository).countBySource(SourceType.MDM);
+        verify(mdmPlantRepository).countBySource(SourceType.MDM.name());
+        verify(mdmModelRepository).countBySource(SourceType.MDM);
+        verify(mdmVariantRepository).countBySource(SourceType.MDM);
+        verify(mdmConfigurationRepository).countBySource(SourceType.MDM);
+        verify(mdmOptionFamilyRepository).countBySource(SourceType.MDM.name());
+        verify(mdmOptionFamilyRepository).countOptionCodeBySource(SourceType.MDM.name());
     }
 
     @Test
     @DisplayName("bootstrapBrand应处理MDM接口异常并不清空本地数据")
     void bootstrapBrand_shouldHandleMdmClientExceptionAndNotClearLocalData() {
         // Given
-        when(vehBrandRepository.countBySource(SourceType.MDM)).thenReturn(0L);
+        when(mdmBrandRepository.countBySource(SourceType.MDM)).thenReturn(0L);
         when(mdmBrandQueryClient.getAllBrands()).thenThrow(new RuntimeException("MDM服务不可用"));
 
         // When
         mdmSyncAppService.bootstrapBrand();
 
         // Then
-        verify(vehBrandRepository).countBySource(SourceType.MDM);
+        verify(mdmBrandRepository).countBySource(SourceType.MDM);
         verify(mdmBrandQueryClient).getAllBrands();
-        verify(vehBrandRepository, never()).insert(any(Brand.class));
+        verify(mdmBrandRepository, never()).insert(any(Brand.class));
     }
 
     @Test
     @DisplayName("bootstrapSeries应处理MDM接口异常并不清空本地数据")
     void bootstrapSeries_shouldHandleMdmClientExceptionAndNotClearLocalData() {
         // Given
-        when(vehCarLineRepository.countBySource(SourceType.MDM)).thenReturn(0L);
+        when(mdmCarLineRepository.countBySource(SourceType.MDM)).thenReturn(0L);
         when(mdmCarLineQueryClient.getAllSeries()).thenThrow(new RuntimeException("MDM服务不可用"));
 
         // When
         mdmSyncAppService.bootstrapSeries();
 
         // Then
-        verify(vehCarLineRepository).countBySource(SourceType.MDM);
+        verify(mdmCarLineRepository).countBySource(SourceType.MDM);
         verify(mdmCarLineQueryClient).getAllSeries();
-        verify(vehCarLineRepository, never()).insert(any(CarLine.class));
+        verify(mdmCarLineRepository, never()).insert(any(CarLine.class));
     }
 
     @Test
     @DisplayName("bootstrapPlatform应处理MDM接口异常并不清空本地数据")
     void bootstrapPlatform_shouldHandleMdmClientExceptionAndNotClearLocalData() {
         // Given
-        when(vehPlatformRepository.countBySource(SourceType.MDM)).thenReturn(0L);
+        when(mdmPlatformRepository.countBySource(SourceType.MDM)).thenReturn(0L);
         when(mdmPlatformQueryClient.getAllPlatforms()).thenThrow(new RuntimeException("MDM服务不可用"));
 
         // When
         mdmSyncAppService.bootstrapPlatform();
 
         // Then
-        verify(vehPlatformRepository).countBySource(SourceType.MDM);
+        verify(mdmPlatformRepository).countBySource(SourceType.MDM);
         verify(mdmPlatformQueryClient).getAllPlatforms();
-        verify(vehPlatformRepository, never()).insert(any(Platform.class));
+        verify(mdmPlatformRepository, never()).insert(any(Platform.class));
     }
 
     @Test
@@ -540,15 +540,15 @@ class MdmSyncAppServiceTest {
         // Given
         MdmModelEvent event = new MdmModelEvent("CREATED", "mdm-model-001", 1L, "MODEL001", "新车型", "PLATFORM001", "CARLINE001", LocalDateTime.now());
 
-        when(vehModelRepository.selectByExternalRefId("mdm-model-001")).thenReturn(null);
-        when(vehModelRepository.insert(any(Model.class))).thenReturn(1);
+        when(mdmModelRepository.selectByExternalRefId("mdm-model-001")).thenReturn(null);
+        when(mdmModelRepository.insert(any(Model.class))).thenReturn(1);
 
         // When
         mdmSyncAppService.handleModelEvent(event);
 
         // Then
-        verify(vehModelRepository).selectByExternalRefId("mdm-model-001");
-        verify(vehModelRepository).insert(any(Model.class));
+        verify(mdmModelRepository).selectByExternalRefId("mdm-model-001");
+        verify(mdmModelRepository).insert(any(Model.class));
     }
 
     @Test
@@ -568,15 +568,15 @@ class MdmSyncAppServiceTest {
                 .externalVersion(1L)
                 .build();
 
-        when(vehModelRepository.selectByExternalRefId("mdm-model-002")).thenReturn(localModel);
-        when(vehModelRepository.updateById(any(Model.class))).thenReturn(1);
+        when(mdmModelRepository.selectByExternalRefId("mdm-model-002")).thenReturn(localModel);
+        when(mdmModelRepository.updateById(any(Model.class))).thenReturn(1);
 
         // When
         mdmSyncAppService.handleModelEvent(event);
 
         // Then
-        verify(vehModelRepository).selectByExternalRefId("mdm-model-002");
-        verify(vehModelRepository).updateById(any(Model.class));
+        verify(mdmModelRepository).selectByExternalRefId("mdm-model-002");
+        verify(mdmModelRepository).updateById(any(Model.class));
     }
 
     @Test
@@ -596,27 +596,27 @@ class MdmSyncAppServiceTest {
                 .externalVersion(2L)
                 .build();
 
-        when(vehModelRepository.selectByExternalRefId("mdm-model-003")).thenReturn(localModel);
+        when(mdmModelRepository.selectByExternalRefId("mdm-model-003")).thenReturn(localModel);
 
         // When
         mdmSyncAppService.handleModelEvent(event);
 
         // Then
-        verify(vehModelRepository).selectByExternalRefId("mdm-model-003");
-        verify(vehModelRepository, never()).updateById(any(Model.class));
+        verify(mdmModelRepository).selectByExternalRefId("mdm-model-003");
+        verify(mdmModelRepository, never()).updateById(any(Model.class));
     }
 
     @Test
     @DisplayName("bootstrapModel应跳过当本地已有MDM车型数据时")
     void bootstrapModel_shouldSkipWhenLocalMdmModelsExist() {
         // Given
-        when(vehModelRepository.countBySource(SourceType.MDM)).thenReturn(5L);
+        when(mdmModelRepository.countBySource(SourceType.MDM)).thenReturn(5L);
 
         // When
         mdmSyncAppService.bootstrapModel();
 
         // Then
-        verify(vehModelRepository).countBySource(SourceType.MDM);
+        verify(mdmModelRepository).countBySource(SourceType.MDM);
         verify(mdmModelQueryClient, never()).getAllModels();
     }
 
@@ -624,7 +624,7 @@ class MdmSyncAppServiceTest {
     @DisplayName("bootstrapModel应同步当本地无MDM车型数据时")
     void bootstrapModel_shouldSyncWhenNoLocalMdmModels() {
         // Given
-        when(vehModelRepository.countBySource(SourceType.MDM)).thenReturn(0L);
+        when(mdmModelRepository.countBySource(SourceType.MDM)).thenReturn(0L);
 
         Map<String, Object> modelData1 = new HashMap<>();
         modelData1.put("id", "mdm-model-001");
@@ -644,31 +644,31 @@ class MdmSyncAppServiceTest {
 
         List<Map<String, Object>> mdmModels = Arrays.asList(modelData1, modelData2);
         when(mdmModelQueryClient.getAllModels()).thenReturn(mdmModels);
-        when(vehModelRepository.insert(any(Model.class))).thenReturn(1);
+        when(mdmModelRepository.insert(any(Model.class))).thenReturn(1);
 
         // When
         mdmSyncAppService.bootstrapModel();
 
         // Then
-        verify(vehModelRepository).countBySource(SourceType.MDM);
+        verify(mdmModelRepository).countBySource(SourceType.MDM);
         verify(mdmModelQueryClient).getAllModels();
-        verify(vehModelRepository, times(2)).insert(any(Model.class));
+        verify(mdmModelRepository, times(2)).insert(any(Model.class));
     }
 
     @Test
     @DisplayName("bootstrapModel应处理MDM接口异常并不清空本地数据")
     void bootstrapModel_shouldHandleMdmClientExceptionAndNotClearLocalData() {
         // Given
-        when(vehModelRepository.countBySource(SourceType.MDM)).thenReturn(0L);
+        when(mdmModelRepository.countBySource(SourceType.MDM)).thenReturn(0L);
         when(mdmModelQueryClient.getAllModels()).thenThrow(new RuntimeException("MDM服务不可用"));
 
         // When
         mdmSyncAppService.bootstrapModel();
 
         // Then
-        verify(vehModelRepository).countBySource(SourceType.MDM);
+        verify(mdmModelRepository).countBySource(SourceType.MDM);
         verify(mdmModelQueryClient).getAllModels();
-        verify(vehModelRepository, never()).insert(any(Model.class));
+        verify(mdmModelRepository, never()).insert(any(Model.class));
     }
 
     @Test
@@ -677,15 +677,15 @@ class MdmSyncAppServiceTest {
         // Given
         MdmModelEvent event = new MdmModelEvent("CREATED", "mdm-model-004", 1L, "MODEL004", "新车型", "PLATFORM001", "CARLINE001", LocalDateTime.now());
 
-        when(vehModelRepository.selectByExternalRefId("mdm-model-004")).thenReturn(null);
-        when(vehModelRepository.insert(any(Model.class))).thenReturn(1);
+        when(mdmModelRepository.selectByExternalRefId("mdm-model-004")).thenReturn(null);
+        when(mdmModelRepository.insert(any(Model.class))).thenReturn(1);
 
         // When
         mdmSyncAppService.handleModelEvent(event);
 
         // Then
-        verify(vehModelRepository).selectByExternalRefId("mdm-model-004");
-        verify(vehModelRepository).insert(argThat(model ->
+        verify(mdmModelRepository).selectByExternalRefId("mdm-model-004");
+        verify(mdmModelRepository).insert(argThat(model ->
                 "PLATFORM001".equals(model.getPlatformCode()) &&
                 "CARLINE001".equals(model.getCarLineCode()) &&
                 SourceType.MDM.equals(model.getSource())
@@ -696,7 +696,7 @@ class MdmSyncAppServiceTest {
     @DisplayName("bootstrapModel应正确处理平台和车系关联字段")
     void bootstrapModel_shouldCorrectlyHandlePlatformAndCarLineFields() {
         // Given
-        when(vehModelRepository.countBySource(SourceType.MDM)).thenReturn(0L);
+        when(mdmModelRepository.countBySource(SourceType.MDM)).thenReturn(0L);
 
         Map<String, Object> modelData = new HashMap<>();
         modelData.put("id", "mdm-model-003");
@@ -708,15 +708,15 @@ class MdmSyncAppServiceTest {
 
         List<Map<String, Object>> mdmModels = Arrays.asList(modelData);
         when(mdmModelQueryClient.getAllModels()).thenReturn(mdmModels);
-        when(vehModelRepository.insert(any(Model.class))).thenReturn(1);
+        when(mdmModelRepository.insert(any(Model.class))).thenReturn(1);
 
         // When
         mdmSyncAppService.bootstrapModel();
 
         // Then
-        verify(vehModelRepository).countBySource(SourceType.MDM);
+        verify(mdmModelRepository).countBySource(SourceType.MDM);
         verify(mdmModelQueryClient).getAllModels();
-        verify(vehModelRepository).insert(argThat(model ->
+        verify(mdmModelRepository).insert(argThat(model ->
                 "PLATFORM002".equals(model.getPlatformCode()) &&
                 "CARLINE002".equals(model.getCarLineCode()) &&
                 SourceType.MDM.equals(model.getSource())
@@ -732,15 +732,15 @@ class MdmSyncAppServiceTest {
         MdmOptionFamilyEvent event = new MdmOptionFamilyEvent("CREATED", "mdm-of-001", 1L, "OF001",
                 "选装族1", "Option Family 1", "EXTERIOR", true, true, 1, LocalDateTime.now());
 
-        when(vehOptionFamilyRepository.selectByExternalRefId("mdm-of-001")).thenReturn(null);
-        when(vehOptionFamilyRepository.insert(any(OptionFamily.class))).thenReturn(1);
+        when(mdmOptionFamilyRepository.selectByExternalRefId("mdm-of-001")).thenReturn(null);
+        when(mdmOptionFamilyRepository.insert(any(OptionFamily.class))).thenReturn(1);
 
         // When
         mdmSyncAppService.handleOptionFamilyEvent(event);
 
         // Then
-        verify(vehOptionFamilyRepository).selectByExternalRefId("mdm-of-001");
-        verify(vehOptionFamilyRepository).insert(any(OptionFamily.class));
+        verify(mdmOptionFamilyRepository).selectByExternalRefId("mdm-of-001");
+        verify(mdmOptionFamilyRepository).insert(any(OptionFamily.class));
     }
 
     @Test
@@ -764,15 +764,15 @@ class MdmSyncAppServiceTest {
                 .externalVersion(1L)
                 .build();
 
-        when(vehOptionFamilyRepository.selectByExternalRefId("mdm-of-002")).thenReturn(localOptionFamily);
-        when(vehOptionFamilyRepository.updateById(any(OptionFamily.class))).thenReturn(1);
+        when(mdmOptionFamilyRepository.selectByExternalRefId("mdm-of-002")).thenReturn(localOptionFamily);
+        when(mdmOptionFamilyRepository.updateById(any(OptionFamily.class))).thenReturn(1);
 
         // When
         mdmSyncAppService.handleOptionFamilyEvent(event);
 
         // Then
-        verify(vehOptionFamilyRepository).selectByExternalRefId("mdm-of-002");
-        verify(vehOptionFamilyRepository).updateById(any(OptionFamily.class));
+        verify(mdmOptionFamilyRepository).selectByExternalRefId("mdm-of-002");
+        verify(mdmOptionFamilyRepository).updateById(any(OptionFamily.class));
     }
 
     @Test
@@ -796,14 +796,14 @@ class MdmSyncAppServiceTest {
                 .externalVersion(2L)
                 .build();
 
-        when(vehOptionFamilyRepository.selectByExternalRefId("mdm-of-003")).thenReturn(localOptionFamily);
+        when(mdmOptionFamilyRepository.selectByExternalRefId("mdm-of-003")).thenReturn(localOptionFamily);
 
         // When
         mdmSyncAppService.handleOptionFamilyEvent(event);
 
         // Then
-        verify(vehOptionFamilyRepository).selectByExternalRefId("mdm-of-003");
-        verify(vehOptionFamilyRepository, never()).updateById(any(OptionFamily.class));
+        verify(mdmOptionFamilyRepository).selectByExternalRefId("mdm-of-003");
+        verify(mdmOptionFamilyRepository, never()).updateById(any(OptionFamily.class));
     }
 
     // ==================== OptionCode Event Tests ====================
@@ -815,15 +815,15 @@ class MdmSyncAppServiceTest {
         MdmOptionCodeEvent event = new MdmOptionCodeEvent("CREATED", "mdm-oc-001", 1L, "OC001",
                 "OF001", "选装值1", "Option Code 1", "V001", true, 1, LocalDateTime.now());
 
-        when(vehOptionFamilyRepository.selectOptionCodeByExternalRefId("mdm-oc-001")).thenReturn(null);
-        when(vehOptionFamilyRepository.insertOptionCode(any(OptionCode.class))).thenReturn(1);
+        when(mdmOptionFamilyRepository.selectOptionCodeByExternalRefId("mdm-oc-001")).thenReturn(null);
+        when(mdmOptionFamilyRepository.insertOptionCode(any(OptionCode.class))).thenReturn(1);
 
         // When
         mdmSyncAppService.handleOptionCodeEvent(event);
 
         // Then
-        verify(vehOptionFamilyRepository).selectOptionCodeByExternalRefId("mdm-oc-001");
-        verify(vehOptionFamilyRepository).insertOptionCode(any(OptionCode.class));
+        verify(mdmOptionFamilyRepository).selectOptionCodeByExternalRefId("mdm-oc-001");
+        verify(mdmOptionFamilyRepository).insertOptionCode(any(OptionCode.class));
     }
 
     @Test
@@ -847,15 +847,15 @@ class MdmSyncAppServiceTest {
                 .externalVersion(1L)
                 .build();
 
-        when(vehOptionFamilyRepository.selectOptionCodeByExternalRefId("mdm-oc-002")).thenReturn(localOptionCode);
-        when(vehOptionFamilyRepository.updateOptionCodeById(any(OptionCode.class))).thenReturn(1);
+        when(mdmOptionFamilyRepository.selectOptionCodeByExternalRefId("mdm-oc-002")).thenReturn(localOptionCode);
+        when(mdmOptionFamilyRepository.updateOptionCodeById(any(OptionCode.class))).thenReturn(1);
 
         // When
         mdmSyncAppService.handleOptionCodeEvent(event);
 
         // Then
-        verify(vehOptionFamilyRepository).selectOptionCodeByExternalRefId("mdm-oc-002");
-        verify(vehOptionFamilyRepository).updateOptionCodeById(any(OptionCode.class));
+        verify(mdmOptionFamilyRepository).selectOptionCodeByExternalRefId("mdm-oc-002");
+        verify(mdmOptionFamilyRepository).updateOptionCodeById(any(OptionCode.class));
     }
 
     @Test
@@ -879,13 +879,13 @@ class MdmSyncAppServiceTest {
                 .externalVersion(2L)
                 .build();
 
-        when(vehOptionFamilyRepository.selectOptionCodeByExternalRefId("mdm-oc-003")).thenReturn(localOptionCode);
+        when(mdmOptionFamilyRepository.selectOptionCodeByExternalRefId("mdm-oc-003")).thenReturn(localOptionCode);
 
         // When
         mdmSyncAppService.handleOptionCodeEvent(event);
 
         // Then
-        verify(vehOptionFamilyRepository).selectOptionCodeByExternalRefId("mdm-oc-003");
-        verify(vehOptionFamilyRepository, never()).updateOptionCodeById(any(OptionCode.class));
+        verify(mdmOptionFamilyRepository).selectOptionCodeByExternalRefId("mdm-oc-003");
+        verify(mdmOptionFamilyRepository, never()).updateOptionCodeById(any(OptionCode.class));
     }
 }

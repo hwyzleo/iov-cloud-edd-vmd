@@ -14,7 +14,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.OptionFamilyDto
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.ProductDataReadOnlyException;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.OptionCode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.OptionFamily;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehOptionFamilyRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmOptionFamilyRepository;
 import net.hwyz.iov.cloud.framework.common.util.ParamHelper;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Service;
@@ -33,7 +33,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class OptionFamilyAppService {
 
-    private final VehOptionFamilyRepository vehOptionFamilyRepository;
+    private final MdmOptionFamilyRepository mdmOptionFamilyRepository;
 
     // ==================== 选装族 ====================
 
@@ -50,7 +50,7 @@ public class OptionFamilyAppService {
         map.put("type", query.getType());
         map.put("beginTime", query.getBeginTime());
         map.put("endTime", query.getEndTime());
-        List<OptionFamily> optionFamilyList = vehOptionFamilyRepository.selectByMap(map);
+        List<OptionFamily> optionFamilyList = mdmOptionFamilyRepository.selectByMap(map);
         return PageUtil.convert(optionFamilyList, OptionFamilyAssembler.INSTANCE::fromDomain);
     }
 
@@ -65,7 +65,7 @@ public class OptionFamilyAppService {
         if (ObjUtil.isNull(optionFamilyId)) {
             optionFamilyId = -1L;
         }
-        OptionFamily optionFamily = vehOptionFamilyRepository.selectByCode(code);
+        OptionFamily optionFamily = mdmOptionFamilyRepository.selectByCode(code);
         return !ObjUtil.isNotNull(optionFamily) || optionFamily.getId().longValue() == optionFamilyId.longValue();
     }
 
@@ -80,7 +80,7 @@ public class OptionFamilyAppService {
         if (ObjUtil.isNull(optionCodeId)) {
             optionCodeId = -1L;
         }
-        OptionCode optionCode = vehOptionFamilyRepository.selectOptionCodeByCode(code);
+        OptionCode optionCode = mdmOptionFamilyRepository.selectOptionCodeByCode(code);
         return !ObjUtil.isNotNull(optionCode) || optionCode.getId().longValue() == optionCodeId.longValue();
     }
 
@@ -91,7 +91,7 @@ public class OptionFamilyAppService {
      * @return 选装族 DTO
      */
     public OptionFamilyDto getOptionFamilyById(Long id) {
-        return OptionFamilyAssembler.INSTANCE.fromDomain(vehOptionFamilyRepository.selectById(id));
+        return OptionFamilyAssembler.INSTANCE.fromDomain(mdmOptionFamilyRepository.selectById(id));
     }
 
     /**
@@ -101,7 +101,7 @@ public class OptionFamilyAppService {
      * @return 选装族 DTO
      */
     public OptionFamilyDto getOptionFamilyByCode(String code) {
-        return OptionFamilyAssembler.INSTANCE.fromDomain(vehOptionFamilyRepository.selectByCode(code));
+        return OptionFamilyAssembler.INSTANCE.fromDomain(mdmOptionFamilyRepository.selectByCode(code));
     }
 
     /**
@@ -113,7 +113,7 @@ public class OptionFamilyAppService {
      */
     public int createOptionFamily(OptionFamilyCmd optionFamilyCmd, String userId) {
         OptionFamily optionFamilyDomain = OptionFamilyAssembler.INSTANCE.toDomain(optionFamilyCmd);
-        return vehOptionFamilyRepository.insert(optionFamilyDomain);
+        return mdmOptionFamilyRepository.insert(optionFamilyDomain);
     }
 
     /**
@@ -124,12 +124,12 @@ public class OptionFamilyAppService {
      * @return 结果
      */
     public int modifyOptionFamily(OptionFamilyCmd optionFamilyCmd, String userId) {
-        OptionFamily optionFamily = vehOptionFamilyRepository.selectById(optionFamilyCmd.getId());
+        OptionFamily optionFamily = mdmOptionFamilyRepository.selectById(optionFamilyCmd.getId());
         if ("MDM".equals(optionFamily.getSource())) {
             throw new ProductDataReadOnlyException("选装族", optionFamily.getCode());
         }
         OptionFamily updateDomain = OptionFamilyAssembler.INSTANCE.toDomain(optionFamilyCmd);
-        return vehOptionFamilyRepository.update(updateDomain);
+        return mdmOptionFamilyRepository.update(updateDomain);
     }
 
     /**
@@ -140,12 +140,12 @@ public class OptionFamilyAppService {
      */
     public int deleteOptionFamilyByIds(Long[] ids) {
         for (Long id : ids) {
-            OptionFamily optionFamily = vehOptionFamilyRepository.selectById(id);
+            OptionFamily optionFamily = mdmOptionFamilyRepository.selectById(id);
             if (optionFamily != null && "MDM".equals(optionFamily.getSource())) {
                 throw new ProductDataReadOnlyException("选装族", optionFamily.getCode());
             }
         }
-        return vehOptionFamilyRepository.batchPhysicalDelete(ids);
+        return mdmOptionFamilyRepository.batchPhysicalDelete(ids);
     }
 
     // ==================== 选装值 ====================
@@ -159,12 +159,12 @@ public class OptionFamilyAppService {
     public List<OptionCodeDto> searchOptionCode(OptionCodeQuery query) {
         String familyCode = query.getOptionFamilyCode();
         if (ObjUtil.isNotNull(query.getOptionFamilyId())) {
-            OptionFamily optionFamily = vehOptionFamilyRepository.selectById(query.getOptionFamilyId());
+            OptionFamily optionFamily = mdmOptionFamilyRepository.selectById(query.getOptionFamilyId());
             if (optionFamily != null) {
                 familyCode = optionFamily.getCode();
             }
         }
-        List<OptionCode> list = vehOptionFamilyRepository.selectOptionCodeByOptionFamilyCode(familyCode);
+        List<OptionCode> list = mdmOptionFamilyRepository.selectOptionCodeByOptionFamilyCode(familyCode);
         return PageUtil.convert(list, OptionCodeAssembler.INSTANCE::fromDomain);
     }
 
@@ -176,7 +176,7 @@ public class OptionFamilyAppService {
      * @return 选装值 DTO
      */
     public OptionCodeDto getOptionCodeById(Long optionFamilyId, Long id) {
-        OptionCode optionCode = vehOptionFamilyRepository.selectOptionCodeById(id);
+        OptionCode optionCode = mdmOptionFamilyRepository.selectOptionCodeById(id);
         return OptionCodeAssembler.INSTANCE.fromDomain(optionCode);
     }
 
@@ -187,7 +187,7 @@ public class OptionFamilyAppService {
      * @return 选装值 DTO
      */
     public OptionCodeDto getOptionCodeByCode(String code) {
-        return OptionCodeAssembler.INSTANCE.fromDomain(vehOptionFamilyRepository.selectOptionCodeByCode(code));
+        return OptionCodeAssembler.INSTANCE.fromDomain(mdmOptionFamilyRepository.selectOptionCodeByCode(code));
     }
 
     /**
@@ -197,7 +197,7 @@ public class OptionFamilyAppService {
      * @return 选装值列表
      */
     public List<OptionCodeDto> listAllOptionCodeByOptionFamilyCode(String optionFamilyCode) {
-        List<OptionCode> list = vehOptionFamilyRepository.selectOptionCodeByOptionFamilyCode(optionFamilyCode);
+        List<OptionCode> list = mdmOptionFamilyRepository.selectOptionCodeByOptionFamilyCode(optionFamilyCode);
         return PageUtil.convert(list, OptionCodeAssembler.INSTANCE::fromDomain);
     }
 
@@ -211,8 +211,8 @@ public class OptionFamilyAppService {
      */
     public int createOptionCode(Long familyId, OptionCodeCmd optionCodeCmd, String userId) {
         OptionCode optionCodeDomain = OptionCodeAssembler.INSTANCE.toDomain(optionCodeCmd);
-        optionCodeDomain.setOptionFamilyCode(vehOptionFamilyRepository.selectById(familyId).getCode());
-        return vehOptionFamilyRepository.insertOptionCode(optionCodeDomain);
+        optionCodeDomain.setOptionFamilyCode(mdmOptionFamilyRepository.selectById(familyId).getCode());
+        return mdmOptionFamilyRepository.insertOptionCode(optionCodeDomain);
     }
 
     /**
@@ -224,12 +224,12 @@ public class OptionFamilyAppService {
      * @return 结果
      */
     public int modifyOptionCode(Long optionFamilyId, OptionCodeCmd optionCodeCmd, String userId) {
-        OptionCode optionCode = vehOptionFamilyRepository.selectOptionCodeById(optionCodeCmd.getId());
+        OptionCode optionCode = mdmOptionFamilyRepository.selectOptionCodeById(optionCodeCmd.getId());
         if ("MDM".equals(optionCode.getSource())) {
             throw new ProductDataReadOnlyException("选装值", optionCode.getCode());
         }
         OptionCode updateDomain = OptionCodeAssembler.INSTANCE.toDomain(optionCodeCmd);
-        return vehOptionFamilyRepository.updateOptionCode(updateDomain);
+        return mdmOptionFamilyRepository.updateOptionCode(updateDomain);
     }
 
     /**
@@ -241,12 +241,12 @@ public class OptionFamilyAppService {
      */
     public int deleteOptionCodeByIds(Long optionFamilyId, Long[] ids) {
         for (Long id : ids) {
-            OptionCode optionCode = vehOptionFamilyRepository.selectOptionCodeById(id);
+            OptionCode optionCode = mdmOptionFamilyRepository.selectOptionCodeById(id);
             if (optionCode != null && "MDM".equals(optionCode.getSource())) {
                 throw new ProductDataReadOnlyException("选装值", optionCode.getCode());
             }
         }
-        return vehOptionFamilyRepository.batchPhysicalDeleteOptionCode(ids);
+        return mdmOptionFamilyRepository.batchPhysicalDeleteOptionCode(ids);
     }
 
 }

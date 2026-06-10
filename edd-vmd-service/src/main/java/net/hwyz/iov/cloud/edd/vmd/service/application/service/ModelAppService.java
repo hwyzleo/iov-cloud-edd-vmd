@@ -10,10 +10,10 @@ import net.hwyz.iov.cloud.edd.vmd.service.common.exception.ProductDataReadOnlyEx
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Model;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.CarLine;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehVariantRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmVariantRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehModelRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehCarLineRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmModelRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmCarLineRepository;
 import net.hwyz.iov.cloud.framework.common.util.ParamHelper;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Service;
@@ -33,9 +33,9 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ModelAppService {
 
-    private final VehModelRepository vehModelRepository;
-    private final VehCarLineRepository vehCarLineRepository;
-    private final VehVariantRepository vehVariantRepository;
+    private final MdmModelRepository mdmModelRepository;
+    private final MdmCarLineRepository mdmCarLineRepository;
+    private final MdmVariantRepository mdmVariantRepository;
     private final VehBasicInfoRepository vehBasicInfoRepository;
 
     /**
@@ -52,7 +52,7 @@ public class ModelAppService {
         map.put("name", ParamHelper.fuzzyQueryParam(query.getName()));
         map.put("beginTime", query.getBeginTime());
         map.put("endTime", query.getEndTime());
-        List<Model> modelList = vehModelRepository.selectByMap(map);
+        List<Model> modelList = mdmModelRepository.selectByMap(map);
         return PageUtil.convert(modelList, ModelAssembler.INSTANCE::fromDomain);
     }
 
@@ -67,7 +67,7 @@ public class ModelAppService {
         if (ObjUtil.isNull(modelId)) {
             modelId = -1L;
         }
-        Model model = vehModelRepository.selectByCode(code);
+        Model model = mdmModelRepository.selectByCode(code);
         return !ObjUtil.isNotNull(model) || model.getId().longValue() == modelId.longValue();
     }
 
@@ -78,10 +78,10 @@ public class ModelAppService {
      * @return 结果
      */
     public Boolean checkModelVariantExist(Long modelId) {
-        Model model = vehModelRepository.selectById(modelId);
+        Model model = mdmModelRepository.selectById(modelId);
         Map<String, Object> map = new HashMap<>();
         map.put("modelCode", model.getCode());
-        return vehVariantRepository.countByMap(map) > 0;
+        return mdmVariantRepository.countByMap(map) > 0;
     }
 
     /**
@@ -91,7 +91,7 @@ public class ModelAppService {
      * @return 结果
      */
     public Boolean checkModelVehicleExist(Long modelId) {
-        Model model = vehModelRepository.selectById(modelId);
+        Model model = mdmModelRepository.selectById(modelId);
         Map<String, Object> map = new HashMap<>();
         map.put("modelCode", model.getCode());
         return vehBasicInfoRepository.countByMap(map) > 0;
@@ -104,9 +104,9 @@ public class ModelAppService {
      * @return 车型 DTO
      */
     public ModelDto getModelById(Long id) {
-        Model model = vehModelRepository.selectById(id);
+        Model model = mdmModelRepository.selectById(id);
         ModelDto modelDto = ModelAssembler.INSTANCE.fromDomain(model);
-        CarLine carLine = vehCarLineRepository.selectByCode(model.getCarLineCode());
+        CarLine carLine = mdmCarLineRepository.selectByCode(model.getCarLineCode());
         if (carLine != null) {
             modelDto.setBrandCode(carLine.getBrandCode());
         }
@@ -120,7 +120,7 @@ public class ModelAppService {
      * @return 车型领域对象
      */
     public Model getModelByCode(String code) {
-        return vehModelRepository.selectByCode(code);
+        return mdmModelRepository.selectByCode(code);
     }
 
     /**
@@ -136,7 +136,7 @@ public class ModelAppService {
         if (model.getSource() == SourceType.MDM) {
             throw new ProductDataReadOnlyException("车型", model.getCode());
         }
-        return vehModelRepository.insert(model);
+        return mdmModelRepository.insert(model);
     }
 
     /**
@@ -147,13 +147,13 @@ public class ModelAppService {
      * @return 结果
      */
     public int modifyModel(ModelCmd modelCmd, String userId) {
-        Model model = vehModelRepository.selectById(modelCmd.getId());
+        Model model = mdmModelRepository.selectById(modelCmd.getId());
         // 检查是否为 MDM 来源数据
         if (model != null && model.getSource() == SourceType.MDM) {
             throw new ProductDataReadOnlyException("车型", model.getCode());
         }
         Model updateModel = ModelAssembler.INSTANCE.toDomain(modelCmd);
-        return vehModelRepository.update(updateModel);
+        return mdmModelRepository.update(updateModel);
     }
 
     /**
@@ -165,12 +165,12 @@ public class ModelAppService {
     public int deleteModelByIds(Long[] ids) {
         // 检查是否为 MDM 来源数据
         for (Long id : ids) {
-            Model model = vehModelRepository.selectById(id);
+            Model model = mdmModelRepository.selectById(id);
             if (model != null && model.getSource() == SourceType.MDM) {
                 throw new ProductDataReadOnlyException("车型", model.getCode());
             }
         }
-        return vehModelRepository.batchPhysicalDelete(ids);
+        return mdmModelRepository.batchPhysicalDelete(ids);
     }
 
 }

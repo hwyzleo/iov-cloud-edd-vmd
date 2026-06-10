@@ -2,8 +2,8 @@ package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter;
 
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.OptionCode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.OptionFamily;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehOptionCodePo;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehOptionFamilyPo;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.MdmOptionCodePo;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.MdmOptionFamilyPo;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 
@@ -21,17 +21,17 @@ public interface OptionConverter {
 
     // ==================== 选装族 ====================
 
-    OptionFamily toFamilyDomain(VehOptionFamilyPo po);
+    OptionFamily toFamilyDomain(MdmOptionFamilyPo po);
 
-    List<OptionFamily> toFamilyDomainList(List<VehOptionFamilyPo> poList);
+    List<OptionFamily> toFamilyDomainList(List<MdmOptionFamilyPo> poList);
 
-    VehOptionFamilyPo fromFamilyDomain(OptionFamily domain);
+    MdmOptionFamilyPo fromFamilyDomain(OptionFamily domain);
 
     // ==================== 选装值 ====================
 
-    OptionCode toCodeDomain(VehOptionCodePo po);
+    OptionCode toCodeDomain(MdmOptionCodePo po);
 
-    List<OptionCode> toCodeDomainList(List<VehOptionCodePo> poList);
+    List<OptionCode> toCodeDomainList(List<MdmOptionCodePo> poList);
 
-    VehOptionCodePo fromCodeDomain(OptionCode domain);
+    MdmOptionCodePo fromCodeDomain(OptionCode domain);
 }

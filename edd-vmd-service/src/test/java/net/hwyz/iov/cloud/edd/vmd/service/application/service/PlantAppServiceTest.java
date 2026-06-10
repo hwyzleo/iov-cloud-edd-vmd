@@ -5,7 +5,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.PlantDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.PlantQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Plant;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehPlantRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmPlantRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,7 +32,7 @@ import static org.mockito.Mockito.*;
 class PlantAppServiceTest {
 
     @Mock
-    private VehPlantRepository vehPlantRepository;
+    private MdmPlantRepository mdmPlantRepository;
 
     @Mock
     private VehBasicInfoRepository vehBasicInfoRepository;
@@ -53,7 +53,7 @@ class PlantAppServiceTest {
         Plant plant2 = Plant.builder().id(2L).code("PLANT002").name("测试工厂2").build();
         List<Plant> plants = Arrays.asList(plant1, plant2);
 
-        when(vehPlantRepository.selectByMap(any(Map.class))).thenReturn(plants);
+        when(mdmPlantRepository.selectByMap(any(Map.class))).thenReturn(plants);
 
         // When
         List<PlantDto> result = plantAppService.search(query);
@@ -61,7 +61,7 @@ class PlantAppServiceTest {
         // Then
         assertNotNull(result);
         assertEquals(2, result.size());
-        verify(vehPlantRepository).selectByMap(any(Map.class));
+        verify(mdmPlantRepository).selectByMap(any(Map.class));
     }
 
     @Test
@@ -72,7 +72,7 @@ class PlantAppServiceTest {
                 .code("NONEXISTENT")
                 .build();
 
-        when(vehPlantRepository.selectByMap(any(Map.class))).thenReturn(Collections.emptyList());
+        when(mdmPlantRepository.selectByMap(any(Map.class))).thenReturn(Collections.emptyList());
 
         // When
         List<PlantDto> result = plantAppService.search(query);
@@ -80,7 +80,7 @@ class PlantAppServiceTest {
         // Then
         assertNotNull(result);
         assertTrue(result.isEmpty());
-        verify(vehPlantRepository).selectByMap(any(Map.class));
+        verify(mdmPlantRepository).selectByMap(any(Map.class));
     }
 
     @Test
@@ -88,14 +88,14 @@ class PlantAppServiceTest {
     void checkCodeUnique_shouldReturnTrueWhenCodeIsUnique() {
         // Given
         String code = "PLANT001";
-        when(vehPlantRepository.selectByCode(code)).thenReturn(null);
+        when(mdmPlantRepository.selectByCode(code)).thenReturn(null);
 
         // When
         Boolean result = plantAppService.checkCodeUnique(1L, code);
 
         // Then
         assertTrue(result);
-        verify(vehPlantRepository).selectByCode(code);
+        verify(mdmPlantRepository).selectByCode(code);
     }
 
     @Test
@@ -106,14 +106,14 @@ class PlantAppServiceTest {
         String code = "PLANT001";
         Plant existingPlant = Plant.builder().id(plantId).code(code).build();
 
-        when(vehPlantRepository.selectByCode(code)).thenReturn(existingPlant);
+        when(mdmPlantRepository.selectByCode(code)).thenReturn(existingPlant);
 
         // When
         Boolean result = plantAppService.checkCodeUnique(plantId, code);
 
         // Then
         assertTrue(result);
-        verify(vehPlantRepository).selectByCode(code);
+        verify(mdmPlantRepository).selectByCode(code);
     }
 
     @Test
@@ -124,14 +124,14 @@ class PlantAppServiceTest {
         String code = "PLANT001";
         Plant existingPlant = Plant.builder().id(2L).code(code).build();
 
-        when(vehPlantRepository.selectByCode(code)).thenReturn(existingPlant);
+        when(mdmPlantRepository.selectByCode(code)).thenReturn(existingPlant);
 
         // When
         Boolean result = plantAppService.checkCodeUnique(plantId, code);
 
         // Then
         assertFalse(result);
-        verify(vehPlantRepository).selectByCode(code);
+        verify(mdmPlantRepository).selectByCode(code);
     }
 
     @Test
@@ -141,7 +141,7 @@ class PlantAppServiceTest {
         Long plantId = 1L;
         Plant plant = Plant.builder().id(plantId).code("PLANT001").build();
 
-        when(vehPlantRepository.selectById(plantId)).thenReturn(plant);
+        when(mdmPlantRepository.selectById(plantId)).thenReturn(plant);
         when(vehBasicInfoRepository.countByMap(any(Map.class))).thenReturn(5);
 
         // When
@@ -149,7 +149,7 @@ class PlantAppServiceTest {
 
         // Then
         assertTrue(result);
-        verify(vehPlantRepository).selectById(plantId);
+        verify(mdmPlantRepository).selectById(plantId);
         verify(vehBasicInfoRepository).countByMap(any(Map.class));
     }
 
@@ -160,7 +160,7 @@ class PlantAppServiceTest {
         Long plantId = 1L;
         Plant plant = Plant.builder().id(plantId).code("PLANT001").build();
 
-        when(vehPlantRepository.selectById(plantId)).thenReturn(plant);
+        when(mdmPlantRepository.selectById(plantId)).thenReturn(plant);
         when(vehBasicInfoRepository.countByMap(any(Map.class))).thenReturn(0);
 
         // When
@@ -168,7 +168,7 @@ class PlantAppServiceTest {
 
         // Then
         assertFalse(result);
-        verify(vehPlantRepository).selectById(plantId);
+        verify(mdmPlantRepository).selectById(plantId);
         verify(vehBasicInfoRepository).countByMap(any(Map.class));
     }
 
@@ -183,7 +183,7 @@ class PlantAppServiceTest {
                 .name("测试工厂")
                 .build();
 
-        when(vehPlantRepository.selectById(plantId)).thenReturn(plant);
+        when(mdmPlantRepository.selectById(plantId)).thenReturn(plant);
 
         // When
         PlantDto result = plantAppService.getPlantById(plantId);
@@ -193,7 +193,7 @@ class PlantAppServiceTest {
         assertEquals(plantId, result.getId());
         assertEquals("PLANT001", result.getCode());
         assertEquals("测试工厂", result.getName());
-        verify(vehPlantRepository).selectById(plantId);
+        verify(mdmPlantRepository).selectById(plantId);
     }
 
     @Test
@@ -207,7 +207,7 @@ class PlantAppServiceTest {
                 .name("测试工厂")
                 .build();
 
-        when(vehPlantRepository.selectByCode(code)).thenReturn(plant);
+        when(mdmPlantRepository.selectByCode(code)).thenReturn(plant);
 
         // When
         Plant result = plantAppService.getPlantByCode(code);
@@ -215,7 +215,7 @@ class PlantAppServiceTest {
         // Then
         assertNotNull(result);
         assertEquals(code, result.getCode());
-        verify(vehPlantRepository).selectByCode(code);
+        verify(mdmPlantRepository).selectByCode(code);
     }
 
     @Test
@@ -227,14 +227,14 @@ class PlantAppServiceTest {
                 .name("新工厂")
                 .build();
 
-        when(vehPlantRepository.insert(any(Plant.class))).thenReturn(1);
+        when(mdmPlantRepository.insert(any(Plant.class))).thenReturn(1);
 
         // When
         int result = plantAppService.createPlant(cmd, "user1");
 
         // Then
         assertEquals(1, result);
-        verify(vehPlantRepository).insert(any(Plant.class));
+        verify(mdmPlantRepository).insert(any(Plant.class));
     }
 
     @Test
@@ -247,14 +247,14 @@ class PlantAppServiceTest {
                 .name("修改后的工厂")
                 .build();
 
-        when(vehPlantRepository.update(any(Plant.class))).thenReturn(1);
+        when(mdmPlantRepository.update(any(Plant.class))).thenReturn(1);
 
         // When
         int result = plantAppService.modifyPlant(cmd, "user1");
 
         // Then
         assertEquals(1, result);
-        verify(vehPlantRepository).update(any(Plant.class));
+        verify(mdmPlantRepository).update(any(Plant.class));
     }
 
     @Test
@@ -262,14 +262,14 @@ class PlantAppServiceTest {
     void deletePlantByIds_shouldSuccessfullyDeletePlants() {
         // Given
         Long[] ids = {1L, 2L, 3L};
-        when(vehPlantRepository.batchPhysicalDelete(ids)).thenReturn(3);
+        when(mdmPlantRepository.batchPhysicalDelete(ids)).thenReturn(3);
 
         // When
         int result = plantAppService.deletePlantByIds(ids);
 
         // Then
         assertEquals(3, result);
-        verify(vehPlantRepository).batchPhysicalDelete(ids);
+        verify(mdmPlantRepository).batchPhysicalDelete(ids);
     }
 
     @Test
@@ -283,7 +283,7 @@ class PlantAppServiceTest {
                 .externalRefId(externalRefId)
                 .build();
 
-        when(vehPlantRepository.selectByExternalRefId(externalRefId)).thenReturn(plant);
+        when(mdmPlantRepository.selectByExternalRefId(externalRefId)).thenReturn(plant);
 
         // When
         Plant result = plantAppService.getPlantByExternalRefId(externalRefId);
@@ -291,7 +291,7 @@ class PlantAppServiceTest {
         // Then
         assertNotNull(result);
         assertEquals(externalRefId, result.getExternalRefId());
-        verify(vehPlantRepository).selectByExternalRefId(externalRefId);
+        verify(mdmPlantRepository).selectByExternalRefId(externalRefId);
     }
 
     @Test
@@ -299,13 +299,13 @@ class PlantAppServiceTest {
     void countBySource_shouldReturnCountForSource() {
         // Given
         String source = "MDM";
-        when(vehPlantRepository.countBySource(source)).thenReturn(5);
+        when(mdmPlantRepository.countBySource(source)).thenReturn(5);
 
         // When
         int result = plantAppService.countBySource(source);
 
         // Then
         assertEquals(5, result);
-        verify(vehPlantRepository).countBySource(source);
+        verify(mdmPlantRepository).countBySource(source);
     }
 }

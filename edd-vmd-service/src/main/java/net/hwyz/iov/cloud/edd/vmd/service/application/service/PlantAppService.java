@@ -9,7 +9,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.PlantDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.PlantQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Plant;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehPlantRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmPlantRepository;
 import net.hwyz.iov.cloud.framework.common.util.ParamHelper;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Service;
@@ -28,7 +28,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class PlantAppService {
 
-    private final VehPlantRepository vehPlantRepository;
+    private final MdmPlantRepository mdmPlantRepository;
     private final VehBasicInfoRepository vehBasicInfoRepository;
 
     /**
@@ -43,7 +43,7 @@ public class PlantAppService {
         map.put("name", ParamHelper.fuzzyQueryParam(query.getName()));
         map.put("beginTime", query.getBeginTime());
         map.put("endTime", query.getEndTime());
-        List<Plant> plantList = vehPlantRepository.selectByMap(map);
+        List<Plant> plantList = mdmPlantRepository.selectByMap(map);
         return PageUtil.convert(plantList, PlantAssembler.INSTANCE::fromDomain);
     }
 
@@ -58,7 +58,7 @@ public class PlantAppService {
         if (ObjUtil.isNull(plantId)) {
             plantId = -1L;
         }
-        Plant plant = vehPlantRepository.selectByCode(code);
+        Plant plant = mdmPlantRepository.selectByCode(code);
         return !ObjUtil.isNotNull(plant) || plant.getId().longValue() == plantId.longValue();
     }
 
@@ -69,7 +69,7 @@ public class PlantAppService {
      * @return 结果
      */
     public Boolean checkPlantVehicleExist(Long plantId) {
-        Plant plant = vehPlantRepository.selectById(plantId);
+        Plant plant = mdmPlantRepository.selectById(plantId);
         Map<String, Object> map = new HashMap<>();
         map.put("plantCode", plant.getCode());
         return vehBasicInfoRepository.countByMap(map) > 0;
@@ -82,7 +82,7 @@ public class PlantAppService {
      * @return 生产工厂 DTO
      */
     public PlantDto getPlantById(Long id) {
-        return PlantAssembler.INSTANCE.fromDomain(vehPlantRepository.selectById(id));
+        return PlantAssembler.INSTANCE.fromDomain(mdmPlantRepository.selectById(id));
     }
 
     /**
@@ -92,7 +92,7 @@ public class PlantAppService {
      * @return 生产工厂领域对象
      */
     public Plant getPlantByCode(String code) {
-        return vehPlantRepository.selectByCode(code);
+        return mdmPlantRepository.selectByCode(code);
     }
 
     /**
@@ -104,7 +104,7 @@ public class PlantAppService {
      */
     public int createPlant(PlantCmd plantCmd, String userId) {
         Plant plant = PlantAssembler.INSTANCE.toDomain(plantCmd);
-        return vehPlantRepository.insert(plant);
+        return mdmPlantRepository.insert(plant);
     }
 
     /**
@@ -116,7 +116,7 @@ public class PlantAppService {
      */
     public int modifyPlant(PlantCmd plantCmd, String userId) {
         Plant plant = PlantAssembler.INSTANCE.toDomain(plantCmd);
-        return vehPlantRepository.update(plant);
+        return mdmPlantRepository.update(plant);
     }
 
     /**
@@ -126,7 +126,7 @@ public class PlantAppService {
      * @return 结果
      */
     public int deletePlantByIds(Long[] ids) {
-        return vehPlantRepository.batchPhysicalDelete(ids);
+        return mdmPlantRepository.batchPhysicalDelete(ids);
     }
 
     /**
@@ -136,7 +136,7 @@ public class PlantAppService {
      * @return 生产工厂领域对象
      */
     public Plant getPlantByExternalRefId(String externalRefId) {
-        return vehPlantRepository.selectByExternalRefId(externalRefId);
+        return mdmPlantRepository.selectByExternalRefId(externalRefId);
     }
 
     /**
@@ -146,7 +146,7 @@ public class PlantAppService {
      * @return 数量
      */
     public int countBySource(String source) {
-        return vehPlantRepository.countBySource(source);
+        return mdmPlantRepository.countBySource(source);
     }
 
 }

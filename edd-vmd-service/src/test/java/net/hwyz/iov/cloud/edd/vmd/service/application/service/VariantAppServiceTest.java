@@ -7,8 +7,8 @@ import net.hwyz.iov.cloud.edd.vmd.service.common.exception.ProductDataReadOnlyEx
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Variant;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehConfigurationRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehVariantRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmConfigurationRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmVariantRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -29,13 +29,13 @@ import static org.mockito.Mockito.*;
 class VariantAppServiceTest {
 
     @Mock
-    private VehVariantRepository vehVariantRepository;
+    private MdmVariantRepository mdmVariantRepository;
 
     @Mock
     private VehBasicInfoRepository vehBasicInfoRepository;
 
     @Mock
-    private VehConfigurationRepository vehBuildConfigRepository;
+    private MdmConfigurationRepository mdmConfigurationRepository;
 
     @Mock
     private OptionFamilyAppService optionFamilyAppService;
@@ -57,25 +57,25 @@ class VariantAppServiceTest {
         Variant v1 = Variant.builder().id(1L).code("V001").name("版本1").build();
         Variant v2 = Variant.builder().id(2L).code("V002").name("版本2").build();
 
-        when(vehVariantRepository.selectByMap(any(Map.class))).thenReturn(Arrays.asList(v1, v2));
+        when(mdmVariantRepository.selectByMap(any(Map.class))).thenReturn(Arrays.asList(v1, v2));
 
         List<VariantDto> result = variantAppService.search(query);
 
         assertNotNull(result);
         assertEquals(2, result.size());
-        verify(vehVariantRepository).selectByMap(any(Map.class));
+        verify(mdmVariantRepository).selectByMap(any(Map.class));
     }
 
     @Test
     @DisplayName("checkCodeUnique应返回true当代码唯一时")
     void testCheckCodeUnique() {
         String code = "V001";
-        when(vehVariantRepository.selectByCode(code)).thenReturn(null);
+        when(mdmVariantRepository.selectByCode(code)).thenReturn(null);
 
         Boolean result = variantAppService.checkCodeUnique(1L, code);
 
         assertTrue(result);
-        verify(vehVariantRepository).selectByCode(code);
+        verify(mdmVariantRepository).selectByCode(code);
     }
 
     @Test
@@ -84,12 +84,12 @@ class VariantAppServiceTest {
         String code = "V001";
         Variant existing = Variant.builder().id(1L).code(code).build();
 
-        when(vehVariantRepository.selectByCode(code)).thenReturn(existing);
+        when(mdmVariantRepository.selectByCode(code)).thenReturn(existing);
 
         Boolean result = variantAppService.checkCodeUnique(1L, code);
 
         assertTrue(result);
-        verify(vehVariantRepository).selectByCode(code);
+        verify(mdmVariantRepository).selectByCode(code);
     }
 
     @Test
@@ -98,12 +98,12 @@ class VariantAppServiceTest {
         String code = "V001";
         Variant existing = Variant.builder().id(2L).code(code).build();
 
-        when(vehVariantRepository.selectByCode(code)).thenReturn(existing);
+        when(mdmVariantRepository.selectByCode(code)).thenReturn(existing);
 
         Boolean result = variantAppService.checkCodeUnique(1L, code);
 
         assertFalse(result);
-        verify(vehVariantRepository).selectByCode(code);
+        verify(mdmVariantRepository).selectByCode(code);
     }
 
     @Test
@@ -112,14 +112,14 @@ class VariantAppServiceTest {
         Long variantId = 1L;
         Variant variant = Variant.builder().id(variantId).code("V001").build();
 
-        when(vehVariantRepository.selectById(variantId)).thenReturn(variant);
-        when(vehBuildConfigRepository.countByMap(any(Map.class))).thenReturn(5);
+        when(mdmVariantRepository.selectById(variantId)).thenReturn(variant);
+        when(mdmConfigurationRepository.countByMap(any(Map.class))).thenReturn(5);
 
         Boolean result = variantAppService.checkVariantBuildConfigExist(variantId);
 
         assertTrue(result);
-        verify(vehVariantRepository).selectById(variantId);
-        verify(vehBuildConfigRepository).countByMap(any(Map.class));
+        verify(mdmVariantRepository).selectById(variantId);
+        verify(mdmConfigurationRepository).countByMap(any(Map.class));
     }
 
     @Test
@@ -128,14 +128,14 @@ class VariantAppServiceTest {
         Long variantId = 1L;
         Variant variant = Variant.builder().id(variantId).code("V001").build();
 
-        when(vehVariantRepository.selectById(variantId)).thenReturn(variant);
-        when(vehBuildConfigRepository.countByMap(any(Map.class))).thenReturn(0);
+        when(mdmVariantRepository.selectById(variantId)).thenReturn(variant);
+        when(mdmConfigurationRepository.countByMap(any(Map.class))).thenReturn(0);
 
         Boolean result = variantAppService.checkVariantBuildConfigExist(variantId);
 
         assertFalse(result);
-        verify(vehVariantRepository).selectById(variantId);
-        verify(vehBuildConfigRepository).countByMap(any(Map.class));
+        verify(mdmVariantRepository).selectById(variantId);
+        verify(mdmConfigurationRepository).countByMap(any(Map.class));
     }
 
     @Test
@@ -144,13 +144,13 @@ class VariantAppServiceTest {
         Long variantId = 1L;
         Variant variant = Variant.builder().id(variantId).code("V001").build();
 
-        when(vehVariantRepository.selectById(variantId)).thenReturn(variant);
+        when(mdmVariantRepository.selectById(variantId)).thenReturn(variant);
         when(vehBasicInfoRepository.countByMap(any(Map.class))).thenReturn(3);
 
         Boolean result = variantAppService.checkVariantVehicleExist(variantId);
 
         assertTrue(result);
-        verify(vehVariantRepository).selectById(variantId);
+        verify(mdmVariantRepository).selectById(variantId);
         verify(vehBasicInfoRepository).countByMap(any(Map.class));
     }
 
@@ -160,13 +160,13 @@ class VariantAppServiceTest {
         Long variantId = 1L;
         Variant variant = Variant.builder().id(variantId).code("V001").build();
 
-        when(vehVariantRepository.selectById(variantId)).thenReturn(variant);
+        when(mdmVariantRepository.selectById(variantId)).thenReturn(variant);
         when(vehBasicInfoRepository.countByMap(any(Map.class))).thenReturn(0);
 
         Boolean result = variantAppService.checkVariantVehicleExist(variantId);
 
         assertFalse(result);
-        verify(vehVariantRepository).selectById(variantId);
+        verify(mdmVariantRepository).selectById(variantId);
         verify(vehBasicInfoRepository).countByMap(any(Map.class));
     }
 
@@ -197,12 +197,12 @@ class VariantAppServiceTest {
         // without mocking the static assembler.
 
         // Let's test that createVariant with MANUAL source works instead.
-        when(vehVariantRepository.insert(any(Variant.class))).thenReturn(1);
+        when(mdmVariantRepository.insert(any(Variant.class))).thenReturn(1);
 
         int result = variantAppService.createVariant(cmd);
 
         assertEquals(1, result);
-        verify(vehVariantRepository).insert(any(Variant.class));
+        verify(mdmVariantRepository).insert(any(Variant.class));
     }
 
     @Test
@@ -221,13 +221,13 @@ class VariantAppServiceTest {
                 .source(SourceType.MDM)
                 .build();
 
-        when(vehVariantRepository.selectById(1L)).thenReturn(existing);
+        when(mdmVariantRepository.selectById(1L)).thenReturn(existing);
 
         assertThrows(ProductDataReadOnlyException.class, () -> {
             variantAppService.modifyVariant(cmd);
         });
-        verify(vehVariantRepository).selectById(1L);
-        verify(vehVariantRepository, never()).update(any(Variant.class));
+        verify(mdmVariantRepository).selectById(1L);
+        verify(mdmVariantRepository, never()).update(any(Variant.class));
     }
 
     @Test
@@ -246,14 +246,14 @@ class VariantAppServiceTest {
                 .source(SourceType.MANUAL)
                 .build();
 
-        when(vehVariantRepository.selectById(1L)).thenReturn(existing);
-        when(vehVariantRepository.update(any(Variant.class))).thenReturn(1);
+        when(mdmVariantRepository.selectById(1L)).thenReturn(existing);
+        when(mdmVariantRepository.update(any(Variant.class))).thenReturn(1);
 
         int result = variantAppService.modifyVariant(cmd);
 
         assertEquals(1, result);
-        verify(vehVariantRepository).selectById(1L);
-        verify(vehVariantRepository).update(any(Variant.class));
+        verify(mdmVariantRepository).selectById(1L);
+        verify(mdmVariantRepository).update(any(Variant.class));
     }
 
     @Test
@@ -264,15 +264,15 @@ class VariantAppServiceTest {
         Variant v1 = Variant.builder().id(1L).code("V001").source(SourceType.MANUAL).build();
         Variant v2 = Variant.builder().id(2L).code("V002").source(SourceType.MDM).build();
 
-        when(vehVariantRepository.selectById(1L)).thenReturn(v1);
-        when(vehVariantRepository.selectById(2L)).thenReturn(v2);
+        when(mdmVariantRepository.selectById(1L)).thenReturn(v1);
+        when(mdmVariantRepository.selectById(2L)).thenReturn(v2);
 
         assertThrows(ProductDataReadOnlyException.class, () -> {
             variantAppService.deleteVariantByIds(ids);
         });
-        verify(vehVariantRepository).selectById(1L);
-        verify(vehVariantRepository).selectById(2L);
-        verify(vehVariantRepository, never()).batchPhysicalDelete(any(Long[].class));
+        verify(mdmVariantRepository).selectById(1L);
+        verify(mdmVariantRepository).selectById(2L);
+        verify(mdmVariantRepository, never()).batchPhysicalDelete(any(Long[].class));
     }
 
     @Test
@@ -283,15 +283,15 @@ class VariantAppServiceTest {
         Variant v1 = Variant.builder().id(1L).code("V001").source(SourceType.MANUAL).build();
         Variant v2 = Variant.builder().id(2L).code("V002").source(SourceType.MANUAL).build();
 
-        when(vehVariantRepository.selectById(1L)).thenReturn(v1);
-        when(vehVariantRepository.selectById(2L)).thenReturn(v2);
-        when(vehVariantRepository.batchPhysicalDelete(ids)).thenReturn(2);
+        when(mdmVariantRepository.selectById(1L)).thenReturn(v1);
+        when(mdmVariantRepository.selectById(2L)).thenReturn(v2);
+        when(mdmVariantRepository.batchPhysicalDelete(ids)).thenReturn(2);
 
         int result = variantAppService.deleteVariantByIds(ids);
 
         assertEquals(2, result);
-        verify(vehVariantRepository).selectById(1L);
-        verify(vehVariantRepository).selectById(2L);
-        verify(vehVariantRepository).batchPhysicalDelete(ids);
+        verify(mdmVariantRepository).selectById(1L);
+        verify(mdmVariantRepository).selectById(2L);
+        verify(mdmVariantRepository).batchPhysicalDelete(ids);
     }
 }
