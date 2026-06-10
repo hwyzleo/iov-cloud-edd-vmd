@@ -36,26 +36,27 @@ public class MptSupplierController extends BaseController {
 
     private final SupplierAppService supplierAppService;
 
-    /**
-     * 分页查询供应商信息
-     *
-     * @param supplier 供应商信息
-     * @return 供应商信息列表
-     */
-    @RequiresPermissions("completeVehicle:vehicle:supplier:list")
-    @GetMapping(value = "/list")
-    public ApiResponse<PageResult<SupplierResponse>> list(SupplierRequest supplier) {
-        log.info("管理后台用户[{}]分页查询供应商信息", SecurityContextHolder.getUserName());
-        startPage();
-        SupplierQuery query = SupplierQuery.builder()
-                .code(supplier.getCode())
-                .name(supplier.getName())
-                .beginTime(getBeginTime(supplier))
-                .endTime(getEndTime(supplier))
-                .build();
-        List<SupplierDto> dtoList = supplierAppService.search(query);
-        return ApiResponse.ok(getPageResult(PageUtil.convert(dtoList, MptSupplierAssembler.INSTANCE::fromDto)));
-    }
+    // TODO: CR-019 - 待迁移
+    // /**
+    //  * 分页查询供应商信息
+    //  *
+    //  * @param supplier 供应商信息
+    //  * @return 供应商信息列表
+    //  */
+    // @RequiresPermissions("completeVehicle:vehicle:supplier:list")
+    // @GetMapping(value = "/list")
+    // public ApiResponse<PageResult<SupplierResponse>> list(SupplierRequest supplier) {
+    //     log.info("管理后台用户[{}]分页查询供应商信息", SecurityContextHolder.getUserName());
+    //     startPage();
+    //     SupplierQuery query = SupplierQuery.builder()
+    //             .code(supplier.getCode())
+    //             .name(supplier.getName())
+    //             .beginTime(getBeginTime(supplier))
+    //             .endTime(getEndTime(supplier))
+    //             .build();
+    //     List<SupplierDto> dtoList = supplierAppService.search(query);
+    //     return ApiResponse.ok(getPageResult(PageUtil.convert(dtoList, MptSupplierAssembler.INSTANCE::fromDto)));
+    // }
 
     /**
      * 导出供应商信息
@@ -70,67 +71,71 @@ public class MptSupplierController extends BaseController {
         log.info("管理后台用户[{}]导出供应商信息", SecurityContextHolder.getUserName());
     }
 
-    /**
-     * 根据供应商ID获取供应商信息
-     *
-     * @param supplierId 供应商ID
-     * @return 供应商信息
-     */
-    @RequiresPermissions("completeVehicle:vehicle:supplier:query")
-    @GetMapping(value = "/{supplierId}")
-    public ApiResponse<SupplierResponse> getInfo(@PathVariable Long supplierId) {
-        log.info("管理后台用户[{}]根据供应商ID[{}]获取供应商信息", SecurityContextHolder.getUserName(), supplierId);
-        return ApiResponse.ok(MptSupplierAssembler.INSTANCE.fromDto(supplierAppService.getSupplierById(supplierId)));
-    }
+    // TODO: CR-019 - 待迁移
+    // /**
+    //  * 根据供应商ID获取供应商信息
+    //  *
+    //  * @param supplierId 供应商ID
+    //  * @return 供应商信息
+    //  */
+    // @RequiresPermissions("completeVehicle:vehicle:supplier:query")
+    // @GetMapping(value = "/{supplierId}")
+    // public ApiResponse<SupplierResponse> getInfo(@PathVariable Long supplierId) {
+    //     log.info("管理后台用户[{}]根据供应商ID[{}]获取供应商信息", SecurityContextHolder.getUserName(), supplierId);
+    //     return ApiResponse.ok(MptSupplierAssembler.INSTANCE.fromDto(supplierAppService.getSupplierById(supplierId)));
+    // }
 
-    /**
-     * 新增供应商信息
-     *
-     * @param supplier 供应商信息
-     * @return 结果
-     */
-    @Log(title = "供应商管理", businessType = BusinessType.INSERT)
-    @RequiresPermissions("completeVehicle:vehicle:supplier:add")
-    @PostMapping
-    public ApiResponse<Void> add(@Validated @RequestBody SupplierRequest supplier) {
-        log.info("管理后台用户[{}]新增供应商信息[{}]", SecurityContextHolder.getUserName(), supplier.getCode());
-        if (!supplierAppService.checkCodeUnique(supplier.getId(), supplier.getCode())) {
-            return ApiResponse.fail("新增供应商'" + supplier.getCode() + "'失败，供应商代码已存在");
-        }
-        supplierAppService.createSupplier(MptSupplierAssembler.INSTANCE.toCmd(supplier), SecurityUtils.getUserId().toString());
-        return ApiResponse.ok();
-    }
+    // TODO: CR-019 - 待迁移
+    // /**
+    //  * 新增供应商信息
+    //  *
+    //  * @param supplier 供应商信息
+    //  * @return 结果
+    //  */
+    // @Log(title = "供应商管理", businessType = BusinessType.INSERT)
+    // @RequiresPermissions("completeVehicle:vehicle:supplier:add")
+    // @PostMapping
+    // public ApiResponse<Void> add(@Validated @RequestBody SupplierRequest supplier) {
+    //     log.info("管理后台用户[{}]新增供应商信息[{}]", SecurityContextHolder.getUserName(), supplier.getCode());
+    //     if (!supplierAppService.checkCodeUnique(supplier.getId(), supplier.getCode())) {
+    //         return ApiResponse.fail("新增供应商'" + supplier.getCode() + "'失败，供应商代码已存在");
+    //     }
+    //     supplierAppService.createSupplier(MptSupplierAssembler.INSTANCE.toCmd(supplier), SecurityUtils.getUserId().toString());
+    //     return ApiResponse.ok();
+    // }
 
-    /**
-     * 修改保存供应商信息
-     *
-     * @param supplier 供应商信息
-     * @return 结果
-     */
-    @Log(title = "供应商管理", businessType = BusinessType.UPDATE)
-    @RequiresPermissions("completeVehicle:vehicle:supplier:edit")
-    @PutMapping
-    public ApiResponse<Void> edit(@Validated @RequestBody SupplierRequest supplier) {
-        log.info("管理后台用户[{}]修改保存供应商信息[{}]", SecurityContextHolder.getUserName(), supplier.getCode());
-        if (!supplierAppService.checkCodeUnique(supplier.getId(), supplier.getCode())) {
-            return ApiResponse.fail("修改保存供应商'" + supplier.getCode() + "'失败，供应商代码已存在");
-        }
-        supplierAppService.modifySupplier(MptSupplierAssembler.INSTANCE.toCmd(supplier), SecurityUtils.getUserId().toString());
-        return ApiResponse.ok();
-    }
+    // TODO: CR-019 - 待迁移
+    // /**
+    //  * 修改保存供应商信息
+    //  *
+    //  * @param supplier 供应商信息
+    //  * @return 结果
+    //  */
+    // @Log(title = "供应商管理", businessType = BusinessType.UPDATE)
+    // @RequiresPermissions("completeVehicle:vehicle:supplier:edit")
+    // @PutMapping
+    // public ApiResponse<Void> edit(@Validated @RequestBody SupplierRequest supplier) {
+    //     log.info("管理后台用户[{}]修改保存供应商信息[{}]", SecurityContextHolder.getUserName(), supplier.getCode());
+    //     if (!supplierAppService.checkCodeUnique(supplier.getId(), supplier.getCode())) {
+    //         return ApiResponse.fail("修改保存供应商'" + supplier.getCode() + "'失败，供应商代码已存在");
+    //     }
+    //     supplierAppService.modifySupplier(MptSupplierAssembler.INSTANCE.toCmd(supplier), SecurityUtils.getUserId().toString());
+    //     return ApiResponse.ok();
+    // }
 
-    /**
-     * 删除供应商信息
-     *
-     * @param supplierIds 供应商ID数组
-     * @return 结果
-     */
-    @Log(title = "供应商管理", businessType = BusinessType.DELETE)
-    @RequiresPermissions("completeVehicle:vehicle:supplier:remove")
-    @DeleteMapping("/{supplierIds}")
-    public ApiResponse<Void> remove(@PathVariable Long[] supplierIds) {
-        log.info("管理后台用户[{}]删除供应商信息[{}]", SecurityContextHolder.getUserName(), supplierIds);
-        return supplierAppService.deleteSupplierByIds(supplierIds) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
-    }
+    // TODO: CR-019 - 待迁移
+    // /**
+    //  * 删除供应商信息
+    //  *
+    //  * @param supplierIds 供应商ID数组
+    //  * @return 结果
+    //  */
+    // @Log(title = "供应商管理", businessType = BusinessType.DELETE)
+    // @RequiresPermissions("completeVehicle:vehicle:supplier:remove")
+    // @DeleteMapping("/{supplierIds}")
+    // public ApiResponse<Void> remove(@PathVariable Long[] supplierIds) {
+    //     log.info("管理后台用户[{}]删除供应商信息[{}]", SecurityContextHolder.getUserName(), supplierIds);
+    //     return supplierAppService.deleteSupplierByIds(supplierIds) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
+    // }
 
 }

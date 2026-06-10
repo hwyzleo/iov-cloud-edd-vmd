@@ -22,6 +22,7 @@
 - G6：在工厂（Plant）主数据上，VMD 作为 edd-mdm 的下游消费方，持有 Plant 本地投影副本，用于车辆生产工厂追溯；车辆主档使用 `plantCode` 表示生产工厂编码，VMD 不再承担 Plant 主数据治理职责（CR-011）。
 - G7：在配置（Configuration，原 BuildConfig 生产配置）主数据上，VMD 作为 edd-mdm 的下游消费方，持有 Configuration 配置本地投影副本，用于配置关联、特征-配置反查、导入校验、查询展示与历史追溯；车辆主档使用 `configurationCode`（承接原 `buildConfigCode` 语义）作为配置关联编码（每台物理车唯一映射的核心锚点），VMD 不再承担 Configuration 配置主数据维护职责（CR-017）。
 - G8：在选项族（OptionFamily，原 FeatureFamily 特征族）/选项值（OptionCode，原 FeatureCode 特征值）主数据上，VMD 作为 edd-mdm 的下游消费方，持有 OptionFamily / OptionCode 本地**只读**投影副本，用于版本（Variant）/配置（Configuration）的选项引用、特征-配置反查（US-031）、查询展示与历史追溯；关联键使用 `optionFamilyCode`（承接原 `familyCode` 语义）/ `optionCode`（承接原 `featureCode` 语义），VMD 不再承担 OptionFamily / OptionCode 主数据治理（编码生成 / 审批 / Golden Record / 质量打分 / 生命周期）职责（CR-018）。
+- G9：在供应商（Supplier）主数据上，VMD **彻底下线本地维护能力**（`Supplier` 聚合 + `tb_supplier` 表 + 增删改查 API + 契约及附属物），供应商主数据 SSOT 上移至 **edd-mdm 的 Party 子域**（MDM CR-006）；**与产品树各实体（CR-012~CR-018）的按需最小化只读投影策略不同，VMD 明确不为供应商建立任何本地只读投影**，仅保留零部件 / 设备 / 导入记录上的 `supplier_code` 作为溯源属性透传（CR-019）。
 
 > **Plant / 工厂主数据语义统一（CR-011 补充）**：
 > - VMD 中 Plant 本地投影用于支撑车辆生产工厂追溯，不再承担 Plant 主数据治理职责。
@@ -93,6 +94,13 @@
 > - VMD 不再承担 OptionFamily / OptionCode 主数据治理、编码生成、审批、Golden Record、质量打分、生命周期管理等职责。
 > - VMD OptionFamily / OptionCode 投影采用按需最小化字段设计，对 source=MDM 记录保持只读语义。
 
+> **Supplier / 供应商主数据语义统一（CR-019 补充）**：
+> - 供应商（Supplier）主数据的权威来源（SSOT）为 **edd-mdm 的 Party 子域**（MDM CR-006），VMD 不再是供应商主数据维护入口。
+> - **与产品树各实体（CR-011~CR-018）不同，VMD 不为供应商建立本地只读投影**：VMD 彻底下线供应商本地维护能力（`Supplier` 聚合、`tb_supplier` 表、`/api/mpt/supplier/v1/**` CRUD API、应用 / 持久化栈及附属物全部移除）。
+> - VMD 仅保留 `supplier_code` 作为零部件 / 设备 / 导入记录上的溯源属性透传，该编码不依赖本地供应商表、不外键约束到本地供应商表。
+> - 需要供应商主数据本体者改调 edd-mdm Party 子域；仅需供应商编码者继续使用 `supplier_code` 透传。
+> - 历史本地供应商表采用直接清退（方案 B），清退前完成与 MDM Party 子域的一致性核对，配套 Flyway 删表脚本（仅需求说明，不在本 CR 生成）。
+
 ### 非目标（Non-Goals，本期不做）
 - N1：不替代账号服务（`ExAccountService`）做用户身份/手机号实名核验。
 - N2：不替代安全密钥服务（`ExSkService`）执行 IMMO_SK 的实际生成。
@@ -105,6 +113,7 @@
 - N9：不再作为 **Variant（版本，原 BaseModel 基础车型）**主数据的企业级 SSOT；VMD 不负责 Variant 主数据治理、审批、编码生成、数据质量打分、Golden Record 合并与版本生命周期管理；不要求完整复制 MDM Variant 的全部字段；不承担 MDM Variant 字段变化的自动适配责任，仅当字段变化影响 VMD 的车辆导入、车辆查询、车辆追溯、展示或校验逻辑时，才通过独立 CR 纳入 VMD Variant 投影；本 CR 不改造 BaseModelFeatureCode / 特征值的归属与维护语义（仅做随实体重命名必需的引用键兼容改名），不改造 BuildConfig / FeatureFamily 的归属（CR-017 / CR-018 处理），不得切断「车系→车型→版本」及 `BuildConfig → variantCode` 引用链（CR-016）。
 - N10：不再作为 **Configuration（配置，原 BuildConfig 生产配置）**主数据的企业级 SSOT；VMD 不负责 Configuration 主数据治理、审批、编码生成、数据质量打分、Golden Record 合并与配置生命周期管理；不要求完整复制 MDM Configuration 的全部字段；不承担 MDM Configuration 字段变化的自动适配责任，仅当字段变化影响 VMD 的车辆导入、车辆查询、车辆追溯、特征-配置反查、展示或校验逻辑时，才通过独立 CR 纳入 VMD Configuration 投影；本 CR 不改造 BuildConfigFeatureCode / 特征值的归属与维护语义（仅做随实体重命名必需的引用键兼容改名），不改造 FeatureFamily 的归属（CR-018 处理）；不得切断「版本（Variant）→配置（Configuration）」引用链及每台物理车 `configurationCode` 唯一映射（CR-017）。
 - N11：不再作为 **OptionFamily / OptionCode（选项族 / 选项值，原 FeatureFamily / FeatureCode 特征族 / 特征值）**主数据的企业级 SSOT；VMD 不负责 OptionFamily / OptionCode 主数据治理、审批、编码生成、数据质量打分、Golden Record 合并与选项族 / 选项值生命周期管理；不要求完整复制 MDM OptionFamily / OptionCode 的全部字段；不承担 MDM OptionFamily / OptionCode 字段变化的自动适配责任，仅当字段变化影响 VMD 的车辆导入、车辆查询、车辆追溯、特征-配置反查（US-031）、展示或校验逻辑时，才通过独立 CR 纳入 VMD OptionFamily / OptionCode 投影；本 CR 仅做随实体重命名必需的引用键兼容改名（`familyCode`→`optionFamilyCode`、`featureCode`→`optionCode`，含 Variant / Configuration 侧引用键），**不重复接管已随 Variant（CR-016）/ Configuration（CR-017）投影下发的选项值映射数据**；旧字段、旧接口、旧权限点的最终下线留待后续兼容性清理 CR（CR-018）。
+- N12：VMD 不再作为 **Supplier（供应商）**主数据的维护入口或 SSOT；供应商主数据治理、审批、编码生成、生命周期管理由 edd-mdm Party 子域承担。**区别于产品树各实体（CR-011~CR-018），VMD 不为供应商建立任何本地只读投影**，彻底下线供应商本地维护能力（`Supplier` 聚合、`tb_supplier` 表、`/api/mpt/supplier/v1/**` CRUD API 及附属物）；仅保留 `supplier_code` 作为溯源属性透传，`supplier_code` 及其导入写入逻辑不在下线 / 清退范围（CR-019）。
 
 ## 3. User Stories
 
@@ -556,11 +565,18 @@
 - THE SYSTEM SHALL 通过 `GET /api/service/device/v1/{code}` 对外暴露按设备代码查询。
 - THE SYSTEM SHALL 通过 `GET /api/service/device/v1/listAllFota` 返回全部可 FOTA 升级设备。
 
-#### US-016: 维护供应商（Supplier）
-**As a** Mpt-User, **I want** 供应商 CRUD, **so that** 零件/批次可追溯到供应商。
+#### US-016: 供应商本地维护下线（Supplier 下线，CR-019）
+**As a** VMD 维护者, **I want** 彻底下线 VMD 供应商本地维护能力（`Supplier` 聚合 + `tb_supplier` 表 + CRUD API + 契约及附属物），改由 edd-mdm Party 子域承接供应商主数据, **so that** 消除 VMD 与 MDM 的双源 / 双写，零部件 / 设备仅以 `supplier_code` 溯源透传。
+
+> 供应商 SSOT 上移 edd-mdm Party 子域（MDM CR-006）。与产品树各实体不同，**VMD 不为供应商建立本地只读投影**；删除 / 保留边界、调用方迁移、数据处置（方案 B 直接清退）与回滚详见 §4「供应商本地维护下线约束（CR-019）」。
 
 **Acceptance Criteria**:
-- WHEN 创建/修改供应商 IF `code` 已存在 THEN THE SYSTEM SHALL 返回唯一性失败。
+- WHEN 调用方请求已下线的供应商维护 API（`/api/mpt/supplier/v1/*` 的 list / query / add / edit / remove / export）THE SYSTEM SHALL 返回明确的下线 / 不支持响应（约定 HTTP 410 Gone 或业务错误码，提示供应商主数据已上移至 edd-mdm Party 子域，VMD 不再提供供应商维护能力）。
+- WHEN 调用方在过渡窗口内调用已标注 `@Deprecated` 的供应商接口 THEN THE SYSTEM SHALL 正常返回兼容响应并记录下线告警日志，便于识别残留调用方。
+- WHERE 零部件 / 设备数据导入 WHEN 写入记录 THE SYSTEM SHALL 正常保留并写入 `supplier_code`（`tb_part / tb_btm / tb_ccp / tb_idcm / tb_tbox` 及 `ods_vmd_*_df / ods_vmd_data_import_di`），不受供应商本地维护下线影响。
+- THE SYSTEM SHALL 不再保留任何供应商主数据的本地增删改查能力与本地表（`Supplier` 聚合、`SupplierAppService`、`tb_supplier` 及其全栈附属物在终版下线后均不存在）。
+- THE SYSTEM SHALL NOT 将 `supplier_code` 溯源透传字段及其写入逻辑纳入任何删除 / 清退动作。
+- WHEN 调用方需要供应商主数据本体 THE SYSTEM SHALL 由 edd-mdm Party 子域承接，VMD 不提供供应商主数据本地投影。
 
 ### 3.6 车辆零件绑定域
 
@@ -1126,6 +1142,51 @@
 - OptionFamily / OptionCode 主数据合并 / 拆分关系。
 - MDM 内部治理字段、审批字段、流程字段。
 
+### 供应商本地维护下线约束（CR-019）
+> 供应商（Supplier）主数据的权威来源（SSOT）已上移至 **edd-mdm 的 Party 子域**（见 MDM CR-006）。**与产品树各实体（CR-011~CR-018）的按需最小化只读投影策略不同，供应商明确不在 VMD 建立任何本地只读投影**：VMD 彻底下线供应商本地维护能力（实体 + 表 + CRUD API + 契约及其附属物），仅保留 `supplier_code` 作为零部件 / 设备 / 导入记录上的溯源属性透传。本节为需求语言，落地实现（含 Flyway 删表脚本）另起任务。
+
+**动机**：
+- Supplier SSOT 上移 edd-mdm Party 子域，VMD 不再是供应商主数据维护入口。
+- VMD 历史残留一整套供应商本地维护实现（领域实体 + 本地表 + 增删改查 REST API + 应用 / 持久化栈），与 MDM Party 子域形成双源 / 潜在双写风险。
+- 需求上要求彻底移除，避免与 MDM 双写 / 双源、口径漂移。
+
+**需求要求的删除范围（以需求语言逐项描述）**：
+- 供应商领域对象 / 实体：`Supplier` 聚合（`domain/model/entity/Supplier`）及领域仓储接口 `SupplierRepository`。
+- 供应商应用 / 持久化栈：应用服务 `SupplierAppService`（`search / getSupplierById / createSupplier / modifySupplier / deleteSupplierByIds / checkCodeUnique`）、仓储实现 `SupplierRepositoryImpl`、`SupplierMapper`（接口）与 `SupplierMapper.xml`、持久化对象 `SupplierPo`、转换器 `SupplierConverter`、装配器 `SupplierAssembler` / `MptSupplierAssembler`、专用 DTO / 命令 / 查询 / VO（`SupplierCmd` / `SupplierDto` / `SupplierQuery` / `SupplierRequest` / `SupplierResponse`）。
+- 供应商本地库表：`tb_supplier`（供应商表，现有实际命名）。
+- 对外供应商 CRUD REST API（`MptSupplierController`，base path `/api/mpt/supplier/v1`）：`GET /list`、`POST /export`、`GET /{supplierId}`、`POST`（新增）、`PUT`（修改）、`DELETE /{supplierIds}`，及关联权限点 `completeVehicle:vehicle:supplier:{list|export|query|add|edit|remove}`。
+- 供应商相关 Feign 契约及 DTO：经核查 `edd-vmd-api` 模块当前**未发现** `VmdSupplier*Service` 等供应商对外 Feign 契约；需求上要求——若后续排查确认存在则一并移除，若不存在则在实现中明确记录「无对外 Feign 契约需移除」。
+- 供应商专用附属物（如有）：仅供供应商维护使用的错误码 / 提示文案、校验（如供应商代码唯一性 `checkCodeUnique`）、枚举（如供应商类型 `type`）、Kafka 事件 / 订阅（经核查当前未发现供应商专用领域事件，如有则一并移除）。
+
+**需求要求的保留范围（关键，明确不在下线之列）**：
+- 零部件 / 设备表上的 `supplier_code` 字段一律保留，作为溯源属性透传（非主数据本体、不外键约束到本地供应商表）：`tb_part`、`tb_btm`、`tb_ccp`、`tb_idcm`、`tb_tbox`。
+- 导入链路与导入批次表上的 `supplier_code` 保留：`ods_vmd_*_df` 各贴源导入表，以及导入批次表 `ods_vmd_data_import_di` 的 `supplier_code`。
+- 6 类离线导入写入 `supplier_code` 的逻辑保留：PRODUCE / EOL / BTM / CCP / IDCM / TBOX / SIM 各解析 / 绑定链路（`BtmDataParserV1_0 / CcpDataParserV1_0 / IdcmDataParserV1_0 / TboxDataParserV1_0 / VehiclePartBinder` 等）写入 `supplier_code` 的行为不变。
+- 数仓侧 `ods_vmd_supplier_mf` 属 DMP，不在 VMD 本 CR 范围内。
+> 边界声明：`supplier_code` 是贴在零部件 / 设备 / 导入记录上的编码字符串属性，用于追溯供应商来源，**不依赖** VMD 本地供应商主数据表；下线供应商本地维护后 `supplier_code` 以纯透传方式存续。需要供应商主数据明细者改向 MDM Party 子域查询。
+
+**调用方迁移（需求层面的要求）**：
+- 要求实现前排查并列出所有调用 VMD 供应商接口 / 依赖 VMD 本地供应商数据的下游（如 SRM 供应商关系管理、导入 / 查询链路、MPT 后台供应商管理页面），形成调用方清单与影响面评估。
+- 替代方案：需要供应商主数据本体者改调 edd-mdm Party 子域；仅需供应商编码者继续用 `supplier_code` 透传，无需改造。
+- 要求约定下线公告、过渡窗口与灰度策略：先公告并冻结新接入，给过渡期供调用方切换至 MDM Party 子域，再按灰度逐步下线接口与本地表。
+
+**数据处置要求（采用方案 B：直接清退）**：
+- 历史本地供应商表 `tb_supplier` 采用**直接清退**：在确认无任何调用方依赖本地供应商本体、且 MDM Party 子域已完整覆盖历史数据并核对通过后，直接删表，**不做阶段性只读归档过渡**。
+- 直接清退的前置条件：清退前必须完成 VMD 历史供应商数据与 MDM Party 子域的一致性核对，确保数据已在 MDM 侧可查、不丢失。
+- 表删除需配套 **Flyway 删表脚本**（仅作需求说明，本 CR 不生成脚本本身）；脚本与代码删除同批次评审，并保留建表 DDL / 数据备份作为应急回滚物（备份仅作回滚兜底，不作为运行期只读归档）。
+- `supplier_code` 列不在任何删表 / 清退脚本范围内（见保留范围）。
+
+**兼容 / 废弃策略**：
+- 对外供应商 CRUD REST API 建议「先 `@Deprecated` 过渡一版、再删除」：过渡版标注 `@Deprecated` 并写入下线告警日志以收敛残留调用方，过渡窗口结束后物理删除控制器、权限点及对应应用 / 持久化栈。
+- 确认无调用方的内部接口可直接删除，无需过渡版。
+- 注：本 CR 数据处置采用直接清退（方案 B），与 API 的 `@Deprecated` 过渡相互独立——API 过渡用于收敛调用方，数据表在调用方切换确认后直接删除。
+
+**风险与回滚**：
+- 误删 `supplier_code`：删表 / 清退脚本若波及零部件 / 设备 / 导入表的 `supplier_code` 将造成溯源断链；缓解——删除范围显式排除 `supplier_code`，脚本评审逐表核对，并以导入写入 `supplier_code` 回归用例验收。
+- 调用方未切换：过渡窗口结束前仍有调用方依赖 VMD 供应商接口；缓解——先 `@Deprecated` + 下线告警日志收敛残留调用方，确认归零后再物理删除接口与表。
+- 数据不可恢复（方案 B 直接清退的固有风险）：直接删表后本地无只读归档；缓解——删表前完成与 MDM Party 子域一致性核对，Flyway 删表脚本提供配套回滚 DDL 并保留建表 DDL + 数据备份，必要时可临时恢复。
+- MDM 覆盖度：若 MDM Party 子域未完整覆盖历史，直接清退会丢失数据；缓解——清退前完成一致性核对，未覆盖部分先补齐 MDM 再清退。
+
 ### 依赖（外部）
 - **TSP 服务**：`TspVehicleCcpService / TspVehicleIdcmService / TspVehicleNetworkService / TspVehicleTboxService / TspCcpInfoService / TspIdcmInfoService / TspTboxInfoService / TspSimService`。
 - **OTA 服务**：`OtaVehiclePartService`（车辆零件同步）。
@@ -1208,6 +1269,12 @@
 - O59：本次 CR 只定义 FeatureFamily→OptionFamily / FeatureCode→OptionCode 的投影化、实体重命名与关联键重命名（`familyCode`→`optionFamilyCode`、`featureCode`→`optionCode`）及兼容策略，不要求一次性删除所有旧字段（`family_code` / `feature_code` 等）、旧接口（`/api/mpt/featureFamily/**`、`listAllFeatureCode`）和旧权限点（`completeVehicle:product:featureFamily:*` / `completeVehicle:product:featureCode:*`）；旧资产标记 `deprecated`，最终下线由后续兼容性清理 CR 完成（CR-018）。
 - O60：**不重复接管已随 Variant（CR-016）/ Configuration（CR-017）投影下发的选项值映射数据**，本 CR 仅对 Variant 侧（原 BaseModelFeatureCode）/ Configuration 侧（原 BuildConfigFeatureCode）的特征值引用键 `feature_code` 做随实体重命名必需的兼容改名（`feature_code`→`option_code`），不改其业务语义；不得切断特征-配置反查（US-031）能力与每台物理车 `configurationCode` 唯一映射（CR-018）。
 - O61：MDM OptionFamily / OptionCode 的内部模型设计、生命周期状态、审批流、编码规则不在 VMD 范围内（CR-018）。
+- O62：VMD 不再为供应商建立本地只读投影（区别于产品树各实体 CR-011~CR-018 的投影化策略，供应商不投影）（CR-019）。
+- O63：数仓侧 `ods_vmd_supplier_mf` 属 DMP，不在 VMD 本 CR 范围内（CR-019）。
+- O64：edd-mdm Party 子域供应商主数据的内部模型设计、治理、审批、编码规则、生命周期管理不在 VMD 范围内（CR-019）。
+- O65：调用方（如 SRM）切换至 edd-mdm Party 子域的具体改造由各调用方自行立项，不在 VMD 本 CR 范围内（CR-019）。
+- O66：历史供应商数据向 edd-mdm Party 子域的迁移 / 核对 / 回标由独立数据治理任务执行，本期 spec 不实现（CR-019）。
+- O67：供应商相关 Flyway 删表脚本、字段物理删除、代码删除、API 下线响应等实现细节留 design.md / tasks.md（CR-019）。
 
 ## 6. Changelog
 
@@ -1229,4 +1296,5 @@
 | 2026-06-09 | CR-016 | Modified | **基础车型（BaseModel）重构为 MDM Variant（版本）本地投影 + 命名迁移**：Variant 主数据 SSOT 上移至 MDM，VMD 保留 Variant 本地投影表（US-004 由「维护基础车型 BaseModel 及其特征值」改写为「消费 MDM Variant 主数据本地投影」；新增 US-004b Variant Bootstrap 全量同步（entity=variant\|all）、US-004c Variant 本地维护能力兼容清理 + BaseModel→Variant 命名迁移）；**与 Plant（CR-011）同构、区别于 Brand/Platform/CarLine/Model（CR-012~015 命名不变、仅投影化）——本次涉及实体重命名 + 关联键重命名**：MDM 侧 BaseModel 改名为 Variant，VMD 将 `veh_base_model`→`veh_variant`、`baseModelCode`→`variantCode`，BaseModel/`baseModelCode`/「基础车型」转为历史兼容命名（参照 Manufacturer→Plant）；新增 §4「Variant 主数据投影约束」与「Variant 投影字段范围原则」（VMD Variant ⊂ MDM Variant，按需最小化投影）；VMD Variant add/edit/remove 仅作 source=MANUAL 兼容期遗留，对 source=MDM 一律只读（拒绝时抛 `ProductDataReadOnlyException`，错误码 `202014`）；保留并回填 `variantCode`，**`veh_variant.model_code → veh_model.code` 的「车系→车型→版本（原基础车型）」与 `BuildConfig → variantCode` 引用链不得切断**；US-005 BuildConfig 引用键 `base_model_code`→`variant_code`、路径 `listByBaseModelCode/{baseModelCode}`→`listByVariantCode/{variantCode}`（保留旧路径兼容，BuildConfig 本体仍为 VMD 自有）；US-019 PRODUCE 解析器七项编码 `baseModelCode`→`variantCode`（含历史兼容读取/映射）；US-030 service 路径 `/buildConfig/list/{baseModelCode}`→`/buildConfig/list/{variantCode}`（保留旧路径兼容）；MDM 事件订阅（F6，新增 entity=variant）与 Bootstrap 全量同步（F7，entity=variant\|all）复用现有机制；§1 产品树链路、§2 G5 纳入 Variant 语义并新增 Variant 语义统一说明、新增 N9 Variant 非目标；§5 新增 O47~O54。**本 CR 不改造 BaseModelFeatureCode/特征值归属（仅引用键兼容改名）、不改造 BuildConfig/FeatureFamily 归属（CR-017/CR-018）**。<br>**受影响清单（供实现对账）**：<br>· 表：`tb_veh_base_model`→`tb_veh_variant`（重命名 + 补 source/external_ref_id/external_version/last_sync_time + UK(external_ref_id)）；`tb_veh_basic_info`（新增 `variant_code` 回填）；`tb_veh_build_config`（`base_model_code`→`variant_code`）；`tb_veh_base_model_feature_code`（`base_model_code`→`variant_code`，仅引用键改名）。<br>· 字段：`base_model_code`/`baseModelCode`→`variant_code`/`variantCode`（保留旧列/旧字段兼容并回填）；`veh_variant` 保留列 `code`/`name`/`platform_code`/`car_line_code`/`model_code` 不变。<br>· 权限点：`completeVehicle:product:baseModel:*`→`completeVehicle:product:variant:list/query/export`；`variant:add/edit/remove` 仅兼容期遗留（限 source=MANUAL）；旧 `baseModel:*` 标记 `deprecated` 待后续 CR 下线。<br>· API path：`/api/mpt/baseModel/**`→`/api/mpt/variant/**`（含 `listByPlatformCodeAndCarLineCodeAndModelCode`）；`/api/mpt/buildConfig/v1/listByBaseModelCode/{baseModelCode}`→`listByVariantCode/{variantCode}`；`/api/service/vehicleModelConfig/v1/buildConfig/list/{baseModelCode}`→`/buildConfig/list/{variantCode}`（旧路径迁移期保留兼容）。<br>· Flyway：新增 `V7__Migrate_base_model_to_variant.sql`（表迁移/重命名 + 投影字段 + UK + 回填 source='MANUAL'）、`V8__Migrate_base_model_code_to_variant_code.sql`（basic_info/build_config/base_model_feature_code 关联键迁移回填），接续 CR-015 的 V6。**design.md / tasks.md 需按 SPEC 工作流后续同步落地本 CR** |
 | 2026-06-09 | CR-017 | Modified | **生产配置（BuildConfig）重构为 MDM Configuration（配置）本地投影 + 命名迁移**：Configuration 配置主数据 SSOT 上移至 MDM，VMD 保留 Configuration 本地投影表（US-005 由「维护生产配置 BuildConfig 及其特征值」改写为「消费 MDM Configuration 主数据本地投影」；新增 US-005b Configuration Bootstrap 全量同步（entity=configuration\|all）、US-005c Configuration 本地维护能力兼容清理 + BuildConfig→Configuration 命名迁移）；**与 Plant（CR-011）/ Variant（CR-016）同构、区别于 Brand/Platform/CarLine/Model（CR-012~015 命名不变、仅投影化）——本次涉及实体重命名 + 关联键重命名**：MDM 侧 BuildConfig 改名为 Configuration，VMD 将 `buildConfigCode`→`configurationCode`，BuildConfig/`buildConfigCode`/「生产配置」转为历史兼容命名（参照 Manufacturer→Plant、BaseModel→Variant）；**命名消歧**——Configuration（配置）区别于 VehicleConfig（车辆配置，US-013）、ConfigItem（配置项，US-009）、configCenter（配置中心），易混处用全称限定；新增 §4「Configuration 配置主数据投影约束」与「Configuration 投影字段范围原则」（VMD Configuration ⊂ MDM Configuration，按需最小化投影）；VMD Configuration add/edit/remove 仅作 source=MANUAL 兼容期遗留，对 source=MDM 一律只读（拒绝时抛 `ProductDataReadOnlyException`，错误码 `202014`）；保留并回填 `configurationCode`（每台物理车唯一映射的核心锚点），**「版本（Variant）→配置（Configuration）」引用链与每台物理车 `configurationCode` 唯一映射不得切断**；US-019 PRODUCE 解析器七项编码 `buildConfigCode`→`configurationCode`（含历史兼容读取/映射）；US-030 service 路径 `/buildConfigCode`→`/configurationCode`、`/buildConfig/list/{variantCode}`→`/configuration/list/{variantCode}`、`/buildConfig/{buildConfigCode}`→`/configuration/{configurationCode}`（旧路径迁移期保留兼容，与 CR-016 baseModel 兼容并存）；US-031 特征-配置反查标题/路径改 Configuration、响应类型 `VmdBuildConfigResponse`→`VmdConfigurationResponse`（旧路径/旧类型兼容），强调反查逻辑仍属 VMD（基于本地投影 + 特征值映射，不强依赖 MDM 运行时）；MDM 事件订阅（F6，新增 entity=configuration）与 Bootstrap 全量同步（F7，entity=configuration\|all）复用现有机制；§2 新增 G7、Configuration 语义统一说明、N10 Configuration 非目标；§4 数据来源标记由六类实体扩展为七类（纳入 Configuration 配置投影）、新增 Configuration 投影约束与字段范围原则两节。**本 CR 不改造 BuildConfigFeatureCode/特征值归属（仅引用键兼容改名）、不改造 FeatureFamily 归属（CR-018）；具体迁移脚本、字段物理改名、Flyway 文件等实现细节留 design.md / tasks.md**。**design.md / tasks.md 需按 SPEC 工作流后续同步落地本 CR** |
 | 2026-06-09 | CR-018 | Modified | **特征族（FeatureFamily）/ 特征值（FeatureCode）重构为 MDM OptionFamily（选项族）/ OptionCode（选项值）本地投影 + 命名迁移**：OptionFamily / OptionCode 主数据 SSOT 上移至 MDM，VMD 保留本地只读投影表（US-008 由「维护特征族 FeatureFamily 及其特征值 FeatureCode」改写为「消费 MDM OptionFamily / OptionCode 主数据本地投影」；新增 US-008b OptionFamily / OptionCode Bootstrap 全量同步（entity=optionFamily \| optionCode \| all）、US-008c 本地维护能力兼容清理 + Feature→Option 命名迁移）；**与 Plant（CR-011）/ Variant（CR-016）/ Configuration（CR-017）同构、区别于 Brand/Platform/CarLine/Model（CR-012~015 命名不变、仅投影化）——本次涉及实体重命名 + 关联键重命名**：MDM 侧 FeatureFamily / FeatureCode 改名为 OptionFamily / OptionCode，VMD 将 `familyCode`→`optionFamilyCode`、`featureCode`→`optionCode`，FeatureFamily / FeatureCode / `familyCode` / `featureCode` / 「特征族」「特征值」转为历史兼容命名（参照 Manufacturer→Plant、BaseModel→Variant、BuildConfig→Configuration）；**命名消歧**——OptionFamily / OptionCode（选项族 / 选项值）区别于 ConfigItem（配置项，US-009）下的「枚举值 Option」、configCenter（配置中心）、VehicleConfig（车辆配置，US-013），易混处用全称限定；新增 §4「OptionFamily / OptionCode 主数据投影约束」与「OptionFamily / OptionCode 投影字段范围原则」（VMD ⊂ MDM，按需最小化投影，含 OptionFamily 与 OptionCode 两张最小投影集，OptionCode 含 `option_family_code` 归属字段）；VMD OptionFamily / OptionCode add/edit/remove 仅作 source=MANUAL 兼容期遗留，对 source=MDM 一律只读（拒绝时抛 `ProductDataReadOnlyException`，错误码 `202014`）；保留并回填 `optionFamilyCode` / `optionCode`，**特征-配置反查（US-031）能力与每台物理车 `configurationCode` 唯一映射不得切断**；**对 Variant 侧（原 BaseModelFeatureCode，CR-016）/ Configuration 侧（原 BuildConfigFeatureCode，CR-017）的特征值引用键 `feature_code` 随实体重命名兼容改名为 `option_code`，仅引用键改名、不改业务语义、不重复接管已随 Variant / Configuration 投影下发的选项值映射数据**（US-004 / US-005 / US-005c 引用键表述同步更新）；US-031 特征-配置反查标题/入参/响应改 OptionFamily-OptionCode（`familyCode`→`optionFamilyCode`、`featureCode`→`optionCode`、响应 `featureCodes`→`optionCodes`，旧入参/旧字段/旧路径兼容），强调反查逻辑仍属 VMD（基于本地投影 + 选项值映射，不强依赖 MDM 运行时）；新接口 `/api/mpt/optionFamily/v1/listAllOptionCode?optionFamilyCode`（旧路径 `/api/mpt/featureFamily/v1/listAllFeatureCode?familyCode` 迁移期保留兼容）；权限点 `completeVehicle:product:featureFamily:*` / `featureCode:*`→`completeVehicle:product:optionFamily:list/query/export` / `optionCode:list/query/export`（`add/edit/remove` 仅兼容期遗留限 source=MANUAL，旧权限点标记 `deprecated` 待后续 CR 下线）；MDM 事件订阅（F6，新增 entity=optionFamily / optionCode）与 Bootstrap 全量同步（F7，entity=optionFamily \| optionCode \| all）复用现有机制；§2 新增 G8、OptionFamily / OptionCode 语义统一说明、N11 非目标；§3.2 章节标题由「特征族 & 配置项域」改为「选项族（OptionFamily） & 配置项域」并加消歧说明；§4 数据来源标记由七类实体扩展为九类（纳入 OptionFamily / OptionCode 投影）；§5 新增 O55~O61。**本 CR 仅做引用键兼容改名，不重复接管 CR-016/CR-017 已下发的选项值映射；具体迁移脚本、字段物理改名、Flyway 文件等实现细节留 design.md / tasks.md**。**design.md / tasks.md 需按 SPEC 工作流后续同步落地本 CR** |
+| 2026-06-10 | CR-019 | Modified | **供应商本地维护彻底下线（不建本地投影）**：供应商（Supplier）主数据 SSOT 已上移至 edd-mdm Party 子域（MDM CR-006），VMD 彻底下线供应商本地维护能力。**区别于产品树各实体（CR-011~CR-018）的按需最小化只读投影策略——供应商不投影**：要求移除 `Supplier` 聚合 / `SupplierRepository` / `SupplierAppService` / `SupplierRepositoryImpl` / `SupplierMapper`(+xml) / `SupplierPo` / `SupplierConverter` / `SupplierAssembler` / `MptSupplierAssembler` 及专用 DTO/VO（`SupplierCmd`/`SupplierDto`/`SupplierQuery`/`SupplierRequest`/`SupplierResponse`）、本地表 `tb_supplier`、对外 CRUD API `MptSupplierController`（`/api/mpt/supplier/v1` 的 list/export/{id}/add/edit/remove）及权限点 `completeVehicle:vehicle:supplier:{list\|export\|query\|add\|edit\|remove}`；经核查 `edd-vmd-api` 无供应商 Feign 契约（如存在则一并移除）。**保留范围（不得删除）**：零部件/设备表 `tb_part`/`tb_btm`/`tb_ccp`/`tb_idcm`/`tb_tbox` 与导入链路 `ods_vmd_*_df`/`ods_vmd_data_import_di` 的 `supplier_code` 溯源透传字段、6 类离线导入（PRODUCE/EOL/BTM/CCP/IDCM/TBOX/SIM）写入 `supplier_code` 的逻辑；数仓 `ods_vmd_supplier_mf` 属 DMP 不在本 CR。调用方迁移：需供应商主数据者改调 edd-mdm Party 子域，仅需编码者用 `supplier_code` 透传，约定下线公告/过渡窗口/灰度；**数据处置采用方案 B 直接清退**（清退前与 MDM Party 子域一致性核对，配套 Flyway 删表脚本，保留建表 DDL+备份作回滚兜底，不做阶段性只读归档）；对外 API 建议先 `@Deprecated` 过渡一版再删（与数据直接清退相互独立）。US-016 由「维护供应商（Supplier）」改写为「供应商本地维护下线」并给出 EARS 验收（已下线 API 返回明确下线响应、导入仍保留 `supplier_code`、不再保留任何供应商本地增删改查与本地表）；§2 新增 G9、Supplier 语义统一说明、N12 非目标；§4 新增「供应商本地维护下线约束（CR-019）」；§5 新增 O62~O67。**design.md / tasks.md 需按 SPEC 工作流后续同步落地本 CR** |
 
