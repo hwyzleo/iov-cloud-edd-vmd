@@ -6,7 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.SupplierAssembler;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.SupplierDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.SupplierQuery;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Supplier;
+// import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Supplier; // TODO: CR-019 - Supplier领域对象已删除
 // import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.SupplierRepository; // TODO: CR-019 - 待迁移
 import net.hwyz.iov.cloud.framework.common.util.ParamHelper;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
