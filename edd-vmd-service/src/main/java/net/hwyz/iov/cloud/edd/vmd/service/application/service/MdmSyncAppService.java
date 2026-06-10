@@ -22,6 +22,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmModelEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmPlantEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmVariantEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmVehicleNodeEvent;
+import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmPartEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Brand;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Configuration;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.OptionFamily;
@@ -32,6 +33,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Model;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Plant;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Variant;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleNode;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Part;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmBrandRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmConfigurationRepository;
@@ -42,6 +44,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmModelRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmPlantRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmVariantRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmVehicleNodeRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmPartRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -68,6 +71,7 @@ public class MdmSyncAppService {
     private final MdmVariantRepository mdmVariantRepository;
     private final MdmOptionFamilyRepository mdmOptionFamilyRepository;
     private final MdmVehicleNodeRepository mdmVehicleNodeRepository;
+    private final MdmPartRepository mdmPartRepository;
     private final MdmBrandQueryClient mdmBrandQueryClient;
     private final MdmCarLineQueryClient mdmCarLineQueryClient;
     private final MdmConfigurationQueryClient mdmConfigurationQueryClient;
@@ -946,6 +950,48 @@ public class MdmSyncAppService {
             } else {
                 log.info("忽略车载节点事件（版本不高于本地）: code={}, eventVersion={}, localVersion={}",
                         event.getCode(), event.getVersion(), localVehicleNode.getExternalVersion());
+            }
+        }
+    }
+
+    /**
+     * 处理 MDM 零件事件
+     *
+     * <p>CR-021：Part 投影采用按需最小化只读投影，仅同步 VMD 业务所需字段。
+     * 来自 edd-mdm Part 子域，区别于产品树各实体的 Product MDM 子域。</p>
+     *
+     * @param event 零件事件
+     */
+    public void handlePartEvent(MdmPartEvent event) {
+        log.info("处理MDM零件事件: entityId={}, version={}", event.getEntityId(), event.getVersion());
+        Part localPart = mdmPartRepository.selectByExternalRefId(event.getEntityId());
+        if (localPart == null) {
+            Part newPart = Part.builder()
+                    .pn(event.getCode())
+                    .name(event.getName())
+                    .type(event.getPartType())
+                    .status(event.getStatus())
+                    .accuratelyTraced(event.getIsAccuratelyTraced())
+                    .source(SourceType.MDM)
+                    .externalRefId(event.getEntityId())
+                    .externalVersion(event.getVersion())
+                    .lastSyncTime(LocalDateTime.now())
+                    .build();
+            mdmPartRepository.insert(newPart);
+            log.info("新增零件: pn={}", event.getCode());
+        } else {
+            if (event.getVersion() > localPart.getExternalVersion()) {
+                localPart.setName(event.getName());
+                localPart.setType(event.getPartType());
+                localPart.setStatus(event.getStatus());
+                localPart.setAccuratelyTraced(event.getIsAccuratelyTraced());
+                localPart.setExternalVersion(event.getVersion());
+                localPart.setLastSyncTime(LocalDateTime.now());
+                mdmPartRepository.updateById(localPart);
+                log.info("更新零件: pn={}, version={}", event.getCode(), event.getVersion());
+            } else {
+                log.info("忽略零件事件（版本不高于本地）: pn={}, eventVersion={}, localVersion={}",
+                        event.getCode(), event.getVersion(), localPart.getExternalVersion());
             }
         }
     }

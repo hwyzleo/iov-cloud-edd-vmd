@@ -12,6 +12,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmOptionFamil
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmOptionCodeEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmVariantEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmVehicleNodeEvent;
+import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmPartEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.MdmSyncAppService;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -149,6 +150,20 @@ public class MdmEventSubscribe {
         log.info("收到MDM车载节点事件: type={}, entityId={}, version={}, code={}",
                 event.getEventType(), event.getEntityId(), event.getVersion(), event.getCode());
         mdmSyncAppService.handleVehicleNodeEvent(event);
+    }
+
+    /**
+     * 订阅 MDM 零件事件
+     *
+     * <p>CR-021：零件来自 edd-mdm Part 子域，区别于产品树各实体的 Product MDM 子域。</p>
+     *
+     * @param event 零件事件
+     */
+    @EventListener
+    public void onMdmPartEvent(MdmPartEvent event) {
+        log.info("收到MDM零件事件: type={}, entityId={}, version={}, code={}",
+                event.getEventType(), event.getEntityId(), event.getVersion(), event.getCode());
+        mdmSyncAppService.handlePartEvent(event);
     }
 
 }
