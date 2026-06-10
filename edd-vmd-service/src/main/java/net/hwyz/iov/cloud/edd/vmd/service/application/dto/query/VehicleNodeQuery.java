@@ -6,13 +6,13 @@ import lombok.Data;
 import java.util.Date;
 
 /**
- * 设备查询 DTO
+ * 车载节点查询 DTO
  *
  * @author hwyz_leo
  */
 @Data
 @Builder
-public class DeviceQuery {
+public class VehicleNodeQuery {
 
     private String code;
     private String name;

@@ -11,21 +11,24 @@ import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import net.hwyz.iov.cloud.framework.mysql.po.BasePo;
 
+import java.time.LocalDateTime;
+
 /**
- * <p>
- * 设备信息表 持久化对象
- * </p>
+ * 车载节点表 持久化对象
+ *
+ * <p>由 tb_device 重命名迁移而来（CR-020）。
+ * MDM VehicleNode（车载节点，原Device设备）字典/类型主数据本地投影。</p>
  *
  * @author hwyz_leo
- * @since 2026-01-26
+ * @since 2026-06-10
  */
 @Getter
 @Setter
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-@TableName("tb_device")
-public class DevicePo extends BasePo {
+@TableName("tb_mdm_vehicle_node")
+public class MdmVehicleNodePo extends BasePo {
 
     private static final long serialVersionUID = 1L;
 
@@ -36,19 +39,19 @@ public class DevicePo extends BasePo {
     private Long id;
 
     /**
-     * 设备编码
+     * 车载节点代码（原deviceCode，CR-020重命名）
      */
     @TableField("code")
     private String code;
 
     /**
-     * 设备名称
+     * 车载节点名称
      */
     @TableField("name")
     private String name;
 
     /**
-     * 设备英文名称
+     * 车载节点英文名称
      */
     @TableField("name_en")
     private String nameEn;
@@ -60,7 +63,7 @@ public class DevicePo extends BasePo {
     private String type;
 
     /**
-     * 设备项
+     * 设备项（节点类型）
      */
     @TableField("device_item")
     private String deviceItem;
@@ -160,4 +163,28 @@ public class DevicePo extends BasePo {
      */
     @TableField("sort")
     private Integer sort;
+
+    /**
+     * 数据来源：MDM=来自MDM系统，MANUAL=本地手动维护
+     */
+    @TableField("source")
+    private String source;
+
+    /**
+     * MDM侧实体主键ID
+     */
+    @TableField("external_ref_id")
+    private String externalRefId;
+
+    /**
+     * MDM侧实体版本号
+     */
+    @TableField("external_version")
+    private Long externalVersion;
+
+    /**
+     * 最后一次同步时间
+     */
+    @TableField("last_sync_time")
+    private LocalDateTime lastSyncTime;
 }

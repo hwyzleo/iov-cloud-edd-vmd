@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
  * 
  * <p>提供从 MDM 全量快照同步数据到 VMD 本地投影的能力。</p>
  * 
- * <p>支持实体：brand（品牌）、carLine（车系）、platform（平台）、plant（工厂）、model（车型）、variant（版本）、configuration（配置）、all（全部）</p>
+ * <p>支持实体：brand（品牌）、carLine（车系）、platform（平台）、plant（工厂）、model（车型）、variant（版本）、configuration（配置）、optionFamily（选项族）、optionCode（选项值）、vehicleNode（车载节点）、all（全部）</p>
  * 
  * <p>同步规则：</p>
  * <ul>
@@ -40,7 +40,7 @@ public class MptMdmSyncController extends BaseController {
      * <p>从 MDM 拉取指定实体的全量快照并 upsert 本地投影副本。
      * 不删除本地已有记录，按 external_ref_id / external_version 幂等。</p>
      * 
-     * @param entity 同步实体类型：brand|carLine|platform|plant|model|variant|configuration|all
+     * @param entity 同步实体类型：brand|carLine|platform|plant|model|variant|configuration|optionFamily|optionCode|vehicleNode|all
      * @return 操作结果
      */
     @RequiresPermissions("completeVehicle:mdmSync:bootstrap")
@@ -70,6 +70,15 @@ public class MptMdmSyncController extends BaseController {
             case "configuration":
                 mdmSyncAppService.bootstrapConfiguration();
                 return ApiResponse.ok("配置数据同步完成");
+            case "optionfamily":
+                mdmSyncAppService.bootstrapOptionFamily();
+                return ApiResponse.ok("选项族数据同步完成");
+            case "optioncode":
+                mdmSyncAppService.bootstrapOptionCode();
+                return ApiResponse.ok("选项值数据同步完成");
+            case "vehiclenode":
+                mdmSyncAppService.bootstrapVehicleNode();
+                return ApiResponse.ok("车载节点数据同步完成");
             case "all":
                 mdmSyncAppService.bootstrapAll();
                 return ApiResponse.ok("全量数据同步完成");

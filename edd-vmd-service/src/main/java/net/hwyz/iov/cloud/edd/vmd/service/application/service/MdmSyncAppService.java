@@ -11,6 +11,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmPlatfor
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmOptionFamilyQueryClient;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmOptionCodeQueryClient;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmVariantQueryClient;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmVehicleNodeQueryClient;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmBrandEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmConfigurationEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmOptionFamilyEvent;
@@ -20,6 +21,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmCarLineEven
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmModelEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmPlantEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmVariantEvent;
+import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmVehicleNodeEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Brand;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Configuration;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.OptionFamily;
@@ -29,6 +31,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.CarLine;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Model;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Plant;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Variant;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleNode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmBrandRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmConfigurationRepository;
@@ -38,6 +41,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmCarLineRepository
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmModelRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmPlantRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmVariantRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmVehicleNodeRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -63,6 +67,7 @@ public class MdmSyncAppService {
     private final MdmPlantRepository mdmPlantRepository;
     private final MdmVariantRepository mdmVariantRepository;
     private final MdmOptionFamilyRepository mdmOptionFamilyRepository;
+    private final MdmVehicleNodeRepository mdmVehicleNodeRepository;
     private final MdmBrandQueryClient mdmBrandQueryClient;
     private final MdmCarLineQueryClient mdmCarLineQueryClient;
     private final MdmConfigurationQueryClient mdmConfigurationQueryClient;
@@ -72,6 +77,7 @@ public class MdmSyncAppService {
     private final MdmVariantQueryClient mdmVariantQueryClient;
     private final MdmOptionFamilyQueryClient mdmOptionFamilyQueryClient;
     private final MdmOptionCodeQueryClient mdmOptionCodeQueryClient;
+    private final MdmVehicleNodeQueryClient mdmVehicleNodeQueryClient;
 
     /**
      * 处理 MDM 品牌事件
@@ -892,6 +898,119 @@ public class MdmSyncAppService {
     }
 
     /**
+     * 处理 MDM 车载节点事件
+     *
+     * <p>CR-020：VehicleNode 投影采用按需最小化只读投影，仅同步 VMD 业务所需字段
+     * （含 vehicle_node_type / domain / status 等）。
+     * 来自 edd-mdm EEAD 子域，区别于产品树各实体的 Product MDM 子域。</p>
+     *
+     * @param event 车载节点事件
+     */
+    public void handleVehicleNodeEvent(MdmVehicleNodeEvent event) {
+        log.info("处理MDM车载节点事件: entityId={}, version={}", event.getEntityId(), event.getVersion());
+        VehicleNode localVehicleNode = mdmVehicleNodeRepository.selectByExternalRefId(event.getEntityId());
+        if (localVehicleNode == null) {
+            VehicleNode newVehicleNode = VehicleNode.builder()
+                    .code(event.getCode())
+                    .name(event.getName())
+                    .nameEn(event.getNameEn())
+                    .type(event.getType())
+                    .deviceItem(event.getDeviceItem())
+                    .funcDomain(event.getFuncDomain())
+                    .nodeType(event.getNodeType())
+                    .otaSupport(event.getOtaSupport())
+                    .core(event.getCore())
+                    .sort(event.getSort())
+                    .source(SourceType.MDM)
+                    .externalRefId(event.getEntityId())
+                    .externalVersion(event.getVersion())
+                    .lastSyncTime(LocalDateTime.now())
+                    .build();
+            mdmVehicleNodeRepository.insert(newVehicleNode);
+            log.info("新增车载节点: code={}", event.getCode());
+        } else {
+            if (event.getVersion() > localVehicleNode.getExternalVersion()) {
+                localVehicleNode.setName(event.getName());
+                localVehicleNode.setNameEn(event.getNameEn());
+                localVehicleNode.setType(event.getType());
+                localVehicleNode.setDeviceItem(event.getDeviceItem());
+                localVehicleNode.setFuncDomain(event.getFuncDomain());
+                localVehicleNode.setNodeType(event.getNodeType());
+                localVehicleNode.setOtaSupport(event.getOtaSupport());
+                localVehicleNode.setCore(event.getCore());
+                localVehicleNode.setSort(event.getSort());
+                localVehicleNode.setExternalVersion(event.getVersion());
+                localVehicleNode.setLastSyncTime(LocalDateTime.now());
+                mdmVehicleNodeRepository.updateById(localVehicleNode);
+                log.info("更新车载节点: code={}, version={}", event.getCode(), event.getVersion());
+            } else {
+                log.info("忽略车载节点事件（版本不高于本地）: code={}, eventVersion={}, localVersion={}",
+                        event.getCode(), event.getVersion(), localVehicleNode.getExternalVersion());
+            }
+        }
+    }
+
+    /**
+     * Bootstrap 全量同步车载节点数据
+     *
+     * <p>当本地 source=MDM 的车载节点记录数为 0 时，自动调用 MDM VehicleNode 全量快照接口
+     * 拉取数据并 upsert 本地副本。</p>
+     *
+     * <p>CR-020：VehicleNode 投影采用按需最小化只读投影，仅同步 VMD 业务所需字段
+     * （含 vehicle_node_type / domain / status 等）。
+     * 来自 edd-mdm EEAD 子域，区别于产品树各实体的 Product MDM 子域。</p>
+     */
+    public void bootstrapVehicleNode() {
+        log.info("开始 Bootstrap 车载节点数据同步");
+        long count = mdmVehicleNodeRepository.countBySource(SourceType.MDM);
+        if (count == 0) {
+            log.info("本地无 MDM 车载节点记录（count=0），启动 Bootstrap 同步");
+            try {
+                List<Map<String, Object>> mdmVehicleNodes = mdmVehicleNodeQueryClient.getAllVehicleNodes();
+                for (Map<String, Object> vehicleNodeData : mdmVehicleNodes) {
+                    String code = (String) vehicleNodeData.get("code");
+                    String name = (String) vehicleNodeData.get("name");
+                    String nameEn = (String) vehicleNodeData.get("nameEn");
+                    String type = (String) vehicleNodeData.get("type");
+                    String deviceItem = (String) vehicleNodeData.get("deviceItem");
+                    String funcDomain = (String) vehicleNodeData.get("funcDomain");
+                    String nodeType = (String) vehicleNodeData.get("nodeType");
+                    String otaSupport = (String) vehicleNodeData.get("otaSupport");
+                    Boolean core = (Boolean) vehicleNodeData.get("core");
+                    Integer sort = (Integer) vehicleNodeData.get("sort");
+                    String entityId = (String) vehicleNodeData.get("id");
+                    Long version = Long.valueOf(vehicleNodeData.get("version").toString());
+
+                    VehicleNode vehicleNode = VehicleNode.builder()
+                            .code(code)
+                            .name(name)
+                            .nameEn(nameEn)
+                            .type(type)
+                            .deviceItem(deviceItem)
+                            .funcDomain(funcDomain)
+                            .nodeType(nodeType)
+                            .otaSupport(otaSupport)
+                            .core(core)
+                            .sort(sort)
+                            .source(SourceType.MDM)
+                            .externalRefId(entityId)
+                            .externalVersion(version)
+                            .lastSyncTime(LocalDateTime.now())
+                            .build();
+                    mdmVehicleNodeRepository.insert(vehicleNode);
+                    log.info("Bootstrap 新增 MDM 车载节点投影: code={}", code);
+                }
+                log.info("Bootstrap 车载节点数据同步完成，共同步 {} 条", mdmVehicleNodes.size());
+            } catch (Exception e) {
+                log.error("Bootstrap 车载节点数据同步失败", e);
+                // 不清空本地已有数据
+            }
+        } else {
+            log.info("本地已有 MDM 车载节点数据 {} 条，跳过 Bootstrap", count);
+        }
+    }
+
+    /**
      * Bootstrap 全量同步所有数据
      */
     public void bootstrapAll() {
@@ -905,6 +1024,7 @@ public class MdmSyncAppService {
         bootstrapConfiguration();
         bootstrapOptionFamily();
         bootstrapOptionCode();
+        bootstrapVehicleNode();
         log.info("Bootstrap全量数据同步完成");
     }
 

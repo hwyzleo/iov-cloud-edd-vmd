@@ -4,9 +4,9 @@ import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.VehicleEolPartBoundEvent;
-import net.hwyz.iov.cloud.edd.vmd.service.application.service.DeviceAppService;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleNodeAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehiclePartAppService;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Device;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleNode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehiclePart;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,7 +27,7 @@ class VehiclePartBinderTest {
     private VehiclePartAppService vehiclePartAppService;
 
     @Mock
-    private DeviceAppService deviceAppService;
+    private VehicleNodeAppService vehicleNodeAppService;
 
     @InjectMocks
     private VehiclePartBinder binder;
@@ -53,8 +53,8 @@ class VehiclePartBinderTest {
         part.set("ICCID2", "IC002");
         parts.add(part);
 
-        Device device = Device.builder().code("TBOX001").deviceItem("TBOX").build();
-        when(deviceAppService.getDeviceByCode("TBOX001")).thenReturn(device);
+        VehicleNode device = VehicleNode.builder().code("TBOX001").deviceItem("TBOX").build();
+        when(vehicleNodeAppService.getVehicleNodeByCode("TBOX001")).thenReturn(device);
 
         List<VehicleEolPartBoundEvent.PartMeta> result = binder.bindParts(parts, VIN, BATCH_NUM);
 
@@ -105,7 +105,7 @@ class VehiclePartBinderTest {
         part.set("PART_SN", "SN001");
         parts.add(part);
 
-        when(deviceAppService.getDeviceByCode("UNKNOWN")).thenReturn(null);
+        when(vehicleNodeAppService.getVehicleNodeByCode("UNKNOWN")).thenReturn(null);
 
         List<VehicleEolPartBoundEvent.PartMeta> result = binder.bindParts(parts, VIN, BATCH_NUM);
 
@@ -131,10 +131,10 @@ class VehiclePartBinderTest {
         part2.set("PART_SN", "SN2");
         parts.add(part2);
 
-        Device device1 = Device.builder().code("DEV1").deviceItem("TBOX").build();
-        Device device2 = Device.builder().code("DEV2").deviceItem("CCP").build();
-        when(deviceAppService.getDeviceByCode("DEV1")).thenReturn(device1);
-        when(deviceAppService.getDeviceByCode("DEV2")).thenReturn(device2);
+        VehicleNode device1 = VehicleNode.builder().code("DEV1").deviceItem("TBOX").build();
+        VehicleNode device2 = VehicleNode.builder().code("DEV2").deviceItem("CCP").build();
+        when(vehicleNodeAppService.getVehicleNodeByCode("DEV1")).thenReturn(device1);
+        when(vehicleNodeAppService.getVehicleNodeByCode("DEV2")).thenReturn(device2);
         doThrow(new RuntimeException("bind error")).when(vehiclePartAppService).bindVehiclePart(any());
 
         List<VehicleEolPartBoundEvent.PartMeta> result = binder.bindParts(parts, VIN, BATCH_NUM);

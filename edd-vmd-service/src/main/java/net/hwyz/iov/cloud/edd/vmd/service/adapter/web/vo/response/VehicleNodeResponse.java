@@ -1,12 +1,11 @@
-package net.hwyz.iov.cloud.edd.vmd.api.vo.response;
+package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
+
+import java.util.Date;
 
 /**
- * 对外服务车辆信息
+ * 管理后台车载节点信息
  *
  * @author hwyz_leo
  */
@@ -14,7 +13,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class DeviceExResponse {
+public class VehicleNodeResponse {
 
     /**
      * 主键
@@ -22,17 +21,17 @@ public class DeviceExResponse {
     private Long id;
 
     /**
-     * 设备编码
+     * 车载节点代码
      */
     private String code;
 
     /**
-     * 设备名称
+     * 车载节点名称
      */
     private String name;
 
     /**
-     * 设备英文名称
+     * 车载节点英文名称
      */
     private String nameEn;
 
@@ -50,6 +49,11 @@ public class DeviceExResponse {
      * 功能域
      */
     private String funcDomain;
+
+    /**
+     * 节点类型
+     */
+    private String[] nodeType;
 
     /**
      * OTA支持类型
@@ -75,6 +79,16 @@ public class DeviceExResponse {
      * 链路生效目标
      */
     private String linkFlashTarget;
+
+    /**
+     * 通信协议
+     */
+    private String[] commProtocol;
+
+    /**
+     * 刷写协议
+     */
+    private String[] flashProtocol;
 
     /**
      * CAN/CANFD总线发送标识
@@ -110,5 +124,10 @@ public class DeviceExResponse {
      * 排序
      */
     private Integer sort;
+
+    /**
+     * 创建时间
+     */
+    private Date createTime;
 
 }

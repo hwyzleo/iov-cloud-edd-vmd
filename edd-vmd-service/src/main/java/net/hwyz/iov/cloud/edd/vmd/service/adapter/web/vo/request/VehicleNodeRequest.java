@@ -6,7 +6,7 @@ import net.hwyz.iov.cloud.framework.common.bean.BaseRequest;
 import java.util.Date;
 
 /**
- * 管理后台设备信息
+ * 管理后台车载节点信息
  *
  * @author hwyz_leo
  */
@@ -15,7 +15,7 @@ import java.util.Date;
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode(callSuper = true)
-public class DeviceRequest extends BaseRequest {
+public class VehicleNodeRequest extends BaseRequest {
 
     /**
      * 主键
@@ -23,17 +23,17 @@ public class DeviceRequest extends BaseRequest {
     private Long id;
 
     /**
-     * 设备编码
+     * 车载节点代码
      */
     private String code;
 
     /**
-     * 设备名称
+     * 车载节点名称
      */
     private String name;
 
     /**
-     * 设备英文名称
+     * 车载节点英文名称
      */
     private String nameEn;
 

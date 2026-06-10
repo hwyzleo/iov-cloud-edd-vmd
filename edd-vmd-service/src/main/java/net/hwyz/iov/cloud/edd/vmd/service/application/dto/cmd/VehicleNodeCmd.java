@@ -6,7 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * 设备 DTO
+ * 车载节点命令 DTO
  *
  * @author hwyz_leo
  */
@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class DeviceCmd {
+public class VehicleNodeCmd {
 
     private Long id;
     private String code;

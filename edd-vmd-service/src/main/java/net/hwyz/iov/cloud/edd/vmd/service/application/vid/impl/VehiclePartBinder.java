@@ -7,9 +7,9 @@ import cn.hutool.json.JSONUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.VehicleEolPartBoundEvent;
-import net.hwyz.iov.cloud.edd.vmd.service.application.service.DeviceAppService;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleNodeAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehiclePartAppService;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Device;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleNode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehiclePart;
 import net.hwyz.iov.cloud.framework.common.util.StrUtil;
 import org.springframework.stereotype.Component;
@@ -31,7 +31,7 @@ import java.util.List;
 public class VehiclePartBinder {
 
     private final VehiclePartAppService vehiclePartAppService;
-    private final DeviceAppService deviceAppService;
+    private final VehicleNodeAppService vehicleNodeAppService;
 
     /**
      * 绑定零件列表
@@ -57,7 +57,7 @@ public class VehiclePartBinder {
             }
             String pn = partJson.getStr("PART_NO");
             String sn = partJson.getStr("PART_SN");
-            Device device = deviceAppService.getDeviceByCode(deviceCode);
+            VehicleNode vehicleNode = vehicleNodeAppService.getVehicleNodeByCode(deviceCode);
             String supplierCode = partJson.getStr("SUPPLIER_CODE");
             String configWord = partJson.getStr("CONFIG_WORD");
             String hardwareVersion = partJson.getStr("HARDWARE_VERSION");
@@ -66,10 +66,10 @@ public class VehiclePartBinder {
             String softwarePn = partJson.getStr("SOFTWARE_PN");
             String iccid1 = partJson.getStr("ICCID1");
             String iccid2 = partJson.getStr("ICCID2");
-            if (ObjUtil.isNull(device)) {
+            if (ObjUtil.isNull(vehicleNode)) {
                 log.warn("车辆导入数据批次号[{}]车架号[{}]设备[{}]异常", batchNum, vin, deviceCode);
             }
-            String deviceItem = device != null ? device.getDeviceItem() : null;
+            String deviceItem = vehicleNode != null ? vehicleNode.getDeviceItem() : null;
             partMetaList.add(new VehicleEolPartBoundEvent.PartMeta(
                     sn, pn, deviceCode, deviceItem, supplierCode, batchNum,
                     configWord, hardwareVersion, softwareVersion, hardwarePn, softwarePn,

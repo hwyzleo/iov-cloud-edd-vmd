@@ -11,6 +11,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmPlantEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmOptionFamilyEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmOptionCodeEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmVariantEvent;
+import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmVehicleNodeEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.MdmSyncAppService;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -134,6 +135,20 @@ public class MdmEventSubscribe {
         log.info("收到MDM选项值事件: type={}, entityId={}, version={}, code={}",
                 event.getEventType(), event.getEntityId(), event.getVersion(), event.getCode());
         mdmSyncAppService.handleOptionCodeEvent(event);
+    }
+
+    /**
+     * 订阅 MDM 车载节点事件
+     *
+     * <p>CR-020：车载节点来自 edd-mdm EEAD 子域，区别于产品树各实体的 Product MDM 子域。</p>
+     *
+     * @param event 车载节点事件
+     */
+    @EventListener
+    public void onMdmVehicleNodeEvent(MdmVehicleNodeEvent event) {
+        log.info("收到MDM车载节点事件: type={}, entityId={}, version={}, code={}",
+                event.getEventType(), event.getEntityId(), event.getVersion(), event.getCode());
+        mdmSyncAppService.handleVehicleNodeEvent(event);
     }
 
 }
