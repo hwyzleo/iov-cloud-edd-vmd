@@ -233,6 +233,18 @@ public class PartPo extends BasePo {
     private String deviceCode;
 
     /**
+     * 供应商代码
+     */
+    @TableField("supplier_code")
+    private String supplierCode;
+
+    /**
+     * 是否支持FOTA升级
+     */
+    @TableField("fota_upgradeable")
+    private Boolean fotaUpgradeable;
+
+    /**
      * 设计工程师
      */
     @TableField("designer")
