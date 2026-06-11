@@ -23,7 +23,9 @@ public enum VmdErrorCode implements ErrorCode {
     SUPPLIER_MAINTENANCE_RETIRED("202015", "供应商本地维护已下线"),
     PART_INSTANCE_ALREADY_EXISTS("202016", "物理零件实例已存在"),
     PART_BINDING_CONFLICT("202017", "零件绑定冲突"),
-    PART_INSTANCE_NOT_EXIST("202018", "物理零件实例不存在");
+    PART_INSTANCE_NOT_EXIST("202018", "物理零件实例不存在"),
+    PART_INBOUND_VALIDATE_FAILED("202019", "零件实例入站校验失败"),
+    PART_TYPE_SCHEMA_NOT_FOUND("202020", "未登记的零件类型字段契约");
 
     private final String code;
     private final String message;

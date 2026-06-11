@@ -111,4 +111,34 @@ public class PartInfoPo extends BasePo {
      */
     @TableField("first_seen_time")
     private Instant firstSeenTime;
+
+    /**
+     * 入站来源系统：MES-制造执行系统, MANUAL-手动导入, WMS-仓储管理系统, IQC-来料检验, OTHER-其他
+     */
+    @TableField("source")
+    private String source;
+
+    /**
+     * 零件类型快照：TBOX-车载终端, BTM-蓝牙模块, CCP-域控制器, IDCM-智能驾驶控制, SIM-SIM卡, OTHER-其他
+     */
+    @TableField("part_type")
+    private String partType;
+
+    /**
+     * 入站批次号（批次级幂等去重键）
+     */
+    @TableField("inbound_batch_no")
+    private String inboundBatchNo;
+
+    /**
+     * 源事件ID（事件级幂等去重键）
+     */
+    @TableField("source_event_id")
+    private String sourceEventId;
+
+    /**
+     * 最近一次入站upsert时间
+     */
+    @TableField("last_inbound_time")
+    private Instant lastInboundTime;
 }

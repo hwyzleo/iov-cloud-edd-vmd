@@ -6,12 +6,11 @@ import cn.hutool.json.JSONUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ImportResult;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartInboundAppService.PartInboundRecord;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartInboundAppService.PartInboundResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParser;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParserRegistry;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartInfo;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehiclePart;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.PartInstanceState;
-import net.hwyz.iov.cloud.framework.common.enums.DeviceItem;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.InboundSourceType;
 import net.hwyz.iov.cloud.framework.common.util.StrUtil;
 import net.hwyz.iov.cloud.iov.tsp.api.service.TspTboxInfoService;
 import net.hwyz.iov.cloud.iov.tsp.api.vo.TboxVo;
@@ -61,12 +60,11 @@ public class TboxDataParserV1_0 extends BaseParser implements ImportDataParser {
         }
         JSONObject data = getData(dataJson);
         JSONArray items = data.getJSONArray("ITEMS");
-        int totalCount = items.size();
-        int invalidCount = 0;
-        BatchImportTboxRequest request = new BatchImportTboxRequest();
-        request.setBatchNum(batchNum);
-        request.setSupplierCode(supplier);
+
+        List<PartInboundRecord> records = new ArrayList<>();
         List<TboxVo> tboxList = new ArrayList<>();
+        int invalidCount = 0;
+
         for (Object item : items) {
             JSONObject itemJson = JSONUtil.parseObj(item);
             String pn = itemJson.getStr("NO");
@@ -75,34 +73,21 @@ public class TboxDataParserV1_0 extends BaseParser implements ImportDataParser {
             String iccid2 = itemJson.getStr("ICCID2");
             String imei = itemJson.getStr("IMEI");
             String hsm = itemJson.getStr("HSM");
+
             if (StrUtil.isBlank(pn) || StrUtil.isBlank(sn) || StrUtil.isAllBlank(iccid1, iccid2)) {
                 invalidCount++;
                 continue;
             }
-            Map<String, Object> extra = new HashMap<>(4);
-            extra.put("IMEI", imei);
-            extra.put("ICCID1", iccid1);
-            extra.put("ICCID2", iccid2);
-            extra.put("HSM", hsm);
-            // 步骤1: 先按 (partCode, sn) upsert part_info（幂等）
-            PartInfo partInfo = PartInfo.builder()
-                    .partCode(pn)
-                    .sn(sn)
-                    .vehicleNodeCode(DeviceItem.TBOX.name())
-                    .supplierCode(supplier)
-                    .batchNum(batchNum)
-                    .extra(JSONUtil.toJsonStr(extra))
-                    .instanceState(PartInstanceState.IN_STOCK.value)
-                    .build();
-            upsertPartInfo(partInfo);
 
-            // 步骤2: 创建绑定关系
-            VehiclePart vehiclePart = VehiclePart.builder()
-                    .vehicleNodeCode(DeviceItem.TBOX.name())
-                    .deviceItem(DeviceItem.TBOX.name())
-                    .bindOrg("MES")
-                    .build();
-            bindVehiclePart(vehiclePart);
+            Map<String, String> extraFields = new HashMap<>(4);
+            extraFields.put("imei", imei);
+            extraFields.put("iccid1", iccid1);
+            extraFields.put("iccid2", iccid2);
+            extraFields.put("hsm", hsm);
+
+            PartInboundRecord record = buildInboundRecord(pn, sn, "TBOX", "TBOX", "TBOX",
+                    supplier, batchNum, extraFields);
+            records.add(record);
 
             tboxList.add(TboxVo.builder()
                     .sn(sn)
@@ -113,16 +98,27 @@ public class TboxDataParserV1_0 extends BaseParser implements ImportDataParser {
                     .iccid2(iccid2)
                     .build());
         }
+
+        // 使用入站内核处理
+        PartInboundResult result = partInboundAppService.processInbound(records, InboundSourceType.MES, null);
+
         if (invalidCount > 0) {
             log.warn("车联终端导入数据批次号[{}]存在无效车联终端数据[{}]", batchNum, invalidCount);
         }
-        int successCount = tboxList.size();
-        request.setTboxList(tboxList);
-        tspTboxInfoService.batchImport(request);
+
+        // 调用下游TSP服务
+        if (!tboxList.isEmpty()) {
+            BatchImportTboxRequest request = new BatchImportTboxRequest();
+            request.setBatchNum(batchNum);
+            request.setSupplierCode(supplier);
+            request.setTboxList(tboxList);
+            tspTboxInfoService.batchImport(request);
+        }
+
         return ImportResult.builder()
-                .totalCount(totalCount)
-                .successCount(successCount)
-                .failureCount(0)
+                .totalCount(result.getTotalCount())
+                .successCount(result.getSuccessCount())
+                .failureCount(result.getFailureCount())
                 .invalidCount(invalidCount)
                 .build();
     }

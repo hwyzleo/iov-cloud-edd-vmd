@@ -5,6 +5,8 @@ import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
 
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.InboundSourceType;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.PartType;
 import net.hwyz.iov.cloud.framework.common.domain.DomainObj;
 
 import java.time.Instant;
@@ -93,5 +95,30 @@ public class PartInfo implements DomainObj<PartInfo> {
      * 首次入库时间
      */
     private Instant firstSeenTime;
+
+    /**
+     * 入站来源系统
+     */
+    private InboundSourceType source;
+
+    /**
+     * 零件类型快照
+     */
+    private PartType partType;
+
+    /**
+     * 入站批次号
+     */
+    private String inboundBatchNo;
+
+    /**
+     * 源事件ID
+     */
+    private String sourceEventId;
+
+    /**
+     * 最近入站时间
+     */
+    private Instant lastInboundTime;
 
 }

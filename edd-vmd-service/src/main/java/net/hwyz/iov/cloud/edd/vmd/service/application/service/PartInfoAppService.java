@@ -43,6 +43,10 @@ public class PartInfoAppService {
         map.put("instanceState", query.getInstanceState());
         map.put("beginTime", query.getBeginTime());
         map.put("endTime", query.getEndTime());
+        // CR-023: 入站特有查询条件
+        map.put("source", query.getSource());
+        map.put("partType", query.getPartType());
+        map.put("inboundBatchNo", query.getInboundBatchNo());
         List<PartInfo> partInfoList = partInfoRepository.selectByMap(map);
         return PageUtil.convert(partInfoList, PartInfoAssembler.INSTANCE::fromDomain);
     }

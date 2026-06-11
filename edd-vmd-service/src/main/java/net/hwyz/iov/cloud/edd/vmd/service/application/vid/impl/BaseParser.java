@@ -4,12 +4,9 @@ import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.json.JSONObject;
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartInfoAppService;
-import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehiclePartAppService;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartInfo;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartInboundAppService;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartInboundAppService.PartInboundRecord;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleDetail;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehiclePart;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.PartInstanceState;
 import net.hwyz.iov.cloud.framework.common.util.StrUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 
@@ -25,10 +22,7 @@ import java.util.Map;
 public class BaseParser {
 
     @Autowired
-    private PartInfoAppService partInfoAppService;
-
-    @Autowired
-    private VehiclePartAppService vehiclePartAppService;
+    protected PartInboundAppService partInboundAppService;
 
     /**
      * 获取头部分
@@ -79,7 +73,7 @@ public class BaseParser {
      * @param vin           车架号
      */
     protected void handleVehicleInfo(JSONObject itemJson, Object vehicleInfoDo, String jsonKey, String propertyName,
-                                     String keyDesc, String batchNum, String vin) {
+                                      String keyDesc, String batchNum, String vin) {
         String keyValue = itemJson.getStr(jsonKey);
         if (StrUtil.isNotBlank(keyValue)) {
             Object fieldValue = BeanUtil.getFieldValue(vehicleInfoDo, propertyName);
@@ -105,7 +99,7 @@ public class BaseParser {
      * @param vin              车架号
      */
     protected void handleVehicleDetail(JSONObject itemJson, Map<String, VehicleDetail> vehicleDetailMap, String jsonKey,
-                                       String keyDesc, String batchNum, String vin) {
+                                        String keyDesc, String batchNum, String vin) {
         String keyValue = itemJson.getStr(jsonKey);
         if (StrUtil.isNotBlank(keyValue)) {
             VehicleDetail vehicleDetail = vehicleDetailMap.get(jsonKey);
@@ -125,22 +119,63 @@ public class BaseParser {
     }
 
     /**
-     * 创建物理零件实例（upsert，幂等）
+     * 构建入站记录
      *
-     * @param partInfo 物理零件实例
-     * @return 创建结果
+     * @param partCode       零件编码
+     * @param sn             零件序列号
+     * @param partType       零件类型
+     * @param vehicleNodeCode 车载节点代码
+     * @param deviceItem     设备项/安装位置
+     * @param supplierCode   供应商编码
+     * @param batchNum       批次号
+     * @param extraFields    特殊字段
+     * @return 入站记录
      */
-    protected int upsertPartInfo(PartInfo partInfo) {
-        return partInfoAppService.upsertPartInfo(partInfo);
+    protected PartInboundRecord buildInboundRecord(String partCode, String sn, String partType,
+                                                     String vehicleNodeCode, String deviceItem,
+                                                     String supplierCode, String batchNum,
+                                                     Map<String, String> extraFields) {
+        return PartInboundRecord.builder()
+                .partCode(partCode)
+                .sn(sn)
+                .partType(partType)
+                .vehicleNodeCode(vehicleNodeCode)
+                .deviceItem(deviceItem)
+                .supplierCode(supplierCode)
+                .batchNum(batchNum)
+                .extraFields(extraFields)
+                .build();
     }
 
     /**
-     * 绑定车辆零件
+     * 构建入站记录（带源事件ID）
      *
-     * @param vehiclePart 绑定关系
+     * @param partCode       零件编码
+     * @param sn             零件序列号
+     * @param partType       零件类型
+     * @param vehicleNodeCode 车载节点代码
+     * @param deviceItem     设备项/安装位置
+     * @param supplierCode   供应商编码
+     * @param batchNum       批次号
+     * @param sourceEventId  源事件ID
+     * @param extraFields    特殊字段
+     * @return 入站记录
      */
-    protected void bindVehiclePart(VehiclePart vehiclePart) {
-        vehiclePartAppService.bindVehiclePart(vehiclePart);
+    protected PartInboundRecord buildInboundRecord(String partCode, String sn, String partType,
+                                                     String vehicleNodeCode, String deviceItem,
+                                                     String supplierCode, String batchNum,
+                                                     String sourceEventId, Map<String, String> extraFields) {
+        return PartInboundRecord.builder()
+                .partCode(partCode)
+                .sn(sn)
+                .partType(partType)
+                .vehicleNodeCode(vehicleNodeCode)
+                .deviceItem(deviceItem)
+                .supplierCode(supplierCode)
+                .batchNum(batchNum)
+                .sourceEventId(sourceEventId)
+                .extraFields(extraFields)
+                .build();
     }
 
 }

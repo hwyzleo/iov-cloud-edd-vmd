@@ -21,4 +21,19 @@ public class PartInfoQuery {
     private Date beginTime;
     private Date endTime;
 
+    /**
+     * 入站来源（CR-023）
+     */
+    private String source;
+
+    /**
+     * 零件类型（CR-023）
+     */
+    private String partType;
+
+    /**
+     * 入站批次号（CR-023）
+     */
+    private String inboundBatchNo;
+
 }
