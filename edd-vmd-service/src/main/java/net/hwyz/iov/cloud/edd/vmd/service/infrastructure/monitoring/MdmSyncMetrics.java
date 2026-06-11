@@ -131,4 +131,25 @@ public class MdmSyncMetrics {
     public void resetConsecutiveFailures() {
         consecutiveFailures.set(0);
     }
+
+    /**
+     * 判断是否需要发送连续失败告警
+     *
+     * @param threshold 连续失败阈值
+     * @return true表示需要告警
+     */
+    public boolean shouldAlertOnConsecutiveFailures(int threshold) {
+        return consecutiveFailures.get() >= threshold;
+    }
+
+    /**
+     * 判断是否需要发送延迟告警
+     *
+     * @param thresholdMinutes 延迟阈值（分钟）
+     * @return true表示需要告警
+     */
+    public boolean shouldAlertOnDelay(long thresholdMinutes) {
+        long delay = getSyncDelayMinutes();
+        return delay > 0 && delay >= thresholdMinutes;
+    }
 }

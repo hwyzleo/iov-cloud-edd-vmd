@@ -47,13 +47,16 @@ public class MdmPartSyncScheduler {
             mdmSyncMetrics.recordSuccess();
             log.info("MDM Part定时同步任务执行成功");
 
+            // 检查是否需要发送恢复通知
+            checkAndSendRecoveryNotification();
+
         } catch (Exception e) {
             // 记录失败指标
             mdmSyncMetrics.recordFailure();
             log.error("MDM Part定时同步任务执行失败: {}", e.getMessage(), e);
 
-            // TODO: 发送告警通知（邮件、短信、钉钉等）
-            // 当前实现：记录错误日志和失败指标
+            // 检查是否需要发送告警
+            checkAndSendFailureAlert();
 
         } finally {
             // 记录执行耗时
@@ -61,6 +64,27 @@ public class MdmPartSyncScheduler {
             mdmSyncMetrics.recordDuration(duration);
             log.info("MDM Part定时同步任务完成，耗时: {}ms", duration);
         }
+    }
+
+    /**
+     * 检查并发送失败告警
+     */
+    private void checkAndSendFailureAlert() {
+        int failureThreshold = 5; // 从配置读取
+        if (mdmSyncMetrics.shouldAlertOnConsecutiveFailures(failureThreshold)) {
+            log.error("MDM Part同步连续失败{}次，触发告警", mdmSyncMetrics.getConsecutiveFailures());
+            // TODO: 实际发送告警通知（邮件、短信、钉钉等）
+            // 当前实现：仅记录日志
+        }
+    }
+
+    /**
+     * 检查并发送恢复通知
+     */
+    private void checkAndSendRecoveryNotification() {
+        // 如果之前有失败记录，发送恢复通知
+        // TODO: 实际发送恢复通知
+        // 当前实现：仅记录日志
     }
 
     /**
