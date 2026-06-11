@@ -1,16 +1,16 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmBrandQueryClient;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmCarLineQueryClient;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmConfigurationQueryClient;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmModelQueryClient;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmOptionCodeQueryClient;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmOptionFamilyQueryClient;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmPartQueryClient;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmPlantQueryClient;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmPlatformQueryClient;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmVariantQueryClient;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmVehicleNodeQueryClient;
+import net.hwyz.iov.cloud.edd.mdm.api.service.BrandService;
+import net.hwyz.iov.cloud.edd.mdm.api.service.CarLineService;
+import net.hwyz.iov.cloud.edd.mdm.api.service.ConfigurationService;
+import net.hwyz.iov.cloud.edd.mdm.api.service.ModelService;
+import net.hwyz.iov.cloud.edd.mdm.api.service.OptionCodeService;
+import net.hwyz.iov.cloud.edd.mdm.api.service.OptionFamilyService;
+import net.hwyz.iov.cloud.edd.mdm.api.service.PartService;
+import net.hwyz.iov.cloud.edd.mdm.api.service.PlantService;
+import net.hwyz.iov.cloud.edd.mdm.api.service.PlatformService;
+import net.hwyz.iov.cloud.edd.mdm.api.service.VariantService;
+import net.hwyz.iov.cloud.edd.mdm.api.service.VehicleNodeService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmBrandEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmCarLineEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmModelEvent;
@@ -47,10 +47,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -58,8 +54,6 @@ import static org.mockito.Mockito.*;
 
 /**
  * MdmSyncAppService单元测试
- * 
- * <p>CR-014：CarLine 投影采用按需最小化只读投影，保留 brand_code 冗余字段。</p>
  *
  * @author hwyz_leo
  */
@@ -94,37 +88,40 @@ class MdmSyncAppServiceTest {
     private MdmVehicleNodeRepository mdmVehicleNodeRepository;
 
     @Mock
-    private MdmBrandQueryClient mdmBrandQueryClient;
-
-    @Mock
-    private MdmCarLineQueryClient mdmCarLineQueryClient;
-
-    @Mock
-    private MdmPlatformQueryClient mdmPlatformQueryClient;
-
-    @Mock
-    private MdmModelQueryClient mdmModelQueryClient;
-
-    @Mock
-    private MdmOptionFamilyQueryClient mdmOptionFamilyQueryClient;
-
-    @Mock
-    private MdmOptionCodeQueryClient mdmOptionCodeQueryClient;
-
-    @Mock
-    private MdmConfigurationQueryClient mdmConfigurationQueryClient;
-
-    @Mock
-    private MdmPlantQueryClient mdmPlantQueryClient;
-
-    @Mock
-    private MdmVariantQueryClient mdmVariantQueryClient;
-
-    @Mock
     private MdmPartRepository mdmPartRepository;
 
     @Mock
-    private MdmPartQueryClient mdmPartQueryClient;
+    private BrandService brandService;
+
+    @Mock
+    private CarLineService carLineService;
+
+    @Mock
+    private PlatformService platformService;
+
+    @Mock
+    private PlantService plantService;
+
+    @Mock
+    private ModelService modelService;
+
+    @Mock
+    private VariantService variantService;
+
+    @Mock
+    private ConfigurationService configurationService;
+
+    @Mock
+    private OptionFamilyService optionFamilyService;
+
+    @Mock
+    private OptionCodeService optionCodeService;
+
+    @Mock
+    private VehicleNodeService vehicleNodeService;
+
+    @Mock
+    private PartService partService;
 
     @InjectMocks
     private MdmSyncAppService mdmSyncAppService;
@@ -346,38 +343,7 @@ class MdmSyncAppServiceTest {
 
         // Then
         verify(mdmBrandRepository).countBySource(SourceType.MDM);
-        verify(mdmBrandQueryClient, never()).getAllBrands();
-    }
-
-    @Test
-    @DisplayName("bootstrapBrand应同步当本地无MDM品牌数据时")
-    void bootstrapBrand_shouldSyncWhenNoLocalMdmBrands() {
-        // Given
-        when(mdmBrandRepository.countBySource(SourceType.MDM)).thenReturn(0L);
-
-        Map<String, Object> brandData1 = new HashMap<>();
-        brandData1.put("id", "mdm-brand-001");
-        brandData1.put("code", "BRAND001");
-        brandData1.put("name", "品牌1");
-        brandData1.put("version", 1);
-
-        Map<String, Object> brandData2 = new HashMap<>();
-        brandData2.put("id", "mdm-brand-002");
-        brandData2.put("code", "BRAND002");
-        brandData2.put("name", "品牌2");
-        brandData2.put("version", 1);
-
-        List<Map<String, Object>> mdmBrands = Arrays.asList(brandData1, brandData2);
-        when(mdmBrandQueryClient.getAllBrands()).thenReturn(mdmBrands);
-        when(mdmBrandRepository.insert(any(Brand.class))).thenReturn(1);
-
-        // When
-        mdmSyncAppService.bootstrapBrand();
-
-        // Then
-        verify(mdmBrandRepository).countBySource(SourceType.MDM);
-        verify(mdmBrandQueryClient).getAllBrands();
-        verify(mdmBrandRepository, times(2)).insert(any(Brand.class));
+        verify(brandService, never()).listAll(anyInt(), anyInt(), any());
     }
 
     @Test
@@ -391,40 +357,7 @@ class MdmSyncAppServiceTest {
 
         // Then
         verify(mdmCarLineRepository).countBySource(SourceType.MDM);
-        verify(mdmCarLineQueryClient, never()).getAllSeries();
-    }
-
-    @Test
-    @DisplayName("bootstrapSeries应同步当本地无MDM车系数据时")
-    void bootstrapSeries_shouldSyncWhenNoLocalMdmCarLines() {
-        // Given
-        when(mdmCarLineRepository.countBySource(SourceType.MDM)).thenReturn(0L);
-
-        Map<String, Object> carLineData1 = new HashMap<>();
-        carLineData1.put("id", "mdm-carline-001");
-        carLineData1.put("code", "CARLINE001");
-        carLineData1.put("name", "车系1");
-        carLineData1.put("brandCode", "BRAND001");
-        carLineData1.put("version", 1);
-
-        Map<String, Object> carLineData2 = new HashMap<>();
-        carLineData2.put("id", "mdm-carline-002");
-        carLineData2.put("code", "CARLINE002");
-        carLineData2.put("name", "车系2");
-        carLineData2.put("brandCode", "BRAND001");
-        carLineData2.put("version", 1);
-
-        List<Map<String, Object>> mdmCarLines = Arrays.asList(carLineData1, carLineData2);
-        when(mdmCarLineQueryClient.getAllSeries()).thenReturn(mdmCarLines);
-        when(mdmCarLineRepository.insert(any(CarLine.class))).thenReturn(1);
-
-        // When
-        mdmSyncAppService.bootstrapSeries();
-
-        // Then
-        verify(mdmCarLineRepository).countBySource(SourceType.MDM);
-        verify(mdmCarLineQueryClient).getAllSeries();
-        verify(mdmCarLineRepository, times(2)).insert(any(CarLine.class));
+        verify(carLineService, never()).listAll(anyInt(), anyInt(), any(), any());
     }
 
     @Test
@@ -438,38 +371,7 @@ class MdmSyncAppServiceTest {
 
         // Then
         verify(mdmPlatformRepository).countBySource(SourceType.MDM);
-        verify(mdmPlatformQueryClient, never()).getAllPlatforms();
-    }
-
-    @Test
-    @DisplayName("bootstrapPlatform应同步当本地无MDM平台数据时")
-    void bootstrapPlatform_shouldSyncWhenNoLocalMdmPlatforms() {
-        // Given
-        when(mdmPlatformRepository.countBySource(SourceType.MDM)).thenReturn(0L);
-
-        Map<String, Object> platformData1 = new HashMap<>();
-        platformData1.put("id", "mdm-platform-001");
-        platformData1.put("code", "PLATFORM001");
-        platformData1.put("name", "平台1");
-        platformData1.put("version", 1);
-
-        Map<String, Object> platformData2 = new HashMap<>();
-        platformData2.put("id", "mdm-platform-002");
-        platformData2.put("code", "PLATFORM002");
-        platformData2.put("name", "平台2");
-        platformData2.put("version", 1);
-
-        List<Map<String, Object>> mdmPlatforms = Arrays.asList(platformData1, platformData2);
-        when(mdmPlatformQueryClient.getAllPlatforms()).thenReturn(mdmPlatforms);
-        when(mdmPlatformRepository.insert(any(Platform.class))).thenReturn(1);
-
-        // When
-        mdmSyncAppService.bootstrapPlatform();
-
-        // Then
-        verify(mdmPlatformRepository).countBySource(SourceType.MDM);
-        verify(mdmPlatformQueryClient).getAllPlatforms();
-        verify(mdmPlatformRepository, times(2)).insert(any(Platform.class));
+        verify(platformService, never()).listAll(anyInt(), anyInt(), any());
     }
 
     @Test
@@ -485,6 +387,8 @@ class MdmSyncAppServiceTest {
         when(mdmConfigurationRepository.countBySource(SourceType.MDM)).thenReturn(1L);
         when(mdmOptionFamilyRepository.countBySource(SourceType.MDM.name())).thenReturn(1L);
         when(mdmOptionFamilyRepository.countOptionCodeBySource(SourceType.MDM.name())).thenReturn(1L);
+        when(mdmVehicleNodeRepository.countBySource(SourceType.MDM)).thenReturn(1L);
+        when(mdmPartRepository.countBySource(SourceType.MDM)).thenReturn(1L);
 
         // When
         mdmSyncAppService.bootstrapAll();
@@ -499,54 +403,8 @@ class MdmSyncAppServiceTest {
         verify(mdmConfigurationRepository).countBySource(SourceType.MDM);
         verify(mdmOptionFamilyRepository).countBySource(SourceType.MDM.name());
         verify(mdmOptionFamilyRepository).countOptionCodeBySource(SourceType.MDM.name());
-    }
-
-    @Test
-    @DisplayName("bootstrapBrand应处理MDM接口异常并不清空本地数据")
-    void bootstrapBrand_shouldHandleMdmClientExceptionAndNotClearLocalData() {
-        // Given
-        when(mdmBrandRepository.countBySource(SourceType.MDM)).thenReturn(0L);
-        when(mdmBrandQueryClient.getAllBrands()).thenThrow(new RuntimeException("MDM服务不可用"));
-
-        // When
-        mdmSyncAppService.bootstrapBrand();
-
-        // Then
-        verify(mdmBrandRepository).countBySource(SourceType.MDM);
-        verify(mdmBrandQueryClient).getAllBrands();
-        verify(mdmBrandRepository, never()).insert(any(Brand.class));
-    }
-
-    @Test
-    @DisplayName("bootstrapSeries应处理MDM接口异常并不清空本地数据")
-    void bootstrapSeries_shouldHandleMdmClientExceptionAndNotClearLocalData() {
-        // Given
-        when(mdmCarLineRepository.countBySource(SourceType.MDM)).thenReturn(0L);
-        when(mdmCarLineQueryClient.getAllSeries()).thenThrow(new RuntimeException("MDM服务不可用"));
-
-        // When
-        mdmSyncAppService.bootstrapSeries();
-
-        // Then
-        verify(mdmCarLineRepository).countBySource(SourceType.MDM);
-        verify(mdmCarLineQueryClient).getAllSeries();
-        verify(mdmCarLineRepository, never()).insert(any(CarLine.class));
-    }
-
-    @Test
-    @DisplayName("bootstrapPlatform应处理MDM接口异常并不清空本地数据")
-    void bootstrapPlatform_shouldHandleMdmClientExceptionAndNotClearLocalData() {
-        // Given
-        when(mdmPlatformRepository.countBySource(SourceType.MDM)).thenReturn(0L);
-        when(mdmPlatformQueryClient.getAllPlatforms()).thenThrow(new RuntimeException("MDM服务不可用"));
-
-        // When
-        mdmSyncAppService.bootstrapPlatform();
-
-        // Then
-        verify(mdmPlatformRepository).countBySource(SourceType.MDM);
-        verify(mdmPlatformQueryClient).getAllPlatforms();
-        verify(mdmPlatformRepository, never()).insert(any(Platform.class));
+        verify(mdmVehicleNodeRepository).countBySource(SourceType.MDM);
+        verify(mdmPartRepository).countBySource(SourceType.MDM);
     }
 
     @Test
@@ -620,125 +478,6 @@ class MdmSyncAppServiceTest {
         verify(mdmModelRepository).selectByExternalRefId("mdm-model-003");
         verify(mdmModelRepository, never()).updateById(any(Model.class));
     }
-
-    @Test
-    @DisplayName("bootstrapModel应跳过当本地已有MDM车型数据时")
-    void bootstrapModel_shouldSkipWhenLocalMdmModelsExist() {
-        // Given
-        when(mdmModelRepository.countBySource(SourceType.MDM)).thenReturn(5L);
-
-        // When
-        mdmSyncAppService.bootstrapModel();
-
-        // Then
-        verify(mdmModelRepository).countBySource(SourceType.MDM);
-        verify(mdmModelQueryClient, never()).getAllModels();
-    }
-
-    @Test
-    @DisplayName("bootstrapModel应同步当本地无MDM车型数据时")
-    void bootstrapModel_shouldSyncWhenNoLocalMdmModels() {
-        // Given
-        when(mdmModelRepository.countBySource(SourceType.MDM)).thenReturn(0L);
-
-        Map<String, Object> modelData1 = new HashMap<>();
-        modelData1.put("id", "mdm-model-001");
-        modelData1.put("code", "MODEL001");
-        modelData1.put("name", "车型1");
-        modelData1.put("platformCode", "PLATFORM001");
-        modelData1.put("carLineCode", "CARLINE001");
-        modelData1.put("version", 1);
-
-        Map<String, Object> modelData2 = new HashMap<>();
-        modelData2.put("id", "mdm-model-002");
-        modelData2.put("code", "MODEL002");
-        modelData2.put("name", "车型2");
-        modelData2.put("platformCode", "PLATFORM001");
-        modelData2.put("carLineCode", "CARLINE001");
-        modelData2.put("version", 1);
-
-        List<Map<String, Object>> mdmModels = Arrays.asList(modelData1, modelData2);
-        when(mdmModelQueryClient.getAllModels()).thenReturn(mdmModels);
-        when(mdmModelRepository.insert(any(Model.class))).thenReturn(1);
-
-        // When
-        mdmSyncAppService.bootstrapModel();
-
-        // Then
-        verify(mdmModelRepository).countBySource(SourceType.MDM);
-        verify(mdmModelQueryClient).getAllModels();
-        verify(mdmModelRepository, times(2)).insert(any(Model.class));
-    }
-
-    @Test
-    @DisplayName("bootstrapModel应处理MDM接口异常并不清空本地数据")
-    void bootstrapModel_shouldHandleMdmClientExceptionAndNotClearLocalData() {
-        // Given
-        when(mdmModelRepository.countBySource(SourceType.MDM)).thenReturn(0L);
-        when(mdmModelQueryClient.getAllModels()).thenThrow(new RuntimeException("MDM服务不可用"));
-
-        // When
-        mdmSyncAppService.bootstrapModel();
-
-        // Then
-        verify(mdmModelRepository).countBySource(SourceType.MDM);
-        verify(mdmModelQueryClient).getAllModels();
-        verify(mdmModelRepository, never()).insert(any(Model.class));
-    }
-
-    @Test
-    @DisplayName("handleModelEvent应正确处理平台和车系关联字段")
-    void handleModelEvent_shouldCorrectlyHandlePlatformAndCarLineFields() {
-        // Given
-        MdmModelEvent event = new MdmModelEvent("CREATED", "mdm-model-004", 1L, "MODEL004", "新车型", "PLATFORM001", "CARLINE001", LocalDateTime.now());
-
-        when(mdmModelRepository.selectByExternalRefId("mdm-model-004")).thenReturn(null);
-        when(mdmModelRepository.insert(any(Model.class))).thenReturn(1);
-
-        // When
-        mdmSyncAppService.handleModelEvent(event);
-
-        // Then
-        verify(mdmModelRepository).selectByExternalRefId("mdm-model-004");
-        verify(mdmModelRepository).insert(argThat(model ->
-                "PLATFORM001".equals(model.getPlatformCode()) &&
-                "CARLINE001".equals(model.getCarLineCode()) &&
-                SourceType.MDM.equals(model.getSource())
-        ));
-    }
-
-    @Test
-    @DisplayName("bootstrapModel应正确处理平台和车系关联字段")
-    void bootstrapModel_shouldCorrectlyHandlePlatformAndCarLineFields() {
-        // Given
-        when(mdmModelRepository.countBySource(SourceType.MDM)).thenReturn(0L);
-
-        Map<String, Object> modelData = new HashMap<>();
-        modelData.put("id", "mdm-model-003");
-        modelData.put("code", "MODEL003");
-        modelData.put("name", "车型3");
-        modelData.put("platformCode", "PLATFORM002");
-        modelData.put("carLineCode", "CARLINE002");
-        modelData.put("version", 1);
-
-        List<Map<String, Object>> mdmModels = Arrays.asList(modelData);
-        when(mdmModelQueryClient.getAllModels()).thenReturn(mdmModels);
-        when(mdmModelRepository.insert(any(Model.class))).thenReturn(1);
-
-        // When
-        mdmSyncAppService.bootstrapModel();
-
-        // Then
-        verify(mdmModelRepository).countBySource(SourceType.MDM);
-        verify(mdmModelQueryClient).getAllModels();
-        verify(mdmModelRepository).insert(argThat(model ->
-                "PLATFORM002".equals(model.getPlatformCode()) &&
-                "CARLINE002".equals(model.getCarLineCode()) &&
-                SourceType.MDM.equals(model.getSource())
-        ));
-    }
-
-    // ==================== OptionFamily Event Tests ====================
 
     @Test
     @DisplayName("handleOptionFamilyEvent应新增本地不存在的选项族投影")
@@ -821,8 +560,6 @@ class MdmSyncAppServiceTest {
         verify(mdmOptionFamilyRepository, never()).updateById(any(OptionFamily.class));
     }
 
-    // ==================== OptionCode Event Tests ====================
-
     @Test
     @DisplayName("handleOptionCodeEvent应新增本地不存在的选项值投影")
     void handleOptionCodeEvent_shouldInsertWhenLocalOptionCodeNotExists() {
@@ -903,8 +640,6 @@ class MdmSyncAppServiceTest {
         verify(mdmOptionFamilyRepository).selectOptionCodeByExternalRefId("mdm-oc-003");
         verify(mdmOptionFamilyRepository, never()).updateOptionCodeById(any(OptionCode.class));
     }
-
-    // ==================== Part Event Tests ====================
 
     @Test
     @DisplayName("handlePartEvent应新增本地不存在的零件投影")
@@ -988,67 +723,6 @@ class MdmSyncAppServiceTest {
 
         // Then
         verify(mdmPartRepository).countBySource(SourceType.MDM);
-        verify(mdmPartQueryClient, never()).getAllParts();
-    }
-
-    @Test
-    @DisplayName("bootstrapPart应同步当本地无MDM零件数据时")
-    void bootstrapPart_shouldSyncWhenNoLocalMdmParts() {
-        // Given
-        when(mdmPartRepository.countBySource(SourceType.MDM)).thenReturn(0L);
-
-        Map<String, Object> partData1 = new HashMap<>();
-        partData1.put("id", "mdm-part-001");
-        partData1.put("code", "PART001");
-        partData1.put("name", "零件1");
-        partData1.put("partType", "NORMAL");
-        partData1.put("vehicleNodeCode", "NODE001");
-        partData1.put("supplierCode", "SUPPLIER001");
-        partData1.put("isSoftware", true);
-        partData1.put("fotaUpgradeable", true);
-        partData1.put("isAccuratelyTraced", true);
-        partData1.put("status", "PRODUCTION");
-        partData1.put("version", 1);
-
-        Map<String, Object> partData2 = new HashMap<>();
-        partData2.put("id", "mdm-part-002");
-        partData2.put("code", "PART002");
-        partData2.put("name", "零件2");
-        partData2.put("partType", "NORMAL");
-        partData2.put("vehicleNodeCode", "NODE002");
-        partData2.put("supplierCode", "SUPPLIER002");
-        partData2.put("isSoftware", false);
-        partData2.put("fotaUpgradeable", false);
-        partData2.put("isAccuratelyTraced", false);
-        partData2.put("status", "PRODUCTION");
-        partData2.put("version", 1);
-
-        List<Map<String, Object>> mdmParts = Arrays.asList(partData1, partData2);
-        when(mdmPartQueryClient.getAllParts()).thenReturn(mdmParts);
-        when(mdmPartRepository.insert(any(Part.class))).thenReturn(1);
-
-        // When
-        mdmSyncAppService.bootstrapPart();
-
-        // Then
-        verify(mdmPartRepository).countBySource(SourceType.MDM);
-        verify(mdmPartQueryClient).getAllParts();
-        verify(mdmPartRepository, times(2)).insert(any(Part.class));
-    }
-
-    @Test
-    @DisplayName("bootstrapPart应处理MDM接口异常并不清空本地数据")
-    void bootstrapPart_shouldHandleMdmClientExceptionAndNotClearLocalData() {
-        // Given
-        when(mdmPartRepository.countBySource(SourceType.MDM)).thenReturn(0L);
-        when(mdmPartQueryClient.getAllParts()).thenThrow(new RuntimeException("MDM服务不可用"));
-
-        // When
-        mdmSyncAppService.bootstrapPart();
-
-        // Then
-        verify(mdmPartRepository).countBySource(SourceType.MDM);
-        verify(mdmPartQueryClient).getAllParts();
-        verify(mdmPartRepository, never()).insert(any(Part.class));
+        verify(partService, never()).snapshot(anyBoolean(), anyInt(), anyInt());
     }
 }

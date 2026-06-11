@@ -30,6 +30,10 @@
             <groupId>net.hwyz.iov.cloud.edd</groupId>
             <artifactId>edd-vmd-api</artifactId>
         </dependency>
+        <dependency>
+            <groupId>net.hwyz.iov.cloud.edd</groupId>
+            <artifactId>edd-mdm-api</artifactId>
+        </dependency>
 <!--        <dependency>-->
 <!--            <groupId>net.hwyz.iov.cloud.tsp</groupId>-->
 <!--            <artifactId>account-api</artifactId>-->

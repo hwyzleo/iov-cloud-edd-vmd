@@ -2,17 +2,39 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmBrandQueryClient;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmCarLineQueryClient;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmConfigurationQueryClient;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmModelQueryClient;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmPlantQueryClient;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmPlatformQueryClient;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmOptionFamilyQueryClient;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmOptionCodeQueryClient;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmVariantQueryClient;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmVehicleNodeQueryClient;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.gateway.http.MdmPartQueryClient;
+import net.hwyz.iov.cloud.edd.mdm.api.service.BrandService;
+import net.hwyz.iov.cloud.edd.mdm.api.service.CarLineService;
+import net.hwyz.iov.cloud.edd.mdm.api.service.ConfigurationService;
+import net.hwyz.iov.cloud.edd.mdm.api.service.ModelService;
+import net.hwyz.iov.cloud.edd.mdm.api.service.OptionCodeService;
+import net.hwyz.iov.cloud.edd.mdm.api.service.OptionFamilyService;
+import net.hwyz.iov.cloud.edd.mdm.api.service.PartService;
+import net.hwyz.iov.cloud.edd.mdm.api.service.PlantService;
+import net.hwyz.iov.cloud.edd.mdm.api.service.PlatformService;
+import net.hwyz.iov.cloud.edd.mdm.api.service.VariantService;
+import net.hwyz.iov.cloud.edd.mdm.api.service.VehicleNodeService;
+import net.hwyz.iov.cloud.edd.mdm.api.vo.response.BrandPageResponse;
+import net.hwyz.iov.cloud.edd.mdm.api.vo.response.BrandResponse;
+import net.hwyz.iov.cloud.edd.mdm.api.vo.response.CarLinePageResponse;
+import net.hwyz.iov.cloud.edd.mdm.api.vo.response.CarLineResponse;
+import net.hwyz.iov.cloud.edd.mdm.api.vo.response.ConfigurationPageResponse;
+import net.hwyz.iov.cloud.edd.mdm.api.vo.response.ConfigurationResponse;
+import net.hwyz.iov.cloud.edd.mdm.api.vo.response.ModelPageResponse;
+import net.hwyz.iov.cloud.edd.mdm.api.vo.response.ModelResponse;
+import net.hwyz.iov.cloud.edd.mdm.api.vo.response.OptionCodePageResponse;
+import net.hwyz.iov.cloud.edd.mdm.api.vo.response.OptionCodeResponse;
+import net.hwyz.iov.cloud.edd.mdm.api.vo.response.OptionFamilyPageResponse;
+import net.hwyz.iov.cloud.edd.mdm.api.vo.response.OptionFamilyResponse;
+import net.hwyz.iov.cloud.edd.mdm.api.vo.response.PartPageResponse;
+import net.hwyz.iov.cloud.edd.mdm.api.vo.response.PartResponse;
+import net.hwyz.iov.cloud.edd.mdm.api.vo.response.PlantPageResponse;
+import net.hwyz.iov.cloud.edd.mdm.api.vo.response.PlantResponse;
+import net.hwyz.iov.cloud.edd.mdm.api.vo.response.PlatformPageResponse;
+import net.hwyz.iov.cloud.edd.mdm.api.vo.response.PlatformResponse;
+import net.hwyz.iov.cloud.edd.mdm.api.vo.response.VariantPageResponse;
+import net.hwyz.iov.cloud.edd.mdm.api.vo.response.VariantResponse;
+import net.hwyz.iov.cloud.edd.mdm.api.vo.response.VehicleNodePageResponse;
+import net.hwyz.iov.cloud.edd.mdm.api.vo.response.VehicleNodeResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmBrandEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmConfigurationEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmOptionFamilyEvent;
@@ -49,8 +71,9 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmPartRepository;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.util.Date;
 import java.util.List;
-import java.util.Map;
 
 /**
  * MDM 同步应用服务类
@@ -73,32 +96,30 @@ public class MdmSyncAppService {
     private final MdmOptionFamilyRepository mdmOptionFamilyRepository;
     private final MdmVehicleNodeRepository mdmVehicleNodeRepository;
     private final MdmPartRepository mdmPartRepository;
-    private final MdmBrandQueryClient mdmBrandQueryClient;
-    private final MdmCarLineQueryClient mdmCarLineQueryClient;
-    private final MdmConfigurationQueryClient mdmConfigurationQueryClient;
-    private final MdmModelQueryClient mdmModelQueryClient;
-    private final MdmPlantQueryClient mdmPlantQueryClient;
-    private final MdmPlatformQueryClient mdmPlatformQueryClient;
-    private final MdmVariantQueryClient mdmVariantQueryClient;
-    private final MdmOptionFamilyQueryClient mdmOptionFamilyQueryClient;
-    private final MdmOptionCodeQueryClient mdmOptionCodeQueryClient;
-    private final MdmVehicleNodeQueryClient mdmVehicleNodeQueryClient;
-    private final MdmPartQueryClient mdmPartQueryClient;
+
+    // 使用 MDM 标准 API 接口
+    private final BrandService brandService;
+    private final CarLineService carLineService;
+    private final ConfigurationService configurationService;
+    private final ModelService modelService;
+    private final PlantService plantService;
+    private final PlatformService platformService;
+    private final VariantService variantService;
+    private final OptionFamilyService optionFamilyService;
+    private final OptionCodeService optionCodeService;
+    private final VehicleNodeService vehicleNodeService;
+    private final PartService partService;
 
     /**
      * 处理 MDM 品牌事件
-     * 
-     * <p>CR-012：Brand 投影采用按需最小化只读投影，仅同步 VMD 业务所需字段。</p>
      *
      * @param event 品牌事件
      */
     public void handleBrandEvent(MdmBrandEvent event) {
-        log.debug("处理 MDM 品牌事件: eventType={}, entityId={}, code={}", 
+        log.debug("处理 MDM 品牌事件: eventType={}, entityId={}, code={}",
                 event.getEventType(), event.getEntityId(), event.getCode());
-        // 根据 externalRefId 查找本地记录
         Brand localBrand = mdmBrandRepository.selectByExternalRefId(event.getEntityId());
         if (localBrand == null) {
-            // 本地不存在，新增 Brand 投影
             Brand newBrand = Brand.builder()
                     .code(event.getCode())
                     .name(event.getName())
@@ -110,17 +131,14 @@ public class MdmSyncAppService {
             mdmBrandRepository.insert(newBrand);
             log.info("新增 MDM 品牌投影: code={}, name={}", event.getCode(), event.getName());
         } else {
-            // 本地存在，检查版本
             if (event.getVersion() > localBrand.getExternalVersion()) {
-                // 更新 Brand 投影（版本更高）
                 localBrand.setName(event.getName());
                 localBrand.setExternalVersion(event.getVersion());
                 localBrand.setLastSyncTime(LocalDateTime.now());
                 mdmBrandRepository.updateById(localBrand);
-                log.info("更新 MDM 品牌投影: code={}, oldVersion={}, newVersion={}", 
+                log.info("更新 MDM 品牌投影: code={}, oldVersion={}, newVersion={}",
                         event.getCode(), localBrand.getExternalVersion(), event.getVersion());
             } else {
-                // 忽略乱序事件
                 log.debug("忽略 MDM 品牌事件（版本不满足）: code={}, eventVersion={}, localVersion={}",
                         event.getCode(), event.getVersion(), localBrand.getExternalVersion());
             }
@@ -129,15 +147,11 @@ public class MdmSyncAppService {
 
     /**
      * 处理 MDM 车系事件
-     *
-     * @param event 车系事件
      */
     public void handleSeriesEvent(MdmCarLineEvent event) {
         log.info("处理MDM车系事件: entityId={}, version={}", event.getEntityId(), event.getVersion());
-        // 根据 externalRefId 查找本地记录
         CarLine localCarLine = mdmCarLineRepository.selectByExternalRefId(event.getEntityId());
         if (localCarLine == null) {
-            // 本地不存在，新增
             CarLine newCarLine = CarLine.builder()
                     .code(event.getCode())
                     .name(event.getName())
@@ -150,7 +164,6 @@ public class MdmSyncAppService {
             mdmCarLineRepository.insert(newCarLine);
             log.info("新增车系: code={}", event.getCode());
         } else {
-            // 本地存在，检查版本
             if (event.getVersion() > localCarLine.getExternalVersion()) {
                 localCarLine.setName(event.getName());
                 localCarLine.setBrandCode(event.getBrandCode());
@@ -167,15 +180,11 @@ public class MdmSyncAppService {
 
     /**
      * 处理 MDM 平台事件
-     *
-     * @param event 平台事件
      */
     public void handlePlatformEvent(MdmPlatformEvent event) {
         log.info("处理MDM平台事件: entityId={}, version={}", event.getEntityId(), event.getVersion());
-        // 根据 externalRefId 查找本地记录
         Platform localPlatform = mdmPlatformRepository.selectByExternalRefId(event.getEntityId());
         if (localPlatform == null) {
-            // 本地不存在，新增
             Platform newPlatform = Platform.builder()
                     .code(event.getCode())
                     .name(event.getName())
@@ -187,7 +196,6 @@ public class MdmSyncAppService {
             mdmPlatformRepository.insert(newPlatform);
             log.info("新增平台: code={}", event.getCode());
         } else {
-            // 本地存在，检查版本
             if (event.getVersion() > localPlatform.getExternalVersion()) {
                 localPlatform.setName(event.getName());
                 localPlatform.setExternalVersion(event.getVersion());
@@ -203,18 +211,11 @@ public class MdmSyncAppService {
 
     /**
      * 处理 MDM 车型事件
-     *
-     * <p>CR-015：Model 投影采用按需最小化只读投影，仅同步 VMD 业务所需字段
-     * （含 platform_code / carLine_code 关联字段）。</p>
-     *
-     * @param event 车型事件
      */
     public void handleModelEvent(MdmModelEvent event) {
         log.info("处理MDM车型事件: entityId={}, version={}", event.getEntityId(), event.getVersion());
-        // 根据 externalRefId 查找本地记录
         Model localModel = mdmModelRepository.selectByExternalRefId(event.getEntityId());
         if (localModel == null) {
-            // 本地不存在，新增
             Model newModel = Model.builder()
                     .code(event.getCode())
                     .name(event.getName())
@@ -228,7 +229,6 @@ public class MdmSyncAppService {
             mdmModelRepository.insert(newModel);
             log.info("新增车型: code={}", event.getCode());
         } else {
-            // 本地存在，检查版本
             if (event.getVersion() > localModel.getExternalVersion()) {
                 localModel.setName(event.getName());
                 localModel.setPlatformCode(event.getPlatformCode());
@@ -246,18 +246,11 @@ public class MdmSyncAppService {
 
     /**
      * 处理 MDM 版本事件
-     *
-     * <p>CR-016：Variant 投影采用按需最小化只读投影，仅同步 VMD 业务所需字段
-     * （含 platform_code / carLine_code / model_code 关联字段）。</p>
-     *
-     * @param event 版本事件
      */
     public void handleVariantEvent(MdmVariantEvent event) {
         log.info("处理MDM版本事件: entityId={}, version={}", event.getEntityId(), event.getVersion());
-        // 根据 externalRefId 查找本地记录
         Variant localVariant = mdmVariantRepository.selectByExternalRefId(event.getEntityId());
         if (localVariant == null) {
-            // 本地不存在，新增
             Variant newVariant = Variant.builder()
                     .code(event.getCode())
                     .name(event.getName())
@@ -272,7 +265,6 @@ public class MdmSyncAppService {
             mdmVariantRepository.insert(newVariant);
             log.info("新增版本: code={}", event.getCode());
         } else {
-            // 本地存在，检查版本
             if (event.getVersion() > localVariant.getExternalVersion()) {
                 localVariant.setName(event.getName());
                 localVariant.setPlatformCode(event.getPlatformCode());
@@ -291,18 +283,11 @@ public class MdmSyncAppService {
 
     /**
      * 处理 MDM 配置事件
-     *
-     * <p>CR-017：Configuration 投影采用按需最小化只读投影，仅同步 VMD 业务所需字段
-     * （含 platform_code / carLine_code / model_code / variant_code 关联字段）。</p>
-     *
-     * @param event 配置事件
      */
     public void handleConfigurationEvent(MdmConfigurationEvent event) {
         log.info("处理MDM配置事件: entityId={}, version={}", event.getEntityId(), event.getVersion());
-        // 根据 externalRefId 查找本地记录
         Configuration localConfiguration = mdmConfigurationRepository.selectByExternalRefId(event.getEntityId());
         if (localConfiguration == null) {
-            // 本地不存在，新增
             Configuration newConfiguration = Configuration.builder()
                     .code(event.getCode())
                     .name(event.getName())
@@ -322,7 +307,6 @@ public class MdmSyncAppService {
             mdmConfigurationRepository.insert(newConfiguration);
             log.info("新增配置: code={}", event.getCode());
         } else {
-            // 本地存在，检查版本
             if (event.getVersion() > localConfiguration.getExternalVersion()) {
                 localConfiguration.setName(event.getName());
                 localConfiguration.setNameEn(event.getNameEn());
@@ -345,294 +329,7 @@ public class MdmSyncAppService {
     }
 
     /**
-     * Bootstrap 全量同步品牌数据
-     * 
-     * <p>当本地 source=MDM 的品牌记录数为 0 时，自动调用 MDM Brand 全量快照接口
-     * 拉取数据并 upsert 本地副本。</p>
-     * 
-     * <p>CR-012：Brand 投影采用按需最小化只读投影，仅同步 VMD 业务所需字段。</p>
-     */
-    public void bootstrapBrand() {
-        log.info("开始 Bootstrap 品牌数据同步");
-        long count = mdmBrandRepository.countBySource(SourceType.MDM);
-        if (count == 0) {
-            log.info("本地无 MDM 品牌记录（count=0），启动 Bootstrap 同步");
-            try {
-                List<Map<String, Object>> mdmBrands = mdmBrandQueryClient.getAllBrands();
-                for (Map<String, Object> brandData : mdmBrands) {
-                    String code = (String) brandData.get("code");
-                    String name = (String) brandData.get("name");
-                    String entityId = (String) brandData.get("id");
-                    Long version = Long.valueOf(brandData.get("version").toString());
-                    
-                    Brand brand = Brand.builder()
-                            .code(code)
-                            .name(name)
-                            .source(SourceType.MDM)
-                            .externalRefId(entityId)
-                            .externalVersion(version)
-                            .lastSyncTime(LocalDateTime.now())
-                            .build();
-                    mdmBrandRepository.insert(brand);
-                    log.info("Bootstrap 新增 MDM 品牌投影: code={}", code);
-                }
-                log.info("Bootstrap 品牌数据同步完成，共同步 {} 条", mdmBrands.size());
-            } catch (Exception e) {
-                log.error("Bootstrap 品牌数据同步失败", e);
-                // 不清空本地已有数据
-            }
-        } else {
-            log.info("本地已有 MDM 品牌数据 {} 条，跳过 Bootstrap", count);
-        }
-    }
-
-    /**
-     * Bootstrap 全量同步车系数据
-     * 
-     * <p>当本地 source=MDM 的车系记录数为 0 时，自动调用 MDM CarLine 全量快照接口
-     * 拉取数据并 upsert 本地副本。</p>
-     * 
-     * <p>CR-014：CarLine 投影采用按需最小化只读投影，仅同步 VMD 业务所需字段（含 brand_code 冗余字段）。</p>
-     */
-    public void bootstrapSeries() {
-        log.info("开始 Bootstrap 车系数据同步");
-        long count = mdmCarLineRepository.countBySource(SourceType.MDM);
-        if (count == 0) {
-            log.info("本地无 MDM 车系记录（count=0），启动 Bootstrap 同步");
-            try {
-                List<Map<String, Object>> mdmCarLines = mdmCarLineQueryClient.getAllSeries();
-                for (Map<String, Object> carLineData : mdmCarLines) {
-                    String code = (String) carLineData.get("code");
-                    String name = (String) carLineData.get("name");
-                    String brandCode = (String) carLineData.get("brandCode");
-                    String entityId = (String) carLineData.get("id");
-                    Long version = Long.valueOf(carLineData.get("version").toString());
-                    
-                    CarLine carLine = CarLine.builder()
-                            .code(code)
-                            .name(name)
-                            .brandCode(brandCode)
-                            .source(SourceType.MDM)
-                            .externalRefId(entityId)
-                            .externalVersion(version)
-                            .lastSyncTime(LocalDateTime.now())
-                            .build();
-                    mdmCarLineRepository.insert(carLine);
-                    log.info("Bootstrap 新增 MDM 车系投影: code={}, brandCode={}", code, brandCode);
-                }
-                log.info("Bootstrap 车系数据同步完成，共同步 {} 条", mdmCarLines.size());
-            } catch (Exception e) {
-                log.error("Bootstrap 车系数据同步失败", e);
-                // 不清空本地已有数据
-            }
-        } else {
-            log.info("本地已有 MDM 车系数据 {} 条，跳过 Bootstrap", count);
-        }
-    }
-
-    /**
-     * Bootstrap 全量同步平台数据
-     * 
-     * <p>当本地 source=MDM 的平台记录数为 0 时，自动调用 MDM Platform 全量快照接口
-     * 拉取数据并 upsert 本地副本。</p>
-     * 
-     * <p>CR-013：Platform 投影采用按需最小化只读投影，仅同步 VMD 业务所需字段。</p>
-     */
-    public void bootstrapPlatform() {
-        log.info("开始 Bootstrap 平台数据同步");
-        long count = mdmPlatformRepository.countBySource(SourceType.MDM);
-        if (count == 0) {
-            log.info("本地无 MDM 平台记录（count=0），启动 Bootstrap 同步");
-            try {
-                List<Map<String, Object>> mdmPlatforms = mdmPlatformQueryClient.getAllPlatforms();
-                for (Map<String, Object> platformData : mdmPlatforms) {
-                    String code = (String) platformData.get("code");
-                    String name = (String) platformData.get("name");
-                    String entityId = (String) platformData.get("id");
-                    Long version = Long.valueOf(platformData.get("version").toString());
-                    
-                    Platform platform = Platform.builder()
-                            .code(code)
-                            .name(name)
-                            .source(SourceType.MDM)
-                            .externalRefId(entityId)
-                            .externalVersion(version)
-                            .lastSyncTime(LocalDateTime.now())
-                            .build();
-                    mdmPlatformRepository.insert(platform);
-                    log.info("Bootstrap 新增 MDM 平台投影: code={}", code);
-                }
-                log.info("Bootstrap 平台数据同步完成，共同步 {} 条", mdmPlatforms.size());
-            } catch (Exception e) {
-                log.error("Bootstrap 平台数据同步失败", e);
-                // 不清空本地已有数据
-            }
-        } else {
-            log.info("本地已有 MDM 平台数据 {} 条，跳过 Bootstrap", count);
-        }
-    }
-
-    /**
-     * Bootstrap 全量同步车型数据
-     *
-     * <p>当本地 source=MDM 的车型记录数为 0 时，自动调用 MDM Model 全量快照接口
-     * 拉取数据并 upsert 本地副本。</p>
-     *
-     * <p>CR-015：Model 投影采用按需最小化只读投影，仅同步 VMD 业务所需字段
-     * （含 platform_code / carLine_code 关联字段）。</p>
-     */
-    public void bootstrapModel() {
-        log.info("开始 Bootstrap 车型数据同步");
-        long count = mdmModelRepository.countBySource(SourceType.MDM);
-        if (count == 0) {
-            log.info("本地无 MDM 车型记录（count=0），启动 Bootstrap 同步");
-            try {
-                List<Map<String, Object>> mdmModels = mdmModelQueryClient.getAllModels();
-                for (Map<String, Object> modelData : mdmModels) {
-                    String code = (String) modelData.get("code");
-                    String name = (String) modelData.get("name");
-                    String platformCode = (String) modelData.get("platformCode");
-                    String carLineCode = (String) modelData.get("carLineCode");
-                    String entityId = (String) modelData.get("id");
-                    Long version = Long.valueOf(modelData.get("version").toString());
-
-                    Model model = Model.builder()
-                            .code(code)
-                            .name(name)
-                            .platformCode(platformCode)
-                            .carLineCode(carLineCode)
-                            .source(SourceType.MDM)
-                            .externalRefId(entityId)
-                            .externalVersion(version)
-                            .lastSyncTime(LocalDateTime.now())
-                            .build();
-                    mdmModelRepository.insert(model);
-                    log.info("Bootstrap 新增 MDM 车型投影: code={}, platformCode={}, carLineCode={}", code, platformCode, carLineCode);
-                }
-                log.info("Bootstrap 车型数据同步完成，共同步 {} 条", mdmModels.size());
-            } catch (Exception e) {
-                log.error("Bootstrap 车型数据同步失败", e);
-                // 不清空本地已有数据
-            }
-        } else {
-            log.info("本地已有 MDM 车型数据 {} 条，跳过 Bootstrap", count);
-        }
-    }
-
-    /**
-     * Bootstrap 全量同步版本数据
-     *
-     * <p>当本地 source=MDM 的版本记录数为 0 时，自动调用 MDM Variant 全量快照接口
-     * 拉取数据并 upsert 本地副本。</p>
-     *
-     * <p>CR-016：Variant 投影采用按需最小化只读投影，仅同步 VMD 业务所需字段
-     * （含 platform_code / carLine_code / model_code 关联字段）。</p>
-     */
-    public void bootstrapVariant() {
-        log.info("开始 Bootstrap 版本数据同步");
-        long count = mdmVariantRepository.countBySource(SourceType.MDM);
-        if (count == 0) {
-            log.info("本地无 MDM 版本记录（count=0），启动 Bootstrap 同步");
-            try {
-                List<Map<String, Object>> mdmVariants = mdmVariantQueryClient.getAllVariants();
-                for (Map<String, Object> variantData : mdmVariants) {
-                    String code = (String) variantData.get("code");
-                    String name = (String) variantData.get("name");
-                    String platformCode = (String) variantData.get("platformCode");
-                    String carLineCode = (String) variantData.get("carLineCode");
-                    String modelCode = (String) variantData.get("modelCode");
-                    String entityId = (String) variantData.get("id");
-                    Long version = Long.valueOf(variantData.get("version").toString());
-
-                    Variant variant = Variant.builder()
-                            .code(code)
-                            .name(name)
-                            .platformCode(platformCode)
-                            .carLineCode(carLineCode)
-                            .modelCode(modelCode)
-                            .source(SourceType.MDM)
-                            .externalRefId(entityId)
-                            .externalVersion(version)
-                            .lastSyncTime(LocalDateTime.now())
-                            .build();
-                    mdmVariantRepository.insert(variant);
-                    log.info("Bootstrap 新增 MDM 版本投影: code={}, platformCode={}, carLineCode={}, modelCode={}", code, platformCode, carLineCode, modelCode);
-                }
-                log.info("Bootstrap 版本数据同步完成，共同步 {} 条", mdmVariants.size());
-            } catch (Exception e) {
-                log.error("Bootstrap 版本数据同步失败", e);
-                // 不清空本地已有数据
-            }
-        } else {
-            log.info("本地已有 MDM 版本数据 {} 条，跳过 Bootstrap", count);
-        }
-    }
-
-    /**
-     * Bootstrap 全量同步配置数据
-     *
-     * <p>当本地 source=MDM 的配置记录数为 0 时，自动调用 MDM Configuration 全量快照接口
-     * 拉取数据并 upsert 本地副本。</p>
-     *
-     * <p>CR-017：Configuration 投影采用按需最小化只读投影，仅同步 VMD 业务所需字段
-     * （含 platform_code / carLine_code / model_code / variant_code 关联字段）。</p>
-     */
-    public void bootstrapConfiguration() {
-        log.info("开始 Bootstrap 配置数据同步");
-        long count = mdmConfigurationRepository.countBySource(SourceType.MDM);
-        if (count == 0) {
-            log.info("本地无 MDM 配置记录（count=0），启动 Bootstrap 同步");
-            try {
-                List<Map<String, Object>> mdmConfigurations = mdmConfigurationQueryClient.getAllConfigurations();
-                for (Map<String, Object> configurationData : mdmConfigurations) {
-                    String code = (String) configurationData.get("code");
-                    String name = (String) configurationData.get("name");
-                    String nameEn = (String) configurationData.get("nameEn");
-                    String platformCode = (String) configurationData.get("platformCode");
-                    String carLineCode = (String) configurationData.get("carLineCode");
-                    String modelCode = (String) configurationData.get("modelCode");
-                    String variantCode = (String) configurationData.get("variantCode");
-                    String vehicleStageCode = (String) configurationData.get("vehicleStageCode");
-                    Boolean enable = (Boolean) configurationData.get("enable");
-                    Integer sort = (Integer) configurationData.get("sort");
-                    String entityId = (String) configurationData.get("id");
-                    Long version = Long.valueOf(configurationData.get("version").toString());
-
-                    Configuration configuration = Configuration.builder()
-                            .code(code)
-                            .name(name)
-                            .nameEn(nameEn)
-                            .platformCode(platformCode)
-                            .carLineCode(carLineCode)
-                            .modelCode(modelCode)
-                            .variantCode(variantCode)
-                            .vehicleStageCode(vehicleStageCode)
-                            .enable(enable)
-                            .sort(sort)
-                            .source(SourceType.MDM)
-                            .externalRefId(entityId)
-                            .externalVersion(version)
-                            .lastSyncTime(LocalDateTime.now())
-                            .build();
-                    mdmConfigurationRepository.insert(configuration);
-                    log.info("Bootstrap 新增 MDM 配置投影: code={}, variantCode={}", code, variantCode);
-                }
-                log.info("Bootstrap 配置数据同步完成，共同步 {} 条", mdmConfigurations.size());
-            } catch (Exception e) {
-                log.error("Bootstrap 配置数据同步失败", e);
-                // 不清空本地已有数据
-            }
-        } else {
-            log.info("本地已有 MDM 配置数据 {} 条，跳过 Bootstrap", count);
-        }
-    }
-
-    /**
      * 处理 MDM 选项族事件
-     *
-     * <p>CR-018：OptionFamily 投影采用按需最小化只读投影，仅同步 VMD 业务所需字段。</p>
-     *
-     * @param event 选项族事件
      */
     public void handleOptionFamilyEvent(MdmOptionFamilyEvent event) {
         log.info("处理MDM选项族事件: entityId={}, version={}", event.getEntityId(), event.getVersion());
@@ -674,10 +371,6 @@ public class MdmSyncAppService {
 
     /**
      * 处理 MDM 选项值事件
-     *
-     * <p>CR-018：OptionCode 投影采用按需最小化只读投影，仅同步 VMD 业务所需字段。</p>
-     *
-     * @param event 选项值事件
      */
     public void handleOptionCodeEvent(MdmOptionCodeEvent event) {
         log.info("处理MDM选项值事件: entityId={}, version={}", event.getEntityId(), event.getVersion());
@@ -718,121 +411,13 @@ public class MdmSyncAppService {
     }
 
     /**
-     * Bootstrap 全量同步选项族数据
-     *
-     * <p>当本地 source=MDM 的选项族记录数为 0 时，自动调用 MDM OptionFamily 全量快照接口
-     * 拉取数据并 upsert 本地副本。</p>
-     *
-     * <p>CR-018：OptionFamily 投影采用按需最小化只读投影，仅同步 VMD 业务所需字段。</p>
-     */
-    public void bootstrapOptionFamily() {
-        log.info("开始 Bootstrap 选项族数据同步");
-        long count = mdmOptionFamilyRepository.countBySource(SourceType.MDM.name());
-        if (count == 0) {
-            log.info("本地无 MDM 选项族记录（count=0），启动 Bootstrap 同步");
-            try {
-                List<Map<String, Object>> mdmOptionFamilies = mdmOptionFamilyQueryClient.getAllOptionFamilies();
-                for (Map<String, Object> optionFamilyData : mdmOptionFamilies) {
-                    String code = (String) optionFamilyData.get("code");
-                    String name = (String) optionFamilyData.get("name");
-                    String nameEn = (String) optionFamilyData.get("nameEn");
-                    String type = (String) optionFamilyData.get("type");
-                    Boolean mandatory = (Boolean) optionFamilyData.get("mandatory");
-                    Boolean enable = (Boolean) optionFamilyData.get("enable");
-                    Integer sort = (Integer) optionFamilyData.get("sort");
-                    String entityId = (String) optionFamilyData.get("id");
-                    Long version = Long.valueOf(optionFamilyData.get("version").toString());
-
-                    OptionFamily optionFamily = OptionFamily.builder()
-                            .code(code)
-                            .name(name)
-                            .nameEn(nameEn)
-                            .type(type)
-                            .mandatory(mandatory)
-                            .enable(enable)
-                            .sort(sort)
-                            .source(SourceType.MDM.name())
-                            .externalRefId(entityId)
-                            .externalVersion(version)
-                            .lastSyncTime(LocalDateTime.now())
-                            .build();
-                    mdmOptionFamilyRepository.insert(optionFamily);
-                    log.info("Bootstrap 新增 MDM 选项族投影: code={}", code);
-                }
-                log.info("Bootstrap 选项族数据同步完成，共同步 {} 条", mdmOptionFamilies.size());
-            } catch (Exception e) {
-                log.error("Bootstrap 选项族数据同步失败", e);
-            }
-        } else {
-            log.info("本地已有 MDM 选项族数据 {} 条，跳过 Bootstrap", count);
-        }
-    }
-
-    /**
-     * Bootstrap 全量同步选项值数据
-     *
-     * <p>当本地 source=MDM 的选项值记录数为 0 时，自动调用 MDM OptionCode 全量快照接口
-     * 拉取数据并 upsert 本地副本。</p>
-     *
-     * <p>CR-018：OptionCode 投影采用按需最小化只读投影，仅同步 VMD 业务所需字段。</p>
-     */
-    public void bootstrapOptionCode() {
-        log.info("开始 Bootstrap 选项值数据同步");
-        long count = mdmOptionFamilyRepository.countOptionCodeBySource(SourceType.MDM.name());
-        if (count == 0) {
-            log.info("本地无 MDM 选项值记录（count=0），启动 Bootstrap 同步");
-            try {
-                List<Map<String, Object>> mdmOptionCodes = mdmOptionCodeQueryClient.getAllOptionCodes();
-                for (Map<String, Object> optionCodeData : mdmOptionCodes) {
-                    String code = (String) optionCodeData.get("code");
-                    String optionFamilyCode = (String) optionCodeData.get("optionFamilyCode");
-                    String name = (String) optionCodeData.get("name");
-                    String nameEn = (String) optionCodeData.get("nameEn");
-                    String val = (String) optionCodeData.get("val");
-                    Boolean enable = (Boolean) optionCodeData.get("enable");
-                    Integer sort = (Integer) optionCodeData.get("sort");
-                    String entityId = (String) optionCodeData.get("id");
-                    Long version = Long.valueOf(optionCodeData.get("version").toString());
-
-                    OptionCode optionCode = OptionCode.builder()
-                            .code(code)
-                            .optionFamilyCode(optionFamilyCode)
-                            .name(name)
-                            .nameEn(nameEn)
-                            .val(val)
-                            .enable(enable)
-                            .sort(sort)
-                            .source(SourceType.MDM.name())
-                            .externalRefId(entityId)
-                            .externalVersion(version)
-                            .lastSyncTime(LocalDateTime.now())
-                            .build();
-                    mdmOptionFamilyRepository.insertOptionCode(optionCode);
-                    log.info("Bootstrap 新增 MDM 选项值投影: code={}", code);
-                }
-                log.info("Bootstrap 选项值数据同步完成，共同步 {} 条", mdmOptionCodes.size());
-            } catch (Exception e) {
-                log.error("Bootstrap 选项值数据同步失败", e);
-            }
-        } else {
-            log.info("本地已有 MDM 选项值数据 {} 条，跳过 Bootstrap", count);
-        }
-    }
-
-    /**
      * 处理 MDM 工厂事件
-     *
-     * <p>CR-011：Plant 投影采用按需最小化只读投影，仅同步 VMD 业务所需字段。</p>
-     *
-     * @param event 工厂事件
      */
     public void handlePlantEvent(MdmPlantEvent event) {
         log.debug("处理 MDM 工厂事件: eventType={}, entityId={}, code={}",
                 event.getEventType(), event.getEntityId(), event.getCode());
-        // 根据 externalRefId 查找本地记录
         Plant localPlant = mdmPlantRepository.selectByExternalRefId(event.getEntityId());
         if (localPlant == null) {
-            // 本地不存在，新增 Plant 投影
             Plant newPlant = Plant.builder()
                     .code(event.getCode())
                     .name(event.getName())
@@ -844,9 +429,7 @@ public class MdmSyncAppService {
             mdmPlantRepository.insert(newPlant);
             log.info("新增 MDM 工厂投影: code={}, name={}", event.getCode(), event.getName());
         } else {
-            // 本地存在，检查版本
             if (event.getVersion() > localPlant.getExternalVersion()) {
-                // 更新 Plant 投影（版本更高）
                 localPlant.setName(event.getName());
                 localPlant.setExternalVersion(event.getVersion());
                 localPlant.setLastSyncTime(LocalDateTime.now());
@@ -854,7 +437,6 @@ public class MdmSyncAppService {
                 log.info("更新 MDM 工厂投影: code={}, oldVersion={}, newVersion={}",
                         event.getCode(), localPlant.getExternalVersion(), event.getVersion());
             } else {
-                // 忽略乱序事件
                 log.debug("忽略 MDM 工厂事件（版本不满足）: code={}, eventVersion={}, localVersion={}",
                         event.getCode(), event.getVersion(), localPlant.getExternalVersion());
             }
@@ -862,55 +444,7 @@ public class MdmSyncAppService {
     }
 
     /**
-     * Bootstrap 全量同步工厂数据
-     *
-     * <p>当本地 source=MDM 的工厂记录数为 0 时，自动调用 MDM Plant 全量快照接口
-     * 拉取数据并 upsert 本地副本。</p>
-     *
-     * <p>CR-011：Plant 投影采用按需最小化只读投影，仅同步 VMD 业务所需字段。</p>
-     */
-    public void bootstrapPlant() {
-        log.info("开始 Bootstrap 工厂数据同步");
-        long count = mdmPlantRepository.countBySource(SourceType.MDM.name());
-        if (count == 0) {
-            log.info("本地无 MDM 工厂记录（count=0），启动 Bootstrap 同步");
-            try {
-                List<Map<String, Object>> mdmPlants = mdmPlantQueryClient.getAllPlants();
-                for (Map<String, Object> plantData : mdmPlants) {
-                    String code = (String) plantData.get("code");
-                    String name = (String) plantData.get("name");
-                    String entityId = (String) plantData.get("id");
-                    Long version = Long.valueOf(plantData.get("version").toString());
-
-                    Plant plant = Plant.builder()
-                            .code(code)
-                            .name(name)
-                            .source(SourceType.MDM)
-                            .externalRefId(entityId)
-                            .externalVersion(version)
-                            .lastSyncTime(LocalDateTime.now())
-                            .build();
-                    mdmPlantRepository.insert(plant);
-                    log.info("Bootstrap 新增 MDM 工厂投影: code={}", code);
-                }
-                log.info("Bootstrap 工厂数据同步完成，共同步 {} 条", mdmPlants.size());
-            } catch (Exception e) {
-                log.error("Bootstrap 工厂数据同步失败", e);
-                // 不清空本地已有数据
-            }
-        } else {
-            log.info("本地已有 MDM 工厂数据 {} 条，跳过 Bootstrap", count);
-        }
-    }
-
-    /**
      * 处理 MDM 车载节点事件
-     *
-     * <p>CR-020：VehicleNode 投影采用按需最小化只读投影，仅同步 VMD 业务所需字段
-     * （含 vehicle_node_type / domain / status 等）。
-     * 来自 edd-mdm EEAD 子域，区别于产品树各实体的 Product MDM 子域。</p>
-     *
-     * @param event 车载节点事件
      */
     public void handleVehicleNodeEvent(MdmVehicleNodeEvent event) {
         log.info("处理MDM车载节点事件: entityId={}, version={}", event.getEntityId(), event.getVersion());
@@ -958,11 +492,6 @@ public class MdmSyncAppService {
 
     /**
      * 处理 MDM 零件事件
-     *
-     * <p>CR-021：Part 投影采用按需最小化只读投影，仅同步 VMD 业务所需字段。
-     * 来自 edd-mdm Part 子域，区别于产品树各实体的 Product MDM 子域。</p>
-     *
-     * @param event 零件事件
      */
     public void handlePartEvent(MdmPartEvent event) {
         log.info("处理MDM零件事件: entityId={}, version={}", event.getEntityId(), event.getVersion());
@@ -987,6 +516,7 @@ public class MdmSyncAppService {
             log.info("新增零件: pn={}", event.getCode());
         } else {
             if (event.getVersion() > localPart.getExternalVersion()) {
+                localPart.setPn(event.getCode());
                 localPart.setName(event.getName());
                 localPart.setType(event.getPartType());
                 localPart.setDeviceCode(event.getVehicleNodeCode());
@@ -1007,14 +537,516 @@ public class MdmSyncAppService {
     }
 
     /**
+     * Bootstrap 全量同步品牌数据
+     */
+    public void bootstrapBrand() {
+        log.info("开始 Bootstrap 品牌数据同步");
+        long count = mdmBrandRepository.countBySource(SourceType.MDM);
+        if (count == 0) {
+            log.info("本地无 MDM 品牌记录（count=0），启动 Bootstrap 同步");
+            try {
+                int page = 1;
+                int pageSize = 100;
+                boolean hasMore = true;
+                while (hasMore) {
+                    BrandPageResponse pageResponse = brandService.listAll(page, pageSize, null);
+                    if (pageResponse == null || pageResponse.getRows() == null || pageResponse.getRows().isEmpty()) {
+                        hasMore = false;
+                        break;
+                    }
+                    for (BrandResponse brandData : pageResponse.getRows()) {
+                        // 先按 code 查询是否已存在
+                        Brand existingBrand = mdmBrandRepository.selectByCode(brandData.getCode());
+                        if (existingBrand == null) {
+                            Brand brand = Brand.builder()
+                                    .code(brandData.getCode())
+                                    .name(brandData.getName())
+                                    .enable(true)
+                                    .sort(0)
+                                    .source(SourceType.MDM)
+                                    .externalRefId(brandData.getSourceId())
+                                    .externalVersion(brandData.getVersion() != null ? brandData.getVersion().longValue() : 0L)
+                                    .lastSyncTime(convertToLocalDateTime(brandData.getModifyTime()))
+                                    .build();
+                            mdmBrandRepository.insert(brand);
+                            log.info("Bootstrap 新增 MDM 品牌投影: code={}", brandData.getCode());
+                        } else {
+                            existingBrand.setName(brandData.getName());
+                            existingBrand.setSource(SourceType.MDM);
+                            existingBrand.setExternalRefId(brandData.getSourceId());
+                            existingBrand.setExternalVersion(brandData.getVersion() != null ? brandData.getVersion().longValue() : 0L);
+                            existingBrand.setLastSyncTime(convertToLocalDateTime(brandData.getModifyTime()));
+                            mdmBrandRepository.updateById(existingBrand);
+                            log.info("Bootstrap 更新 MDM 品牌投影: code={}", brandData.getCode());
+                        }
+                    }
+                    if (pageResponse.getRows().size() < pageSize) {
+                        hasMore = false;
+                    } else {
+                        page++;
+                    }
+                }
+                log.info("Bootstrap 品牌数据同步完成");
+            } catch (Exception e) {
+                log.error("Bootstrap 品牌数据同步失败", e);
+            }
+        } else {
+            log.info("本地已有 MDM 品牌数据 {} 条，跳过 Bootstrap", count);
+        }
+    }
+
+    /**
+     * Bootstrap 全量同步车系数据
+     */
+    public void bootstrapSeries() {
+        log.info("开始 Bootstrap 车系数据同步");
+        long count = mdmCarLineRepository.countBySource(SourceType.MDM);
+        if (count == 0) {
+            log.info("本地无 MDM 车系记录（count=0），启动 Bootstrap 同步");
+            try {
+                int page = 1;
+                int pageSize = 100;
+                boolean hasMore = true;
+                while (hasMore) {
+                    CarLinePageResponse pageResponse = carLineService.listAll(page, pageSize, null, null);
+                    if (pageResponse == null || pageResponse.getRows() == null || pageResponse.getRows().isEmpty()) {
+                        hasMore = false;
+                        break;
+                    }
+                    for (CarLineResponse carLineData : pageResponse.getRows()) {
+                        CarLine existingCarLine = mdmCarLineRepository.selectByCode(carLineData.getCode());
+                        if (existingCarLine == null) {
+                            CarLine carLine = CarLine.builder()
+                                    .code(carLineData.getCode())
+                                    .name(carLineData.getName())
+                                    .brandCode(carLineData.getBrandCode())
+                                    .enable(true)
+                                    .sort(0)
+                                    .source(SourceType.MDM)
+                                    .externalRefId(carLineData.getSourceId())
+                                    .externalVersion(carLineData.getVersion() != null ? carLineData.getVersion().longValue() : 0L)
+                                    .lastSyncTime(convertToLocalDateTime(carLineData.getModifyTime()))
+                                    .build();
+                            mdmCarLineRepository.insert(carLine);
+                            log.info("Bootstrap 新增 MDM 车系投影: code={}", carLineData.getCode());
+                        } else {
+                            existingCarLine.setName(carLineData.getName());
+                            existingCarLine.setBrandCode(carLineData.getBrandCode());
+                            existingCarLine.setSource(SourceType.MDM);
+                            existingCarLine.setExternalRefId(carLineData.getSourceId());
+                            existingCarLine.setExternalVersion(carLineData.getVersion() != null ? carLineData.getVersion().longValue() : 0L);
+                            existingCarLine.setLastSyncTime(convertToLocalDateTime(carLineData.getModifyTime()));
+                            mdmCarLineRepository.updateById(existingCarLine);
+                            log.info("Bootstrap 更新 MDM 车系投影: code={}", carLineData.getCode());
+                        }
+                    }
+                    if (pageResponse.getRows().size() < pageSize) {
+                        hasMore = false;
+                    } else {
+                        page++;
+                    }
+                }
+                log.info("Bootstrap 车系数据同步完成");
+            } catch (Exception e) {
+                log.error("Bootstrap 车系数据同步失败", e);
+            }
+        } else {
+            log.info("本地已有 MDM 车系数据 {} 条，跳过 Bootstrap", count);
+        }
+    }
+
+    /**
+     * Bootstrap 全量同步平台数据
+     */
+    public void bootstrapPlatform() {
+        log.info("开始 Bootstrap 平台数据同步");
+        long count = mdmPlatformRepository.countBySource(SourceType.MDM);
+        if (count == 0) {
+            log.info("本地无 MDM 平台记录（count=0），启动 Bootstrap 同步");
+            try {
+                int page = 1;
+                int pageSize = 100;
+                boolean hasMore = true;
+                while (hasMore) {
+                    PlatformPageResponse pageResponse = platformService.listAll(page, pageSize, null);
+                    if (pageResponse == null || pageResponse.getRows() == null || pageResponse.getRows().isEmpty()) {
+                        hasMore = false;
+                        break;
+                    }
+                    for (PlatformResponse platformData : pageResponse.getRows()) {
+                        Platform existingPlatform = mdmPlatformRepository.selectByCode(platformData.getCode());
+                        if (existingPlatform == null) {
+                            Platform platform = Platform.builder()
+                                    .code(platformData.getCode())
+                                    .name(platformData.getName())
+                                    .enable(true)
+                                    .sort(0)
+                                    .source(SourceType.MDM)
+                                    .externalRefId(platformData.getSourceId())
+                                    .externalVersion(platformData.getVersion() != null ? platformData.getVersion().longValue() : 0L)
+                                    .lastSyncTime(convertToLocalDateTime(platformData.getModifyTime()))
+                                    .build();
+                            mdmPlatformRepository.insert(platform);
+                            log.info("Bootstrap 新增 MDM 平台投影: code={}", platformData.getCode());
+                        } else {
+                            existingPlatform.setName(platformData.getName());
+                            existingPlatform.setSource(SourceType.MDM);
+                            existingPlatform.setExternalRefId(platformData.getSourceId());
+                            existingPlatform.setExternalVersion(platformData.getVersion() != null ? platformData.getVersion().longValue() : 0L);
+                            existingPlatform.setLastSyncTime(convertToLocalDateTime(platformData.getModifyTime()));
+                            mdmPlatformRepository.updateById(existingPlatform);
+                            log.info("Bootstrap 更新 MDM 平台投影: code={}", platformData.getCode());
+                        }
+                    }
+                    if (pageResponse.getRows().size() < pageSize) {
+                        hasMore = false;
+                    } else {
+                        page++;
+                    }
+                }
+                log.info("Bootstrap 平台数据同步完成");
+            } catch (Exception e) {
+                log.error("Bootstrap 平台数据同步失败", e);
+            }
+        } else {
+            log.info("本地已有 MDM 平台数据 {} 条，跳过 Bootstrap", count);
+        }
+    }
+
+    /**
+     * Bootstrap 全量同步工厂数据
+     */
+    public void bootstrapPlant() {
+        log.info("开始 Bootstrap 工厂数据同步");
+        long count = mdmPlantRepository.countBySource(SourceType.MDM.name());
+        if (count == 0) {
+            log.info("本地无 MDM 工厂记录（count=0），启动 Bootstrap 同步");
+            try {
+                int page = 1;
+                int pageSize = 10;
+                boolean hasMore = true;
+                while (hasMore) {
+                    PlantPageResponse pageResponse = plantService.snapshot(false, page, pageSize);
+                    if (pageResponse == null || pageResponse.getRows() == null || pageResponse.getRows().isEmpty()) {
+                        hasMore = false;
+                        break;
+                    }
+                    for (PlantResponse plantData : pageResponse.getRows()) {
+                        Plant existingPlant = mdmPlantRepository.selectByCode(plantData.getCode());
+                        if (existingPlant == null) {
+                            Plant plant = Plant.builder()
+                                    .code(plantData.getCode())
+                                    .name(plantData.getName())
+                                    .enable(true)
+                                    .sort(0)
+                                    .source(SourceType.MDM)
+                                    .externalRefId(plantData.getSourceId())
+                                    .externalVersion(plantData.getVersion() != null ? plantData.getVersion().longValue() : 0L)
+                                    .lastSyncTime(convertToLocalDateTime(plantData.getModifyTime()))
+                                    .build();
+                            mdmPlantRepository.insert(plant);
+                            log.info("Bootstrap 新增 MDM 工厂投影: code={}", plantData.getCode());
+                        } else {
+                            existingPlant.setName(plantData.getName());
+                            existingPlant.setSource(SourceType.MDM);
+                            existingPlant.setExternalRefId(plantData.getSourceId());
+                            existingPlant.setExternalVersion(plantData.getVersion() != null ? plantData.getVersion().longValue() : 0L);
+                            existingPlant.setLastSyncTime(convertToLocalDateTime(plantData.getModifyTime()));
+                            mdmPlantRepository.update(existingPlant);
+                            log.info("Bootstrap 更新 MDM 工厂投影: code={}", plantData.getCode());
+                        }
+                    }
+                    if (pageResponse.getRows().size() < pageSize) {
+                        hasMore = false;
+                    } else {
+                        page++;
+                    }
+                }
+                log.info("Bootstrap 工厂数据同步完成");
+            } catch (Exception e) {
+                log.error("Bootstrap 工厂数据同步失败", e);
+            }
+        } else {
+            log.info("本地已有 MDM 工厂数据 {} 条，跳过 Bootstrap", count);
+        }
+    }
+
+    /**
+     * Bootstrap 全量同步车型数据
+     */
+    public void bootstrapModel() {
+        log.info("开始 Bootstrap 车型数据同步");
+        long count = mdmModelRepository.countBySource(SourceType.MDM);
+        if (count == 0) {
+            log.info("本地无 MDM 车型记录（count=0），启动 Bootstrap 同步");
+            try {
+                int page = 1;
+                int pageSize = 100;
+                boolean hasMore = true;
+                while (hasMore) {
+                    ModelPageResponse pageResponse = modelService.listAll(page, pageSize, null, null, null);
+                    if (pageResponse == null || pageResponse.getRows() == null || pageResponse.getRows().isEmpty()) {
+                        hasMore = false;
+                        break;
+                    }
+                    for (ModelResponse modelData : pageResponse.getRows()) {
+                        Model model = Model.builder()
+                                .code(modelData.getCode())
+                                .name(modelData.getName())
+                                .platformCode(modelData.getPlatformCode())
+                                .carLineCode(modelData.getCarLineCode())
+                                .source(SourceType.MDM)
+                                .externalRefId(modelData.getSourceId())
+                                .externalVersion(modelData.getVersion() != null ? modelData.getVersion().longValue() : 0L)
+                                .lastSyncTime(convertToLocalDateTime(modelData.getModifyTime()))
+                                .build();
+                        mdmModelRepository.insert(model);
+                        log.info("Bootstrap 新增 MDM 车型投影: code={}", modelData.getCode());
+                    }
+                    if (pageResponse.getRows().size() < pageSize) {
+                        hasMore = false;
+                    } else {
+                        page++;
+                    }
+                }
+                log.info("Bootstrap 车型数据同步完成");
+            } catch (Exception e) {
+                log.error("Bootstrap 车型数据同步失败", e);
+            }
+        } else {
+            log.info("本地已有 MDM 车型数据 {} 条，跳过 Bootstrap", count);
+        }
+    }
+
+    /**
+     * Bootstrap 全量同步版本数据
+     */
+    public void bootstrapVariant() {
+        log.info("开始 Bootstrap 版本数据同步");
+        long count = mdmVariantRepository.countBySource(SourceType.MDM);
+        if (count == 0) {
+            log.info("本地无 MDM 版本记录（count=0），启动 Bootstrap 同步");
+            try {
+                int page = 1;
+                int pageSize = 100;
+                boolean hasMore = true;
+                while (hasMore) {
+                    VariantPageResponse pageResponse = variantService.listAll(page, pageSize, null, null, null, null);
+                    if (pageResponse == null || pageResponse.getRows() == null || pageResponse.getRows().isEmpty()) {
+                        hasMore = false;
+                        break;
+                    }
+                    for (VariantResponse variantData : pageResponse.getRows()) {
+                        Variant existingVariant = mdmVariantRepository.selectByCode(variantData.getCode());
+                        if (existingVariant == null) {
+                            Variant variant = Variant.builder()
+                                    .code(variantData.getCode())
+                                    .name(variantData.getName())
+                                    .platformCode("DEFAULT")
+                                    .carLineCode("DEFAULT")
+                                    .modelCode(variantData.getModelCode())
+                                    .enable(true)
+                                    .sort(0)
+                                    .source(SourceType.MDM)
+                                    .externalRefId(variantData.getSourceId())
+                                    .externalVersion(variantData.getVersion() != null ? variantData.getVersion().longValue() : 0L)
+                                    .lastSyncTime(convertToLocalDateTime(variantData.getModifyTime()))
+                                    .build();
+                            mdmVariantRepository.insert(variant);
+                            log.info("Bootstrap 新增 MDM 版本投影: code={}", variantData.getCode());
+                        } else {
+                            existingVariant.setName(variantData.getName());
+                            existingVariant.setModelCode(variantData.getModelCode());
+                            existingVariant.setSource(SourceType.MDM);
+                            existingVariant.setExternalRefId(variantData.getSourceId());
+                            existingVariant.setExternalVersion(variantData.getVersion() != null ? variantData.getVersion().longValue() : 0L);
+                            existingVariant.setLastSyncTime(convertToLocalDateTime(variantData.getModifyTime()));
+                            mdmVariantRepository.updateById(existingVariant);
+                            log.info("Bootstrap 更新 MDM 版本投影: code={}", variantData.getCode());
+                        }
+                    }
+                    if (pageResponse.getRows().size() < pageSize) {
+                        hasMore = false;
+                    } else {
+                        page++;
+                    }
+                }
+                log.info("Bootstrap 版本数据同步完成");
+            } catch (Exception e) {
+                log.error("Bootstrap 版本数据同步失败", e);
+            }
+        } else {
+            log.info("本地已有 MDM 版本数据 {} 条，跳过 Bootstrap", count);
+        }
+    }
+
+    /**
+     * Bootstrap 全量同步配置数据
+     */
+    public void bootstrapConfiguration() {
+        log.info("开始 Bootstrap 配置数据同步");
+        long count = mdmConfigurationRepository.countBySource(SourceType.MDM);
+        if (count == 0) {
+            log.info("本地无 MDM 配置记录（count=0），启动 Bootstrap 同步");
+            try {
+                int page = 1;
+                int pageSize = 100;
+                boolean hasMore = true;
+                while (hasMore) {
+                    ConfigurationPageResponse pageResponse = configurationService.listAll(page, pageSize, null, null);
+                    if (pageResponse == null || pageResponse.getRows() == null || pageResponse.getRows().isEmpty()) {
+                        hasMore = false;
+                        break;
+                    }
+                    for (ConfigurationResponse configurationData : pageResponse.getRows()) {
+                        // ConfigurationResponse 只含 variantCode，不含 platformCode/carLineCode/modelCode
+                        Configuration configuration = Configuration.builder()
+                                .code(configurationData.getCode())
+                                .name(configurationData.getName())
+                                .variantCode(configurationData.getVariantCode())
+                                .source(SourceType.MDM)
+                                .externalRefId(configurationData.getSourceId())
+                                .externalVersion(configurationData.getVersion() != null ? configurationData.getVersion().longValue() : 0L)
+                                .lastSyncTime(convertToLocalDateTime(configurationData.getModifyTime()))
+                                .build();
+                        mdmConfigurationRepository.insert(configuration);
+                        log.info("Bootstrap 新增 MDM 配置投影: code={}", configurationData.getCode());
+                    }
+                    if (pageResponse.getRows().size() < pageSize) {
+                        hasMore = false;
+                    } else {
+                        page++;
+                    }
+                }
+                log.info("Bootstrap 配置数据同步完成");
+            } catch (Exception e) {
+                log.error("Bootstrap 配置数据同步失败", e);
+            }
+        } else {
+            log.info("本地已有 MDM 配置数据 {} 条，跳过 Bootstrap", count);
+        }
+    }
+
+    /**
+     * Bootstrap 全量同步选项族数据
+     */
+    public void bootstrapOptionFamily() {
+        log.info("开始 Bootstrap 选项族数据同步");
+        long count = mdmOptionFamilyRepository.countBySource(SourceType.MDM.name());
+        if (count == 0) {
+            log.info("本地无 MDM 选项族记录（count=0），启动 Bootstrap 同步");
+            try {
+                int page = 1;
+                int pageSize = 100;
+                boolean hasMore = true;
+                while (hasMore) {
+                    OptionFamilyPageResponse pageResponse = optionFamilyService.listAll(page, pageSize, null, null);
+                    if (pageResponse == null || pageResponse.getRows() == null || pageResponse.getRows().isEmpty()) {
+                        hasMore = false;
+                        break;
+                    }
+                    for (OptionFamilyResponse optionFamilyData : pageResponse.getRows()) {
+                        OptionFamily existingOptionFamily = mdmOptionFamilyRepository.selectByCode(optionFamilyData.getCode());
+                        if (existingOptionFamily == null) {
+                            OptionFamily optionFamily = OptionFamily.builder()
+                                    .code(optionFamilyData.getCode())
+                                    .name(optionFamilyData.getName())
+                                    .enable(true)
+                                    .sort(0)
+                                    .source(SourceType.MDM.name())
+                                    .externalRefId(optionFamilyData.getSourceId())
+                                    .externalVersion(optionFamilyData.getVersion() != null ? optionFamilyData.getVersion().longValue() : 0L)
+                                    .lastSyncTime(convertToLocalDateTime(optionFamilyData.getModifyTime()))
+                                    .build();
+                            mdmOptionFamilyRepository.insert(optionFamily);
+                            log.info("Bootstrap 新增 MDM 选项族投影: code={}", optionFamilyData.getCode());
+                        } else {
+                            existingOptionFamily.setName(optionFamilyData.getName());
+                            existingOptionFamily.setSource(SourceType.MDM.name());
+                            existingOptionFamily.setExternalRefId(optionFamilyData.getSourceId());
+                            existingOptionFamily.setExternalVersion(optionFamilyData.getVersion() != null ? optionFamilyData.getVersion().longValue() : 0L);
+                            existingOptionFamily.setLastSyncTime(convertToLocalDateTime(optionFamilyData.getModifyTime()));
+                            mdmOptionFamilyRepository.updateById(existingOptionFamily);
+                            log.info("Bootstrap 更新 MDM 选项族投影: code={}", optionFamilyData.getCode());
+                        }
+                    }
+                    if (pageResponse.getRows().size() < pageSize) {
+                        hasMore = false;
+                    } else {
+                        page++;
+                    }
+                }
+                log.info("Bootstrap 选项族数据同步完成");
+            } catch (Exception e) {
+                log.error("Bootstrap 选项族数据同步失败", e);
+            }
+        } else {
+            log.info("本地已有 MDM 选项族数据 {} 条，跳过 Bootstrap", count);
+        }
+    }
+
+    /**
+     * Bootstrap 全量同步选项值数据
+     */
+    public void bootstrapOptionCode() {
+        log.info("开始 Bootstrap 选项值数据同步");
+        long count = mdmOptionFamilyRepository.countOptionCodeBySource(SourceType.MDM.name());
+        if (count == 0) {
+            log.info("本地无 MDM 选项值记录（count=0），启动 Bootstrap 同步");
+            try {
+                int page = 1;
+                int pageSize = 100;
+                boolean hasMore = true;
+                while (hasMore) {
+                    OptionCodePageResponse pageResponse = optionCodeService.listAll(page, pageSize, null, null);
+                    if (pageResponse == null || pageResponse.getRows() == null || pageResponse.getRows().isEmpty()) {
+                        hasMore = false;
+                        break;
+                    }
+                    for (OptionCodeResponse optionCodeData : pageResponse.getRows()) {
+                        OptionCode existingOptionCode = mdmOptionFamilyRepository.selectOptionCodeByCode(optionCodeData.getCode());
+                        if (existingOptionCode == null) {
+                            OptionCode optionCode = OptionCode.builder()
+                                    .code(optionCodeData.getCode())
+                                    .optionFamilyCode(optionCodeData.getOptionFamilyCode())
+                                    .name(optionCodeData.getName())
+                                    .enable(true)
+                                    .sort(0)
+                                    .source(SourceType.MDM.name())
+                                    .externalRefId(optionCodeData.getSourceId())
+                                    .externalVersion(optionCodeData.getVersion() != null ? optionCodeData.getVersion().longValue() : 0L)
+                                    .lastSyncTime(convertToLocalDateTime(optionCodeData.getModifyTime()))
+                                    .build();
+                            mdmOptionFamilyRepository.insertOptionCode(optionCode);
+                            log.info("Bootstrap 新增 MDM 选项值投影: code={}", optionCodeData.getCode());
+                        } else {
+                            existingOptionCode.setOptionFamilyCode(optionCodeData.getOptionFamilyCode());
+                            existingOptionCode.setName(optionCodeData.getName());
+                            existingOptionCode.setSource(SourceType.MDM.name());
+                            existingOptionCode.setExternalRefId(optionCodeData.getSourceId());
+                            existingOptionCode.setExternalVersion(optionCodeData.getVersion() != null ? optionCodeData.getVersion().longValue() : 0L);
+                            existingOptionCode.setLastSyncTime(convertToLocalDateTime(optionCodeData.getModifyTime()));
+                            mdmOptionFamilyRepository.updateOptionCodeById(existingOptionCode);
+                            log.info("Bootstrap 更新 MDM 选项值投影: code={}", optionCodeData.getCode());
+                        }
+                    }
+                    if (pageResponse.getRows().size() < pageSize) {
+                        hasMore = false;
+                    } else {
+                        page++;
+                    }
+                }
+                log.info("Bootstrap 选项值数据同步完成");
+            } catch (Exception e) {
+                log.error("Bootstrap 选项值数据同步失败", e);
+            }
+        } else {
+            log.info("本地已有 MDM 选项值数据 {} 条，跳过 Bootstrap", count);
+        }
+    }
+
+    /**
      * Bootstrap 全量同步车载节点数据
-     *
-     * <p>当本地 source=MDM 的车载节点记录数为 0 时，自动调用 MDM VehicleNode 全量快照接口
-     * 拉取数据并 upsert 本地副本。</p>
-     *
-     * <p>CR-020：VehicleNode 投影采用按需最小化只读投影，仅同步 VMD 业务所需字段
-     * （含 vehicle_node_type / domain / status 等）。
-     * 来自 edd-mdm EEAD 子域，区别于产品树各实体的 Product MDM 子域。</p>
      */
     public void bootstrapVehicleNode() {
         log.info("开始 Bootstrap 车载节点数据同步");
@@ -1022,44 +1054,62 @@ public class MdmSyncAppService {
         if (count == 0) {
             log.info("本地无 MDM 车载节点记录（count=0），启动 Bootstrap 同步");
             try {
-                List<Map<String, Object>> mdmVehicleNodes = mdmVehicleNodeQueryClient.getAllVehicleNodes();
-                for (Map<String, Object> vehicleNodeData : mdmVehicleNodes) {
-                    String code = (String) vehicleNodeData.get("code");
-                    String name = (String) vehicleNodeData.get("name");
-                    String nameEn = (String) vehicleNodeData.get("nameEn");
-                    String type = (String) vehicleNodeData.get("type");
-                    String deviceItem = (String) vehicleNodeData.get("deviceItem");
-                    String funcDomain = (String) vehicleNodeData.get("funcDomain");
-                    String nodeType = (String) vehicleNodeData.get("nodeType");
-                    String otaSupport = (String) vehicleNodeData.get("otaSupport");
-                    Boolean core = (Boolean) vehicleNodeData.get("core");
-                    Integer sort = (Integer) vehicleNodeData.get("sort");
-                    String entityId = (String) vehicleNodeData.get("id");
-                    Long version = Long.valueOf(vehicleNodeData.get("version").toString());
-
-                    VehicleNode vehicleNode = VehicleNode.builder()
-                            .code(code)
-                            .name(name)
-                            .nameEn(nameEn)
-                            .type(type)
-                            .deviceItem(deviceItem)
-                            .funcDomain(funcDomain)
-                            .nodeType(nodeType)
-                            .otaSupport(otaSupport)
-                            .core(core)
-                            .sort(sort)
-                            .source(SourceType.MDM)
-                            .externalRefId(entityId)
-                            .externalVersion(version)
-                            .lastSyncTime(LocalDateTime.now())
-                            .build();
-                    mdmVehicleNodeRepository.insert(vehicleNode);
-                    log.info("Bootstrap 新增 MDM 车载节点投影: code={}", code);
+                int page = 1;
+                int pageSize = 100;
+                boolean hasMore = true;
+                while (hasMore) {
+                    VehicleNodePageResponse pageResponse = vehicleNodeService.snapshot(page, pageSize, null);
+                    if (pageResponse == null || pageResponse.getRows() == null || pageResponse.getRows().isEmpty()) {
+                        hasMore = false;
+                        break;
+                    }
+                    for (VehicleNodeResponse vehicleNodeData : pageResponse.getRows()) {
+                        VehicleNode existingVehicleNode = mdmVehicleNodeRepository.selectByCode(vehicleNodeData.getNodeCode());
+                        if (existingVehicleNode == null) {
+                            VehicleNode vehicleNode = VehicleNode.builder()
+                                    .code(vehicleNodeData.getNodeCode())
+                                    .name(vehicleNodeData.getName())
+                                    .nameEn(vehicleNodeData.getNameLocal())
+                                    .type(vehicleNodeData.getNodeType() != null ? vehicleNodeData.getNodeType() : "ECU")
+                                    .deviceItem(vehicleNodeData.getDeviceCategory())
+                                    .funcDomain(vehicleNodeData.getFunctionalDomain() != null ? vehicleNodeData.getFunctionalDomain() : "GENERAL")
+                                    .nodeType(vehicleNodeData.getNodeType() != null ? vehicleNodeData.getNodeType() : "ECU")
+                                    .otaSupport(vehicleNodeData.getOtaSupportType() != null ? vehicleNodeData.getOtaSupportType() : "NONE")
+                                    .core(vehicleNodeData.getIsCoreNode())
+                                    .sort(0)
+                                    .source(SourceType.MDM)
+                                    .externalRefId(vehicleNodeData.getExternalRefId())
+                                    .externalVersion(vehicleNodeData.getExternalVersion())
+                                    .lastSyncTime(convertToLocalDateTime(vehicleNodeData.getLastSyncTime()))
+                                    .build();
+                            mdmVehicleNodeRepository.insert(vehicleNode);
+                            log.info("Bootstrap 新增 MDM 车载节点投影: code={}", vehicleNodeData.getNodeCode());
+                        } else {
+                            existingVehicleNode.setName(vehicleNodeData.getName());
+                            existingVehicleNode.setNameEn(vehicleNodeData.getNameLocal());
+                            existingVehicleNode.setType(vehicleNodeData.getNodeType() != null ? vehicleNodeData.getNodeType() : "ECU");
+                            existingVehicleNode.setDeviceItem(vehicleNodeData.getDeviceCategory());
+                            existingVehicleNode.setFuncDomain(vehicleNodeData.getFunctionalDomain() != null ? vehicleNodeData.getFunctionalDomain() : "GENERAL");
+                            existingVehicleNode.setNodeType(vehicleNodeData.getNodeType() != null ? vehicleNodeData.getNodeType() : "ECU");
+                            existingVehicleNode.setOtaSupport(vehicleNodeData.getOtaSupportType() != null ? vehicleNodeData.getOtaSupportType() : "NONE");
+                            existingVehicleNode.setCore(vehicleNodeData.getIsCoreNode());
+                            existingVehicleNode.setSource(SourceType.MDM);
+                            existingVehicleNode.setExternalRefId(vehicleNodeData.getExternalRefId());
+                            existingVehicleNode.setExternalVersion(vehicleNodeData.getExternalVersion());
+                            existingVehicleNode.setLastSyncTime(convertToLocalDateTime(vehicleNodeData.getLastSyncTime()));
+                            mdmVehicleNodeRepository.updateById(existingVehicleNode);
+                            log.info("Bootstrap 更新 MDM 车载节点投影: code={}", vehicleNodeData.getNodeCode());
+                        }
+                    }
+                    if (pageResponse.getRows().size() < pageSize) {
+                        hasMore = false;
+                    } else {
+                        page++;
+                    }
                 }
-                log.info("Bootstrap 车载节点数据同步完成，共同步 {} 条", mdmVehicleNodes.size());
+                log.info("Bootstrap 车载节点数据同步完成");
             } catch (Exception e) {
                 log.error("Bootstrap 车载节点数据同步失败", e);
-                // 不清空本地已有数据
             }
         } else {
             log.info("本地已有 MDM 车载节点数据 {} 条，跳过 Bootstrap", count);
@@ -1068,158 +1118,155 @@ public class MdmSyncAppService {
 
     /**
      * Bootstrap 全量同步零件数据
-     *
-     * <p>调用 MDM Part 全量快照接口拉取数据并 upsert 本地副本。
-     * 基于 externalRefId 和 externalVersion 进行幂等 upsert：
-     * - 如果本地不存在则新增
-     * - 如果本地存在且事件版本更高则更新
-     * - 否则忽略</p>
-     *
-     * <p>CR-021：Part 投影采用按需最小化只读投影，仅同步 VMD 业务所需的 P0 必投字段集。
-     * 来自 edd-mdm Part 子域，区别于产品树各实体的 Product MDM 子域。</p>
      */
     public void bootstrapPart() {
         log.info("开始 Bootstrap 零件数据同步");
         try {
-            // Check if local MDM parts already exist
             long existingCount = mdmPartRepository.countBySource(SourceType.MDM);
             if (existingCount > 0) {
                 log.info("本地已存在 {} 条 MDM 零件数据，跳过 Bootstrap 同步", existingCount);
                 return;
             }
 
-            List<Map<String, Object>> mdmParts = mdmPartQueryClient.getAllParts();
+            int page = 1;
+            int pageSize = 10;
+            boolean hasMore = true;
             int insertCount = 0;
             int updateCount = 0;
             int skipCount = 0;
-            for (Map<String, Object> partData : mdmParts) {
-                String code = (String) partData.get("code");
-                String name = (String) partData.get("name");
-                String partType = (String) partData.get("partType");
-                String vehicleNodeCode = (String) partData.get("vehicleNodeCode");
-                String supplierCode = (String) partData.get("supplierCode");
-                Boolean isSoftware = (Boolean) partData.get("isSoftware");
-                Boolean fotaUpgradeable = (Boolean) partData.get("fotaUpgradeable");
-                Boolean isAccuratelyTraced = (Boolean) partData.get("isAccuratelyTraced");
-                String status = (String) partData.get("status");
-                String entityId = (String) partData.get("id");
-                Long version = Long.valueOf(partData.get("version").toString());
 
-                Part localPart = mdmPartRepository.selectByExternalRefId(entityId);
-                if (localPart == null) {
-                    Part newPart = Part.builder()
-                            .pn(code)
-                            .name(name)
-                            .type(partType)
-                            .deviceCode(vehicleNodeCode)
-                            .supplierCode(supplierCode)
-                            .naturePart(isSoftware)
-                            .fotaUpgradeable(fotaUpgradeable)
-                            .accuratelyTraced(isAccuratelyTraced)
-                            .status(status)
-                            .source(SourceType.MDM)
-                            .externalRefId(entityId)
-                            .externalVersion(version)
-                            .lastSyncTime(LocalDateTime.now())
-                            .build();
-                    mdmPartRepository.insert(newPart);
-                    log.info("Bootstrap 新增 MDM 零件投影: pn={}", code);
-                    insertCount++;
-                } else if (version > localPart.getExternalVersion()) {
-                    localPart.setPn(code);
-                    localPart.setName(name);
-                    localPart.setType(partType);
-                    localPart.setDeviceCode(vehicleNodeCode);
-                    localPart.setSupplierCode(supplierCode);
-                    localPart.setNaturePart(isSoftware);
-                    localPart.setFotaUpgradeable(fotaUpgradeable);
-                    localPart.setAccuratelyTraced(isAccuratelyTraced);
-                    localPart.setStatus(status);
-                    localPart.setExternalVersion(version);
-                    localPart.setLastSyncTime(LocalDateTime.now());
-                    mdmPartRepository.updateById(localPart);
-                    log.info("Bootstrap 更新 MDM 零件投影: pn={}, version={}", code, version);
-                    updateCount++;
+            while (hasMore) {
+                PartPageResponse pageResponse = partService.snapshot(false, page, pageSize);
+                if (pageResponse == null || pageResponse.getRows() == null || pageResponse.getRows().isEmpty()) {
+                    hasMore = false;
+                    break;
+                }
+                for (PartResponse partData : pageResponse.getRows()) {
+                    Part localPart = mdmPartRepository.selectByExternalRefId(partData.getSourceId());
+                    if (localPart == null) {
+                        Part newPart = Part.builder()
+                                .pn(partData.getCode())
+                                .name(partData.getName())
+                                .type(partData.getPartType())
+                                .deviceCode(partData.getVehicleNodeCode())
+                                .supplierCode(partData.getSupplierCode())
+                                .naturePart(partData.getIsSoftware())
+                                .fotaUpgradeable(partData.getFotaUpgradeable())
+                                .accuratelyTraced(partData.getIsAccuratelyTraced())
+                                .status(partData.getStatus())
+                                .source(SourceType.MDM)
+                                .externalRefId(partData.getSourceId())
+                                .externalVersion(partData.getVersion() != null ? partData.getVersion().longValue() : 0L)
+                                .lastSyncTime(convertToLocalDateTime(partData.getModifyTime()))
+                                .build();
+                        mdmPartRepository.insert(newPart);
+                        log.info("Bootstrap 新增 MDM 零件投影: pn={}", partData.getCode());
+                        insertCount++;
+                    } else {
+                        Long remoteVersion = partData.getVersion() != null ? partData.getVersion().longValue() : 0L;
+                        if (remoteVersion > localPart.getExternalVersion()) {
+                            localPart.setPn(partData.getCode());
+                            localPart.setName(partData.getName());
+                            localPart.setType(partData.getPartType());
+                            localPart.setDeviceCode(partData.getVehicleNodeCode());
+                            localPart.setSupplierCode(partData.getSupplierCode());
+                            localPart.setNaturePart(partData.getIsSoftware());
+                            localPart.setFotaUpgradeable(partData.getFotaUpgradeable());
+                            localPart.setAccuratelyTraced(partData.getIsAccuratelyTraced());
+                            localPart.setStatus(partData.getStatus());
+                            localPart.setExternalVersion(remoteVersion);
+                            localPart.setLastSyncTime(convertToLocalDateTime(partData.getModifyTime()));
+                            mdmPartRepository.updateById(localPart);
+                            log.info("Bootstrap 更新 MDM 零件投影: pn={}, version={}", partData.getCode(), remoteVersion);
+                            updateCount++;
+                        } else {
+                            skipCount++;
+                        }
+                    }
+                }
+                if (pageResponse.getRows().size() < pageSize) {
+                    hasMore = false;
                 } else {
-                    skipCount++;
+                    page++;
                 }
             }
             log.info("Bootstrap 零件数据同步完成: 新增={}, 更新={}, 跳过={}", insertCount, updateCount, skipCount);
         } catch (Exception e) {
             log.error("Bootstrap 零件数据同步失败", e);
-            // 不清空本地已有数据
         }
     }
 
     /**
      * 强制全量同步零件数据
-     *
-     * <p>忽略本地记录数，强制调用 MDM Part 全量快照接口拉取数据并 upsert 本地副本。
-     * 适用于需要重新同步或修复数据的场景。</p>
      */
     public void forceBootstrapPart() {
         log.info("开始强制 Bootstrap 零件数据同步");
         try {
-            List<Map<String, Object>> mdmParts = mdmPartQueryClient.getAllParts();
+            int page = 1;
+            int pageSize = 10;
+            boolean hasMore = true;
             int insertCount = 0;
             int updateCount = 0;
             int skipCount = 0;
-            for (Map<String, Object> partData : mdmParts) {
-                String code = (String) partData.get("code");
-                String name = (String) partData.get("name");
-                String partType = (String) partData.get("partType");
-                String vehicleNodeCode = (String) partData.get("vehicleNodeCode");
-                String supplierCode = (String) partData.get("supplierCode");
-                Boolean isSoftware = (Boolean) partData.get("isSoftware");
-                Boolean fotaUpgradeable = (Boolean) partData.get("fotaUpgradeable");
-                Boolean isAccuratelyTraced = (Boolean) partData.get("isAccuratelyTraced");
-                String status = (String) partData.get("status");
-                String entityId = (String) partData.get("id");
-                Long version = Long.valueOf(partData.get("version").toString());
 
-                Part localPart = mdmPartRepository.selectByExternalRefId(entityId);
-                if (localPart == null) {
-                    Part newPart = Part.builder()
-                            .pn(code)
-                            .name(name)
-                            .type(partType)
-                            .deviceCode(vehicleNodeCode)
-                            .supplierCode(supplierCode)
-                            .naturePart(isSoftware)
-                            .fotaUpgradeable(fotaUpgradeable)
-                            .accuratelyTraced(isAccuratelyTraced)
-                            .status(status)
-                            .source(SourceType.MDM)
-                            .externalRefId(entityId)
-                            .externalVersion(version)
-                            .lastSyncTime(LocalDateTime.now())
-                            .build();
-                    mdmPartRepository.insert(newPart);
-                    log.info("强制 Bootstrap 新增 MDM 零件投影: pn={}", code);
-                    insertCount++;
-                } else if (version > localPart.getExternalVersion()) {
-                    localPart.setPn(code);
-                    localPart.setName(name);
-                    localPart.setType(partType);
-                    localPart.setDeviceCode(vehicleNodeCode);
-                    localPart.setSupplierCode(supplierCode);
-                    localPart.setNaturePart(isSoftware);
-                    localPart.setFotaUpgradeable(fotaUpgradeable);
-                    localPart.setAccuratelyTraced(isAccuratelyTraced);
-                    localPart.setStatus(status);
-                    localPart.setExternalVersion(version);
-                    localPart.setLastSyncTime(LocalDateTime.now());
-                    mdmPartRepository.updateById(localPart);
-                    log.info("强制 Bootstrap 更新 MDM 零件投影: pn={}, version={}", code, version);
-                    updateCount++;
+            while (hasMore) {
+                PartPageResponse pageResponse = partService.snapshot(false, page, pageSize);
+                if (pageResponse == null || pageResponse.getRows() == null || pageResponse.getRows().isEmpty()) {
+                    hasMore = false;
+                    break;
+                }
+                for (PartResponse partData : pageResponse.getRows()) {
+                    Part localPart = mdmPartRepository.selectByExternalRefId(partData.getSourceId());
+                    if (localPart == null) {
+                        Part newPart = Part.builder()
+                                .pn(partData.getCode())
+                                .name(partData.getName())
+                                .type(partData.getPartType())
+                                .deviceCode(partData.getVehicleNodeCode())
+                                .supplierCode(partData.getSupplierCode())
+                                .naturePart(partData.getIsSoftware())
+                                .fotaUpgradeable(partData.getFotaUpgradeable())
+                                .accuratelyTraced(partData.getIsAccuratelyTraced())
+                                .status(partData.getStatus())
+                                .source(SourceType.MDM)
+                                .externalRefId(partData.getSourceId())
+                                .externalVersion(partData.getVersion() != null ? partData.getVersion().longValue() : 0L)
+                                .lastSyncTime(convertToLocalDateTime(partData.getModifyTime()))
+                                .build();
+                        mdmPartRepository.insert(newPart);
+                        log.info("强制 Bootstrap 新增 MDM 零件投影: pn={}", partData.getCode());
+                        insertCount++;
+                    } else {
+                        Long remoteVersion = partData.getVersion() != null ? partData.getVersion().longValue() : 0L;
+                        if (remoteVersion > localPart.getExternalVersion()) {
+                            localPart.setPn(partData.getCode());
+                            localPart.setName(partData.getName());
+                            localPart.setType(partData.getPartType());
+                            localPart.setDeviceCode(partData.getVehicleNodeCode());
+                            localPart.setSupplierCode(partData.getSupplierCode());
+                            localPart.setNaturePart(partData.getIsSoftware());
+                            localPart.setFotaUpgradeable(partData.getFotaUpgradeable());
+                            localPart.setAccuratelyTraced(partData.getIsAccuratelyTraced());
+                            localPart.setStatus(partData.getStatus());
+                            localPart.setExternalVersion(remoteVersion);
+                            localPart.setLastSyncTime(convertToLocalDateTime(partData.getModifyTime()));
+                            mdmPartRepository.updateById(localPart);
+                            log.info("强制 Bootstrap 更新 MDM 零件投影: pn={}, version={}", partData.getCode(), remoteVersion);
+                            updateCount++;
+                        } else {
+                            skipCount++;
+                        }
+                    }
+                }
+                if (pageResponse.getRows().size() < pageSize) {
+                    hasMore = false;
                 } else {
-                    skipCount++;
+                    page++;
                 }
             }
             log.info("强制 Bootstrap 零件数据同步完成: 新增={}, 更新={}, 跳过={}", insertCount, updateCount, skipCount);
         } catch (Exception e) {
             log.error("强制 Bootstrap 零件数据同步失败", e);
-            // 不清空本地已有数据
         }
     }
 
@@ -1242,4 +1289,13 @@ public class MdmSyncAppService {
         log.info("Bootstrap全量数据同步完成");
     }
 
+    /**
+     * 将 Date 转换为 LocalDateTime
+     */
+    private LocalDateTime convertToLocalDateTime(Date date) {
+        if (date == null) {
+            return LocalDateTime.now();
+        }
+        return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+    }
 }

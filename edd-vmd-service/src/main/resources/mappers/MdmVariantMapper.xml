@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.MdmVariantMapper">
+
+    <resultMap id="baseResultMap" type="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.MdmVariantPo">
+        <id column="id" property="id"/>
+        <result column="code" property="code"/>
+        <result column="name" property="name"/>
+        <result column="platform_code" property="platformCode"/>
+        <result column="car_line_code" property="carLineCode"/>
+        <result column="model_code" property="modelCode"/>
+        <result column="source" property="source"/>
+        <result column="external_ref_id" property="externalRefId"/>
+        <result column="external_version" property="externalVersion"/>
+        <result column="last_sync_time" property="lastSyncTime"/>
+        <result column="description" property="description"/>
+        <result column="create_time" property="createTime"/>
+        <result column="create_by" property="createBy"/>
+        <result column="modify_time" property="modifyTime"/>
+        <result column="modify_by" property="modifyBy"/>
+        <result column="row_version" property="rowVersion"/>
+        <result column="row_valid" property="rowValid"/>
+    </resultMap>
+
+    <sql id="baseColumnList">
+        id, code, name, platform_code, car_line_code, model_code,
+        source, external_ref_id, external_version, last_sync_time,
+        description, create_time, create_by, modify_time, modify_by, row_version, row_valid
+    </sql>
+
+    <insert id="insertPo" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO tb_mdm_variant (
+            id, code, name, platform_code, car_line_code, model_code,
+            source, external_ref_id, external_version, last_sync_time,
+            description, create_time, create_by, modify_time, modify_by, row_version, row_valid
+        ) VALUES (
+            #{id}, #{code}, #{name}, #{platformCode}, #{carLineCode}, #{modelCode},
+            #{source}, #{externalRefId}, #{externalVersion}, #{lastSyncTime},
+            #{description}, now(), #{createBy}, now(), #{modifyBy}, 1, 1
+        )
+    </insert>
+
+    <update id="updatePo" parameterType="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.MdmVariantPo">
+        UPDATE tb_mdm_variant SET
+            code = #{code},
+            name = #{name},
+            platform_code = #{platformCode},
+            car_line_code = #{carLineCode},
+            model_code = #{modelCode},
+            source = #{source},
+            external_ref_id = #{externalRefId},
+            external_version = #{externalVersion},
+            last_sync_time = #{lastSyncTime},
+            description = #{description},
+            modify_by = #{modifyBy},
+            modify_time = now(),
+            row_version = row_version + 1
+        WHERE id = #{id} AND row_valid = 1
+    </update>
+
+    <update id="updatePoById">
+        UPDATE tb_mdm_variant SET
+            code = #{code},
+            name = #{name},
+            platform_code = #{platformCode},
+            car_line_code = #{carLineCode},
+            model_code = #{modelCode},
+            source = #{source},
+            external_ref_id = #{externalRefId},
+            external_version = #{externalVersion},
+            last_sync_time = #{lastSyncTime},
+            description = #{description},
+            modify_by = #{modifyBy},
+            modify_time = now(),
+            row_version = row_version + 1
+        WHERE id = #{id} AND row_valid = 1
+    </update>
+
+</mapper>
