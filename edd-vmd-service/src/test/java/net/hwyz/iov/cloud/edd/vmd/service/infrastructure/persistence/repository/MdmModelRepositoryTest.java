@@ -4,9 +4,11 @@ import net.hwyz.iov.cloud.edd.vmd.service.BaseTest;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Model;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmModelRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.annotation.Rollback;
 
 import java.time.LocalDateTime;
@@ -27,6 +29,14 @@ class MdmModelRepositoryTest extends BaseTest {
 
     @Autowired
     private MdmModelRepository mdmModelRepository;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @BeforeEach
+    void setUp() {
+        jdbcTemplate.execute("DELETE FROM tb_mdm_model WHERE code LIKE 'TEST_MODEL_%' OR code LIKE 'MODEL_%'");
+    }
 
     private String generateUniqueCode() {
         return "MODEL_" + UUID.randomUUID().toString().substring(0, 8);

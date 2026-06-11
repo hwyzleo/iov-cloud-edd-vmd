@@ -1,16 +1,3 @@
-spring:
-  kafka:
-    consumer:
-      bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
-      group-id: ${KAFKA_GROUP_ID:iov-cloud-edd-vmd}
-      auto-offset-reset: earliest
-      enable-auto-commit: false
-      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-    properties:
-      session.timeout.ms: 30000  # 消费者会话超时时间
-      heartbeat.interval.ms: 10000  # 心跳间隔，通常为session.timeout.ms的1/3
-
 mybatis-plus:
   type-aliases-package: net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po
 

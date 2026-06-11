@@ -48,7 +48,10 @@ public class MdmPlantRepositoryImpl implements MdmPlantRepository {
 
     @Override
     public int insert(Plant plant) {
-        return mdmPlantMapper.insertPo(PlantConverter.INSTANCE.fromDomain(plant));
+        MdmPlantPo po = PlantConverter.INSTANCE.fromDomain(plant);
+        int result = mdmPlantMapper.insertPo(po);
+        plant.setId(po.getId());
+        return result;
     }
 
     @Override

@@ -59,7 +59,10 @@ public class MdmModelRepositoryImpl implements MdmModelRepository {
 
     @Override
     public int insert(Model model) {
-        return mdmModelMapper.insertPo(ModelConverter.INSTANCE.fromDomain(model));
+        MdmModelPo po = ModelConverter.INSTANCE.fromDomain(model);
+        int result = mdmModelMapper.insertPo(po);
+        model.setId(po.getId());
+        return result;
     }
 
     @Override

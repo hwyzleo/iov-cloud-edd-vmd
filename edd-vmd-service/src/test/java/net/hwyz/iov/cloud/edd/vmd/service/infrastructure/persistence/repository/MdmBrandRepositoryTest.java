@@ -4,9 +4,11 @@ import net.hwyz.iov.cloud.edd.vmd.service.BaseTest;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Brand;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmBrandRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.annotation.Rollback;
 
 import java.time.LocalDateTime;
@@ -26,6 +28,14 @@ class MdmBrandRepositoryTest extends BaseTest {
 
     @Autowired
     private MdmBrandRepository mdmBrandRepository;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @BeforeEach
+    void setUp() {
+        jdbcTemplate.execute("DELETE FROM tb_mdm_brand WHERE code LIKE 'TEST_BRAND_%'");
+    }
 
     @Test
     @DisplayName("应成功插入品牌记录")
@@ -172,7 +182,7 @@ class MdmBrandRepositoryTest extends BaseTest {
         mdmBrandRepository.insert(brand2);
 
         Map<String, Object> map = new HashMap<>();
-        map.put("name", "测试");
+        map.put("name", "%测试%");
 
         // When
         List<Brand> result = mdmBrandRepository.selectByMap(map);

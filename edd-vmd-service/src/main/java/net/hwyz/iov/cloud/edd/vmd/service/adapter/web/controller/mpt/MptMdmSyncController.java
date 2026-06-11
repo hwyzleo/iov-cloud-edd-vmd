@@ -40,7 +40,7 @@ public class MptMdmSyncController extends BaseController {
      * <p>从 MDM 拉取指定实体的全量快照并 upsert 本地投影副本。
      * 不删除本地已有记录，按 external_ref_id / external_version 幂等。</p>
      * 
-     * @param entity 同步实体类型：brand|carLine|platform|plant|model|variant|configuration|optionFamily|optionCode|vehicleNode|all
+     * @param entity 同步实体类型：brand|carLine|platform|plant|model|variant|configuration|optionFamily|optionCode|vehicleNode|part|all
      * @return 操作结果
      */
     @RequiresPermissions("completeVehicle:mdmSync:bootstrap")
@@ -79,9 +79,38 @@ public class MptMdmSyncController extends BaseController {
             case "vehiclenode":
                 mdmSyncAppService.bootstrapVehicleNode();
                 return ApiResponse.ok("车载节点数据同步完成");
+            case "part":
+                mdmSyncAppService.bootstrapPart();
+                return ApiResponse.ok("零件数据同步完成");
             case "all":
                 mdmSyncAppService.bootstrapAll();
                 return ApiResponse.ok("全量数据同步完成");
+            default:
+                return ApiResponse.fail("不支持的实体类型: " + entity);
+        }
+    }
+
+    /**
+     * 强制全量同步
+     * 
+     * <p>强制从 MDM 拉取指定实体的全量快照并 upsert 本地投影副本。
+     * 忽略本地记录数，强制重新同步。适用于数据修复场景。</p>
+     * 
+     * @param entity 同步实体类型：part|all
+     * @return 操作结果
+     */
+    @RequiresPermissions("completeVehicle:mdmSync:bootstrap")
+    @Log(title = "MDM强制同步", businessType = BusinessType.OTHER)
+    @PostMapping(value = "/forceBootstrap")
+    public ApiResponse<String> forceBootstrap(@RequestParam(value = "entity", defaultValue = "part") String entity) {
+        log.info("管理后台用户触发MDM强制同步: entity={}", entity);
+        switch (entity.toLowerCase()) {
+            case "part":
+                mdmSyncAppService.forceBootstrapPart();
+                return ApiResponse.ok("零件数据强制同步完成");
+            case "all":
+                mdmSyncAppService.forceBootstrapPart();
+                return ApiResponse.ok("全量数据强制同步完成");
             default:
                 return ApiResponse.fail("不支持的实体类型: " + entity);
         }

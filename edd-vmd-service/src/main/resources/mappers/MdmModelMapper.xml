@@ -72,6 +72,12 @@
         <if test="nameEn != null and nameEn != ''">
             t.name_en = #{nameEn},
         </if>
+        <if test="platformCode != null and platformCode != ''">
+            t.platform_code = #{platformCode},
+        </if>
+        <if test="carLineCode != null and carLineCode != ''">
+            t.car_line_code = #{carLineCode},
+        </if>
         <if test="enable != null">
             t.enable = #{enable},
         </if>

@@ -5,9 +5,11 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Configuration;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.ConfigurationOptionCode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmConfigurationRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.annotation.Rollback;
 
 import java.time.LocalDateTime;
@@ -28,6 +30,15 @@ class MdmConfigurationRepositoryImplTest extends BaseTest {
 
     @Autowired
     private MdmConfigurationRepository mdmConfigurationRepository;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @BeforeEach
+    void setUp() {
+        jdbcTemplate.execute("DELETE FROM tb_mdm_configuration_option_code WHERE configuration_code LIKE 'TEST_CONFIG_%'");
+        jdbcTemplate.execute("DELETE FROM tb_mdm_configuration WHERE code LIKE 'TEST_CONFIG_%'");
+    }
 
     @Test
     @DisplayName("应成功插入配置记录")
@@ -207,7 +218,7 @@ class MdmConfigurationRepositoryImplTest extends BaseTest {
         mdmConfigurationRepository.insert(configuration2);
 
         Map<String, Object> map = new HashMap<>();
-        map.put("name", "测试");
+        map.put("name", "%测试%");
 
         // When
         List<Configuration> result = mdmConfigurationRepository.selectByMap(map);

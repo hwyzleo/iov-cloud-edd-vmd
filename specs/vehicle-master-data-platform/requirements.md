@@ -655,6 +655,45 @@
 - WHEN Part 投影记录 `is_accurately_traced=true` THEN THE SYSTEM SHALL 在物理零件实例层按既有精准追溯语义记录单件 SN / 精准追溯信息（实例层行为由该字典属性驱动，实例数据仍留 VMD）。
 - THE SYSTEM SHALL 保持 US-017（VehiclePart）/ US-020（EOL 零件绑定）/ US-026（生命周期节点）所覆盖的实例与事件能力语义不变，不因 Part 字典投影化而改变。
 
+#### US-014e: 实现 Kafka 消费者接收 MDM Part 事件（增量同步）
+**As a** System, **I want** 通过 Kafka 消费者实时接收 MDM Part 事件并同步到本地投影, **so that** MDM 中新增或更新的零件可以实时同步到 VMD，避免增量同步通道缺失导致数据不同步。
+
+> **问题背景（CR-024）**：当前设计文档（D13）明确 MDM 同步策略为「Kafka 事件订阅为主 + Feign 全量快照兜底」，但 VMD 项目中仅实现了 Spring `@EventListener` 监听本地事件，**未实现 Kafka 消费者**，导致增量同步通道完全缺失。本 US 补全 Kafka 消费者实现，确保 MDM Part 事件能够通过 Kafka 实时同步到 VMD。
+
+**Acceptance Criteria** (EARS):
+- WHEN MDM Part 子域通过 Kafka 推送 PartCreated / PartUpdated / PartDeleted 事件 THE SYSTEM SHALL 通过 Kafka 消费者接收事件并转换为本地 `MdmPartEvent`。
+- WHEN Kafka 消费者接收到 MDM Part 事件 THE SYSTEM SHALL 调用 `MdmSyncAppService.handlePartEvent()` 进行幂等 upsert。
+- WHEN Kafka 消费者接收到事件但 MDM 服务不可用 THEN THE SYSTEM SHALL 记录错误日志并继续处理后续事件，不阻塞消费流程。
+- WHEN Kafka 消费者处理事件失败 THEN THE SYSTEM SHALL 支持重试机制，重试次数超过阈值后将消息发送到死信队列。
+- THE SYSTEM SHALL 与 MDM 团队确认 Part 事件的 Kafka topic 名称、payload schema、partition 策略。
+- THE SYSTEM SHALL 确保 Kafka 消费者的消费组名称（group.id）与其他实体（Brand/CarLine/Platform 等）的消费组保持一致的命名规范。
+
+#### US-014f: 定时同步 MDM Part 数据
+**As a** System, **I want** 定期从 MDM 同步 Part 数据, **so that** 即使 Kafka 事件丢失或消费失败，VMD 也能通过定时任务保持 Part 投影数据的最终一致性。
+
+> **问题背景（CR-024）**：当前 Bootstrap 同步仅在启动时执行一次，且修改后的逻辑基于 `externalRefId` 和 `externalVersion` 进行增量同步。但如果没有 Kafka 事件通道，MDM 中新增的零件不会自动同步。本 US 添加定时同步机制，作为 Kafka 事件同步的补充和兜底。
+
+**Acceptance Criteria** (EARS):
+- THE SYSTEM SHALL 支持配置定时同步任务，定期调用 MDM Part 全量快照接口同步数据。
+- WHEN 定时同步任务执行 THE SYSTEM SHALL 基于 `externalRefId` 和 `externalVersion` 进行幂等 upsert，不删除本地已有记录。
+- WHEN 定时同步任务执行失败 THEN THE SYSTEM SHALL 记录错误日志并发送告警通知，不清空本地已有数据。
+- THE SYSTEM SHALL 支持通过配置开关启用/禁用定时同步任务。
+- THE SYSTEM SHALL 支持配置定时同步的执行频率（如每小时、每天）。
+- WHEN Kafka 事件同步通道正常工作 THEN THE SYSTEM SHALL 仍按计划执行定时同步，作为数据一致性兜底。
+
+#### US-014g: MDM 同步监控告警
+**As a** System, **I want** 监控 MDM 同步状态并在同步失败时发送告警, **so that** 运维人员可以及时发现同步异常并采取措施，避免数据长期不一致。
+
+> **问题背景（CR-024）**：当前 MDM 同步失败仅记录错误日志，没有监控和告警机制。如果同步长期失败，运维人员无法及时发现，导致 VMD 本地投影数据与 MDM 数据不一致。本 US 添加监控告警机制，确保同步异常能够及时被发现和处理。
+
+**Acceptance Criteria** (EARS):
+- THE SYSTEM SHALL 记录 MDM 同步的关键指标（同步成功/失败次数、最后同步时间、同步延迟等）。
+- WHEN MDM 同步连续失败次数超过阈值 THEN THE SYSTEM SHALL 发送告警通知（如邮件、短信、钉钉等）。
+- WHEN MDM 同步延迟超过阈值 THEN THE SYSTEM SHALL 发送告警通知。
+- THE SYSTEM SHALL 提供 MDM 同步状态查询接口，供运维人员查看同步状态。
+- WHEN 同步恢复正常 THEN THE SYSTEM SHALL 发送恢复通知。
+- THE SYSTEM SHALL 支持配置告警阈值和通知方式。
+
 #### US-015: 消费 MDM VehicleNode（车载节点，原 Device 设备）主数据本地投影
 **As a** System, **I want** VMD 从 MDM 同步 VehicleNode（车载节点）字典 / 类型主数据并维护本地只读投影表, **so that** 零件 / 车辆零件场景可通过 `vehicleNodeCode` 关联节点类型、车辆 / 设备详情可展示节点信息，同时 VMD 不再承担车载节点字典主数据维护职责。
 
@@ -1787,3 +1826,5 @@
 
 | 2026-06-10 | CR-022 | Modified | **车辆—零件物理实例层数据模型重构为三表**：将现「实例+绑定」混血单表 `tb_vehicle_part` 拆分为 `tb_part_info`（物理零件实例本体，唯一键 `(part_code, sn)`，允许未绑定 VIN 时独立存在=游离零件）+ `tb_vehicle_part`（纯车辆—零件绑定关系，承载装车位置 `vehicleNodeCode`/`deviceItem` 快照、时间 `bindTime`/`unbindTime`、状态 `bindState`、换件溯源 `replaceOfBindingId`）；废弃从未启用的 `tb_vehicle_part_history`（换件历史改由同一 (vin,节点位) 绑定时间线表达）。US-017 由「维护车辆零件」演进为「维护车辆—零件绑定关系」；新增 US-032（物理零件实例本体 PartInfo 与游离零件）、US-033（换件：解绑旧+绑新+溯源）、US-034（导入异步乱序绑定兜底，零件先到游离落库+按 sn 回扫补绑）、US-035（死表清退与车辆主档瘦身：删 `tb_veh_exterior/interior/wheel/optional/ecu/activation` 及遗留 `tb_mes_vehicle_data`/`tb_bom_part`/`tb_bom_part_nove`/`tr_veh_model_config_*`/`tr_veh_user_relation`/`tb_veh_user`，外饰/内饰/轮毂/选装语义由 Variant+Configuration→OptionCode 表达）、US-036（查询/RPC/权限/错误码影响）。实例属性归位准则：本体属性→`part_info`、绑定属性→`vehicle_part`、字典属性→`tb_mdm_part`/`tb_mdm_vehicle_node`（不动）；约束「同一实例/同一车同一节点位 仅一条 active 绑定」；权限点 `vehicle_part` 沿用 `completeVehicle:vehicle:vehiclePart:*`、新增 `completeVehicle:vehicle:partInfo:*`，**均留 `vehicle` 命名空间不迁 product**；错误码接续新增 `202016 PART_INSTANCE_ALREADY_EXISTS`/`202017 PART_BINDING_CONFLICT`/`202018 PART_INSTANCE_NOT_EXIST`。§2 新增 G12、物理实例层语义统一补充、N15；§3.6 重构 US-017 + 新增 US-032~036；§4 新增「PartInfo / VehiclePart 物理实例层模型约束」；§5 新增 O83~O90。**本 CR 仅处理 VMD 自有物理实例层，不动字典/类型层（CR-011~021 MDM 投影）、不切断「车辆→零件→设备→生命周期」链路；无历史数据，结构干净重建、不做数据回迁；Flyway 建议 V18 删死表 / V19 建 part_info / V20 重建 vehicle_part（接续 V17），脚本与 active 约束物理实现（MySQL 生成列/NULL 技巧）等细节留 design.md / tasks.md**。**design.md / tasks.md 需按 SPEC 工作流后续同步落地本 CR** |
 | 2026-06-11 | CR-023 | Modified | **零件实例数据入站统一为两入口 + 共用入站内核**：§3.7「车辆数据导入域」重定位为「零件实例数据入站域」；新增 US-037（入口①上游系统对接，独立链路 / 异步事件为主 + 批量兜底 / 入站回执 + 错误通知 / 不硬绑 MES）、US-038（共用入站内核，合并 US-034 的两步落库与乱序兜底，六步：校验 / 标准化 / 幂等 / 去重 / 落库 / 触发事件，按 `part_type` 适配源差异）、US-039（入站异常隔离 / 重放 / 对账）；US-018 重定位为入口②（复用并挂接入站内核，不旁路）；US-020~024 收敛为入站内核来源适配器（移除 `bindOrg=MES` 与 `vehicleNodeCode=BTM_M` 硬编码）；**US-025 / US-032 反转 CR-022 O86：SIM 纳入物理实例层（`part_type=SIM` 落 `part_info`，`sn`=ICCID，IMSI/MSISDN/MNO 入 `extra`），落库后触发 TSP 连接 / 激活事件**；US-032 新增 `source`（入站来源枚举 MES/MANUAL/WMS/IQC/OTHER）/ `part_type` 快照 / 入站溯源键（`inbound_batch_no`/`source_event_id`）/ `last_inbound_time`，`vehicle_node_code` 明确为可空（车载节点对零件可选）；US-017 绑定支持无车载节点零件（安装位置以 `device_item` 表达、节点位可空）、`bind_org` 取自 `source`；US-036 新增权限点 `completeVehicle:vehicle:partInbound:{list/query/export/retry}` 与错误码 `202019 PART_INBOUND_VALIDATE_FAILED` / `202020 PART_TYPE_SCHEMA_NOT_FOUND`；§1 新增 CR-023 兼容说明、§2 新增 G13 / N16、§4 新增「零件实例数据入站约束」与「来源标记语义区分」、§5 新增 O91~O95。边界声明 MDM（字典投影只读）/ TSP（激活 / 连接回写另一条写路径）/ MES（数据源，仅定义接收契约）。**本 CR 仅改 requirements.md；design.md / tasks.md 需按 SPEC 工作流后续同步落地本 CR** |
+
+| 2026-06-11 | CR-024 | New | **MDM Part 同步通道补全：Kafka 消费者 + 定时同步 + 监控告警**：当前设计文档（D13）明确 MDM 同步策略为「Kafka 事件订阅为主 + Feign 全量快照兜底」，但实现中存在三个关键缺失：① Kafka 消费者未实现（增量同步通道缺失）；② Bootstrap 同步仅启动时执行一次（无法持续同步新增数据）；③ 同步失败无监控告警（运维无法及时发现异常）。本 CR 补全这三个能力：新增 US-014e（Kafka 消费者实现，接收 MDM Part 事件并转换为本地 `MdmPartEvent`）、US-014f（定时同步，定期调用 MDM 全量快照接口作为 Kafka 事件的补充和兜底）、US-014g（监控告警，记录同步指标、失败告警、延迟告警、恢复通知）。§2 新增 G14（MDM 同步可靠性目标）；§4 新增「MDM 同步可靠性约束」；§5 新增 O96~O100。**design.md / tasks.md 需按 SPEC 工作流后续同步落地本 CR** |

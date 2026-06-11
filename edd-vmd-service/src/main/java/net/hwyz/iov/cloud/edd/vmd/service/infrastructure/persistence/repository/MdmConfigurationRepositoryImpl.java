@@ -50,7 +50,10 @@ public class MdmConfigurationRepositoryImpl implements MdmConfigurationRepositor
 
     @Override
     public int insert(Configuration configuration) {
-        return mdmConfigurationMapper.insertPo(ConfigurationConverter.INSTANCE.fromDomain(configuration));
+        MdmConfigurationPo po = ConfigurationConverter.INSTANCE.fromDomain(configuration);
+        int result = mdmConfigurationMapper.insertPo(po);
+        configuration.setId(po.getId());
+        return result;
     }
 
     @Override
@@ -80,7 +83,12 @@ public class MdmConfigurationRepositoryImpl implements MdmConfigurationRepositor
         List<MdmConfigurationOptionCodePo> poList = optionCodeList.stream()
                 .map(ConfigurationOptionCodeConverter.INSTANCE::fromDomain)
                 .collect(Collectors.toList());
-        return mdmConfigurationOptionCodeMapper.batchInsertPo(poList);
+        int result = mdmConfigurationOptionCodeMapper.batchInsertPo(poList);
+        // Copy generated IDs back to domain objects
+        for (int i = 0; i < optionCodeList.size(); i++) {
+            optionCodeList.get(i).setId(poList.get(i).getId());
+        }
+        return result;
     }
 
     @Override
@@ -103,17 +111,17 @@ public class MdmConfigurationRepositoryImpl implements MdmConfigurationRepositor
 
     @Override
     public Configuration selectByExternalRefId(String externalRefId) {
-        return null;
+        return ConfigurationConverter.INSTANCE.toDomain(mdmConfigurationMapper.selectPoByExternalRefId(externalRefId));
     }
 
     @Override
     public long countBySource(SourceType source) {
-        return 0;
+        return mdmConfigurationMapper.countPoBySource(source.getValue());
     }
 
     @Override
     public int updateById(Configuration configuration) {
-        return 0;
+        return mdmConfigurationMapper.updatePo(ConfigurationConverter.INSTANCE.fromDomain(configuration));
     }
 
 }

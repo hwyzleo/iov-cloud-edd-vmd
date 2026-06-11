@@ -59,7 +59,10 @@ public class MdmBrandRepositoryImpl implements MdmBrandRepository {
 
     @Override
     public int insert(Brand brand) {
-        return mdmBrandMapper.insertPo(BrandConverter.INSTANCE.fromDomain(brand));
+        MdmBrandPo po = BrandConverter.INSTANCE.fromDomain(brand);
+        int result = mdmBrandMapper.insertPo(po);
+        brand.setId(po.getId());
+        return result;
     }
 
     @Override

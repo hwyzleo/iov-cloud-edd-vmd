@@ -1069,33 +1069,45 @@ public class MdmSyncAppService {
     /**
      * Bootstrap 全量同步零件数据
      *
-     * <p>当本地 source=MDM 的零件记录数为 0 时，自动调用 MDM Part 全量快照接口
-     * 拉取数据并 upsert 本地副本。</p>
+     * <p>调用 MDM Part 全量快照接口拉取数据并 upsert 本地副本。
+     * 基于 externalRefId 和 externalVersion 进行幂等 upsert：
+     * - 如果本地不存在则新增
+     * - 如果本地存在且事件版本更高则更新
+     * - 否则忽略</p>
      *
      * <p>CR-021：Part 投影采用按需最小化只读投影，仅同步 VMD 业务所需的 P0 必投字段集。
      * 来自 edd-mdm Part 子域，区别于产品树各实体的 Product MDM 子域。</p>
      */
     public void bootstrapPart() {
         log.info("开始 Bootstrap 零件数据同步");
-        long count = mdmPartRepository.countBySource(SourceType.MDM);
-        if (count == 0) {
-            log.info("本地无 MDM 零件记录（count=0），启动 Bootstrap 同步");
-            try {
-                List<Map<String, Object>> mdmParts = mdmPartQueryClient.getAllParts();
-                for (Map<String, Object> partData : mdmParts) {
-                    String code = (String) partData.get("code");
-                    String name = (String) partData.get("name");
-                    String partType = (String) partData.get("partType");
-                    String vehicleNodeCode = (String) partData.get("vehicleNodeCode");
-                    String supplierCode = (String) partData.get("supplierCode");
-                    Boolean isSoftware = (Boolean) partData.get("isSoftware");
-                    Boolean fotaUpgradeable = (Boolean) partData.get("fotaUpgradeable");
-                    Boolean isAccuratelyTraced = (Boolean) partData.get("isAccuratelyTraced");
-                    String status = (String) partData.get("status");
-                    String entityId = (String) partData.get("id");
-                    Long version = Long.valueOf(partData.get("version").toString());
+        try {
+            // Check if local MDM parts already exist
+            long existingCount = mdmPartRepository.countBySource(SourceType.MDM);
+            if (existingCount > 0) {
+                log.info("本地已存在 {} 条 MDM 零件数据，跳过 Bootstrap 同步", existingCount);
+                return;
+            }
 
-                    Part part = Part.builder()
+            List<Map<String, Object>> mdmParts = mdmPartQueryClient.getAllParts();
+            int insertCount = 0;
+            int updateCount = 0;
+            int skipCount = 0;
+            for (Map<String, Object> partData : mdmParts) {
+                String code = (String) partData.get("code");
+                String name = (String) partData.get("name");
+                String partType = (String) partData.get("partType");
+                String vehicleNodeCode = (String) partData.get("vehicleNodeCode");
+                String supplierCode = (String) partData.get("supplierCode");
+                Boolean isSoftware = (Boolean) partData.get("isSoftware");
+                Boolean fotaUpgradeable = (Boolean) partData.get("fotaUpgradeable");
+                Boolean isAccuratelyTraced = (Boolean) partData.get("isAccuratelyTraced");
+                String status = (String) partData.get("status");
+                String entityId = (String) partData.get("id");
+                Long version = Long.valueOf(partData.get("version").toString());
+
+                Part localPart = mdmPartRepository.selectByExternalRefId(entityId);
+                if (localPart == null) {
+                    Part newPart = Part.builder()
                             .pn(code)
                             .name(name)
                             .type(partType)
@@ -1110,16 +1122,104 @@ public class MdmSyncAppService {
                             .externalVersion(version)
                             .lastSyncTime(LocalDateTime.now())
                             .build();
-                    mdmPartRepository.insert(part);
+                    mdmPartRepository.insert(newPart);
                     log.info("Bootstrap 新增 MDM 零件投影: pn={}", code);
+                    insertCount++;
+                } else if (version > localPart.getExternalVersion()) {
+                    localPart.setPn(code);
+                    localPart.setName(name);
+                    localPart.setType(partType);
+                    localPart.setDeviceCode(vehicleNodeCode);
+                    localPart.setSupplierCode(supplierCode);
+                    localPart.setNaturePart(isSoftware);
+                    localPart.setFotaUpgradeable(fotaUpgradeable);
+                    localPart.setAccuratelyTraced(isAccuratelyTraced);
+                    localPart.setStatus(status);
+                    localPart.setExternalVersion(version);
+                    localPart.setLastSyncTime(LocalDateTime.now());
+                    mdmPartRepository.updateById(localPart);
+                    log.info("Bootstrap 更新 MDM 零件投影: pn={}, version={}", code, version);
+                    updateCount++;
+                } else {
+                    skipCount++;
                 }
-                log.info("Bootstrap 零件数据同步完成，共同步 {} 条", mdmParts.size());
-            } catch (Exception e) {
-                log.error("Bootstrap 零件数据同步失败", e);
-                // 不清空本地已有数据
             }
-        } else {
-            log.info("本地已有 MDM 零件数据 {} 条，跳过 Bootstrap", count);
+            log.info("Bootstrap 零件数据同步完成: 新增={}, 更新={}, 跳过={}", insertCount, updateCount, skipCount);
+        } catch (Exception e) {
+            log.error("Bootstrap 零件数据同步失败", e);
+            // 不清空本地已有数据
+        }
+    }
+
+    /**
+     * 强制全量同步零件数据
+     *
+     * <p>忽略本地记录数，强制调用 MDM Part 全量快照接口拉取数据并 upsert 本地副本。
+     * 适用于需要重新同步或修复数据的场景。</p>
+     */
+    public void forceBootstrapPart() {
+        log.info("开始强制 Bootstrap 零件数据同步");
+        try {
+            List<Map<String, Object>> mdmParts = mdmPartQueryClient.getAllParts();
+            int insertCount = 0;
+            int updateCount = 0;
+            int skipCount = 0;
+            for (Map<String, Object> partData : mdmParts) {
+                String code = (String) partData.get("code");
+                String name = (String) partData.get("name");
+                String partType = (String) partData.get("partType");
+                String vehicleNodeCode = (String) partData.get("vehicleNodeCode");
+                String supplierCode = (String) partData.get("supplierCode");
+                Boolean isSoftware = (Boolean) partData.get("isSoftware");
+                Boolean fotaUpgradeable = (Boolean) partData.get("fotaUpgradeable");
+                Boolean isAccuratelyTraced = (Boolean) partData.get("isAccuratelyTraced");
+                String status = (String) partData.get("status");
+                String entityId = (String) partData.get("id");
+                Long version = Long.valueOf(partData.get("version").toString());
+
+                Part localPart = mdmPartRepository.selectByExternalRefId(entityId);
+                if (localPart == null) {
+                    Part newPart = Part.builder()
+                            .pn(code)
+                            .name(name)
+                            .type(partType)
+                            .deviceCode(vehicleNodeCode)
+                            .supplierCode(supplierCode)
+                            .naturePart(isSoftware)
+                            .fotaUpgradeable(fotaUpgradeable)
+                            .accuratelyTraced(isAccuratelyTraced)
+                            .status(status)
+                            .source(SourceType.MDM)
+                            .externalRefId(entityId)
+                            .externalVersion(version)
+                            .lastSyncTime(LocalDateTime.now())
+                            .build();
+                    mdmPartRepository.insert(newPart);
+                    log.info("强制 Bootstrap 新增 MDM 零件投影: pn={}", code);
+                    insertCount++;
+                } else if (version > localPart.getExternalVersion()) {
+                    localPart.setPn(code);
+                    localPart.setName(name);
+                    localPart.setType(partType);
+                    localPart.setDeviceCode(vehicleNodeCode);
+                    localPart.setSupplierCode(supplierCode);
+                    localPart.setNaturePart(isSoftware);
+                    localPart.setFotaUpgradeable(fotaUpgradeable);
+                    localPart.setAccuratelyTraced(isAccuratelyTraced);
+                    localPart.setStatus(status);
+                    localPart.setExternalVersion(version);
+                    localPart.setLastSyncTime(LocalDateTime.now());
+                    mdmPartRepository.updateById(localPart);
+                    log.info("强制 Bootstrap 更新 MDM 零件投影: pn={}, version={}", code, version);
+                    updateCount++;
+                } else {
+                    skipCount++;
+                }
+            }
+            log.info("强制 Bootstrap 零件数据同步完成: 新增={}, 更新={}, 跳过={}", insertCount, updateCount, skipCount);
+        } catch (Exception e) {
+            log.error("强制 Bootstrap 零件数据同步失败", e);
+            // 不清空本地已有数据
         }
     }
 

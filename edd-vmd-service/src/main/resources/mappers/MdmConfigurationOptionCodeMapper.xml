@@ -24,24 +24,24 @@
 
     <insert id="insertPo" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO tb_mdm_configuration_option_code (
-            id, configuration_code, option_family_code, option_code, feature_type,
+            id, configuration_code, family_code, option_family_code, feature_code, option_code, feature_type,
             description, create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
         VALUES (
-            #{id}, #{configurationCode}, #{optionFamilyCode}, #{optionCode}, #{optionType},
+            #{id}, #{configurationCode}, #{optionFamilyCode}, #{optionFamilyCode}, #{optionCode}, #{optionCode}, #{optionType},
             #{description}, now(), #{createBy}, now(), #{modifyBy}, 1, 1
         )
     </insert>
 
     <insert id="batchInsertPo" useGeneratedKeys="true" keyProperty="id" parameterType="java.util.List">
         INSERT INTO tb_mdm_configuration_option_code (
-            id, configuration_code, option_family_code, option_code, feature_type,
+            id, configuration_code, family_code, option_family_code, feature_code, option_code, feature_type,
             description, create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
         VALUES
         <foreach collection="list" item="item" index="index" separator=",">
         (
-            #{item.id}, #{item.configurationCode}, #{item.optionFamilyCode}, #{item.optionCode}, #{item.optionType},
+            #{item.id}, #{item.configurationCode}, #{item.optionFamilyCode}, #{item.optionFamilyCode}, #{item.optionCode}, #{item.optionCode}, #{item.optionType},
             #{item.description}, now(), #{item.createBy}, now(), #{item.modifyBy}, 1, 1
         )
         </foreach>
@@ -53,9 +53,11 @@
             t.configuration_code = #{configurationCode},
         </if>
         <if test="optionFamilyCode != null and optionFamilyCode != ''">
+            t.family_code = #{optionFamilyCode},
             t.option_family_code = #{optionFamilyCode},
         </if>
         <if test="optionCode != null and optionCode != ''">
+            t.feature_code = #{optionCode},
             t.option_code = #{optionCode},
         </if>
         <if test="optionType != null and optionType != ''">

@@ -224,5 +224,8 @@
         <if test="brandCode != null and brandCode != ''">
             AND t.brand_code = #{brandCode}
         </if>
+        <if test="code != null and code != ''">
+            AND t.code = #{code}
+        </if>
     </select>
 </mapper>

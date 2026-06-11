@@ -236,6 +236,21 @@
         LIMIT 1
     </select>
 
+    <select id="selectPoByExternalRefId" parameterType="String" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList"/>
+        FROM tb_mdm_configuration t
+        WHERE t.row_valid = 1
+        AND t.external_ref_id = #{externalRefId}
+        LIMIT 1
+    </select>
+
+    <select id="countPoBySource" parameterType="String" resultType="long">
+        SELECT COUNT(*)
+        FROM tb_mdm_configuration t
+        WHERE t.row_valid = 1
+        AND t.source = #{source}
+    </select>
+
     <select id="countPoByMap" parameterType="java.util.Map" resultType="int">
         SELECT COUNT(*)
         FROM tb_mdm_configuration t
@@ -251,6 +266,9 @@
         </if>
         <if test="vehicleStageCode != null and vehicleStageCode != ''">
             AND t.vehicle_stage_code = #{vehicleStageCode}
+        </if>
+        <if test="code != null and code != ''">
+            AND t.code = #{code}
         </if>
     </select>
 </mapper>

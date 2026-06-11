@@ -59,7 +59,10 @@ public class MdmPlatformRepositoryImpl implements MdmPlatformRepository {
 
     @Override
     public int insert(Platform platform) {
-        return mdmPlatformMapper.insertPo(PlatformConverter.INSTANCE.fromDomain(platform));
+        MdmPlatformPo po = PlatformConverter.INSTANCE.fromDomain(platform);
+        int result = mdmPlatformMapper.insertPo(po);
+        platform.setId(po.getId());
+        return result;
     }
 
     @Override

@@ -4,9 +4,11 @@ import net.hwyz.iov.cloud.edd.vmd.service.BaseTest;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.CarLine;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmCarLineRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.annotation.Rollback;
 
 import java.time.LocalDateTime;
@@ -28,6 +30,14 @@ class MdmCarLineRepositoryTest extends BaseTest {
 
     @Autowired
     private MdmCarLineRepository mdmCarLineRepository;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @BeforeEach
+    void setUp() {
+        jdbcTemplate.execute("DELETE FROM tb_mdm_car_line WHERE code LIKE 'TEST_CARLINE_%'");
+    }
 
     @Test
     @DisplayName("应成功插入车系记录")
@@ -61,6 +71,7 @@ class MdmCarLineRepositoryTest extends BaseTest {
                 .brandCode("BRAND002")
                 .enable(true)
                 .sort(2)
+                .source(SourceType.MANUAL)
                 .build();
         mdmCarLineRepository.insert(carLine);
 
@@ -86,6 +97,7 @@ class MdmCarLineRepositoryTest extends BaseTest {
                 .brandCode("BRAND003")
                 .enable(true)
                 .sort(3)
+                .source(SourceType.MANUAL)
                 .build();
         mdmCarLineRepository.insert(carLine);
 
@@ -107,6 +119,7 @@ class MdmCarLineRepositoryTest extends BaseTest {
                 .brandCode("BRAND004")
                 .enable(true)
                 .sort(4)
+                .source(SourceType.MANUAL)
                 .build();
         mdmCarLineRepository.insert(carLine);
 
@@ -134,6 +147,7 @@ class MdmCarLineRepositoryTest extends BaseTest {
                 .brandCode("BRAND005")
                 .enable(true)
                 .sort(5)
+                .source(SourceType.MANUAL)
                 .build();
         CarLine carLine2 = CarLine.builder()
                 .code("TEST_CARLINE_006")
@@ -141,6 +155,7 @@ class MdmCarLineRepositoryTest extends BaseTest {
                 .brandCode("BRAND006")
                 .enable(true)
                 .sort(6)
+                .source(SourceType.MANUAL)
                 .build();
         mdmCarLineRepository.insert(carLine1);
         mdmCarLineRepository.insert(carLine2);
@@ -166,6 +181,7 @@ class MdmCarLineRepositoryTest extends BaseTest {
                 .brandCode("BRAND007")
                 .enable(true)
                 .sort(7)
+                .source(SourceType.MANUAL)
                 .build();
         CarLine carLine2 = CarLine.builder()
                 .code("TEST_CARLINE_008")
@@ -173,12 +189,13 @@ class MdmCarLineRepositoryTest extends BaseTest {
                 .brandCode("BRAND008")
                 .enable(true)
                 .sort(8)
+                .source(SourceType.MANUAL)
                 .build();
         mdmCarLineRepository.insert(carLine1);
         mdmCarLineRepository.insert(carLine2);
 
         Map<String, Object> map = new HashMap<>();
-        map.put("name", "测试");
+        map.put("name", "%测试%");
 
         // When
         List<CarLine> result = mdmCarLineRepository.selectByMap(map);
@@ -198,6 +215,7 @@ class MdmCarLineRepositoryTest extends BaseTest {
                 .brandCode("BRAND009")
                 .enable(true)
                 .sort(9)
+                .source(SourceType.MANUAL)
                 .build();
         mdmCarLineRepository.insert(carLine);
 
@@ -343,6 +361,7 @@ class MdmCarLineRepositoryTest extends BaseTest {
                 .brandCode(brandCode)
                 .enable(true)
                 .sort(15)
+                .source(SourceType.MANUAL)
                 .build();
         CarLine carLine2 = CarLine.builder()
                 .code("TEST_CARLINE_016")
@@ -350,6 +369,7 @@ class MdmCarLineRepositoryTest extends BaseTest {
                 .brandCode("BRAND_OTHER")
                 .enable(true)
                 .sort(16)
+                .source(SourceType.MANUAL)
                 .build();
         mdmCarLineRepository.insert(carLine1);
         mdmCarLineRepository.insert(carLine2);

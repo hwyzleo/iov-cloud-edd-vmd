@@ -59,7 +59,10 @@ public class MdmCarLineRepositoryImpl implements MdmCarLineRepository {
 
     @Override
     public int insert(CarLine carLine) {
-        return mdmCarLineMapper.insertPo(CarLineConverter.INSTANCE.fromDomain(carLine));
+        MdmCarLinePo po = CarLineConverter.INSTANCE.fromDomain(carLine);
+        int result = mdmCarLineMapper.insertPo(po);
+        carLine.setId(po.getId());
+        return result;
     }
 
     @Override

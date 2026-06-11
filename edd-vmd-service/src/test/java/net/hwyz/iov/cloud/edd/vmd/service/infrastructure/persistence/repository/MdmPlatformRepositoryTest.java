@@ -4,9 +4,11 @@ import net.hwyz.iov.cloud.edd.vmd.service.BaseTest;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Platform;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmPlatformRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.annotation.Rollback;
 
 import java.time.LocalDateTime;
@@ -26,6 +28,14 @@ class MdmPlatformRepositoryTest extends BaseTest {
 
     @Autowired
     private MdmPlatformRepository mdmPlatformRepository;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
+
+    @BeforeEach
+    void setUp() {
+        jdbcTemplate.execute("DELETE FROM tb_mdm_platform WHERE code LIKE 'TEST_PLATFORM_%'");
+    }
 
     @Test
     @DisplayName("应成功插入平台记录")
@@ -57,6 +67,7 @@ class MdmPlatformRepositoryTest extends BaseTest {
                 .name("测试平台2")
                 .enable(true)
                 .sort(2)
+                .source(SourceType.MANUAL)
                 .build();
         mdmPlatformRepository.insert(platform);
 
@@ -80,6 +91,7 @@ class MdmPlatformRepositoryTest extends BaseTest {
                 .name("测试平台3")
                 .enable(true)
                 .sort(3)
+                .source(SourceType.MANUAL)
                 .build();
         mdmPlatformRepository.insert(platform);
 
@@ -100,6 +112,7 @@ class MdmPlatformRepositoryTest extends BaseTest {
                 .name("原始名称")
                 .enable(true)
                 .sort(4)
+                .source(SourceType.MANUAL)
                 .build();
         mdmPlatformRepository.insert(platform);
 
@@ -124,12 +137,14 @@ class MdmPlatformRepositoryTest extends BaseTest {
                 .name("平台5")
                 .enable(true)
                 .sort(5)
+                .source(SourceType.MANUAL)
                 .build();
         Platform platform2 = Platform.builder()
                 .code("TEST_PLATFORM_006")
                 .name("平台6")
                 .enable(true)
                 .sort(6)
+                .source(SourceType.MANUAL)
                 .build();
         mdmPlatformRepository.insert(platform1);
         mdmPlatformRepository.insert(platform2);
@@ -154,18 +169,20 @@ class MdmPlatformRepositoryTest extends BaseTest {
                 .name("测试平台7")
                 .enable(true)
                 .sort(7)
+                .source(SourceType.MANUAL)
                 .build();
         Platform platform2 = Platform.builder()
                 .code("TEST_PLATFORM_008")
                 .name("其他平台")
                 .enable(true)
                 .sort(8)
+                .source(SourceType.MANUAL)
                 .build();
         mdmPlatformRepository.insert(platform1);
         mdmPlatformRepository.insert(platform2);
 
         Map<String, Object> map = new HashMap<>();
-        map.put("name", "测试");
+        map.put("name", "%测试%");
 
         // When
         List<Platform> result = mdmPlatformRepository.selectByMap(map);
@@ -184,6 +201,7 @@ class MdmPlatformRepositoryTest extends BaseTest {
                 .name("平台9")
                 .enable(true)
                 .sort(9)
+                .source(SourceType.MANUAL)
                 .build();
         mdmPlatformRepository.insert(platform);
 
