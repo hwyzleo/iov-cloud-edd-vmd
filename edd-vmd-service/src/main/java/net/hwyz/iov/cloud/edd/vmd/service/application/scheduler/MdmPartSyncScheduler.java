@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.MdmSyncAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.monitoring.MdmSyncMetrics;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
@@ -26,6 +27,9 @@ public class MdmPartSyncScheduler {
 
     private final MdmSyncAppService mdmSyncAppService;
     private final MdmSyncMetrics mdmSyncMetrics;
+
+    @Value("${mdm.sync.part.alert.failure-threshold:5}")
+    private int failureThreshold;
 
     /**
      * 定时同步MDM Part数据
@@ -70,7 +74,6 @@ public class MdmPartSyncScheduler {
      * 检查并发送失败告警
      */
     private void checkAndSendFailureAlert() {
-        int failureThreshold = 5; // 从配置读取
         if (mdmSyncMetrics.shouldAlertOnConsecutiveFailures(failureThreshold)) {
             log.error("MDM Part同步连续失败{}次，触发告警", mdmSyncMetrics.getConsecutiveFailures());
             // TODO: 实际发送告警通知（邮件、短信、钉钉等）
