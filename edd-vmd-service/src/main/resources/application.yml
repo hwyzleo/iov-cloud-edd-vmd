@@ -8,8 +8,8 @@ spring:
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
     properties:
-      session.timeout.ms: 30000
-      heartbeat.interval.ms: 10000
+      session.timeout.ms: 30000  # 消费者会话超时时间
+      heartbeat.interval.ms: 10000  # 心跳间隔，通常为session.timeout.ms的1/3
 
 mybatis-plus:
   type-aliases-package: net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po
@@ -23,9 +23,9 @@ mdm:
         topic: ${MDM_PART_KAFKA_TOPIC:mdm-part-events}
       scheduler:
         enabled: ${MDM_PART_SCHEDULER_ENABLED:true}
-        cron: ${MDM_PART_SCHEDULER_CRON:0 0 */1 * * ?}
+        cron: ${MDM_PART_SCHEDULER_CRON:0 0 */1 * * ?}  # 每小时执行一次
       monitoring:
         enabled: ${MDM_PART_MONITORING_ENABLED:true}
         alert:
-          failure-threshold: ${MDM_PART_ALERT_FAILURE_THRESHOLD:5}
-          delay-threshold-minutes: ${MDM_PART_ALERT_DELAY_THRESHOLD:30}
+          failure-threshold: ${MDM_PART_ALERT_FAILURE_THRESHOLD:5}  # 连续失败次数告警阈值
+          delay-threshold-minutes: ${MDM_PART_ALERT_DELAY_THRESHOLD:30}  # 同步延迟告警阈值（分钟）
