@@ -4,7 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import java.io.Serializable;
+
 import java.time.LocalDateTime;
 import net.hwyz.iov.cloud.framework.mysql.po.BasePo;
 import lombok.*;
@@ -24,7 +24,7 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @AllArgsConstructor
 @TableName("tb_mdm_part")
-public class PartPo extends BasePo {
+public class MdmPartPo extends BasePo {
 
     private static final long serialVersionUID = 1L;
 

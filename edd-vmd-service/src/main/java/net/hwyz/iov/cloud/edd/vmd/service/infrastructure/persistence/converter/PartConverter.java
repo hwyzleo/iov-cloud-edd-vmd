@@ -1,9 +1,8 @@
 package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter;
 
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Part;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.PartPo;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.MdmPartPo;
 import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
 import org.mapstruct.factory.Mappers;
 
 import java.util.List;
@@ -21,18 +20,18 @@ public interface PartConverter {
     /**
      * PO 转领域对象
      *
-     * @param partPo PO
+     * @param mdmPartPo PO
      * @return 领域对象
      */
-    Part toDomain(PartPo partPo);
+    Part toDomain(MdmPartPo mdmPartPo);
 
     /**
      * PO 列表转领域对象列表
      *
-     * @param partPoList PO 列表
+     * @param mdmPartPoList PO 列表
      * @return 领域对象列表
      */
-    List<Part> toDomainList(List<PartPo> partPoList);
+    List<Part> toDomainList(List<MdmPartPo> mdmPartPoList);
 
     /**
      * 领域对象转 PO
@@ -40,5 +39,5 @@ public interface PartConverter {
      * @param part 领域对象
      * @return PO
      */
-    PartPo fromDomain(Part part);
+    MdmPartPo fromDomain(Part part);
 }
