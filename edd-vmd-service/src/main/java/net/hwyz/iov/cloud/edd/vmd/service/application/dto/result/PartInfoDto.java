@@ -33,6 +33,7 @@ public class PartInfoDto {
     private String extra;
     private Integer instanceState;
     private Instant firstSeenTime;
+    private String partName;
     private String description;
     private Date createTime;
 

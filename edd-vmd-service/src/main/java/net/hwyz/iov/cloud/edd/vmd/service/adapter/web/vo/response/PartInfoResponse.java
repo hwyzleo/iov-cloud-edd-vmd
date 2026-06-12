@@ -26,6 +26,11 @@ public class PartInfoResponse {
     private String partCode;
 
     /**
+     * 零件名称
+     */
+    private String partName;
+
+    /**
      * 零件序列号
      */
     private String sn;

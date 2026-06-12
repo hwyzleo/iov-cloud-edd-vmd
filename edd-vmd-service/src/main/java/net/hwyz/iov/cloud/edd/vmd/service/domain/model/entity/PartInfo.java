@@ -123,6 +123,11 @@ public class PartInfo implements DomainObj<PartInfo> {
     private Instant lastInboundTime;
 
     /**
+     * 零件名称（来自零件定义表）
+     */
+    private String partName;
+
+    /**
      * 创建时间
      */
     private Date createTime;

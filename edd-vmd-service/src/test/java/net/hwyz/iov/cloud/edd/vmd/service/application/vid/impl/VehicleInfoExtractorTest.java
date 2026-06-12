@@ -51,7 +51,7 @@ class VehicleInfoExtractorTest {
         assertEquals("P001", result.getPlatformCode());
         assertEquals("S001", result.getCarLineCode());
         assertEquals("MOD01", result.getModelCode());
-        assertEquals("BM01", result.getBaseModelCode());
+        assertEquals("BM01", result.getVariantCode());
         assertEquals("BC01", result.getBuildConfigCode());
         assertEquals("V1.0", result.getVehicleBaseVersion());
     }

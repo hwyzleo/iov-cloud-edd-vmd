@@ -25,6 +25,7 @@
         <result column="modify_by" property="modifyBy" />
         <result column="row_version" property="rowVersion" />
         <result column="row_valid" property="rowValid" />
+        <result column="part_name" property="partName" />
     </resultMap>
 
     <!-- 通用查询结果列 -->
@@ -185,8 +186,12 @@
 
     <!-- 根据Map对象获取对应数据列表 -->
     <select id="selectPoByMap" parameterType="java.util.Map" resultMap="baseResultMap">
-        SELECT <include refid="baseColumnList"/>
+        SELECT t.id, t.part_code, t.sn, t.vehicle_node_code, t.config_word, t.supplier_code, t.batch_num,
+               t.hardware_ver, t.software_ver, t.hardware_pn, t.software_pn, t.extra, t.instance_state,
+               t.first_seen_time, t.description, t.create_time, t.create_by, t.modify_time, t.modify_by,
+               t.row_version, t.row_valid, p.name AS part_name
         FROM tb_part_info t
+        LEFT JOIN tb_mdm_part p ON t.part_code = p.pn AND p.row_valid = 1
         WHERE t.row_valid = 1
         <!-- 添加自定义条件 -->
         <if test="partCode != null and partCode != ''">

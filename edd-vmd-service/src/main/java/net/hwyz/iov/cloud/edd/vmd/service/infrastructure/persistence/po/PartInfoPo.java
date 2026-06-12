@@ -141,4 +141,10 @@ public class PartInfoPo extends BasePo {
      */
     @TableField("last_inbound_time")
     private Instant lastInboundTime;
+
+    /**
+     * 零件名称（关联tb_mdm_part.name，非本表字段）
+     */
+    @TableField(exist = false)
+    private String partName;
 }

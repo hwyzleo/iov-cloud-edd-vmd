@@ -127,6 +127,7 @@ class PartInboundIntegrationTest {
                 .inboundBatchNo("BATCH001")
                 .sourceEventId("EVENT001")
                 .lastInboundTime(Instant.now())
+                .partName("车载终端")
                 .build();
 
         PartInfo partInfo = PartInfoConverter.INSTANCE.toDomain(po);
@@ -141,6 +142,7 @@ class PartInboundIntegrationTest {
         assertEquals("BATCH001", partInfo.getInboundBatchNo());
         assertEquals("EVENT001", partInfo.getSourceEventId());
         assertNotNull(partInfo.getLastInboundTime());
+        assertEquals("车载终端", partInfo.getPartName());
     }
 
     @Test
@@ -160,6 +162,7 @@ class PartInboundIntegrationTest {
                 .inboundBatchNo("BATCH001")
                 .sourceEventId("EVENT001")
                 .lastInboundTime(Instant.now())
+                .partName("车载终端")
                 .build();
 
         PartInfoPo po = PartInfoConverter.INSTANCE.fromDomain(partInfo);
@@ -174,6 +177,7 @@ class PartInboundIntegrationTest {
         assertEquals("BATCH001", po.getInboundBatchNo());
         assertEquals("EVENT001", po.getSourceEventId());
         assertNotNull(po.getLastInboundTime());
+        assertEquals("车载终端", po.getPartName());
     }
 
     @Test
@@ -185,6 +189,7 @@ class PartInboundIntegrationTest {
                 .sn("SN001")
                 .source(null)
                 .partType(null)
+                .partName(null)
                 .build();
 
         PartInfo partInfo = PartInfoConverter.INSTANCE.toDomain(po);
@@ -192,12 +197,14 @@ class PartInboundIntegrationTest {
         assertNotNull(partInfo);
         assertNull(partInfo.getSource());
         assertNull(partInfo.getPartType());
+        assertNull(partInfo.getPartName());
 
         PartInfoPo backToPo = PartInfoConverter.INSTANCE.fromDomain(partInfo);
 
         assertNotNull(backToPo);
         assertNull(backToPo.getSource());
         assertNull(backToPo.getPartType());
+        assertNull(backToPo.getPartName());
     }
 
     @Test
@@ -296,6 +303,7 @@ class PartInboundIntegrationTest {
                 .inboundBatchNo("BATCH001")
                 .sourceEventId("EVENT001")
                 .lastInboundTime(Instant.now())
+                .partName("车载终端")
                 .build();
 
         assertEquals(InboundSourceType.MES, partInfo.getSource());
@@ -303,6 +311,7 @@ class PartInboundIntegrationTest {
         assertEquals("BATCH001", partInfo.getInboundBatchNo());
         assertEquals("EVENT001", partInfo.getSourceEventId());
         assertNotNull(partInfo.getLastInboundTime());
+        assertEquals("车载终端", partInfo.getPartName());
     }
 
     @Test
