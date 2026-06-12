@@ -1,14 +1,17 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 
+import net.hwyz.iov.cloud.edd.mdm.api.service.SupplierService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartInboundAppService.PartInboundRecord;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartInboundAppService.PartInboundResult;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.PartInboundValidateFailedException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.PartTypeSchemaNotFoundException;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Part;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartInfo;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehiclePart;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.InboundSourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.PartType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.PartTypeSchemaRegistry;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmPartRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,6 +35,12 @@ class PartInboundAppServiceTest {
     @Mock
     private VehiclePartAppService vehiclePartAppService;
 
+    @Mock
+    private MdmPartRepository mdmPartRepository;
+
+    @Mock
+    private SupplierService supplierService;
+
     private PartTypeSchemaRegistry partTypeSchemaRegistry;
 
     private PartInboundAppService partInboundAppService;
@@ -40,7 +49,8 @@ class PartInboundAppServiceTest {
     void setUp() {
         partTypeSchemaRegistry = new PartTypeSchemaRegistry();
         partInboundAppService = new PartInboundAppService(
-                partInfoAppService, vehiclePartAppService, partTypeSchemaRegistry);
+                partInfoAppService, vehiclePartAppService, partTypeSchemaRegistry,
+                mdmPartRepository, supplierService);
     }
 
     @Test
@@ -55,6 +65,7 @@ class PartInboundAppServiceTest {
                 .extraFields(Map.of("hsm", "HSM001", "mac", "MAC001"))
                 .build();
 
+        when(mdmPartRepository.selectByPn("PN001")).thenReturn(Part.builder().build());
         when(partInfoAppService.upsertPartInfo(any(PartInfo.class))).thenReturn(1);
 
         // When
@@ -86,6 +97,7 @@ class PartInboundAppServiceTest {
                 .extraFields(extraFields)
                 .build();
 
+        when(mdmPartRepository.selectByPn("SIM001")).thenReturn(Part.builder().build());
         when(partInfoAppService.upsertPartInfo(any(PartInfo.class))).thenReturn(1);
 
         // When
@@ -130,6 +142,8 @@ class PartInboundAppServiceTest {
                 .partType("INVALID_TYPE")
                 .build();
 
+        when(mdmPartRepository.selectByPn("PN001")).thenReturn(Part.builder().build());
+
         // When
         PartInboundResult result = partInboundAppService.processInbound(
                 List.of(record), InboundSourceType.MES, null);
@@ -152,6 +166,7 @@ class PartInboundAppServiceTest {
                 .batchNum("BATCH001")
                 .build();
 
+        when(mdmPartRepository.selectByPn("PN001")).thenReturn(Part.builder().build());
         when(partInfoAppService.upsertPartInfo(any(PartInfo.class))).thenAnswer(invocation -> {
             PartInfo partInfo = invocation.getArgument(0);
             partInfo.setId(1L);
@@ -184,6 +199,7 @@ class PartInboundAppServiceTest {
                 .batchNum("BATCH001")
                 .build();
 
+        when(mdmPartRepository.selectByPn("PN001")).thenReturn(Part.builder().build());
         when(partInfoAppService.upsertPartInfo(any(PartInfo.class))).thenReturn(1);
 
         // When
@@ -208,6 +224,7 @@ class PartInboundAppServiceTest {
                 .batchNum("BATCH001")
                 .build();
 
+        when(mdmPartRepository.selectByPn("PN001")).thenReturn(Part.builder().build());
         when(partInfoAppService.upsertPartInfo(any(PartInfo.class))).thenAnswer(invocation -> {
             PartInfo partInfo = invocation.getArgument(0);
             partInfo.setId(1L);
