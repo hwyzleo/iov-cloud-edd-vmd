@@ -3,10 +3,14 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 import cn.hutool.core.util.ObjUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.hwyz.iov.cloud.edd.mdm.api.service.SupplierService;
+import net.hwyz.iov.cloud.edd.mdm.api.vo.response.SupplierResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.PartInboundValidateFailedException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.PartTypeSchemaNotFoundException;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Part;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartInfo;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehiclePart;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmPartRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.InboundSourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.PartInstanceState;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.PartType;
@@ -37,6 +41,8 @@ public class PartInboundAppService {
     private final PartInfoAppService partInfoAppService;
     private final VehiclePartAppService vehiclePartAppService;
     private final PartTypeSchemaRegistry partTypeSchemaRegistry;
+    private final MdmPartRepository mdmPartRepository;
+    private final SupplierService supplierService;
 
     /**
      * 零件入站处理结果
@@ -161,6 +167,24 @@ public class PartInboundAppService {
     private void validateRecord(PartInboundRecord record) {
         if (StrUtil.isBlank(record.getPartCode())) {
             throw new PartInboundValidateFailedException("零件编码不能为空");
+        }
+
+        // 校验零件编码是否存在于MDM主数据
+        Part mdmPart = mdmPartRepository.selectByPn(record.getPartCode());
+        if (mdmPart == null) {
+            throw new PartInboundValidateFailedException("零件编码[" + record.getPartCode() + "]在MDM主数据中不存在");
+        }
+
+        // 校验供应商编码（宽松：仅警告，不阻断）
+        if (StrUtil.isNotBlank(record.getSupplierCode())) {
+            try {
+                SupplierResponse supplier = supplierService.getByCode(record.getSupplierCode());
+                if (supplier == null) {
+                    log.warn("零件[{}:{}]供应商编码[{}]在MDM主数据中不存在", record.getPartCode(), record.getSn(), record.getSupplierCode());
+                }
+            } catch (Exception e) {
+                log.warn("零件[{}:{}]供应商编码[{}]校验调用MDM服务失败", record.getPartCode(), record.getSn(), record.getSupplierCode(), e);
+            }
         }
 
         // 解析零件类型
