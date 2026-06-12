@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.framework.common.domain.DomainObj;
 import java.time.LocalDateTime;
+import java.util.Date;
 
 /**
  * 零件领域对象
@@ -274,5 +275,10 @@ public class Part implements DomainObj<Part> {
      * 最后一次同步时间
      */
     private LocalDateTime lastSyncTime;
+
+    /**
+     * 创建时间
+     */
+    private Date createTime;
 
 }

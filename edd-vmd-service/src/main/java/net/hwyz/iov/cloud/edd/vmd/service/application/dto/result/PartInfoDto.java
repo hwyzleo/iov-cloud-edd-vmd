@@ -6,6 +6,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.Instant;
+import java.util.Date;
 
 /**
  * 物理零件实例 DTO
@@ -33,5 +34,6 @@ public class PartInfoDto {
     private Integer instanceState;
     private Instant firstSeenTime;
     private String description;
+    private Date createTime;
 
 }

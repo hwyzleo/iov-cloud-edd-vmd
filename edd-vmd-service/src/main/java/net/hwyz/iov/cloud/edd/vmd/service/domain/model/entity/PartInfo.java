@@ -10,6 +10,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.PartType;
 import net.hwyz.iov.cloud.framework.common.domain.DomainObj;
 
 import java.time.Instant;
+import java.util.Date;
 
 /**
  * 物理零件实例本体领域对象
@@ -120,5 +121,10 @@ public class PartInfo implements DomainObj<PartInfo> {
      * 最近入站时间
      */
     private Instant lastInboundTime;
+
+    /**
+     * 创建时间
+     */
+    private Date createTime;
 
 }

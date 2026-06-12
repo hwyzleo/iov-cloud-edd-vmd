@@ -14,10 +14,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParserRegist
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.VehicleImportDataException;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.InboundSourceType;
 import net.hwyz.iov.cloud.framework.common.util.StrUtil;
-import net.hwyz.iov.cloud.iov.tsp.api.service.TspSimService;
-import net.hwyz.iov.cloud.iov.tsp.api.vo.SimVo;
 import net.hwyz.iov.cloud.iov.tsp.api.vo.enums.MnoType;
-import net.hwyz.iov.cloud.iov.tsp.api.vo.request.BatchImportSimRequest;
 import org.springframework.stereotype.Component;
 
 import jakarta.annotation.PostConstruct;
@@ -37,7 +34,7 @@ import java.util.Map;
 @Component("simDataParserV1.0")
 public class SimDataParserV1_0 extends BaseParser implements ImportDataParser {
 
-    private final TspSimService tspSimService;
+//    private final TspSimService tspSimService;
     private final ImportDataParserRegistry parserRegistry;
 
     @PostConstruct
@@ -68,7 +65,7 @@ public class SimDataParserV1_0 extends BaseParser implements ImportDataParser {
         }
 
         List<PartInboundRecord> records = new ArrayList<>();
-        List<SimVo> simList = new ArrayList<>();
+//        List<SimVo> simList = new ArrayList<>();
         int invalidCount = 0;
 
         JSONArray items = data.getJSONArray("ITEMS");
@@ -94,7 +91,7 @@ public class SimDataParserV1_0 extends BaseParser implements ImportDataParser {
                     null, batchNum, extraFields);
             records.add(record);
 
-            simList.add(SimVo.builder().iccid(iccid).imsi(imsi).msisdn(msisdn).build());
+//            simList.add(SimVo.builder().iccid(iccid).imsi(imsi).msisdn(msisdn).build());
         }
 
         // 使用入站内核处理
@@ -105,13 +102,13 @@ public class SimDataParserV1_0 extends BaseParser implements ImportDataParser {
         }
 
         // 调用下游TSP服务
-        if (!simList.isEmpty()) {
-            BatchImportSimRequest req = new BatchImportSimRequest();
-            req.setBatchNum(batchNum);
-            req.setMnoType(mnoType);
-            req.setSimList(simList);
-            tspSimService.batchImport(req);
-        }
+//        if (!simList.isEmpty()) {
+//            BatchImportSimRequest req = new BatchImportSimRequest();
+//            req.setBatchNum(batchNum);
+//            req.setMnoType(mnoType);
+//            req.setSimList(simList);
+//            tspSimService.batchImport(req);
+//        }
 
         return ImportResult.builder()
                 .totalCount(result.getTotalCount())

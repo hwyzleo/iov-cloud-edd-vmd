@@ -5,6 +5,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.Date;
+
 /**
  * 零件 DTO
  *
@@ -62,5 +64,6 @@ public class PartDto {
     private String firstProductionDate;
     private String initialModel;
     private String description;
+    private Date createTime;
 
 }
