@@ -1,6 +1,11 @@
 mybatis-plus:
   type-aliases-package: net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po
 
+spring:
+  kafka:
+    listener:
+      ack-mode: manual
+
 # MDM同步配置
 # 注意：topic名称必须与MDM需求文档US-064保持一致
 mdm:
