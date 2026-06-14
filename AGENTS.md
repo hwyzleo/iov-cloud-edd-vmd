@@ -9,9 +9,11 @@
 
 # 当前项目需求文档
 - 参考 Notion Page ID: 37d0ec7a4b9280449f1ae54822245bf7
+- 变更记录 Notion Page ID: 37f0ec7a4b9280ffbc71d0b76faa480f
 
 # 当前项目设计文档
 - 参考 Notion Page ID: 37d0ec7a4b9280dda094c7de79459037
+- 变更记录 Notion Page ID: 37f0ec7a4b928090b8efd3e27d39aa7c
 
 # graphify
 
