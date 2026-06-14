@@ -648,14 +648,14 @@ class MdmSyncAppServiceTest {
         MdmPartEvent event = new MdmPartEvent("CREATED", "mdm-part-001", 1L, "PART001",
                 "零件1", "NORMAL", "NODE001", "SUPPLIER001", true, true, true, "PRODUCTION", LocalDateTime.now());
 
-        when(mdmPartRepository.selectByExternalRefId("mdm-part-001")).thenReturn(null);
+        when(mdmPartRepository.selectByPn("PART001")).thenReturn(null);
         when(mdmPartRepository.insert(any(Part.class))).thenReturn(1);
 
         // When
         mdmSyncAppService.handlePartEvent(event);
 
         // Then
-        verify(mdmPartRepository).selectByExternalRefId("mdm-part-001");
+        verify(mdmPartRepository).selectByPn("PART001");
         verify(mdmPartRepository).insert(any(Part.class));
     }
 
@@ -675,14 +675,14 @@ class MdmSyncAppServiceTest {
                 .externalVersion(1L)
                 .build();
 
-        when(mdmPartRepository.selectByExternalRefId("mdm-part-002")).thenReturn(localPart);
+        when(mdmPartRepository.selectByPn("PART002")).thenReturn(localPart);
         when(mdmPartRepository.updateById(any(Part.class))).thenReturn(1);
 
         // When
         mdmSyncAppService.handlePartEvent(event);
 
         // Then
-        verify(mdmPartRepository).selectByExternalRefId("mdm-part-002");
+        verify(mdmPartRepository).selectByPn("PART002");
         verify(mdmPartRepository).updateById(any(Part.class));
     }
 
@@ -702,13 +702,13 @@ class MdmSyncAppServiceTest {
                 .externalVersion(2L)
                 .build();
 
-        when(mdmPartRepository.selectByExternalRefId("mdm-part-003")).thenReturn(localPart);
+        when(mdmPartRepository.selectByPn("PART003")).thenReturn(localPart);
 
         // When
         mdmSyncAppService.handlePartEvent(event);
 
         // Then
-        verify(mdmPartRepository).selectByExternalRefId("mdm-part-003");
+        verify(mdmPartRepository).selectByPn("PART003");
         verify(mdmPartRepository, never()).updateById(any(Part.class));
     }
 

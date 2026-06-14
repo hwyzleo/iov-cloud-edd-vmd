@@ -492,10 +492,14 @@ public class MdmSyncAppService {
 
     /**
      * 处理 MDM 零件事件
+     * <p>
+     * 幂等策略：按零件编号(pn)查找本地记录，按externalVersion判断是否需要更新。
+     * 使用pn而非MDM主键作为查找条件，确保Bootstrap全量同步和Kafka增量同步的幂等一致性。
+     * </p>
      */
     public void handlePartEvent(MdmPartEvent event) {
-        log.info("处理MDM零件事件: entityId={}, version={}", event.getEntityId(), event.getVersion());
-        Part localPart = mdmPartRepository.selectByExternalRefId(event.getEntityId());
+        log.info("处理MDM零件事件: code={}, version={}", event.getCode(), event.getVersion());
+        Part localPart = mdmPartRepository.selectByPn(event.getCode());
         if (localPart == null) {
             Part newPart = Part.builder()
                     .pn(event.getCode())
@@ -516,7 +520,6 @@ public class MdmSyncAppService {
             log.info("新增零件: pn={}", event.getCode());
         } else {
             if (event.getVersion() > localPart.getExternalVersion()) {
-                localPart.setPn(event.getCode());
                 localPart.setName(event.getName());
                 localPart.setType(event.getPartType());
                 localPart.setDeviceCode(event.getVehicleNodeCode());
@@ -525,6 +528,7 @@ public class MdmSyncAppService {
                 localPart.setFotaUpgradeable(event.getFotaUpgradeable());
                 localPart.setAccuratelyTraced(event.getIsAccuratelyTraced());
                 localPart.setStatus(event.getStatus());
+                localPart.setExternalRefId(event.getEntityId());
                 localPart.setExternalVersion(event.getVersion());
                 localPart.setLastSyncTime(LocalDateTime.now());
                 mdmPartRepository.updateById(localPart);
