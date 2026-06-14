@@ -46,7 +46,7 @@ class MdmPartKafkaConsumerTest {
     void onPartEvent_shouldSuccessfullyProcessEventAndCallHandlePartEvent() throws Exception {
         // Given
         String messageJson = "{\"eventType\":\"CREATED\",\"entityId\":\"mdm-part-001\",\"version\":1,\"code\":\"PART001\"}";
-        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm-part-events", 0, 0L, "key", messageJson);
+        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.material.part.event", 0, 0L, "key", messageJson);
 
         MdmPartEvent testEvent = new MdmPartEvent("CREATED", "mdm-part-001", 1L, "PART001",
                 "零件1", "NORMAL", "NODE001", "SUPPLIER001", true, true, true, "PRODUCTION", LocalDateTime.now());
@@ -68,7 +68,7 @@ class MdmPartKafkaConsumerTest {
     void onPartEvent_shouldHandleParseFailureAndRecordFailureMetric() throws Exception {
         // Given
         String invalidJson = "invalid-json";
-        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm-part-events", 0, 0L, "key", invalidJson);
+        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.material.part.event", 0, 0L, "key", invalidJson);
 
         when(objectMapper.readValue(invalidJson, MdmPartEvent.class))
                 .thenThrow(new RuntimeException("Parse error"));
@@ -87,7 +87,7 @@ class MdmPartKafkaConsumerTest {
     void onPartEvent_shouldHandleHandlePartEventFailureAndRecordFailureMetric() throws Exception {
         // Given
         String messageJson = "{\"eventType\":\"CREATED\",\"entityId\":\"mdm-part-001\",\"version\":1,\"code\":\"PART001\"}";
-        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm-part-events", 0, 0L, "key", messageJson);
+        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.material.part.event", 0, 0L, "key", messageJson);
 
         MdmPartEvent testEvent = new MdmPartEvent("CREATED", "mdm-part-001", 1L, "PART001",
                 "零件1", "NORMAL", "NODE001", "SUPPLIER001", true, true, true, "PRODUCTION", LocalDateTime.now());
@@ -108,7 +108,7 @@ class MdmPartKafkaConsumerTest {
     void onPartEvent_shouldRecordProcessingDuration() throws Exception {
         // Given
         String messageJson = "{\"eventType\":\"CREATED\",\"entityId\":\"mdm-part-001\",\"version\":1,\"code\":\"PART001\"}";
-        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm-part-events", 0, 0L, "key", messageJson);
+        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.material.part.event", 0, 0L, "key", messageJson);
 
         MdmPartEvent testEvent = new MdmPartEvent("CREATED", "mdm-part-001", 1L, "PART001",
                 "零件1", "NORMAL", "NODE001", "SUPPLIER001", true, true, true, "PRODUCTION", LocalDateTime.now());

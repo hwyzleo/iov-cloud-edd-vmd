@@ -39,7 +39,7 @@ public class MdmPartKafkaConsumer {
      * @param acknowledgment 手动确认
      */
     @KafkaListener(
-            topics = "${mdm.sync.part.kafka.topic:mdm-part-events}",
+            topics = "${mdm.sync.part.kafka.topic:mdm.material.part.event}",
             groupId = "${spring.kafka.consumer.group-id:iov-cloud-edd-vmd}",
             containerFactory = "kafkaListenerContainerFactory"
     )
