@@ -11,7 +11,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.kafka.support.Acknowledgment;
 
 import java.time.LocalDateTime;
 
@@ -35,9 +34,6 @@ class MdmPartKafkaConsumerTest {
     @Mock
     private ObjectMapper objectMapper;
 
-    @Mock
-    private Acknowledgment acknowledgment;
-
     @InjectMocks
     private MdmPartKafkaConsumer kafkaConsumer;
 
@@ -54,12 +50,11 @@ class MdmPartKafkaConsumerTest {
         when(objectMapper.readValue(messageJson, MdmPartEvent.class)).thenReturn(testEvent);
 
         // When
-        kafkaConsumer.onPartEvent(record, acknowledgment);
+        kafkaConsumer.onPartEvent(record);
 
         // Then
         verify(mdmSyncAppService).handlePartEvent(testEvent);
         verify(mdmSyncMetrics).recordSuccess();
-        verify(acknowledgment).acknowledge();
         verify(mdmSyncMetrics, never()).recordFailure();
     }
 
@@ -74,12 +69,11 @@ class MdmPartKafkaConsumerTest {
                 .thenThrow(new RuntimeException("Parse error"));
 
         // When
-        kafkaConsumer.onPartEvent(record, acknowledgment);
+        kafkaConsumer.onPartEvent(record);
 
         // Then
         verify(mdmSyncAppService, never()).handlePartEvent(any());
         verify(mdmSyncMetrics).recordFailure();
-        verify(acknowledgment).acknowledge();
     }
 
     @Test
@@ -96,11 +90,10 @@ class MdmPartKafkaConsumerTest {
         doThrow(new RuntimeException("Handle error")).when(mdmSyncAppService).handlePartEvent(testEvent);
 
         // When
-        kafkaConsumer.onPartEvent(record, acknowledgment);
+        kafkaConsumer.onPartEvent(record);
 
         // Then
         verify(mdmSyncMetrics).recordFailure();
-        verify(acknowledgment).acknowledge();
     }
 
     @Test
@@ -116,7 +109,7 @@ class MdmPartKafkaConsumerTest {
         when(objectMapper.readValue(messageJson, MdmPartEvent.class)).thenReturn(testEvent);
 
         // When
-        kafkaConsumer.onPartEvent(record, acknowledgment);
+        kafkaConsumer.onPartEvent(record);
 
         // Then
         verify(mdmSyncMetrics).recordDuration(anyLong());

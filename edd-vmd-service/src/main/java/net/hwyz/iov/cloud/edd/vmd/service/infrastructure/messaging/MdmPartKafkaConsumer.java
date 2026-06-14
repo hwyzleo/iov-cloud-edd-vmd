@@ -9,7 +9,6 @@ import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.monitoring.MdmSyncMetri
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.kafka.annotation.KafkaListener;
-import org.springframework.kafka.support.Acknowledgment;
 import org.springframework.stereotype.Component;
 
 /**
@@ -36,14 +35,13 @@ public class MdmPartKafkaConsumer {
      * 消费MDM Part事件
      *
      * @param record Kafka消费者记录
-     * @param acknowledgment 手动确认
      */
     @KafkaListener(
             topics = "${mdm.sync.part.kafka.topic:mdm.material.part.event}",
             groupId = "${spring.kafka.consumer.group-id:iov-cloud-edd-vmd}",
             containerFactory = "kafkaListenerContainerFactory"
     )
-    public void onPartEvent(ConsumerRecord<String, String> record, Acknowledgment acknowledgment) {
+    public void onPartEvent(ConsumerRecord<String, String> record) {
         long startTime = System.currentTimeMillis();
         log.info("收到MDM Part事件: topic={}, partition={}, offset={}, key={}",
                 record.topic(), record.partition(), record.offset(), record.key());
@@ -54,12 +52,10 @@ public class MdmPartKafkaConsumer {
             mdmSyncMetrics.recordSuccess();
             log.info("MDM Part事件处理成功: entityId={}, eventType={}",
                     event.getEntityId(), event.getEventType());
-            acknowledgment.acknowledge();
         } catch (Exception e) {
             mdmSyncMetrics.recordFailure();
             log.error("MDM Part事件处理失败: offset={}, error={}",
                     record.offset(), e.getMessage(), e);
-            acknowledgment.acknowledge();
         } finally {
             long duration = System.currentTimeMillis() - startTime;
             mdmSyncMetrics.recordDuration(duration);
