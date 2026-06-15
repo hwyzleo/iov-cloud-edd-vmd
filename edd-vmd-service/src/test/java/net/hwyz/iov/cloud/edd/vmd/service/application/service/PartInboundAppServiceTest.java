@@ -13,6 +13,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.PartType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.PartTypeSchemaRegistry;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmPartRepository;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
@@ -211,6 +212,39 @@ class PartInboundAppServiceTest {
         assertEquals(1, result.getSuccessCount());
         assertEquals(0, result.getFailureCount());
         assertEquals(1, result.getInvalidCount());
+    }
+
+    @Test
+    @DisplayName("Should validate part type against MDM Part projection")
+    void shouldValidatePartTypeAgainstMdmPartProjection() {
+        // Given
+        PartInboundRecord record = PartInboundRecord.builder()
+                .partCode("TEST_PART_001")
+                .sn("TEST_SN_001")
+                .partType("TBOX")
+                .build();
+
+        Part mdmPart = Part.builder()
+                .pn("TEST_PART_001")
+                .name("Test Part")
+                .type("TBOX")
+                .build();
+
+        when(mdmPartRepository.selectByPn("TEST_PART_001")).thenReturn(mdmPart);
+        when(partInfoAppService.upsertPartInfo(any(PartInfo.class))).thenAnswer(invocation -> {
+            PartInfo partInfo = invocation.getArgument(0);
+            partInfo.setId(1L);
+            return 1;
+        });
+
+        // When
+        PartInfo result = partInboundAppService.processSingleInbound(
+                record, InboundSourceType.MES, null);
+
+        // Then
+        assertNotNull(result);
+        assertEquals("TBOX", result.getPartType().name());
+        verify(mdmPartRepository).selectByPn("TEST_PART_001");
     }
 
     @Test
