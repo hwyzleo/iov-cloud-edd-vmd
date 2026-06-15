@@ -119,7 +119,8 @@ public class PartInfoPo extends BasePo {
     private String source;
 
     /**
-     * 零件类型快照：TBOX-车载终端, BTM-蓝牙模块, CCP-域控制器, IDCM-智能驾驶控制, SIM-SIM卡, OTHER-其他
+     * 零件类型
+     * CR-025: 一律取自 MDM Part 投影（partCode -> part.pn），不再人工录入
      */
     @TableField("part_type")
     private String partType;

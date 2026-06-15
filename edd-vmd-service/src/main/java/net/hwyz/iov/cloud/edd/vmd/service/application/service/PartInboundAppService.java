@@ -6,6 +6,8 @@ import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.mdm.api.service.SupplierService;
 import net.hwyz.iov.cloud.edd.mdm.api.vo.response.SupplierResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.PartInboundValidateFailedException;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.PartNotActiveException;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.PartNotFoundException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.PartTypeSchemaNotFoundException;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Part;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartInfo;
@@ -163,17 +165,33 @@ public class PartInboundAppService {
 
     /**
      * 步骤1: 字段校验
+     * CR-025: 零件类型取自 MDM Part 投影（partCode），废止人工录入类型
      */
     private void validateRecord(PartInboundRecord record) {
         if (StrUtil.isBlank(record.getPartCode())) {
             throw new PartInboundValidateFailedException("零件编码不能为空");
         }
 
-        // 校验零件编码是否存在于MDM主数据
+        // 1. 验证 partCode 存在于 MDM Part 投影
         Part mdmPart = mdmPartRepository.selectByPn(record.getPartCode());
         if (mdmPart == null) {
-            throw new PartInboundValidateFailedException("零件编码[" + record.getPartCode() + "]在MDM主数据中不存在");
+            throw new PartNotFoundException(record.getPartCode());
         }
+
+        // 2. 验证 MDM Part 状态为 ACTIVE
+        if (!"ACTIVE".equals(mdmPart.getStatus())) {
+            throw new PartNotActiveException(record.getPartCode());
+        }
+
+        // 3. 从 MDM Part 投影获取零件类型
+        String mdmPartType = mdmPart.getType();
+        if (mdmPartType == null || mdmPartType.isBlank()) {
+            log.warn("MDM Part 类型为空, partCode={}, 使用默认类型 OTHER", record.getPartCode());
+            mdmPartType = "OTHER";
+        }
+
+        // CR-025: 覆写 record.partType 为 MDM Part 投影类型，下游 normalizeRecord / bindVehiclePart 直接使用
+        record.setPartType(mdmPartType);
 
         // 校验供应商编码（宽松：仅警告，不阻断）
         if (StrUtil.isNotBlank(record.getSupplierCode())) {

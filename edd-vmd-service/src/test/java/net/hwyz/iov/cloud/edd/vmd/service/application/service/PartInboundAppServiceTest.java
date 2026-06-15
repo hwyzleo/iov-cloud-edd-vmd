@@ -66,7 +66,7 @@ class PartInboundAppServiceTest {
                 .extraFields(Map.of("hsm", "HSM001", "mac", "MAC001"))
                 .build();
 
-        when(mdmPartRepository.selectByPn("PN001")).thenReturn(Part.builder().build());
+        when(mdmPartRepository.selectByPn("PN001")).thenReturn(Part.builder().status("ACTIVE").type("BTM").build());
         when(partInfoAppService.upsertPartInfo(any(PartInfo.class))).thenReturn(1);
 
         // When
@@ -98,7 +98,7 @@ class PartInboundAppServiceTest {
                 .extraFields(extraFields)
                 .build();
 
-        when(mdmPartRepository.selectByPn("SIM001")).thenReturn(Part.builder().build());
+        when(mdmPartRepository.selectByPn("SIM001")).thenReturn(Part.builder().status("ACTIVE").type("SIM").build());
         when(partInfoAppService.upsertPartInfo(any(PartInfo.class))).thenReturn(1);
 
         // When
@@ -143,7 +143,7 @@ class PartInboundAppServiceTest {
                 .partType("INVALID_TYPE")
                 .build();
 
-        when(mdmPartRepository.selectByPn("PN001")).thenReturn(Part.builder().build());
+        when(mdmPartRepository.selectByPn("PN001")).thenReturn(Part.builder().status("ACTIVE").type("INVALID_TYPE").build());
 
         // When
         PartInboundResult result = partInboundAppService.processInbound(
@@ -167,7 +167,7 @@ class PartInboundAppServiceTest {
                 .batchNum("BATCH001")
                 .build();
 
-        when(mdmPartRepository.selectByPn("PN001")).thenReturn(Part.builder().build());
+        when(mdmPartRepository.selectByPn("PN001")).thenReturn(Part.builder().status("ACTIVE").type("TBOX").build());
         when(partInfoAppService.upsertPartInfo(any(PartInfo.class))).thenAnswer(invocation -> {
             PartInfo partInfo = invocation.getArgument(0);
             partInfo.setId(1L);
@@ -200,7 +200,7 @@ class PartInboundAppServiceTest {
                 .batchNum("BATCH001")
                 .build();
 
-        when(mdmPartRepository.selectByPn("PN001")).thenReturn(Part.builder().build());
+        when(mdmPartRepository.selectByPn("PN001")).thenReturn(Part.builder().status("ACTIVE").type("BTM").build());
         when(partInfoAppService.upsertPartInfo(any(PartInfo.class))).thenReturn(1);
 
         // When
@@ -228,6 +228,7 @@ class PartInboundAppServiceTest {
                 .pn("TEST_PART_001")
                 .name("Test Part")
                 .type("TBOX")
+                .status("ACTIVE")
                 .build();
 
         when(mdmPartRepository.selectByPn("TEST_PART_001")).thenReturn(mdmPart);
@@ -258,7 +259,7 @@ class PartInboundAppServiceTest {
                 .batchNum("BATCH001")
                 .build();
 
-        when(mdmPartRepository.selectByPn("PN001")).thenReturn(Part.builder().build());
+        when(mdmPartRepository.selectByPn("PN001")).thenReturn(Part.builder().status("ACTIVE").type("TBOX").build());
         when(partInfoAppService.upsertPartInfo(any(PartInfo.class))).thenAnswer(invocation -> {
             PartInfo partInfo = invocation.getArgument(0);
             partInfo.setId(1L);

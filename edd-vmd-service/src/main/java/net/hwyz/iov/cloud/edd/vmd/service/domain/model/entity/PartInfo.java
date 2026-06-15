@@ -103,7 +103,8 @@ public class PartInfo implements DomainObj<PartInfo> {
     private InboundSourceType source;
 
     /**
-     * 零件类型快照
+     * 零件类型
+     * CR-025: 一律取自 MDM Part 投影（partCode -> part.pn），不再人工录入
      */
     private PartType partType;
 
