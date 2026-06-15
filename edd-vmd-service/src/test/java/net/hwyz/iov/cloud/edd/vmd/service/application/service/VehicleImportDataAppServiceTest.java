@@ -5,6 +5,7 @@ import cn.hutool.json.JSONUtil;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ImportResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParser;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParserRegistry;
+import net.hwyz.iov.cloud.edd.vmd.service.application.vid.impl.ProduceDataParserV1_0;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleImportData;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehImportDataRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,12 +35,15 @@ class VehicleImportDataAppServiceTest {
     @Mock
     private ImportDataParser vehicleProduceDataParserV1_0;
 
+    @Mock
+    private ProduceDataParserV1_0 produceDataParserV1_0Bean;
+
     private VehicleImportDataAppService vehicleImportDataAppService;
 
     @BeforeEach
     void setUp() {
         vehicleImportDataAppService = new VehicleImportDataAppService(
-                parserRegistry, vehImportDataRepository);
+                parserRegistry, vehImportDataRepository, produceDataParserV1_0Bean);
     }
 
     @Test
@@ -56,16 +60,14 @@ class VehicleImportDataAppServiceTest {
                 .build();
 
         when(vehImportDataRepository.selectByBatchNum(batchNum)).thenReturn(importData);
-        when(parserRegistry.getParser("PRODUCE", "1.0")).thenReturn(vehicleProduceDataParserV1_0);
-        when(vehicleProduceDataParserV1_0.parse(eq(batchNum), any(JSONObject.class)))
+        when(produceDataParserV1_0Bean.parse(eq(batchNum), any(JSONObject.class)))
                 .thenReturn(ImportResult.builder().build());
 
         // When
         vehicleImportDataAppService.parseVehicleImportData(batchNum);
 
         // Then
-        verify(parserRegistry).getParser("PRODUCE", "1.0");
-        verify(vehicleProduceDataParserV1_0).parse(eq(batchNum), any(JSONObject.class));
-        verify(produceDataParserV1_0, never()).parse(anyString(), any(JSONObject.class));
+        verify(produceDataParserV1_0Bean).parse(eq(batchNum), any(JSONObject.class));
+        verify(parserRegistry, never()).getParser(anyString(), anyString());
     }
 }

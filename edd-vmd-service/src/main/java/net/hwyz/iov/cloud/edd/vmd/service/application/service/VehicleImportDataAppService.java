@@ -11,6 +11,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.VehicleImportDa
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.VehicleImportDataQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParser;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParserRegistry;
+import net.hwyz.iov.cloud.edd.vmd.service.application.vid.impl.ProduceDataParserV1_0;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleImportData;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehImportDataRepository;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
@@ -33,6 +34,7 @@ public class VehicleImportDataAppService {
 
     private final ImportDataParserRegistry parserRegistry;
     private final VehImportDataRepository vehImportDataRepository;
+    private final ProduceDataParserV1_0 produceDataParserV1_0;
 
     /**
      * 查询车辆导入数据信息
@@ -84,16 +86,18 @@ public class VehicleImportDataAppService {
         
         log.info("解析导入数据, batchNum={}, type={}, version={}", batchNum, type, version);
         
+        ImportResult result;
+        
         // CR-025: PRODUCE 类型由 US-040 独立处理
         if ("PRODUCE".equals(type)) {
             log.info("CR-025: PRODUCE 类型由 US-040 处理, batchNum={}", batchNum);
             JSONObject dataJson = JSONUtil.parseObj(vehicleImportData.getData());
-            handleProduceImport(batchNum, dataJson);
+            result = handleProduceImport(batchNum, dataJson);
         } else {
             // 其他类型正常处理
             ImportDataParser parser = parserRegistry.getParser(type, version);
             JSONObject dataJson = JSONUtil.parseObj(vehicleImportData.getData());
-            parser.parse(batchNum, dataJson);
+            result = parser.parse(batchNum, dataJson);
         }
         
         // 标记为已处理
@@ -101,7 +105,7 @@ public class VehicleImportDataAppService {
         vehImportDataRepository.update(vehicleImportData);
         
         log.info("导入数据解析完成, batchNum={}", batchNum);
-        return ImportResult.builder().build();
+        return result;
     }
 
     /**
@@ -116,8 +120,7 @@ public class VehicleImportDataAppService {
         
         // 复用现有的 PRODUCE 处理逻辑
         // 但需要确保不与零件导入混淆
-        ImportDataParser parser = parserRegistry.getParser("PRODUCE", "1.0");
-        return parser.parse(batchNum, dataJson);
+        return produceDataParserV1_0.parse(batchNum, dataJson);
     }
 
     /**

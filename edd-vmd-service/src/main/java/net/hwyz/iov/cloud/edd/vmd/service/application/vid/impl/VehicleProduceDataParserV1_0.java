@@ -7,6 +7,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ImportResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleImportDataAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParser;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParserRegistry;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import jakarta.annotation.PostConstruct;
@@ -24,6 +25,8 @@ public class VehicleProduceDataParserV1_0 implements ImportDataParser {
 
     private final VehicleImportDataAppService vehicleImportDataAppService;
     private final ImportDataParserRegistry parserRegistry;
+    @Autowired
+    private ProduceDataParserV1_0 produceDataParserV1_0;
 
     @PostConstruct
     public void init() {
@@ -44,8 +47,7 @@ public class VehicleProduceDataParserV1_0 implements ImportDataParser {
     public ImportResult parse(String batchNum, JSONObject dataJson) {
         log.info("US-040: 处理整车主档批量导入, batchNum={}", batchNum);
 
-        // 复用 US-019 PRODUCE 解析器逻辑
-        // VehicleProduceEvent 契约不变
-        return vehicleImportDataAppService.handleProduceImport(batchNum, dataJson);
+        // 直接调用原始的 ProduceDataParserV1_0，避免通过 VehicleImportDataAppService 导致无限递归
+        return produceDataParserV1_0.parse(batchNum, dataJson);
     }
 }
