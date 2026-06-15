@@ -1,13 +1,12 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 
 import cn.hutool.json.JSONObject;
-import cn.hutool.json.JSONUtil;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ImportResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParser;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParserRegistry;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.impl.ProduceDataParserV1_0;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleImportData;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehImportDataRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartImportData;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartImportDataRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -21,29 +20,23 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
-class VehicleImportDataAppServiceTest {
+class PartImportDataAppServiceTest {
 
     @Mock
     private ImportDataParserRegistry parserRegistry;
 
     @Mock
-    private VehImportDataRepository vehImportDataRepository;
-
-    @Mock
-    private ImportDataParser produceDataParserV1_0;
-
-    @Mock
-    private ImportDataParser vehicleProduceDataParserV1_0;
+    private PartImportDataRepository partImportDataRepository;
 
     @Mock
     private ProduceDataParserV1_0 produceDataParserV1_0Bean;
 
-    private VehicleImportDataAppService vehicleImportDataAppService;
+    private PartImportDataAppService partImportDataAppService;
 
     @BeforeEach
     void setUp() {
-        vehicleImportDataAppService = new VehicleImportDataAppService(
-                parserRegistry, vehImportDataRepository, produceDataParserV1_0Bean);
+        partImportDataAppService = new PartImportDataAppService(
+                parserRegistry, partImportDataRepository, produceDataParserV1_0Bean);
     }
 
     @Test
@@ -51,20 +44,20 @@ class VehicleImportDataAppServiceTest {
     void shouldSeparateProduceTypeFromOtherPartTypes() {
         // Given
         String batchNum = "TEST_BATCH_001";
-        VehicleImportData importData = VehicleImportData.builder()
+        PartImportData importData = PartImportData.builder()
                 .batchNum(batchNum)
-                .type("PRODUCE")
+                .partCode("PRODUCE")
                 .version("1.0")
                 .data("{\"VIN\":\"TEST_VIN\",\"PARTS\":[]}")
                 .handle(false)
                 .build();
 
-        when(vehImportDataRepository.selectByBatchNum(batchNum)).thenReturn(importData);
+        when(partImportDataRepository.selectByBatchNum(batchNum)).thenReturn(importData);
         when(produceDataParserV1_0Bean.parse(eq(batchNum), any(JSONObject.class)))
                 .thenReturn(ImportResult.builder().build());
 
         // When
-        vehicleImportDataAppService.parseVehicleImportData(batchNum);
+        partImportDataAppService.parsePartImportData(batchNum);
 
         // Then
         verify(produceDataParserV1_0Bean).parse(eq(batchNum), any(JSONObject.class));
