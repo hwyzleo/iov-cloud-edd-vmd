@@ -11,7 +11,9 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.PartImportDataD
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParser;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParserRegistry;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.impl.ProduceDataParserV1_0;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Part;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartImportData;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmPartRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartImportDataRepository;
 import cn.hutool.core.util.ObjUtil;
 import org.springframework.stereotype.Service;
@@ -31,6 +33,7 @@ public class PartImportDataAppService {
 
     private final ImportDataParserRegistry parserRegistry;
     private final PartImportDataRepository partImportDataRepository;
+    private final MdmPartRepository mdmPartRepository;
     private final ProduceDataParserV1_0 produceDataParserV1_0;
 
     /**
@@ -146,8 +149,23 @@ public class PartImportDataAppService {
             JSONObject dataJson = JSONUtil.parseObj(partImportData.getData());
             result = handleProduceImport(batchNum, dataJson);
         } else {
-            // 其他类型正常处理
-            ImportDataParser parser = parserRegistry.getParser(partCode, version);
+            // 根据 partCode 查询 MDM Part 投影，获取 deviceCode
+            Part mdmPart = mdmPartRepository.selectByPn(partCode);
+            if (ObjUtil.isNull(mdmPart)) {
+                log.error("零件编码[{}]在MDM主数据中不存在", partCode);
+                return ImportResult.builder().build();
+            }
+            
+            String deviceCode = mdmPart.getDeviceCode();
+            if (ObjUtil.isBlank(deviceCode)) {
+                log.error("零件编码[{}]对应的设备编码为空", partCode);
+                return ImportResult.builder().build();
+            }
+            
+            log.info("根据零件编码[{}]找到设备编码[{}]", partCode, deviceCode);
+            
+            // 根据 deviceCode 选择解析器
+            ImportDataParser parser = parserRegistry.getParser(deviceCode, version);
             JSONObject dataJson = JSONUtil.parseObj(partImportData.getData());
             result = parser.parse(batchNum, dataJson);
         }
