@@ -55,12 +55,12 @@ public class VehiclePartBinder {
             JSONObject partJson = JSONUtil.parseObj(part);
             String deviceCode = partJson.getStr("DEVICE_CODE");
             if (StrUtil.isBlank(deviceCode)) {
-                log.warn("车辆导入数据批次号[{}]车架号[{}]设备[{}]为空", batchNum, vin, deviceCode);
+                log.warn("零件导入数据批次号[{}]车架号[{}]设备[{}]为空", batchNum, vin, deviceCode);
                 continue;
             }
             String partVin = partJson.getStr("VIN");
             if (!vin.equalsIgnoreCase(partVin)) {
-                log.warn("车辆导入数据批次号[{}]车架号[{}]设备[{}]车架号[{}]不一致", batchNum, vin, deviceCode, partVin);
+                log.warn("零件导入数据批次号[{}]车架号[{}]设备[{}]车架号[{}]不一致", batchNum, vin, deviceCode, partVin);
                 continue;
             }
             String pn = partJson.getStr("PART_NO");
@@ -75,7 +75,7 @@ public class VehiclePartBinder {
             String iccid1 = partJson.getStr("ICCID1");
             String iccid2 = partJson.getStr("ICCID2");
             if (ObjUtil.isNull(vehicleNode)) {
-                log.warn("车辆导入数据批次号[{}]车架号[{}]设备[{}]异常", batchNum, vin, deviceCode);
+                log.warn("零件导入数据批次号[{}]车架号[{}]设备[{}]异常", batchNum, vin, deviceCode);
             }
             String deviceItem = vehicleNode != null ? vehicleNode.getDeviceItem() : null;
             partMetaList.add(new VehicleEolPartBoundEvent.PartMeta(
@@ -109,7 +109,7 @@ public class VehiclePartBinder {
                         .build();
                 vehiclePartAppService.bindVehiclePart(vehiclePart);
             } catch (Exception e) {
-                log.warn("车辆导入数据批次号[{}]车架号[{}]零部件[{}]绑定异常", batchNum, vin, deviceCode, e);
+                log.warn("零件导入数据批次号[{}]车架号[{}]零部件[{}]绑定异常", batchNum, vin, deviceCode, e);
             }
         }
         return partMetaList;

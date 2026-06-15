@@ -80,11 +80,11 @@ public class BaseParser {
             if (ObjUtil.isNull(fieldValue) || StrUtil.isBlank(fieldValue.toString())) {
                 BeanUtil.setFieldValue(vehicleInfoDo, propertyName, keyValue.trim().toUpperCase());
             } else if (!keyValue.trim().equalsIgnoreCase(fieldValue.toString())) {
-                log.warn("车辆导入数据批次号[{}]车辆[{}]{}[{}]与原数据[{}]不一致", batchNum, vin, keyDesc, keyValue.trim(),
+                log.warn("零件导入数据批次号[{}]车辆[{}]{}[{}]与原数据[{}]不一致", batchNum, vin, keyDesc, keyValue.trim(),
                         fieldValue);
             }
         } else {
-            log.warn("车辆导入数据批次号[{}]车辆[{}]{}为空", batchNum, vin, keyDesc);
+            log.warn("零件导入数据批次号[{}]车辆[{}]{}为空", batchNum, vin, keyDesc);
         }
     }
 
@@ -110,11 +110,11 @@ public class BaseParser {
                         .val(keyValue)
                         .build());
             } else if (!keyValue.trim().equalsIgnoreCase(vehicleDetail.getVal())) {
-                log.warn("车辆导入数据批次号[{}]车辆[{}]{}[{}]与原数据[{}]不一致", batchNum, vin, keyDesc, keyValue.trim(),
+                log.warn("零件导入数据批次号[{}]车辆[{}]{}[{}]与原数据[{}]不一致", batchNum, vin, keyDesc, keyValue.trim(),
                         vehicleDetail.getVal());
             }
         } else {
-            log.warn("车辆导入数据批次号[{}]车辆[{}]{}为空", batchNum, vin, keyDesc);
+            log.warn("零件导入数据批次号[{}]车辆[{}]{}为空", batchNum, vin, keyDesc);
         }
     }
 
