@@ -28,6 +28,12 @@ public class PartImportDataRepositoryImpl implements PartImportDataRepository {
     private final PartImportDataMapper partImportDataMapper;
 
     @Override
+    public PartImportData selectById(Long id) {
+        PartImportDataPo po = partImportDataMapper.selectPoById(id);
+        return PartImportDataConverter.INSTANCE.toEntity(po);
+    }
+
+    @Override
     public PartImportData selectByBatchNum(String batchNum) {
         PartImportDataPo po = partImportDataMapper.selectPoByBatchNum(batchNum);
         return PartImportDataConverter.INSTANCE.toEntity(po);

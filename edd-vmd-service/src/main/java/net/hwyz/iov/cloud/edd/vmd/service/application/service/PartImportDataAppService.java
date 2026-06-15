@@ -56,8 +56,8 @@ public class PartImportDataAppService {
      * @return 零件导入数据 DTO
      */
     public PartImportDataDto getPartImportDataById(Long id) {
-        // TODO: implement
-        return null;
+        PartImportData partImportData = partImportDataRepository.selectById(id);
+        return toDto(partImportData);
     }
 
     /**

@@ -11,6 +11,8 @@ import java.util.List;
  */
 public interface PartImportDataRepository {
 
+    PartImportData selectById(Long id);
+
     PartImportData selectByBatchNum(String batchNum);
 
     int insert(PartImportData partImportData);

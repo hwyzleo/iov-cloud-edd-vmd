@@ -47,7 +47,7 @@ public class VehicleProduceDataParserV1_0 implements ImportDataParser {
     public ImportResult parse(String batchNum, JSONObject dataJson) {
         log.info("US-040: 处理整车主档批量导入, batchNum={}", batchNum);
 
-        // 直接调用原始的 ProduceDataParserV1_0，避免通过 VehicleImportDataAppService 导致无限递归
+        // 直接调用原始的 ProduceDataParserV1_0，避免通过 PartImportDataAppService 导致无限递归
         return produceDataParserV1_0.parse(batchNum, dataJson);
     }
 }
