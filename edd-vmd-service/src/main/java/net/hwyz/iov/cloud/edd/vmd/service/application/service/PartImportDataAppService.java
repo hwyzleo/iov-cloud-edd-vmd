@@ -16,6 +16,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartImportData;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmPartRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartImportDataRepository;
 import cn.hutool.core.util.ObjUtil;
+import cn.hutool.core.util.StrUtil;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -157,7 +158,7 @@ public class PartImportDataAppService {
             }
             
             String deviceCode = mdmPart.getDeviceCode();
-            if (ObjUtil.isBlank(deviceCode)) {
+            if (StrUtil.isBlank(deviceCode)) {
                 log.error("零件编码[{}]对应的设备编码为空", partCode);
                 return ImportResult.builder().build();
             }
