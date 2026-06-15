@@ -78,14 +78,46 @@ public class VehicleImportDataAppService {
             log.warn("批次号[{}]对应的导入数据不存在", batchNum);
             return ImportResult.builder().build();
         }
+        
         String type = vehicleImportData.getType();
         String version = vehicleImportData.getVersion();
-        ImportDataParser importDataParser = parserRegistry.getParser(type, version);
-        JSONObject dataJson = JSONUtil.parseObj(vehicleImportData.getData());
-        ImportResult result = importDataParser.parse(batchNum, dataJson);
+        
+        log.info("解析导入数据, batchNum={}, type={}, version={}", batchNum, type, version);
+        
+        // CR-025: PRODUCE 类型由 US-040 独立处理
+        if ("PRODUCE".equals(type)) {
+            log.info("CR-025: PRODUCE 类型由 US-040 处理, batchNum={}", batchNum);
+            JSONObject dataJson = JSONUtil.parseObj(vehicleImportData.getData());
+            handleProduceImport(batchNum, dataJson);
+        } else {
+            // 其他类型正常处理
+            ImportDataParser parser = parserRegistry.getParser(type, version);
+            JSONObject dataJson = JSONUtil.parseObj(vehicleImportData.getData());
+            parser.parse(batchNum, dataJson);
+        }
+        
+        // 标记为已处理
         vehicleImportData.setHandle(true);
         vehImportDataRepository.update(vehicleImportData);
-        return result;
+        
+        log.info("导入数据解析完成, batchNum={}", batchNum);
+        return ImportResult.builder().build();
+    }
+
+    /**
+     * 处理整车主档批量导入 (US-040)
+     * 
+     * @param batchNum 批次号
+     * @param dataJson 数据JSON
+     * @return 导入结果
+     */
+    public ImportResult handleProduceImport(String batchNum, JSONObject dataJson) {
+        log.info("US-040: 处理整车主档导入, batchNum={}", batchNum);
+        
+        // 复用现有的 PRODUCE 处理逻辑
+        // 但需要确保不与零件导入混淆
+        ImportDataParser parser = parserRegistry.getParser("PRODUCE", "1.0");
+        return parser.parse(batchNum, dataJson);
     }
 
     /**
@@ -101,7 +133,7 @@ public class VehicleImportDataAppService {
     /**
      * 新增车辆导入数据
      *
-     * @param vehicleImportDataDto 车辆导入数据信息 DTO
+     * @param vehicleImportDataCmd 车辆导入数据信息 DTO
      * @param userId              操作用户ID
      * @return 结果
      */
@@ -114,7 +146,7 @@ public class VehicleImportDataAppService {
     /**
      * 修改车辆导入数据
      *
-     * @param vehicleImportDataDto 车辆导入数据信息 DTO
+     * @param vehicleImportDataCmd 车辆导入数据信息 DTO
      * @param userId              操作用户ID
      * @return 结果
      */
