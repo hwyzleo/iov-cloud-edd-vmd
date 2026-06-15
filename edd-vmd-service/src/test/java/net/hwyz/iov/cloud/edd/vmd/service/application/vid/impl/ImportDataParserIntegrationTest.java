@@ -1,11 +1,9 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.vid.impl;
 
 import cn.hutool.json.JSONObject;
-import cn.hutool.json.JSONUtil;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ImportResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartInboundAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartInboundAppService.PartInboundResult;
-import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParser;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParserRegistry;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.InboundSourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.PartTypeSchemaRegistry;
@@ -19,8 +17,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
-import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -68,7 +64,7 @@ class ImportDataParserIntegrationTest {
         BtmDataParserV1_0 btmParser = createBtmParser();
         TboxDataParserV1_0 tboxParser = createTboxParser();
         CcpDataParserV1_0 ccpParser = createCcpParser();
-        IdcmDataParserV1_0 idcmParser = createIdcmParser();
+        CptDcuDataParserV1_0 idcmParser = createIdcmParser();
         SimDataParserV1_0 simParser = createSimParser();
 
         // When - 解析器在@PostConstruct中自注册
@@ -77,7 +73,7 @@ class ImportDataParserIntegrationTest {
         assertNotNull(parserRegistry.getParser("BTM", "1.0"));
         assertNotNull(parserRegistry.getParser("TBOX", "1.0"));
         assertNotNull(parserRegistry.getParser("CCP", "1.0"));
-        assertNotNull(parserRegistry.getParser("IDCM", "1.0"));
+        assertNotNull(parserRegistry.getParser("CPT_DCU", "1.0"));
         assertNotNull(parserRegistry.getParser("SIM", "1.0"));
     }
 
@@ -182,7 +178,7 @@ class ImportDataParserIntegrationTest {
     @DisplayName("IDCM解析器应调用入站内核")
     void idcmParser_shouldCallInboundKernel() {
         // Given
-        IdcmDataParserV1_0 idcmParser = createIdcmParser();
+        CptDcuDataParserV1_0 idcmParser = createIdcmParser();
 
         JSONObject dataJson = buildIdcmDataJson("SUP001", 
                 new String[][]{{"PN001", "SN001", "HSM001", "MAC001"}}
@@ -293,8 +289,8 @@ class ImportDataParserIntegrationTest {
         return parser;
     }
 
-    private IdcmDataParserV1_0 createIdcmParser() {
-        IdcmDataParserV1_0 parser = new IdcmDataParserV1_0(tspIdcmInfoService, parserRegistry);
+    private CptDcuDataParserV1_0 createIdcmParser() {
+        CptDcuDataParserV1_0 parser = new CptDcuDataParserV1_0(tspIdcmInfoService, parserRegistry);
         injectField(parser, "partInboundAppService", partInboundAppService);
         parser.init();
         return parser;

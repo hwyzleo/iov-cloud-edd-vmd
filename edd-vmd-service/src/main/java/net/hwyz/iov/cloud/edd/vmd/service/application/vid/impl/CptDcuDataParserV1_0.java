@@ -25,14 +25,14 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 信息娱乐模块数据解析器V1.0
+ * 座舱域控数据解析器V1.0
  *
  * @author hwyz_leo
  */
 @Slf4j
 @RequiredArgsConstructor
-@Component("idcmDataParserV1.0")
-public class IdcmDataParserV1_0 extends BaseParser implements ImportDataParser {
+@Component("cptDcuDataParserV1.0")
+public class CptDcuDataParserV1_0 extends BaseParser implements ImportDataParser {
 
     private final TspIdcmInfoService tspIdcmInfoService;
     private final ImportDataParserRegistry parserRegistry;
@@ -44,7 +44,7 @@ public class IdcmDataParserV1_0 extends BaseParser implements ImportDataParser {
 
     @Override
     public String getType() {
-        return "IDCM";
+        return "CPT_DCU";
     }
 
     @Override
