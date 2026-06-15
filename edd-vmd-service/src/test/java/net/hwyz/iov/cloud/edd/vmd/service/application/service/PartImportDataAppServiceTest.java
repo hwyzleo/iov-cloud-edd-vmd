@@ -6,6 +6,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParser;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParserRegistry;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.impl.ProduceDataParserV1_0;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartImportData;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmPartRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartImportDataRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -29,6 +30,9 @@ class PartImportDataAppServiceTest {
     private PartImportDataRepository partImportDataRepository;
 
     @Mock
+    private MdmPartRepository mdmPartRepository;
+
+    @Mock
     private ProduceDataParserV1_0 produceDataParserV1_0Bean;
 
     private PartImportDataAppService partImportDataAppService;
@@ -36,7 +40,7 @@ class PartImportDataAppServiceTest {
     @BeforeEach
     void setUp() {
         partImportDataAppService = new PartImportDataAppService(
-                parserRegistry, partImportDataRepository, produceDataParserV1_0Bean);
+                parserRegistry, partImportDataRepository, mdmPartRepository, produceDataParserV1_0Bean);
     }
 
     @Test
