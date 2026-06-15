@@ -9,11 +9,9 @@ import net.hwyz.iov.cloud.iov.ota.api.service.OtaVehiclePartService;
 import net.hwyz.iov.cloud.iov.ota.api.vo.VehiclePartExService;
 import net.hwyz.iov.cloud.iov.ota.api.vo.request.SaveVehiclePartsRequest;
 import net.hwyz.iov.cloud.iov.tsp.api.service.TspVehicleCcpService;
-import net.hwyz.iov.cloud.iov.tsp.api.service.TspVehicleIdcmService;
 import net.hwyz.iov.cloud.iov.tsp.api.service.TspVehicleNetworkService;
 import net.hwyz.iov.cloud.iov.tsp.api.service.TspVehicleTboxService;
 import net.hwyz.iov.cloud.iov.tsp.api.vo.VehicleCcpVo;
-import net.hwyz.iov.cloud.iov.tsp.api.vo.VehicleIdcmVo;
 import net.hwyz.iov.cloud.iov.tsp.api.vo.VehicleNetworkVo;
 import net.hwyz.iov.cloud.iov.tsp.api.vo.VehicleTboxVo;
 import org.springframework.context.event.EventListener;
@@ -36,7 +34,6 @@ public class VehicleEolTspOtaSubscribe {
     private final TspVehicleCcpService tspVehicleCcpService;
     private final OtaVehiclePartService otaVehiclePartService;
     private final TspVehicleTboxService tspVehicleTboxService;
-    private final TspVehicleIdcmService tspVehicleIdcmService;
     private final TspVehicleNetworkService tspVehicleNetworkService;
 
     /**
@@ -79,8 +76,6 @@ public class VehicleEolTspOtaSubscribe {
             tspVehicleTboxService.bind(VehicleTboxVo.builder().vin(vin).sn(part.getSn()).build());
         } else if (DeviceItem.CCP.name().equalsIgnoreCase(deviceItem)) {
             tspVehicleCcpService.bind(VehicleCcpVo.builder().vin(vin).sn(part.getSn()).build());
-        } else if (DeviceItem.IDCM.name().equalsIgnoreCase(deviceItem)) {
-            tspVehicleIdcmService.bind(VehicleIdcmVo.builder().vin(vin).sn(part.getSn()).build());
         }
     }
 

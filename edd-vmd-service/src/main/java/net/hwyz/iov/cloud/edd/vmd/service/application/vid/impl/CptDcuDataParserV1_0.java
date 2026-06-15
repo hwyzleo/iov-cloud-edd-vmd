@@ -3,6 +3,7 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.vid.impl;
 import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ImportResult;
@@ -12,12 +13,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParser;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParserRegistry;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.InboundSourceType;
 import net.hwyz.iov.cloud.framework.common.util.StrUtil;
-import net.hwyz.iov.cloud.iov.tsp.api.service.TspIdcmInfoService;
-import net.hwyz.iov.cloud.iov.tsp.api.vo.IdcmVo;
-import net.hwyz.iov.cloud.iov.tsp.api.vo.request.BatchImportIdcmRequest;
 import org.springframework.stereotype.Component;
-
-import jakarta.annotation.PostConstruct;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -34,7 +30,6 @@ import java.util.Map;
 @Component("cptDcuDataParserV1.0")
 public class CptDcuDataParserV1_0 extends BaseParser implements ImportDataParser {
 
-    private final TspIdcmInfoService tspIdcmInfoService;
     private final ImportDataParserRegistry parserRegistry;
 
     @PostConstruct
@@ -62,7 +57,6 @@ public class CptDcuDataParserV1_0 extends BaseParser implements ImportDataParser
         JSONArray items = data.getJSONArray("ITEMS");
 
         List<PartInboundRecord> records = new ArrayList<>();
-        List<IdcmVo> idcmList = new ArrayList<>();
         int invalidCount = 0;
 
         for (Object item : items) {
@@ -84,13 +78,6 @@ public class CptDcuDataParserV1_0 extends BaseParser implements ImportDataParser
             PartInboundRecord record = buildInboundRecord(pn, sn, "IDCM", "IDCM", "IDCM",
                     supplier, batchNum, extraFields);
             records.add(record);
-
-            idcmList.add(IdcmVo.builder()
-                    .sn(sn)
-                    .no(pn)
-                    .hsm(hsm)
-                    .mac(mac)
-                    .build());
         }
 
         // 使用入站内核处理
@@ -98,15 +85,6 @@ public class CptDcuDataParserV1_0 extends BaseParser implements ImportDataParser
 
         if (invalidCount > 0) {
             log.warn("信息娱乐模块导入数据批次号[{}]存在无效信息娱乐模块数据[{}]", batchNum, invalidCount);
-        }
-
-        // 调用下游TSP服务
-        if (!idcmList.isEmpty()) {
-            BatchImportIdcmRequest request = new BatchImportIdcmRequest();
-            request.setBatchNum(batchNum);
-            request.setSupplierCode(supplier);
-            request.setIdcmList(idcmList);
-            tspIdcmInfoService.batchImport(request);
         }
 
         return ImportResult.builder()

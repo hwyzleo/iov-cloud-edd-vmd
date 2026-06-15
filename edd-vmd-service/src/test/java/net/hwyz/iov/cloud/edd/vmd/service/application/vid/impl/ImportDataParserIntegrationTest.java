@@ -9,7 +9,6 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.InboundSource
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.PartTypeSchemaRegistry;
 import net.hwyz.iov.cloud.iov.idk.api.service.IdkBtmInfoService;
 import net.hwyz.iov.cloud.iov.tsp.api.service.TspCcpInfoService;
-import net.hwyz.iov.cloud.iov.tsp.api.service.TspIdcmInfoService;
 import net.hwyz.iov.cloud.iov.tsp.api.service.TspTboxInfoService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -44,9 +43,6 @@ class ImportDataParserIntegrationTest {
 
     @Mock
     private TspCcpInfoService tspCcpInfoService;
-
-    @Mock
-    private TspIdcmInfoService tspIdcmInfoService;
 
     private ImportDataParserRegistry parserRegistry;
     private PartTypeSchemaRegistry partTypeSchemaRegistry;
@@ -290,7 +286,7 @@ class ImportDataParserIntegrationTest {
     }
 
     private CptDcuDataParserV1_0 createIdcmParser() {
-        CptDcuDataParserV1_0 parser = new CptDcuDataParserV1_0(tspIdcmInfoService, parserRegistry);
+        CptDcuDataParserV1_0 parser = new CptDcuDataParserV1_0(parserRegistry);
         injectField(parser, "partInboundAppService", partInboundAppService);
         parser.init();
         return parser;
