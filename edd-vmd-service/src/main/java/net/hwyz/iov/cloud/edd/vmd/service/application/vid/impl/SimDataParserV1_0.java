@@ -11,7 +11,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartInboundAppServ
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartInboundAppService.PartInboundResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParser;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParserRegistry;
-import net.hwyz.iov.cloud.edd.vmd.service.common.exception.VehicleImportDataException;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.PartImportDataException;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.InboundSourceType;
 import net.hwyz.iov.cloud.framework.common.util.StrUtil;
 import net.hwyz.iov.cloud.iov.tsp.api.vo.enums.MnoType;
@@ -57,11 +57,11 @@ public class SimDataParserV1_0 extends BaseParser implements ImportDataParser {
         JSONObject data = getData(dataJson);
         String mno = data.getStr("MNO");
         if (StrUtil.isBlank(mno)) {
-            throw new VehicleImportDataException(batchNum, "SIM卡导入数据运营商为空");
+            throw new PartImportDataException("SIM卡导入数据运营商为空, 批次号: " + batchNum);
         }
         MnoType mnoType = MnoType.valOf(mno.toUpperCase());
         if (ObjUtil.isNull(mnoType)) {
-            throw new VehicleImportDataException(batchNum, "SIM卡导入数据运营商[" + mno + "]未识别");
+            throw new PartImportDataException("SIM卡导入数据运营商[" + mno + "]未识别, 批次号: " + batchNum);
         }
 
         List<PartInboundRecord> records = new ArrayList<>();

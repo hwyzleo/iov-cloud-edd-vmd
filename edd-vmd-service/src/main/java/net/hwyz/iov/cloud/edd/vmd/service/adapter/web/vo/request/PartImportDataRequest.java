@@ -25,4 +25,6 @@ public class PartImportDataRequest extends BaseRequest {
     private Boolean handle;
     private String description;
     private Date createTime;
+    private Date beginTime;
+    private Date endTime;
 }

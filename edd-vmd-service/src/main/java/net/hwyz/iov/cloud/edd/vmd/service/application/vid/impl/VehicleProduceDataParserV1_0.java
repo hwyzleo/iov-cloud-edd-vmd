@@ -4,7 +4,7 @@ import cn.hutool.json.JSONObject;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ImportResult;
-import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleImportDataAppService;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartImportDataAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParser;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParserRegistry;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,7 +23,7 @@ import jakarta.annotation.PostConstruct;
 @RequiredArgsConstructor
 public class VehicleProduceDataParserV1_0 implements ImportDataParser {
 
-    private final VehicleImportDataAppService vehicleImportDataAppService;
+    private final PartImportDataAppService partImportDataAppService;
     private final ImportDataParserRegistry parserRegistry;
     @Autowired
     private ProduceDataParserV1_0 produceDataParserV1_0;

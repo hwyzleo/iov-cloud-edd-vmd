@@ -1,6 +1,5 @@
 package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.repository;
 
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartImportData;
@@ -11,7 +10,9 @@ import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.PartImpo
 import org.springframework.stereotype.Repository;
 
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -28,43 +29,40 @@ public class PartImportDataRepositoryImpl implements PartImportDataRepository {
 
     @Override
     public PartImportData selectByBatchNum(String batchNum) {
-        LambdaQueryWrapper<PartImportDataPo> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(PartImportDataPo::getBatchNum, batchNum);
-        PartImportDataPo po = partImportDataMapper.selectOne(wrapper);
+        PartImportDataPo po = partImportDataMapper.selectPoByBatchNum(batchNum);
         return PartImportDataConverter.INSTANCE.toEntity(po);
     }
 
     @Override
     public int insert(PartImportData partImportData) {
         PartImportDataPo po = PartImportDataConverter.INSTANCE.toPo(partImportData);
-        return partImportDataMapper.insert(po);
+        return partImportDataMapper.insertPo(po);
     }
 
     @Override
     public int update(PartImportData partImportData) {
         PartImportDataPo po = PartImportDataConverter.INSTANCE.toPo(partImportData);
-        return partImportDataMapper.updateById(po);
+        return partImportDataMapper.updatePo(po);
     }
 
     @Override
     public int deleteByIds(Long[] ids) {
-        return partImportDataMapper.deleteByIds(Arrays.asList(ids));
+        return partImportDataMapper.batchPhysicalDeletePo(ids);
     }
 
     @Override
     public List<PartImportData> selectList(PartImportData partImportData) {
-        LambdaQueryWrapper<PartImportDataPo> wrapper = new LambdaQueryWrapper<>();
+        Map<String, Object> map = new HashMap<>();
         if (partImportData.getBatchNum() != null) {
-            wrapper.like(PartImportDataPo::getBatchNum, partImportData.getBatchNum());
+            map.put("batchNum", partImportData.getBatchNum());
         }
         if (partImportData.getPartCode() != null) {
-            wrapper.like(PartImportDataPo::getPartCode, partImportData.getPartCode());
+            map.put("partCode", partImportData.getPartCode());
         }
         if (partImportData.getHandle() != null) {
-            wrapper.eq(PartImportDataPo::getHandle, partImportData.getHandle());
+            map.put("handle", partImportData.getHandle());
         }
-        wrapper.orderByDesc(PartImportDataPo::getCreateTime);
-        List<PartImportDataPo> poList = partImportDataMapper.selectList(wrapper);
+        List<PartImportDataPo> poList = partImportDataMapper.selectPoByMap(map);
         return poList.stream()
                 .map(PartImportDataConverter.INSTANCE::toEntity)
                 .collect(Collectors.toList());
@@ -72,11 +70,9 @@ public class PartImportDataRepositoryImpl implements PartImportDataRepository {
 
     @Override
     public boolean checkBatchNumUnique(Long id, String batchNum) {
-        LambdaQueryWrapper<PartImportDataPo> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(PartImportDataPo::getBatchNum, batchNum);
         if (id != null) {
-            wrapper.ne(PartImportDataPo::getId, id);
+            return partImportDataMapper.countPoByBatchNumAndIdNot(batchNum, id) == 0;
         }
-        return partImportDataMapper.selectCount(wrapper) == 0;
+        return partImportDataMapper.countPoByBatchNum(batchNum) == 0;
     }
 }
