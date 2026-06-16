@@ -32,8 +32,8 @@ public class ImportResult {
     private int failureCount;
 
     /**
-     * 无效记录数（校验不通过被跳过）
+     * 描述信息
      */
-    private int invalidCount;
+    private String description;
 
 }
