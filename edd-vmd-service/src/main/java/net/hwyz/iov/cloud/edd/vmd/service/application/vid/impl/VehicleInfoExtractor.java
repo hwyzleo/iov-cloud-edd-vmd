@@ -24,7 +24,7 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Component
-public class VehicleInfoExtractor extends BaseParser {
+public class VehicleInfoExtractor extends BaseProcessor {
 
     /**
      * 车辆基础信息字段映射定义

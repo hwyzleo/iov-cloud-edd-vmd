@@ -10,7 +10,6 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleDetail;
 import net.hwyz.iov.cloud.framework.common.util.StrUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import java.util.List;
 import java.util.Map;
 
 /**
@@ -19,7 +18,7 @@ import java.util.Map;
  * @author hwyz_leo
  */
 @Slf4j
-public class BaseParser {
+public class BaseProcessor {
 
     @Autowired
     protected PartInboundAppService partInboundAppService;

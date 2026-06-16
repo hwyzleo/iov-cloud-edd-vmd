@@ -32,7 +32,7 @@ import java.util.Map;
 @Slf4j
 @RequiredArgsConstructor
 @Component("simDataParserV1.0")
-public class SimDataParserV1_0 extends BaseParser implements ImportDataParser {
+public class SimDataParserV1_0 extends BaseProcessor implements ImportDataParser {
 
 //    private final TspSimService tspSimService;
     private final ImportDataParserRegistry parserRegistry;

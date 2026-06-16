@@ -32,7 +32,7 @@ import java.util.Map;
 @Slf4j
 @RequiredArgsConstructor
 @Component("ccpDataParserV1.0")
-public class CcpDataParserV1_0 extends BaseParser implements ImportDataParser {
+public class CcpDataParserV1_0 extends BaseProcessor implements ImportDataParser {
 
     private final TspCcpInfoService tspCcpInfoService;
     private final ImportDataParserRegistry parserRegistry;

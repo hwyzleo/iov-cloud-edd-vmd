@@ -25,7 +25,7 @@ import jakarta.annotation.PostConstruct;
 @Slf4j
 @RequiredArgsConstructor
 @Component("produceDataParserV1.0")
-public class ProduceDataParserV1_0 extends BaseParser implements ImportDataParser {
+public class ProduceDataParserV1_0 extends BaseProcessor implements ImportDataParser {
 
     private final VehiclePublish vehiclePublish;
     private final VehBasicInfoRepository vehBasicInfoRepository;

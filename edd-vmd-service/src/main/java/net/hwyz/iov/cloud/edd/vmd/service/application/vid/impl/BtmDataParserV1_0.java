@@ -32,7 +32,7 @@ import java.util.Map;
 @Slf4j
 @RequiredArgsConstructor
 @Component("btmDataParserV1.0")
-public class BtmDataParserV1_0 extends BaseParser implements ImportDataParser {
+public class BtmDataParserV1_0 extends BaseProcessor implements ImportDataParser {
 
     private final IdkBtmInfoService idkBtmInfoService;
     private final ImportDataParserRegistry parserRegistry;

@@ -301,7 +301,7 @@ class ImportDataParserIntegrationTest {
 
     private void injectField(Object target, String fieldName, Object value) {
         try {
-            java.lang.reflect.Field field = BaseParser.class.getDeclaredField(fieldName);
+            java.lang.reflect.Field field = BaseProcessor.class.getDeclaredField(fieldName);
             field.setAccessible(true);
             field.set(target, value);
         } catch (Exception e) {

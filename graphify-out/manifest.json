@@ -4,8 +4,8 @@
     "hash": "a7c9b278a4258297b5c2ea4c78ffddd6"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/test/java/net/hwyz/iov/cloud/edd/vmd/service/integration/MdmPartSyncIntegrationTest.java": {
-    "mtime": 1781418257.855661,
-    "hash": "dbf2099cb06ef8f674d335b3ac084676"
+    "mtime": 1781585677.900834,
+    "hash": "d46845234edcfd5569c333c49a213e64"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/test/java/net/hwyz/iov/cloud/edd/vmd/service/integration/VariantIntegrationTest.java": {
     "mtime": 1781064709.7411692,
@@ -19,6 +19,10 @@
     "mtime": 1781251552.1786458,
     "hash": "aec6b493fd56e4911e187cf89eb38fd4"
   },
+  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/test/java/net/hwyz/iov/cloud/edd/vmd/service/application/vid/DownstreamProcessorTest.java": {
+    "mtime": 1781597437.1506739,
+    "hash": "22e1e9dfd1dfe69e4f91fc0dd47d156b"
+  },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/test/java/net/hwyz/iov/cloud/edd/vmd/service/application/vid/impl/VehicleInfoExtractorTest.java": {
     "mtime": 1781251747.2043602,
     "hash": "79850cc19630cb732434dc7f51711b25"
@@ -28,12 +32,12 @@
     "hash": "5d6130afe4128bfb50e950f0f5182439"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/test/java/net/hwyz/iov/cloud/edd/vmd/service/application/vid/impl/VehiclePartBinderTest.java": {
-    "mtime": 1781101459.654282,
-    "hash": "a4fe99332d0df1554b865c25cfd5488f"
+    "mtime": 1781585682.1640592,
+    "hash": "4522d201a414e36dc79e8ec4041b0c20"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/test/java/net/hwyz/iov/cloud/edd/vmd/service/application/vid/impl/ImportDataParserIntegrationTest.java": {
-    "mtime": 1781516872.7596514,
-    "hash": "e53516c571afa112a16e9bf5317d69ec"
+    "mtime": 1781587880.4832227,
+    "hash": "74fafed433a1df2ff698346746abf6fc"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/test/java/net/hwyz/iov/cloud/edd/vmd/service/application/scheduler/MdmPartSyncSchedulerTest.java": {
     "mtime": 1781179544.8516707,
@@ -64,16 +68,16 @@
     "hash": "0b4605f64294cc895d880fb7cc1bd7ab"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/test/java/net/hwyz/iov/cloud/edd/vmd/service/application/service/MdmSyncAppServiceTest.java": {
-    "mtime": 1781418626.8832679,
-    "hash": "7f56f785ad18fda0684bb24e757ef92d"
-  },
-  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/test/java/net/hwyz/iov/cloud/edd/vmd/service/application/service/VehicleImportDataAppServiceTest.java": {
-    "mtime": 1781512745.8313544,
-    "hash": "80cdbd95f22a274ff4bab43460367dc0"
+    "mtime": 1781585660.2271953,
+    "hash": "a53e5876b7e1ec65e8a40dc2d1dc4ae6"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/test/java/net/hwyz/iov/cloud/edd/vmd/service/application/service/ConfigurationAppServiceTest.java": {
     "mtime": 1781064983.5769837,
     "hash": "3789c73b4d031083f8e538167cafa5c4"
+  },
+  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/test/java/net/hwyz/iov/cloud/edd/vmd/service/application/service/PartImportDataAppServiceTest.java": {
+    "mtime": 1781597865.2916586,
+    "hash": "ad2c4ee96d9b31113c8a627f03138c63"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/test/java/net/hwyz/iov/cloud/edd/vmd/service/application/service/PlantAppServiceTest.java": {
     "mtime": 1781065288.048584,
@@ -84,8 +88,8 @@
     "hash": "43d6777586f9d37d87dfa82156687e10"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/test/java/net/hwyz/iov/cloud/edd/vmd/service/application/service/PartInboundAppServiceTest.java": {
-    "mtime": 1781515567.8490107,
-    "hash": "58f8dcc9e6843a0e959d80011471c710"
+    "mtime": 1781585631.0320625,
+    "hash": "bc6e17aef90cb63e27cee78efa77e6df"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/test/java/net/hwyz/iov/cloud/edd/vmd/service/infrastructure/persistence/repository/MdmPlatformRepositoryTest.java": {
     "mtime": 1781181536.405483,
@@ -195,9 +199,17 @@
     "mtime": 1781073274.9439201,
     "hash": "6e8ef87f2236670accccf2d91c9cbd7e"
   },
+  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/resources/db/migration/V24__Rename_veh_import_data_to_part_import_data.sql": {
+    "mtime": 1781535518.0004249,
+    "hash": "72a2d6fc8cbc2e55ae73f4f4cae665fe"
+  },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/resources/db/migration/V11__Migrate_feature_family_code_to_option.sql": {
     "mtime": 1781006949.1422038,
     "hash": "30701dd51f647cd203f97bfcff97a4fb"
+  },
+  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/resources/db/migration/V27__Rename_pn_to_code_and_add_name_local_to_part.sql": {
+    "mtime": 1781585084.1898355,
+    "hash": "8613956cae82abd4cd4bfea64cd65a0f"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/resources/db/migration/V5__Migrate_manufacturer_to_plant.sql": {
     "mtime": 1780641377.2768142,
@@ -210,6 +222,10 @@
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/resources/db/migration/V4__Rename_series_to_car_line.sql": {
     "mtime": 1780647994.526424,
     "hash": "fa52f3a0590141a2c82024ec981b3ee4"
+  },
+  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/resources/db/migration/V25__Align_option_projection_columns_with_mdm.sql": {
+    "mtime": 1781575960.913534,
+    "hash": "2ff7e930fd49f736bc6adb614f150f5d"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/resources/db/migration/V6__Add_mdm_source_to_model.sql": {
     "mtime": 1780968314.49257,
@@ -251,6 +267,10 @@
     "mtime": 1779761228.778724,
     "hash": "a18ff21b67a4ec73533f26da2bbd478c"
   },
+  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/resources/db/migration/V26__Rebuild_mdm_part_projection.sql": {
+    "mtime": 1781579947.2034664,
+    "hash": "8bd023354f1f0c7cc35f650e43022a71"
+  },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/resources/db/migration/V7__Migrate_base_model_to_variant.sql": {
     "mtime": 1780980869.8894744,
     "hash": "458d6bd8dffac06a0273c16eec832698"
@@ -266,6 +286,10 @@
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/adapter/web/vo/response/VehicleConfigItemResponse.java": {
     "mtime": 1777266086.4254503,
     "hash": "a5e6170bc3661dd06de5ee1edccc2d97"
+  },
+  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/adapter/web/vo/response/PartImportDataResponse.java": {
+    "mtime": 1781527489.5533614,
+    "hash": "94d2c9e11c84ffa15f986e914ed5eb0d"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/adapter/web/vo/response/PartInfoResponse.java": {
     "mtime": 1781248839.463244,
@@ -288,16 +312,16 @@
     "hash": "c7128aae4347094c9e5630ba4027fe4c"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/adapter/web/vo/response/VehiclePartResponse.java": {
-    "mtime": 1777266086.4272785,
-    "hash": "8e553467c0b2bcedc2936a9187f891bb"
+    "mtime": 1781585462.0280063,
+    "hash": "ccd0d50e34d82569ba25ff9dd5a19117"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/adapter/web/vo/response/VehicleResponse.java": {
     "mtime": 1779858928.0181186,
     "hash": "90e6c49e653013641c758bfaac74f4dd"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/adapter/web/vo/response/OptionCodeResponse.java": {
-    "mtime": 1781008013.8717322,
-    "hash": "7a069d20ae5282c2c50e461139982152"
+    "mtime": 1781576421.551563,
+    "hash": "12e324286a26a5149cf9bd4f96e1296a"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/adapter/web/vo/response/BrandResponse.java": {
     "mtime": 1777265735.050991,
@@ -328,8 +352,8 @@
     "hash": "f1351fcaba42b28ca2607bdc986b125e"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/adapter/web/vo/response/OptionFamilyResponse.java": {
-    "mtime": 1781008009.7049248,
-    "hash": "1a7050b6ec028f90c233bb060ebb7446"
+    "mtime": 1781576419.655774,
+    "hash": "0ffde33a88502d6ed34320dea0b78bf6"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/adapter/web/vo/response/VariantResponse.java": {
     "mtime": 1780981382.2630785,
@@ -343,13 +367,9 @@
     "mtime": 1777266086.4294057,
     "hash": "77aec55fcd6c0840e38c980679e396a2"
   },
-  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/adapter/web/vo/response/VehicleImportDataResponse.java": {
-    "mtime": 1777266086.4296103,
-    "hash": "1cc45580d152b7da8ae72fbfec38115c"
-  },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/adapter/web/vo/response/PartResponse.java": {
-    "mtime": 1777266086.4298763,
-    "hash": "6a1f037562048c6a6786178dc3b3128b"
+    "mtime": 1781585455.336037,
+    "hash": "278f0daab90a7d114751ca3040c5cc9a"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/adapter/web/vo/response/ModelResponse.java": {
     "mtime": 1779858920.852062,
@@ -359,13 +379,13 @@
     "mtime": 1781015002.296468,
     "hash": "03099dfe03022a677c5909939555c3f8"
   },
+  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/adapter/web/vo/request/PartImportDataRequest.java": {
+    "mtime": 1781530075.3849335,
+    "hash": "a56999955f797efdbfbafd88048c0ed4"
+  },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/adapter/web/vo/request/VehicleConfigRequest.java": {
     "mtime": 1777265806.469572,
     "hash": "7596c8f8be5d97e9ae8c82dee956cfd5"
-  },
-  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/adapter/web/vo/request/VehicleImportDataRequest.java": {
-    "mtime": 1777265806.4697795,
-    "hash": "499739dd0e300c34e4477d6121255747"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/adapter/web/vo/request/VehicleNodeRequest.java": {
     "mtime": 1781073966.3652246,
@@ -400,16 +420,16 @@
     "hash": "dee9293f8b2a93b482ad0c17f97420a5"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/adapter/web/vo/request/VehiclePartRequest.java": {
-    "mtime": 1777265806.470518,
-    "hash": "41e4effb7893846ad6a4487aa46541c4"
+    "mtime": 1781585460.268862,
+    "hash": "4a09f40bf32a7ac5b58fa473e42c3f4a"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/adapter/web/vo/request/ConfigurationRequest.java": {
     "mtime": 1780989948.450154,
     "hash": "a7e21b31b4ae70a0ff0df13f7b16c361"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/adapter/web/vo/request/OptionFamilyRequest.java": {
-    "mtime": 1781007992.2282367,
-    "hash": "01afe47a3ae5cbebc5ad92bc16e69bbf"
+    "mtime": 1781576413.3823948,
+    "hash": "c46b70fb0c22403d92649d2f9c970f15"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/adapter/web/vo/request/BrandRequest.java": {
     "mtime": 1777265735.0509615,
@@ -444,12 +464,12 @@
     "hash": "fb2e03ab06e1430e73bc9c4321bee62e"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/adapter/web/vo/request/OptionCodeRequest.java": {
-    "mtime": 1781007996.3903248,
-    "hash": "f9ab841ae56969f8f0d1dbdee61a170d"
+    "mtime": 1781576415.738074,
+    "hash": "ae8b3ef18daf432604cf8f9b42765c43"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/adapter/web/vo/request/PartRequest.java": {
-    "mtime": 1777265806.468391,
-    "hash": "e145590327e056c5ab2c5f00fbde047d"
+    "mtime": 1781585452.5215259,
+    "hash": "1cd2f2b81874c697bb5a4f93b9bb5f15"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/adapter/web/assembler/MptConfigurationAssembler.java": {
     "mtime": 1781015554.4409897,
@@ -503,13 +523,13 @@
     "mtime": 1781015207.1112597,
     "hash": "b34a54e198a89ba97cc3dd214ab428c3"
   },
-  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/adapter/web/assembler/MptVehicleImportDataAssembler.java": {
-    "mtime": 1777265881.2671185,
-    "hash": "84b62e2efeba5718037abc43accdae0b"
-  },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/adapter/web/assembler/MptOptionAssembler.java": {
     "mtime": 1781007858.4667385,
     "hash": "830114064ad1ac027f8205ffa3d97538"
+  },
+  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/adapter/web/assembler/MptPartImportDataAssembler.java": {
+    "mtime": 1781527495.9126465,
+    "hash": "396bc2bdb8c4e3e14502aa65dab857ff"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/adapter/web/assembler/MptVehicleLifecycleAssembler.java": {
     "mtime": 1777265881.2700577,
@@ -527,10 +547,6 @@
     "mtime": 1781073988.9817448,
     "hash": "bf40a40c297c0a2b4fb71b9556884f22"
   },
-  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/adapter/web/controller/mpt/MptVehicleImportDataController.java": {
-    "mtime": 1779530856.9472468,
-    "hash": "6172b446c189c5f9f8586cbf4bf8bd5a"
-  },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/adapter/web/controller/mpt/MptVehicleController.java": {
     "mtime": 1778216738.1146495,
     "hash": "7f2dd28cb9931e9ff8d4996c247b5868"
@@ -540,8 +556,8 @@
     "hash": "93a6c1e550769e11c497993823e0e259"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/adapter/web/controller/mpt/MptVehiclePartController.java": {
-    "mtime": 1781101033.7002046,
-    "hash": "00ee822255bf49bb0129a965f186e1bc"
+    "mtime": 1781585556.5747561,
+    "hash": "60bdcbf51af9c979e734c1ad60e8d7e2"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/adapter/web/controller/mpt/MptPartInboundController.java": {
     "mtime": 1781154221.9029844,
@@ -550,6 +566,10 @@
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/adapter/web/controller/mpt/MptConfigItemController.java": {
     "mtime": 1778216923.8328342,
     "hash": "bf3dbed97c19479a523905dac61f8e45"
+  },
+  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/adapter/web/controller/mpt/MptPartImportDataController.java": {
+    "mtime": 1781527534.5290592,
+    "hash": "1911de37a9ace9573e974cb82ff9a560"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/adapter/web/controller/mpt/MptMdmSyncController.java": {
     "mtime": 1781177589.2594523,
@@ -580,8 +600,8 @@
     "hash": "0f1ec85b9877297a4454a8d82cfb7547"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/adapter/web/controller/service/ServicePartController.java": {
-    "mtime": 1777265917.3371973,
-    "hash": "a4eb66452ef99e59525dd098be6ec897"
+    "mtime": 1781585542.95678,
+    "hash": "8842420a411503b444e405834858cce1"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/common/exception/ParserNotFoundException.java": {
     "mtime": 1779529846.7776377,
@@ -616,20 +636,20 @@
     "hash": "c32dac4a07285c41a54432455c0f16ae"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/common/exception/PartNotExistException.java": {
-    "mtime": 1779526622.0844657,
-    "hash": "9b8e9046900a47046b3cbee4c8ced170"
+    "mtime": 1781585583.7324076,
+    "hash": "dbd1af2bef103d4790bf854cef08a0cf"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/common/exception/PartNotActiveException.java": {
     "mtime": 1781515205.1083796,
     "hash": "b2056b5a7bb9b6c42faae03d889fea57"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/common/exception/VmdErrorCode.java": {
-    "mtime": 1781515567.8483777,
-    "hash": "22aa05a2bc82372f57ccfc39b8ba0a9d"
+    "mtime": 1781531546.9797127,
+    "hash": "99c23eee92dff2eda67c177c1ea40921"
   },
-  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/common/exception/VehicleImportDataException.java": {
-    "mtime": 1779526620.0964148,
-    "hash": "e19e00d34c47db65f5a9cbac22658372"
+  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/common/exception/PartImportDataException.java": {
+    "mtime": 1781527714.987932,
+    "hash": "c16ba3e2322843f50a3ad6307e57ff05"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/common/exception/PartInboundValidateFailedException.java": {
     "mtime": 1781149143.4947143,
@@ -644,20 +664,32 @@
     "hash": "c1a81add61d9dc1549a49168cad10e67"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/common/exception/PartNotAllowBindException.java": {
-    "mtime": 1779526624.3907824,
-    "hash": "3b48ede9c63f2ec0eed5448e69a9ff19"
+    "mtime": 1781585581.6076744,
+    "hash": "f4872762750a2208f3a7c9d28b94116c"
+  },
+  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/vid/DownstreamProcessorRegistry.java": {
+    "mtime": 1781594847.9809272,
+    "hash": "2f86da9a3f859f7dd496080c78afa01e"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/vid/ImportDataParser.java": {
     "mtime": 1779530698.0789294,
     "hash": "d93b5b483bb49e206e1f8958ec4d5ecd"
+  },
+  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/vid/DownstreamProcessor.java": {
+    "mtime": 1781594682.9560263,
+    "hash": "c21e1ae9f1f351f485e423cc02f75b4b"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/vid/ImportDataParserRegistry.java": {
     "mtime": 1781514209.9661524,
     "hash": "d92bfd43c98061a04ae4ff3f9efb9c9f"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/vid/impl/VehiclePartBinder.java": {
-    "mtime": 1781101274.8375523,
-    "hash": "fb0f96597121c3da38362940e2ef92a3"
+    "mtime": 1781528093.872059,
+    "hash": "fb73f2795a4aed3738ba1f016a355964"
+  },
+  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/vid/impl/Tbox5gDataParserV1_0.java": {
+    "mtime": 1781586967.4448164,
+    "hash": "14e3ee0cf99aaa9279578a36cbd285ab"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/vid/impl/ProduceDataParserV1_0.java": {
     "mtime": 1780981705.4533505,
@@ -671,41 +703,49 @@
     "mtime": 1781149594.477875,
     "hash": "6a742a709bee79624c4615215f337230"
   },
-  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/vid/impl/TboxDataParserV1_0.java": {
-    "mtime": 1781149976.3484545,
-    "hash": "0e2dc22d9b9bebe9167c02d01fa49466"
-  },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/vid/impl/VehicleInfoExtractor.java": {
     "mtime": 1780981707.0550697,
     "hash": "bd61fec8ac5945fb94bdd642855b96e9"
   },
-  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/vid/impl/CptDcuDataParserV1_0.java": {
-    "mtime": 1781515567.8481765,
-    "hash": "c586df30041136151e2c8d59be59c07c"
-  },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/vid/impl/SimDataParserV1_0.java": {
-    "mtime": 1781241842.87765,
-    "hash": "51bd74c9f5ff4012c29fc860a4b4cca5"
+    "mtime": 1781528510.4061437,
+    "hash": "aae7a73e55dd0dbd1a343c37f98d7052"
+  },
+  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/vid/impl/TspDownstreamProcessor.java": {
+    "mtime": 1781595024.8193355,
+    "hash": "695546539cb0130c98d0090967ba9d86"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/vid/impl/VehicleProduceDataParserV1_0.java": {
-    "mtime": 1781514129.101357,
-    "hash": "e07f808578c187d13432edb955874590"
+    "mtime": 1781531533.822317,
+    "hash": "230ddf130bba6479bbb9385a7aefb6aa"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/vid/impl/VehicleInfoPersister.java": {
     "mtime": 1779528472.6859803,
     "hash": "c2c4580e3c4dec79200864994ab0ef45"
   },
+  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/vid/impl/IdkDownstreamProcessor.java": {
+    "mtime": 1781595414.9993227,
+    "hash": "519fdd4d71e45dd93b5b3c8bfd95496b"
+  },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/vid/impl/BaseParser.java": {
-    "mtime": 1781149533.8786616,
-    "hash": "21e6b4d635b774d24841f20f6bec30e9"
+    "mtime": 1781528091.6658447,
+    "hash": "3feaed5cdda6a198437eacce0130b2c0"
+  },
+  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/vid/impl/CptDcu8295DataParserV1_0.java": {
+    "mtime": 1781587796.6711714,
+    "hash": "f7fe135a864dc906298334d6118e118a"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/vid/impl/CcpDataParserV1_0.java": {
     "mtime": 1781150038.1832738,
     "hash": "60ff16f7703a463e04aafdac35f4704d"
   },
+  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/vid/impl/OtaDownstreamProcessor.java": {
+    "mtime": 1781595248.8401926,
+    "hash": "b39b3891deb250b4dbfb2dc75e75d472"
+  },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/dto/cmd/OptionFamilyCmd.java": {
-    "mtime": 1781007544.1678002,
-    "hash": "743243f6f4da81cac4369bb8d333a3b9"
+    "mtime": 1781576403.937511,
+    "hash": "cfac4a5ae78e5419018b4b93f5dd7136"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/dto/cmd/ConfigItemCmd.java": {
     "mtime": 1777257716.3445938,
@@ -716,8 +756,8 @@
     "hash": "c13b73a0dc1c352f99b601f80430d920"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/dto/cmd/PartCmd.java": {
-    "mtime": 1777257716.509504,
-    "hash": "ff7e8e208514d7bc5b3c85f12017bd0d"
+    "mtime": 1781585439.7305825,
+    "hash": "e5243e393b9379af07649bc63872b892"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/dto/cmd/PlatformCmd.java": {
     "mtime": 1777257716.530636,
@@ -740,8 +780,8 @@
     "hash": "0f294ff3e4f5e3e030b221dc8ff0bd7d"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/dto/cmd/VehiclePartCmd.java": {
-    "mtime": 1777257716.7152348,
-    "hash": "d29c15e36ec0248310c211b2e9003aca"
+    "mtime": 1781585443.6569138,
+    "hash": "8ca2c03b0f083392b6e9caabba17d08a"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/dto/cmd/ModelCmd.java": {
     "mtime": 1779858999.3920383,
@@ -750,10 +790,6 @@
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/dto/cmd/PlantCmd.java": {
     "mtime": 1780996168.462962,
     "hash": "929da507490da8600a7adb9098587575"
-  },
-  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/dto/cmd/VehicleImportDataCmd.java": {
-    "mtime": 1779098102.5692382,
-    "hash": "20758bea309e8f5f00c4ba77ca9ab973"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/dto/cmd/ConfigItemOptionCmd.java": {
     "mtime": 1777257716.3884342,
@@ -787,25 +823,29 @@
     "mtime": 1781073546.513255,
     "hash": "332683fc27acd44c31acba695988d37f"
   },
+  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/dto/cmd/PartImportDataCmd.java": {
+    "mtime": 1781527228.927384,
+    "hash": "38dfb89014ab7a51b90e2ad18fde8b50"
+  },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/dto/cmd/VariantOptionCodeCmd.java": {
     "mtime": 1781014983.090965,
     "hash": "3c0b3ddd8f1b8ab5854f0d260b2ca7a4"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/dto/cmd/OptionCodeCmd.java": {
-    "mtime": 1781007547.266448,
-    "hash": "a60197e5cff5a37e407ffa46e6f563b7"
+    "mtime": 1781576406.835577,
+    "hash": "950adeff572aaa95faea74690d2fcc06"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/dto/result/ImportResult.java": {
-    "mtime": 1779530692.4252102,
-    "hash": "a2dc077e00030603ae1e461046da61a0"
+    "mtime": 1781597626.0886967,
+    "hash": "3248a8f0de05a28412ff6ff7ba4f2e7d"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/dto/result/VariantOptionCodeDto.java": {
     "mtime": 1781014987.3942623,
     "hash": "f174f6e4e0c3a7eaf59bc1cefa9dc675"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/dto/result/OptionCodeDto.java": {
-    "mtime": 1781007540.407817,
-    "hash": "0ba7ca57ff4485450db257f28c69d078"
+    "mtime": 1781576411.0864894,
+    "hash": "ba43b3d4226b622f76ae877df9bb9cd8"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/dto/result/VariantDto.java": {
     "mtime": 1780981330.404184,
@@ -835,21 +875,25 @@
     "mtime": 1781073539.3864124,
     "hash": "c0a375311d2f9d30223ec4443e68aa84"
   },
+  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/dto/result/PartImportDataDto.java": {
+    "mtime": 1781527236.547954,
+    "hash": "dff17a2d0c9c96ba8d6f0b94d1f15d3f"
+  },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/dto/result/VehicleLifecycleDto.java": {
     "mtime": 1777257716.678441,
     "hash": "8b36b3a54236b199a70e2f3f41940892"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/dto/result/OptionFamilyDto.java": {
-    "mtime": 1781007537.139044,
-    "hash": "45857002883f2fe3cd339ad8e4fdd635"
+    "mtime": 1781576409.211066,
+    "hash": "40719ada60957de0f853333e8ef1a09e"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/dto/result/ConfigItemDto.java": {
     "mtime": 1777257716.328773,
     "hash": "93b8f273587bafa42a9c448225216635"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/dto/result/PartDto.java": {
-    "mtime": 1781241219.925005,
-    "hash": "8d84b4c2063baba4fef1d2405f2271af"
+    "mtime": 1781585441.1182504,
+    "hash": "4e3cf4c0a166849ef7e081d23dd66a66"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/dto/result/BrandDto.java": {
     "mtime": 1777257716.284489,
@@ -862,10 +906,6 @@
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/dto/result/ModelDto.java": {
     "mtime": 1779858874.2435431,
     "hash": "29fa4ee30771376da59388b8961271a2"
-  },
-  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/dto/result/VehicleImportDataDto.java": {
-    "mtime": 1779087207.6850893,
-    "hash": "cda3bf7e82b93756a2bd52f604e2510b"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/dto/result/PlantDto.java": {
     "mtime": 1780996178.7573357,
@@ -888,8 +928,8 @@
     "hash": "021a991627ad9aa9e7e2489d184f1316"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/dto/result/VehiclePartDto.java": {
-    "mtime": 1777257716.6986804,
-    "hash": "d64c60fd9a626bea1c41abd04cb95cbd"
+    "mtime": 1781585447.657828,
+    "hash": "7ffa8b56af55042036f264670329dc23"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/dto/query/ConfigItemQuery.java": {
     "mtime": 1777257513.8788617,
@@ -904,8 +944,8 @@
     "hash": "b31d54f0dc6822abdd3da54cf0ff19fc"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/dto/query/PartQuery.java": {
-    "mtime": 1777257513.9133275,
-    "hash": "4da936385fd39a538eff96d6a8ddf58a"
+    "mtime": 1781585442.6155872,
+    "hash": "d965c0f6d01362296473fd7582f4ec36"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/dto/query/VariantQuery.java": {
     "mtime": 1780981327.99322,
@@ -923,9 +963,9 @@
     "mtime": 1780989619.0048308,
     "hash": "3f2230eb2efe12f26680dccc3a860126"
   },
-  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/dto/query/VehicleImportDataQuery.java": {
-    "mtime": 1777257513.9349353,
-    "hash": "1664caf461ee693b8a27996b99bb0d7c"
+  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/dto/query/PartImportDataQuery.java": {
+    "mtime": 1781528523.6525881,
+    "hash": "ff949f615411ccfa8ac50bf297e0d91e"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/dto/query/VehicleLifecycleQuery.java": {
     "mtime": 1777257513.9392576,
@@ -960,8 +1000,8 @@
     "hash": "4fb848d984083c1ac79f5763b648d869"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/dto/query/VehiclePartQuery.java": {
-    "mtime": 1777257513.9440653,
-    "hash": "f6db41e3a4f4b51606e167aa1d9244b0"
+    "mtime": 1781585445.3642106,
+    "hash": "b0be54694a272d62a4439432e1a95490"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/assembler/VehicleLifecycleNodeAssembler.java": {
     "mtime": 1777020562.3621075,
@@ -978,10 +1018,6 @@
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/assembler/VehicleVoAssembler.java": {
     "mtime": 1777265806.513824,
     "hash": "2e694cf326639bfd9e7e26e2e7253e33"
-  },
-  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/assembler/VehicleImportDataAssembler.java": {
-    "mtime": 1777260748.9126272,
-    "hash": "a4ca7d535d0fbc4684c164c8385ed13c"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/assembler/VariantOptionCodeAssembler.java": {
     "mtime": 1781014978.6118693,
@@ -1084,8 +1120,8 @@
     "hash": "b17740d27ef9e849e4626671cec22d7d"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/service/PartAppService.java": {
-    "mtime": 1781085247.023355,
-    "hash": "c334c9d9503cc0546cb69b4410e32c15"
+    "mtime": 1781585479.9901748,
+    "hash": "5de1fb90dbbcd29155738fcccf0b0747"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/service/PlantAppService.java": {
     "mtime": 1781065263.8431745,
@@ -1103,6 +1139,10 @@
     "mtime": 1781064960.908447,
     "hash": "e9754a1d5af816871bfdcf6db4c6f4ef"
   },
+  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/service/PartImportDataAppService.java": {
+    "mtime": 1781597221.4032564,
+    "hash": "5e677d8f88ca1ed13230503b930aefd6"
+  },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/service/VehicleLifecycleAppService.java": {
     "mtime": 1779531506.0774329,
     "hash": "5f2bb68184332599c859d4565258e63c"
@@ -1115,13 +1155,9 @@
     "mtime": 1781154229.4405222,
     "hash": "7b458a0151b386147633517e93a8e991"
   },
-  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/service/VehicleImportDataAppService.java": {
-    "mtime": 1781514794.1645958,
-    "hash": "96674f195c03009725f4cc3d35f33085"
-  },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/service/VehiclePartAppService.java": {
-    "mtime": 1781100790.5502615,
-    "hash": "6a211154570288f6cfae1bcbdddf12a2"
+    "mtime": 1781585485.319104,
+    "hash": "e4150623661e321cb70c919c0632ecab"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/service/VehicleModelConfigAppService.java": {
     "mtime": 1781064969.0619857,
@@ -1144,12 +1180,12 @@
     "hash": "a97bf96db8cdbbe5adc9a3a10e362db2"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/service/MdmSyncAppService.java": {
-    "mtime": 1781418599.0914,
-    "hash": "3adc4e36b4a2a9a55c94de6d3f8f7981"
+    "mtime": 1781585524.6706727,
+    "hash": "ad9c2793e07e7178497c466e4c3e3d63"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/service/PartInboundAppService.java": {
-    "mtime": 1781515567.8478737,
-    "hash": "7ddeed587665dd24e3788048c4423498"
+    "mtime": 1781585529.091888,
+    "hash": "11fcc96239af6ef84f1c239d84cfaf91"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/service/VehicleConfigAppService.java": {
     "mtime": 1777260141.616104,
@@ -1172,8 +1208,8 @@
     "hash": "f0739f16dc327b24859cd7f8f75fb5fe"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/event/subscribe/VehicleEolTspOtaSubscribe.java": {
-    "mtime": 1779525169.630414,
-    "hash": "6ed6de762a19aad164725a858c2b0440"
+    "mtime": 1781585577.3998725,
+    "hash": "f755aa2ce51b31deb74f34ff1b8b0220"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/event/subscribe/VehicleSkSubscribe.java": {
     "mtime": 1778568673.1598415,
@@ -1196,8 +1232,8 @@
     "hash": "f3d0be48d742e914a2d256cf3aa932a0"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/event/event/MdmOptionCodeEvent.java": {
-    "mtime": 1781417630.796738,
-    "hash": "a03ad8057a36fe6e4ad0f4057a66c134"
+    "mtime": 1781576439.4361067,
+    "hash": "78037d85ad16933dc0e92c11f43a3763"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/event/event/MdmPlantEvent.java": {
     "mtime": 1781417626.6287184,
@@ -1224,8 +1260,8 @@
     "hash": "a799892932be3959d5bf60d45e3f1895"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/event/event/MdmOptionFamilyEvent.java": {
-    "mtime": 1781417628.7324805,
-    "hash": "d57c0af9b1a4e093c92076ef14b50db4"
+    "mtime": 1781576430.9738152,
+    "hash": "74a3edd9742031f7d4c7711c9403be57"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/event/event/MdmPlatformEvent.java": {
     "mtime": 1781417615.4424033,
@@ -1240,8 +1276,8 @@
     "hash": "4256e9110464f3ccd31489722f9569c3"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/event/event/VehicleEolPartBoundEvent.java": {
-    "mtime": 1779525051.6018224,
-    "hash": "9a88bcaa67c912bc5efc97ce2bd2e2fa"
+    "mtime": 1781585572.2883458,
+    "hash": "1f6a02dda0f631567cf55f604714615a"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/application/event/event/MdmModelEvent.java": {
     "mtime": 1781417617.5189583,
@@ -1268,8 +1304,8 @@
     "hash": "5254aeae86378998e846aaa6af966deb"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/infrastructure/persistence/repository/MdmPartRepositoryImpl.java": {
-    "mtime": 1781133801.0210288,
-    "hash": "be3cf1d405db0d138eefe20aac2e7e07"
+    "mtime": 1781585435.5970793,
+    "hash": "d1a5bf79fe41e9109a4cddd3b73cd858"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/infrastructure/persistence/repository/MdmPlantRepositoryImpl.java": {
     "mtime": 1781181066.3012474,
@@ -1295,6 +1331,10 @@
     "mtime": 1781100549.2944503,
     "hash": "ed68226d2abb262c14ffca73d5ffb5ba"
   },
+  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/infrastructure/persistence/repository/PartImportDataRepositoryImpl.java": {
+    "mtime": 1781531511.073095,
+    "hash": "009fd73012b1699b0c873a7d47a74bc1"
+  },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/infrastructure/persistence/repository/MdmOptionFamilyRepositoryImpl.java": {
     "mtime": 1781065752.24173,
     "hash": "65551cba7ab1a2a5ad9dbe604ef1f4b6"
@@ -1310,10 +1350,6 @@
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/infrastructure/persistence/repository/MdmBrandRepositoryImpl.java": {
     "mtime": 1781181099.4425745,
     "hash": "5a0ee28a6d4d91228a132f6be0097c64"
-  },
-  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/infrastructure/persistence/repository/VehImportDataRepositoryImpl.java": {
-    "mtime": 1777303304.3101895,
-    "hash": "5d3d05877d652a279464fbcb0c26f48e"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/infrastructure/persistence/repository/MdmModelRepositoryImpl.java": {
     "mtime": 1781181116.515541,
@@ -1336,8 +1372,8 @@
     "hash": "3ea318c6da09f0c2aac7a4b0d329b817"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/infrastructure/persistence/repository/PartRepositoryImpl.java": {
-    "mtime": 1781133801.0169017,
-    "hash": "206c50516a417f74f1640b86a25d586d"
+    "mtime": 1781585432.757054,
+    "hash": "f618a86640c70ab6b2b2a8d81c07ac20"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/infrastructure/persistence/repository/VehicleConfigRepositoryImpl.java": {
     "mtime": 1777302134.5126603,
@@ -1347,13 +1383,13 @@
     "mtime": 1777129493.4094095,
     "hash": "5561bf9835c02469c1f3f407301348be"
   },
+  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/infrastructure/persistence/converter/PartImportDataConverter.java": {
+    "mtime": 1781527078.3319724,
+    "hash": "e01c8976baee18531c01561f5b08253a"
+  },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/infrastructure/persistence/converter/CarLineConverter.java": {
     "mtime": 1781063833.4306972,
     "hash": "e88898c9e6b614106698380c0ce95775"
-  },
-  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/infrastructure/persistence/converter/VehicleImportDataConverter.java": {
-    "mtime": 1777129493.4087887,
-    "hash": "3734c4e0720a1776faae1db6258ffd42"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/infrastructure/persistence/converter/VehicleInfoConverter.java": {
     "mtime": 1777129493.4090226,
@@ -1464,8 +1500,12 @@
     "hash": "411c2370e783c70934fb925fe0a75654"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/infrastructure/persistence/mapper/PartMapper.java": {
-    "mtime": 1781133801.0112493,
-    "hash": "fa70e578d98039f370c66dfdae134186"
+    "mtime": 1781585098.4448874,
+    "hash": "d45bd73a3320f7cc2fa97c5880f59f4f"
+  },
+  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/infrastructure/persistence/mapper/PartImportDataMapper.java": {
+    "mtime": 1781528468.4181616,
+    "hash": "4c9bfd0b448c0a46ae2a17be1a1e0567"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/infrastructure/persistence/mapper/VehBasicInfoMapper.java": {
     "mtime": 1777002284.4603295,
@@ -1478,10 +1518,6 @@
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/infrastructure/persistence/mapper/MdmVariantOptionCodeMapper.java": {
     "mtime": 1781065849.2351222,
     "hash": "de61b61da20d5d7044ee533453cb7a0d"
-  },
-  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/infrastructure/persistence/mapper/VehImportDataMapper.java": {
-    "mtime": 1777002284.4607594,
-    "hash": "2de313171964e82c3376fd75bec44f35"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/infrastructure/persistence/mapper/VehDetailInfoMapper.java": {
     "mtime": 1777002284.4609544,
@@ -1555,6 +1591,10 @@
     "mtime": 1776957187.4350445,
     "hash": "d66aadbac2d35ae17c77691d228caad6"
   },
+  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/infrastructure/persistence/po/PartImportDataPo.java": {
+    "mtime": 1781526898.71544,
+    "hash": "21a08655e41eb1d9cc6594d0c87309b5"
+  },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/infrastructure/persistence/po/MdmBrandPo.java": {
     "mtime": 1781062542.5509908,
     "hash": "36b1a6acf2232901096a66ce05f8824c"
@@ -1575,13 +1615,9 @@
     "mtime": 1776957187.4366627,
     "hash": "9c9994ab7a293bb173f46d01cedd7878"
   },
-  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/infrastructure/persistence/po/VehImportDataPo.java": {
-    "mtime": 1776957187.4372962,
-    "hash": "f4cdb51b25551b45f9a587d3b4e49d8e"
-  },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/infrastructure/persistence/po/MdmPartPo.java": {
-    "mtime": 1781133801.0259318,
-    "hash": "70492854a949e3c6ac0859fd113c236a"
+    "mtime": 1781585090.9440958,
+    "hash": "b3a72ed9d1051ed9449ce784d03871ea"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/infrastructure/persistence/po/MdmConfigurationPo.java": {
     "mtime": 1781064860.1076581,
@@ -1596,8 +1632,8 @@
     "hash": "beb87af166613f258bb2b7c2afebe679"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/infrastructure/persistence/po/PartInfoPo.java": {
-    "mtime": 1781515567.848761,
-    "hash": "0a0c408acafeb9831a6be0276b0ab4b5"
+    "mtime": 1781585595.901526,
+    "hash": "209ae2a7e3ba5bf890297aed25b9a08d"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/infrastructure/persistence/po/VehDetailInfoPo.java": {
     "mtime": 1776957187.4385087,
@@ -1620,12 +1656,12 @@
     "hash": "f2effb86232348b554a660ce2a2afa2e"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/infrastructure/persistence/po/MdmOptionFamilyPo.java": {
-    "mtime": 1781065432.1460924,
-    "hash": "b932540e7e009d4e2a16cf1b91949076"
+    "mtime": 1781575998.0031064,
+    "hash": "ccfb6990cbbb15de622d2c2e4a9f78d3"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/infrastructure/persistence/po/MdmOptionCodePo.java": {
-    "mtime": 1781065654.8604817,
-    "hash": "b116f4773f2e5c78989e820ac9ba4088"
+    "mtime": 1781576001.065999,
+    "hash": "6193c49ce35a906fc5c5be50f47f2413"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/infrastructure/persistence/po/ConfigItemMappingPo.java": {
     "mtime": 1776957187.4401908,
@@ -1655,13 +1691,9 @@
     "mtime": 1781064255.7693279,
     "hash": "8a0886479018b2b1537e10ef0f6fdb8c"
   },
-  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/domain/repository/VehImportDataRepository.java": {
-    "mtime": 1777037784.9954221,
-    "hash": "f48855a8a90efe29ae4f38f963aa4213"
-  },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/domain/repository/MdmPartRepository.java": {
-    "mtime": 1781084117.740748,
-    "hash": "40607e1b819695bc9895e9188fabf17f"
+    "mtime": 1781585430.3852818,
+    "hash": "1a7be6d10d0b1cd72a1e9ca25b2588f3"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/domain/repository/VehBasicInfoRepository.java": {
     "mtime": 1777016330.4742036,
@@ -1696,8 +1728,12 @@
     "hash": "552446772fc9ad3e5e7c89eb799c6562"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/domain/repository/PartRepository.java": {
-    "mtime": 1781083640.048373,
-    "hash": "5c3c4df41f5f1349214abf9b8980f6c8"
+    "mtime": 1781585428.5255969,
+    "hash": "d531e8260e2fb5a89fa0dcfcab05d325"
+  },
+  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/domain/repository/PartImportDataRepository.java": {
+    "mtime": 1781531484.951329,
+    "hash": "79c63d8b24973af77b71068b62874e08"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/domain/repository/ConfigItemRepository.java": {
     "mtime": 1777013463.695517,
@@ -1771,21 +1807,21 @@
     "mtime": 1780980954.6901386,
     "hash": "dccb76cd12f9017a389437d3bb608b8c"
   },
-  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/domain/model/entity/VehicleImportData.java": {
-    "mtime": 1779087207.6916711,
-    "hash": "c315684ea0c434159d1a5859647f363c"
-  },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/domain/model/entity/Configuration.java": {
     "mtime": 1780988506.0263822,
     "hash": "f1de9fbc99b062f98aa796574722a1cc"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/domain/model/entity/Part.java": {
-    "mtime": 1781241210.3705819,
-    "hash": "58408648043d262a5ed8a5aaace81eb4"
+    "mtime": 1781585094.989537,
+    "hash": "89362201601f365c48076cc11c60292c"
+  },
+  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/domain/model/entity/PartImportData.java": {
+    "mtime": 1781526733.8126817,
+    "hash": "338a27d1b0d4a2a384d5d5d405c9fb85"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/domain/model/entity/OptionFamily.java": {
-    "mtime": 1781007050.7200267,
-    "hash": "ec061775496e1608f3ec292c026216d7"
+    "mtime": 1781576017.3169835,
+    "hash": "23f6f92d221ebec1a5c46c9067533812"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/domain/model/entity/Plant.java": {
     "mtime": 1780641458.3988717,
@@ -1808,8 +1844,8 @@
     "hash": "3fb0c8260958c0326e43baa66d3c1c33"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/domain/model/entity/OptionCode.java": {
-    "mtime": 1781007054.6118252,
-    "hash": "0506262f31576fc93065baefe95bbf10"
+    "mtime": 1781576020.3305538,
+    "hash": "9bd5558e4e7e73274963a9e176927a1a"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/domain/model/entity/Platform.java": {
     "mtime": 1780900899.8196716,
@@ -1860,8 +1896,8 @@
     "hash": "4dc3fd13dc7b9e0cf84bd6af387c5c2a"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/domain/model/entity/PartInfo.java": {
-    "mtime": 1781515567.8485727,
-    "hash": "fb91b18e2e26f0638c41b7aa15cc2402"
+    "mtime": 1781585591.6687615,
+    "hash": "5ce61581a2f8a6a2c194b1634564e13c"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-service/src/main/java/net/hwyz/iov/cloud/edd/vmd/service/domain/model/aggregate/Vehicle.java": {
     "mtime": 1780641966.4337225,
@@ -1904,8 +1940,8 @@
     "hash": "1e3a49c240fbb3537c883a22f6efec81"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-api/src/main/java/net/hwyz/iov/cloud/edd/vmd/api/vo/response/PartExResponse.java": {
-    "mtime": 1777265917.321962,
-    "hash": "0f6484d5bff38c9dc083348ae491da71"
+    "mtime": 1781585457.4421463,
+    "hash": "37ce69b1071cb22f37d6acdaf4b4b62f"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-api/src/main/java/net/hwyz/iov/cloud/edd/vmd/api/vo/request/VehicleOrderExRequest.java": {
     "mtime": 1777265917.3211453,
@@ -1924,8 +1960,8 @@
     "hash": "e53d1f247b17fd999ba5ed9ba900addd"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-api/src/main/java/net/hwyz/iov/cloud/edd/vmd/api/fallback/VmdPartServiceFallbackFactory.java": {
-    "mtime": 1777265917.3245506,
-    "hash": "2a05be6212215a9781fc25d6aee834e3"
+    "mtime": 1781585565.200714,
+    "hash": "b5e816af0cd206554b5576eb6f42875c"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-api/src/main/java/net/hwyz/iov/cloud/edd/vmd/api/fallback/VmdVehicleNodeServiceFallbackFactory.java": {
     "mtime": 1781074090.413152,
@@ -1936,8 +1972,8 @@
     "hash": "e691af81d0de9c6ac2d99599c0598d58"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-api/src/main/java/net/hwyz/iov/cloud/edd/vmd/api/service/VmdPartService.java": {
-    "mtime": 1777265917.3248699,
-    "hash": "4fbae166f19385df0feef69a25e84b6c"
+    "mtime": 1781585562.3972313,
+    "hash": "c60520b4eae9cae1c634ab5236482346"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/edd-vmd-api/src/main/java/net/hwyz/iov/cloud/edd/vmd/api/service/VmdVehicleModelConfigService.java": {
     "mtime": 1781008519.8047698,
@@ -1975,6 +2011,10 @@
     "mtime": 1779527882.3969088,
     "hash": "fd52478ba5437b0c0c3d0195b2cc8b83"
   },
+  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/docs/superpowers/plans/2026-06-15-rename-veh-import-data-to-part-import-data.md": {
+    "mtime": 1781526589.979983,
+    "hash": "0db92ee6632b59ac861584a3384bc742"
+  },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/docs/superpowers/plans/2026-06-09-cr017-buildconfig-to-configuration.md": {
     "mtime": 1781254936.8565633,
     "hash": "31b452751f7d61e3e4fc697de041ac50"
@@ -2003,6 +2043,10 @@
     "mtime": 1780980736.7122645,
     "hash": "3d9ce02e7380b962ba73677b29751f35"
   },
+  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/docs/superpowers/plans/2026-06-16-mdm-part-projection-rebuild.md": {
+    "mtime": 1781578151.179321,
+    "hash": "4b980d14836bc5a9c39cb42d25ca59fa"
+  },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/docs/superpowers/plans/2026-06-08-cr-013-platform-projection.md": {
     "mtime": 1780900494.6385999,
     "hash": "42426847cad040b8f66bf3a7bb87bc25"
@@ -2011,9 +2055,17 @@
     "mtime": 1781178576.0712512,
     "hash": "149dda822f2fe917ee6214de68eaa4f5"
   },
+  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/docs/superpowers/plans/2026-06-16-cr026-part-import-two-stage.md": {
+    "mtime": 1781594514.2006106,
+    "hash": "4f64511a7474c249cdcaa76451da99c9"
+  },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/docs/superpowers/plans/2026-06-09-cr018-option-family-code-refactor.md": {
     "mtime": 1781254936.8411896,
     "hash": "b4b96e583336a41db1369fb7b4365cf8"
+  },
+  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/docs/superpowers/plans/2026-06-16-mdm-option-projection-align.md": {
+    "mtime": 1781575482.0338635,
+    "hash": "7350dd521b9b29181d1314954ee18d54"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/docs/superpowers/plans/2026-05-27-series-to-carLine-refactoring.md": {
     "mtime": 1779850639.1394837,
@@ -2026,6 +2078,10 @@
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/docs/superpowers/specs/2026-06-10-cr019-supplier-retirement-design.md": {
     "mtime": 1781058886.915214,
     "hash": "a91746627cb73dce24b258412b2d8623"
+  },
+  "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/docs/superpowers/specs/2026-06-16-cr026-part-import-two-stage-design.md": {
+    "mtime": 1781593949.5117745,
+    "hash": "ae30ea3b04fa47476462c128edfe22ef"
   },
   "/Users/hwyz_leo/Projects/open-iov/cloud/edd/iov-cloud-edd-vmd/docs/superpowers/specs/2026-05-27-series-to-carLine-refactoring-design.md": {
     "mtime": 1779851064.0722113,

@@ -1,12 +1,12 @@
-# Graph Report - iov-cloud-edd-vmd  (2026-06-15)
+# Graph Report - iov-cloud-edd-vmd  (2026-06-16)
 
 ## Corpus Check
-- 488 files · ~125,094 words
+- 497 files · ~132,963 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 4102 nodes · 4704 edges · 449 communities detected
-- Extraction: 85% EXTRACTED · 15% INFERRED · 0% AMBIGUOUS · INFERRED: 706 edges (avg confidence: 0.8)
+- 4224 nodes · 4865 edges · 454 communities detected
+- Extraction: 85% EXTRACTED · 15% INFERRED · 0% AMBIGUOUS · INFERRED: 738 edges (avg confidence: 0.8)
 - Token cost: 0 input · 0 output
 
 ## Community Hubs (Navigation)
@@ -452,13 +452,18 @@
 - [[_COMMUNITY_Community 446|Community 446]]
 - [[_COMMUNITY_Community 447|Community 447]]
 - [[_COMMUNITY_Community 448|Community 448]]
+- [[_COMMUNITY_Community 449|Community 449]]
+- [[_COMMUNITY_Community 450|Community 450]]
 - [[_COMMUNITY_Community 451|Community 451]]
 - [[_COMMUNITY_Community 452|Community 452]]
-- [[_COMMUNITY_Community 454|Community 454]]
-- [[_COMMUNITY_Community 455|Community 455]]
+- [[_COMMUNITY_Community 453|Community 453]]
 - [[_COMMUNITY_Community 456|Community 456]]
 - [[_COMMUNITY_Community 457|Community 457]]
-- [[_COMMUNITY_Community 458|Community 458]]
+- [[_COMMUNITY_Community 459|Community 459]]
+- [[_COMMUNITY_Community 460|Community 460]]
+- [[_COMMUNITY_Community 461|Community 461]]
+- [[_COMMUNITY_Community 462|Community 462]]
+- [[_COMMUNITY_Community 463|Community 463]]
 
 ## God Nodes (most connected - your core abstractions)
 1. `MdmSyncAppServiceTest` - 38 edges
@@ -480,143 +485,143 @@
 
 ### Community 0 - "Community 0"
 Cohesion: 0.01
-Nodes (41): BaseTest, VehicleInfoConverter, MdmBrandRepository, MdmCarLineRepository, MdmConfigurationRepository, MdmModelRepository, MdmOptionFamilyRepository, MdmPlantRepository (+33 more)
+Nodes (36): VehicleInfoConverter, VehicleInfoPersister, VehicleInfoPersisterTest, MdmBrandRepository, MdmCarLineRepository, MdmConfigurationRepository, MdmModelRepository, MdmOptionFamilyRepository (+28 more)
 
 ### Community 1 - "Community 1"
 Cohesion: 0.02
-Nodes (30): BaseParser, BaseParser, BtmDataParserV1_0, CcpDataParserV1_0, CptDcuDataParserV1_0, EolDataParserV1_0, IdcmDataParserV1_0, ImportDataParserIntegrationTest (+22 more)
+Nodes (34): BaseParser, BaseParser, BtmDataParserV1_0, CcpDataParserV1_0, CptDcu8295DataParserV1_0, CptDcuDataParserV1_0, EolDataParserV1_0, IdcmDataParserV1_0 (+26 more)
 
 ### Community 2 - "Community 2"
+Cohesion: 0.02
+Nodes (14): BaseTest, MdmPlantRepository, MdmBrandRepositoryTest, MdmCarLineRepositoryTest, MdmModelRepositoryTest, MdmPlantRepositoryImpl, MdmPlantRepositoryTest, MdmPlatformRepositoryTest (+6 more)
+
+### Community 3 - "Community 3"
 Cohesion: 0.03
 Nodes (23): MdmBrandQueryClient, MdmCarLineQueryClient, MdmConfigurationQueryClient, MdmModelQueryClient, MdmOptionCodeQueryClient, MdmOptionFamilyQueryClient, MdmPlantQueryClient, MdmPlatformQueryClient (+15 more)
 
-### Community 3 - "Community 3"
-Cohesion: 0.02
-Nodes (22): Qrcode, Vehicle, VehicleLifecycleAssembler, CacheService, VehicleLifecycleNode, QrcodeFactory, CacheServiceImpl, VehLifecycleMapper (+14 more)
-
 ### Community 4 - "Community 4"
 Cohesion: 0.02
-Nodes (17): MptBaseModelAssembler, BaseController, IdcmQrcodeController, MobileQrcodeController, MptBaseModelController, MptMdmSyncController, MptPartController, MptPartInboundController (+9 more)
+Nodes (20): BaseController, DeviceRepository, IdcmQrcodeController, MobileQrcodeController, MptDeviceController, MptMdmSyncController, MptPartController, MptPartInboundController (+12 more)
 
 ### Community 5 - "Community 5"
 Cohesion: 0.03
-Nodes (50): BasePo, ConfigItemMappingPo, ConfigItemOptionPo, ConfigItemPo, DevicePo, MdmBrandPo, MdmCarLinePo, MdmConfigurationOptionCodePo (+42 more)
+Nodes (51): BasePo, ConfigItemMappingPo, ConfigItemOptionPo, ConfigItemPo, DevicePo, MdmBrandPo, MdmCarLinePo, MdmConfigurationOptionCodePo (+43 more)
 
 ### Community 6 - "Community 6"
-Cohesion: 0.04
-Nodes (37): BaseRequest, BaseModelFeatureCodeRequest, BaseModelRequest, BrandRequest, BuildConfigFeatureCodeRequest, BuildConfigRequest, CarLineRequest, ConfigItemMappingRequest (+29 more)
+Cohesion: 0.03
+Nodes (20): Qrcode, Vehicle, VehicleLifecycleAssembler, CacheService, VehicleLifecycleNode, QrcodeFactory, CacheServiceImpl, VehLifecycleMapper (+12 more)
 
 ### Community 7 - "Community 7"
+Cohesion: 0.04
+Nodes (38): BaseRequest, BaseModelFeatureCodeRequest, BaseModelRequest, BrandRequest, BuildConfigFeatureCodeRequest, BuildConfigRequest, CarLineRequest, ConfigItemMappingRequest (+30 more)
+
+### Community 8 - "Community 8"
+Cohesion: 0.03
+Nodes (23): ParserNotFoundException, PartBindingConflictException, PartImportDataException, PartInboundValidateFailedException, PartInstanceAlreadyExistsException, PartInstanceNotExistException, PartNotActiveException, PartNotAllowBindException (+15 more)
+
+### Community 9 - "Community 9"
 Cohesion: 0.05
 Nodes (4): MptOptionAssembler, MptOptionFamilyController, OptionFamilyAppService, OptionFamilyAppServiceTest
 
-### Community 8 - "Community 8"
+### Community 10 - "Community 10"
 Cohesion: 0.04
 Nodes (6): MptFeatureAssembler, FeatureConverter, MptFeatureFamilyController, VehFeatureFamilyRepositoryImpl, FeatureFamilyAppService, VehFeatureFamilyRepository
 
-### Community 9 - "Community 9"
+### Community 11 - "Community 11"
 Cohesion: 0.04
 Nodes (4): BaseModelFeatureCode, MptConfigurationController, ConfigurationAppService, ConfigurationAppServiceTest
 
-### Community 10 - "Community 10"
-Cohesion: 0.03
-Nodes (22): ParserNotFoundException, PartBindingConflictException, PartInboundValidateFailedException, PartInstanceAlreadyExistsException, PartInstanceNotExistException, PartNotActiveException, PartNotAllowBindException, PartNotExistException (+14 more)
-
-### Community 11 - "Community 11"
+### Community 12 - "Community 12"
 Cohesion: 0.04
 Nodes (6): ServiceBuildConfigAssembler, ServiceConfigurationAssembler, MptCarLineController, CarLineAppService, CarLineAppServiceTest, ServiceVehicleModelConfigController
 
-### Community 12 - "Community 12"
+### Community 13 - "Community 13"
 Cohesion: 0.07
 Nodes (7): MdmPartSyncIntegrationTest, MdmPartKafkaConsumer, MdmPartKafkaConsumerTest, MdmSyncMetrics, MdmSyncMetricsTest, MdmPartSyncScheduler, MdmPartSyncSchedulerTest
 
-### Community 13 - "Community 13"
+### Community 14 - "Community 14"
 Cohesion: 0.05
 Nodes (3): MptConfigItemAssembler, MptConfigItemController, ConfigItemAppService
 
-### Community 14 - "Community 14"
+### Community 15 - "Community 15"
 Cohesion: 0.04
 Nodes (6): VehiclePartConverter, VehiclePartMapper, MptVehiclePartController, VehiclePartRepositoryImpl, VehiclePartAppService, VehiclePartRepository
 
-### Community 15 - "Community 15"
+### Community 16 - "Community 16"
 Cohesion: 0.06
 Nodes (3): OptionConverter, MdmOptionFamilyRepositoryImpl, VehOptionFamilyRepositoryImpl
 
-### Community 16 - "Community 16"
+### Community 17 - "Community 17"
 Cohesion: 0.05
 Nodes (4): MptBuildConfigController, VehBuildConfigRepositoryImpl, BuildConfigAppService, VehBuildConfigRepository
 
-### Community 17 - "Community 17"
+### Community 18 - "Community 18"
 Cohesion: 0.05
 Nodes (6): MptVehicleConfigAssembler, VehicleConfigConverter, MptVehicleConfigController, VehicleConfigRepositoryImpl, VehicleConfigAppService, VehicleConfigRepository
 
-### Community 18 - "Community 18"
+### Community 19 - "Community 19"
 Cohesion: 0.07
 Nodes (3): MptModelController, ModelAppService, ModelAppServiceTest
 
-### Community 19 - "Community 19"
+### Community 20 - "Community 20"
 Cohesion: 0.06
 Nodes (4): PartInboundIntegrationTest, PartTypeSchema, PartTypeSchemaRegistry, PartTypeSchemaTest
 
-### Community 20 - "Community 20"
+### Community 21 - "Community 21"
 Cohesion: 0.06
 Nodes (4): FeatureCode, OptionCode, MdmConfigurationRepositoryImplTest, VehConfigurationRepositoryImplTest
 
-### Community 21 - "Community 21"
-Cohesion: 0.07
-Nodes (3): MptBrandController, BrandAppService, BrandAppServiceTest
-
 ### Community 22 - "Community 22"
-Cohesion: 0.06
+Cohesion: 0.05
 Nodes (7): PartMapper, MdmPartRepository, PartRepository, MdmPartRepositoryImpl, PartRepositoryImpl, PartInboundRecord, PartInboundResult
 
 ### Community 23 - "Community 23"
-Cohesion: 0.06
-Nodes (4): MdmVehicleNodeRepository, MdmVehicleNodeRepositoryImpl, VehicleNodeAppService, VehicleNodeAppServiceTest
+Cohesion: 0.07
+Nodes (3): MptBrandController, BrandAppService, BrandAppServiceTest
 
 ### Community 24 - "Community 24"
 Cohesion: 0.07
-Nodes (4): ConfigItemRepository, ConfigItemConverter, ConfigItemMappingMapper, ConfigItemRepositoryImpl
-
-### Community 25 - "Community 25"
-Cohesion: 0.08
 Nodes (3): MptPlatformController, PlatformAppService, PlatformAppServiceTest
 
+### Community 25 - "Community 25"
+Cohesion: 0.06
+Nodes (4): MdmVehicleNodeRepository, MdmVehicleNodeRepositoryImpl, VehicleNodeAppService, VehicleNodeAppServiceTest
+
 ### Community 26 - "Community 26"
+Cohesion: 0.07
+Nodes (4): ConfigItemRepository, ConfigItemConverter, ConfigItemMappingMapper, ConfigItemRepositoryImpl
+
+### Community 27 - "Community 27"
 Cohesion: 0.05
 Nodes (13): MdmBrandEvent, MdmCarLineEvent, MdmConfigurationEvent, MdmModelEvent, MdmOptionCodeEvent, MdmOptionFamilyEvent, MdmPartEvent, MdmPlantEvent (+5 more)
 
-### Community 27 - "Community 27"
+### Community 28 - "Community 28"
+Cohesion: 0.07
+Nodes (3): MptBaseModelAssembler, MptBaseModelController, BaseModelAppService
+
+### Community 29 - "Community 29"
 Cohesion: 0.07
 Nodes (2): VariantAppService, VariantAppServiceTest
 
-### Community 28 - "Community 28"
+### Community 30 - "Community 30"
 Cohesion: 0.08
 Nodes (5): PartInfoMapper, MptPartInfoController, PartInfoRepository, PartInfoRepositoryImpl, PartInfoAppService
 
-### Community 29 - "Community 29"
-Cohesion: 0.08
-Nodes (4): DeviceRepository, MptDeviceController, DeviceRepositoryImpl, DeviceAppService
-
-### Community 30 - "Community 30"
+### Community 31 - "Community 31"
 Cohesion: 0.08
 Nodes (4): MptManufacturerController, VehManufacturerRepositoryImpl, ManufacturerAppService, VehManufacturerRepository
 
-### Community 31 - "Community 31"
+### Community 32 - "Community 32"
 Cohesion: 0.1
 Nodes (2): PlantAppService, PlantAppServiceTest
 
-### Community 32 - "Community 32"
+### Community 33 - "Community 33"
 Cohesion: 0.09
 Nodes (4): MptSupplierController, SupplierRepositoryImpl, SupplierAppService, SupplierRepository
 
-### Community 33 - "Community 33"
-Cohesion: 0.09
-Nodes (1): VehConfigurationRepository
-
 ### Community 34 - "Community 34"
 Cohesion: 0.09
-Nodes (1): VehConfigurationRepositoryImpl
+Nodes (1): VehConfigurationRepository
 
 ### Community 35 - "Community 35"
 Cohesion: 0.1
@@ -636,51 +641,51 @@ Nodes (1): VehOptionFamilyRepository
 
 ### Community 39 - "Community 39"
 Cohesion: 0.11
-Nodes (1): VehVariantRepositoryImpl
+Nodes (7): BaseEvent, QrcodeConfirmEvent, QrcodeValidateEvent, VehicleEolEvent, PartMeta, VehicleEolPartBoundEvent, VehicleProduceEvent
 
 ### Community 40 - "Community 40"
 Cohesion: 0.11
-Nodes (7): BaseEvent, QrcodeConfirmEvent, QrcodeValidateEvent, VehicleEolEvent, PartMeta, VehicleEolPartBoundEvent, VehicleProduceEvent
-
-### Community 41 - "Community 41"
-Cohesion: 0.11
 Nodes (1): MdmConfigurationRepository
 
-### Community 42 - "Community 42"
-Cohesion: 0.23
-Nodes (1): MdmModelRepositoryTest
+### Community 41 - "Community 41"
+Cohesion: 0.15
+Nodes (3): PartImportDataConverter, PartImportDataMapper, PartImportDataRepositoryImpl
 
-### Community 43 - "Community 43"
+### Community 42 - "Community 42"
 Cohesion: 0.12
 Nodes (1): FlywayMigrationTest
 
-### Community 44 - "Community 44"
+### Community 43 - "Community 43"
 Cohesion: 0.12
 Nodes (1): MdmVariantRepository
 
-### Community 45 - "Community 45"
+### Community 44 - "Community 44"
 Cohesion: 0.26
 Nodes (1): VehModelRepositoryTest
 
-### Community 46 - "Community 46"
+### Community 45 - "Community 45"
 Cohesion: 0.13
 Nodes (1): VehBuildConfigRepository
 
-### Community 47 - "Community 47"
+### Community 46 - "Community 46"
 Cohesion: 0.14
 Nodes (1): VehiclePartRepository
 
-### Community 48 - "Community 48"
+### Community 47 - "Community 47"
 Cohesion: 0.14
 Nodes (1): VehFeatureFamilyRepository
 
-### Community 49 - "Community 49"
+### Community 48 - "Community 48"
 Cohesion: 0.15
 Nodes (1): CarLineTest
 
+### Community 49 - "Community 49"
+Cohesion: 0.19
+Nodes (4): DownstreamProcessor, IdkDownstreamProcessor, OtaDownstreamProcessor, TspDownstreamProcessor
+
 ### Community 50 - "Community 50"
 Cohesion: 0.15
-Nodes (1): MdmPlatformRepositoryTest
+Nodes (1): MdmPartRepository
 
 ### Community 51 - "Community 51"
 Cohesion: 0.15
@@ -692,583 +697,583 @@ Nodes (1): VehBaseModelRepository
 
 ### Community 53 - "Community 53"
 Cohesion: 0.17
-Nodes (1): VehBrandRepositoryTest
+Nodes (1): MdmVehicleNodeRepositoryImplTest
 
 ### Community 54 - "Community 54"
 Cohesion: 0.17
-Nodes (1): MdmVehicleNodeRepositoryImplTest
+Nodes (1): ModelTest
 
 ### Community 55 - "Community 55"
 Cohesion: 0.17
-Nodes (1): ModelTest
+Nodes (1): MptConfigurationAssembler
 
 ### Community 56 - "Community 56"
 Cohesion: 0.17
-Nodes (1): MptConfigurationAssembler
+Nodes (1): MdmModelRepository
 
 ### Community 57 - "Community 57"
 Cohesion: 0.17
-Nodes (1): MdmModelRepository
+Nodes (1): VehBasicInfoRepository
 
 ### Community 58 - "Community 58"
 Cohesion: 0.17
-Nodes (1): MdmPartRepository
+Nodes (1): MdmPlatformRepository
 
 ### Community 59 - "Community 59"
 Cohesion: 0.17
-Nodes (1): VehBasicInfoRepository
+Nodes (1): MdmCarLineRepository
 
 ### Community 60 - "Community 60"
 Cohesion: 0.17
-Nodes (1): MdmPlatformRepository
+Nodes (1): MdmBrandRepository
 
 ### Community 61 - "Community 61"
 Cohesion: 0.17
-Nodes (1): MdmCarLineRepository
+Nodes (1): VehicleConfigRepository
 
 ### Community 62 - "Community 62"
 Cohesion: 0.17
-Nodes (1): MdmBrandRepository
+Nodes (1): PartRepository
 
 ### Community 63 - "Community 63"
 Cohesion: 0.17
-Nodes (1): VehicleConfigRepository
+Nodes (1): MdmVehicleNodeRepository
 
 ### Community 64 - "Community 64"
 Cohesion: 0.17
-Nodes (1): MdmVehicleNodeRepository
+Nodes (1): VehBrandRepository
 
 ### Community 65 - "Community 65"
 Cohesion: 0.17
-Nodes (1): VehBrandRepository
+Nodes (1): VehPlatformRepository
 
 ### Community 66 - "Community 66"
 Cohesion: 0.17
-Nodes (1): VehPlatformRepository
+Nodes (1): VehModelRepository
 
 ### Community 67 - "Community 67"
 Cohesion: 0.17
-Nodes (1): VehModelRepository
-
-### Community 68 - "Community 68"
-Cohesion: 0.17
 Nodes (1): VehCarLineRepository
 
-### Community 69 - "Community 69"
-Cohesion: 0.17
-Nodes (1): VehBaseModelRepositoryImpl
-
-### Community 70 - "Community 70"
+### Community 68 - "Community 68"
 Cohesion: 0.18
 Nodes (1): VariantIntegrationTest
 
-### Community 71 - "Community 71"
+### Community 69 - "Community 69"
 Cohesion: 0.18
 Nodes (1): VehicleNodeIntegrationTest
 
-### Community 72 - "Community 72"
+### Community 70 - "Community 70"
 Cohesion: 0.18
 Nodes (1): BrandTest
 
-### Community 73 - "Community 73"
+### Community 71 - "Community 71"
 Cohesion: 0.18
 Nodes (1): PlatformTest
 
-### Community 74 - "Community 74"
+### Community 72 - "Community 72"
 Cohesion: 0.18
 Nodes (1): MptVariantAssembler
 
-### Community 75 - "Community 75"
-Cohesion: 0.18
-Nodes (1): MdmBrandRepositoryImpl
-
-### Community 76 - "Community 76"
-Cohesion: 0.18
-Nodes (1): PartRepository
-
-### Community 77 - "Community 77"
+### Community 73 - "Community 73"
 Cohesion: 0.18
 Nodes (1): MdmPlantRepository
 
-### Community 78 - "Community 78"
+### Community 74 - "Community 74"
 Cohesion: 0.18
 Nodes (1): VmdVehicleLifecycleService
 
-### Community 79 - "Community 79"
+### Community 75 - "Community 75"
 Cohesion: 0.18
 Nodes (1): VehPlantRepository
 
-### Community 80 - "Community 80"
+### Community 76 - "Community 76"
 Cohesion: 0.22
 Nodes (1): MdmVariantRepositoryImplTest
 
-### Community 81 - "Community 81"
+### Community 77 - "Community 77"
 Cohesion: 0.2
 Nodes (1): PartInfoConverter
 
-### Community 82 - "Community 82"
+### Community 78 - "Community 78"
 Cohesion: 0.22
 Nodes (1): VehVariantRepositoryImplTest
 
-### Community 83 - "Community 83"
+### Community 79 - "Community 79"
 Cohesion: 0.2
 Nodes (10): edd-vmd Service, Adapter Layer, Application Layer, DDD Domain Driven Design, Domain Layer, Infrastructure Layer, Kafka/RocketMQ Events, MySQL Database (+2 more)
 
-### Community 84 - "Community 84"
+### Community 80 - "Community 80"
 Cohesion: 0.22
 Nodes (1): PlantTest
 
-### Community 85 - "Community 85"
-Cohesion: 0.31
-Nodes (2): VehicleInfoPersister, VehicleInfoPersisterTest
-
-### Community 86 - "Community 86"
+### Community 81 - "Community 81"
 Cohesion: 0.22
 Nodes (1): VehLifecycleRepository
 
-### Community 87 - "Community 87"
+### Community 82 - "Community 82"
+Cohesion: 0.22
+Nodes (1): PartImportDataRepository
+
+### Community 83 - "Community 83"
 Cohesion: 0.22
 Nodes (1): PartInfoRepository
 
-### Community 88 - "Community 88"
+### Community 84 - "Community 84"
 Cohesion: 0.22
 Nodes (1): MptBuildConfigAssembler
 
-### Community 89 - "Community 89"
+### Community 85 - "Community 85"
 Cohesion: 0.22
 Nodes (1): VehManufacturerRepository
 
-### Community 90 - "Community 90"
+### Community 86 - "Community 86"
 Cohesion: 0.22
 Nodes (1): VehSeriesRepository
 
-### Community 91 - "Community 91"
+### Community 87 - "Community 87"
 Cohesion: 0.25
 Nodes (1): VehImportDataRepository
 
-### Community 92 - "Community 92"
+### Community 88 - "Community 88"
 Cohesion: 0.25
 Nodes (1): DeviceRepository
 
-### Community 93 - "Community 93"
+### Community 89 - "Community 89"
 Cohesion: 0.25
 Nodes (1): SupplierRepository
 
-### Community 94 - "Community 94"
+### Community 90 - "Community 90"
 Cohesion: 0.29
 Nodes (1): MptPlantAssembler
 
-### Community 95 - "Community 95"
+### Community 91 - "Community 91"
 Cohesion: 0.29
 Nodes (1): VehicleAssembler
 
-### Community 96 - "Community 96"
+### Community 92 - "Community 92"
 Cohesion: 0.29
 Nodes (7): OTA Platform, QR Code Activation, TSP Service, Vehicle Activation, Vehicle Lifecycle, VIN Vehicle Identification Number, VMD Vehicle Master Data
 
-### Community 97 - "Community 97"
+### Community 93 - "Community 93"
 Cohesion: 0.33
 Nodes (1): InboundSourceTypeTest
 
-### Community 98 - "Community 98"
+### Community 94 - "Community 94"
 Cohesion: 0.33
 Nodes (1): PartTypeTest
 
-### Community 99 - "Community 99"
+### Community 95 - "Community 95"
 Cohesion: 0.33
 Nodes (1): MptCarLineAssembler
 
-### Community 100 - "Community 100"
+### Community 96 - "Community 96"
 Cohesion: 0.33
 Nodes (1): MptModelAssembler
 
-### Community 101 - "Community 101"
+### Community 97 - "Community 97"
 Cohesion: 0.33
 Nodes (1): MptVehiclePartAssembler
 
-### Community 102 - "Community 102"
+### Community 98 - "Community 98"
 Cohesion: 0.33
 Nodes (1): MptPartInfoAssembler
 
-### Community 103 - "Community 103"
+### Community 99 - "Community 99"
 Cohesion: 0.33
 Nodes (1): MptPartAssembler
 
-### Community 104 - "Community 104"
-Cohesion: 0.33
-Nodes (1): MptVehicleImportDataAssembler
-
-### Community 105 - "Community 105"
+### Community 100 - "Community 100"
 Cohesion: 0.33
 Nodes (1): MptVehicleLifecycleAssembler
 
-### Community 106 - "Community 106"
+### Community 101 - "Community 101"
 Cohesion: 0.33
 Nodes (1): MptPlatformAssembler
 
-### Community 107 - "Community 107"
+### Community 102 - "Community 102"
 Cohesion: 0.33
 Nodes (1): MptVehicleNodeAssembler
 
-### Community 108 - "Community 108"
+### Community 103 - "Community 103"
+Cohesion: 0.4
+Nodes (3): BatchInboundItem, BatchInboundRequest, ServicePartInboundController
+
+### Community 104 - "Community 104"
 Cohesion: 0.33
 Nodes (1): VehicleVoAssembler
 
-### Community 109 - "Community 109"
+### Community 105 - "Community 105"
 Cohesion: 0.33
 Nodes (1): CacheService
 
-### Community 110 - "Community 110"
+### Community 106 - "Community 106"
+Cohesion: 0.33
+Nodes (1): MptVehicleImportDataAssembler
+
+### Community 107 - "Community 107"
 Cohesion: 0.33
 Nodes (1): MptDeviceAssembler
 
-### Community 111 - "Community 111"
+### Community 108 - "Community 108"
 Cohesion: 0.33
 Nodes (1): MptSupplierAssembler
 
-### Community 112 - "Community 112"
+### Community 109 - "Community 109"
 Cohesion: 0.33
 Nodes (1): MptManufacturerAssembler
 
-### Community 113 - "Community 113"
+### Community 110 - "Community 110"
 Cohesion: 0.33
 Nodes (1): MptSeriesAssembler
 
-### Community 114 - "Community 114"
+### Community 111 - "Community 111"
 Cohesion: 0.33
 Nodes (6): Base Model, Brand, Manufacturer, Model, Platform, Series
 
-### Community 115 - "Community 115"
+### Community 112 - "Community 112"
 Cohesion: 0.4
 Nodes (1): BaseTest
 
-### Community 116 - "Community 116"
+### Community 113 - "Community 113"
+Cohesion: 0.4
+Nodes (1): DownstreamProcessorTest
+
+### Community 114 - "Community 114"
 Cohesion: 0.4
 Nodes (1): MptBrandAssembler
 
-### Community 117 - "Community 117"
+### Community 115 - "Community 115"
 Cohesion: 0.6
 Nodes (3): BaseException, BusinessException, VmdBaseException
 
-### Community 118 - "Community 118"
+### Community 116 - "Community 116"
 Cohesion: 0.4
 Nodes (1): ImportDataParser
 
-### Community 119 - "Community 119"
+### Community 117 - "Community 117"
 Cohesion: 0.4
 Nodes (1): CarLineAssembler
 
-### Community 120 - "Community 120"
-Cohesion: 0.4
-Nodes (1): VehicleImportDataAssembler
-
-### Community 121 - "Community 121"
+### Community 118 - "Community 118"
 Cohesion: 0.4
 Nodes (1): VariantOptionCodeAssembler
 
-### Community 122 - "Community 122"
+### Community 119 - "Community 119"
 Cohesion: 0.4
 Nodes (1): PlatformAssembler
 
-### Community 123 - "Community 123"
+### Community 120 - "Community 120"
 Cohesion: 0.4
 Nodes (1): ConfigItemAssembler
 
-### Community 124 - "Community 124"
+### Community 121 - "Community 121"
 Cohesion: 0.4
 Nodes (1): ConfigItemOptionAssembler
 
-### Community 125 - "Community 125"
+### Community 122 - "Community 122"
 Cohesion: 0.4
 Nodes (1): OptionCodeAssembler
 
-### Community 126 - "Community 126"
+### Community 123 - "Community 123"
 Cohesion: 0.4
 Nodes (1): VehiclePartAssembler
 
-### Community 127 - "Community 127"
+### Community 124 - "Community 124"
 Cohesion: 0.4
 Nodes (1): VariantAssembler
 
-### Community 128 - "Community 128"
+### Community 125 - "Community 125"
 Cohesion: 0.4
 Nodes (1): VmdVehicleExServiceAssembler
 
-### Community 129 - "Community 129"
+### Community 126 - "Community 126"
 Cohesion: 0.4
 Nodes (1): ConfigurationOptionCodeAssembler
 
-### Community 130 - "Community 130"
+### Community 127 - "Community 127"
 Cohesion: 0.4
 Nodes (1): VehicleNodeExServiceAssembler
 
-### Community 131 - "Community 131"
+### Community 128 - "Community 128"
 Cohesion: 0.4
 Nodes (1): BrandAssembler
 
-### Community 132 - "Community 132"
+### Community 129 - "Community 129"
 Cohesion: 0.4
 Nodes (1): VehicleConfigAssembler
 
-### Community 133 - "Community 133"
+### Community 130 - "Community 130"
 Cohesion: 0.4
 Nodes (1): ConfigurationAssembler
 
-### Community 134 - "Community 134"
+### Community 131 - "Community 131"
 Cohesion: 0.4
 Nodes (1): ModelAssembler
 
-### Community 135 - "Community 135"
+### Community 132 - "Community 132"
 Cohesion: 0.4
 Nodes (1): PartAssembler
 
-### Community 136 - "Community 136"
+### Community 133 - "Community 133"
 Cohesion: 0.4
 Nodes (1): VehicleNodeAssembler
 
-### Community 137 - "Community 137"
+### Community 134 - "Community 134"
 Cohesion: 0.4
 Nodes (1): VehicleConfigItemAssembler
 
-### Community 138 - "Community 138"
+### Community 135 - "Community 135"
 Cohesion: 0.4
 Nodes (1): PlantAssembler
 
-### Community 139 - "Community 139"
+### Community 136 - "Community 136"
 Cohesion: 0.4
 Nodes (1): PartExServiceAssembler
 
-### Community 140 - "Community 140"
+### Community 137 - "Community 137"
 Cohesion: 0.4
 Nodes (1): OptionFamilyAssembler
 
-### Community 141 - "Community 141"
+### Community 138 - "Community 138"
 Cohesion: 0.4
 Nodes (1): ConfigItemMappingAssembler
 
-### Community 142 - "Community 142"
+### Community 139 - "Community 139"
 Cohesion: 0.4
 Nodes (1): PartInfoAssembler
 
-### Community 143 - "Community 143"
+### Community 140 - "Community 140"
 Cohesion: 0.6
 Nodes (1): VehicleEolTspOtaSubscribe
 
-### Community 144 - "Community 144"
+### Community 141 - "Community 141"
 Cohesion: 0.4
 Nodes (1): CarLineConverter
 
-### Community 145 - "Community 145"
-Cohesion: 0.4
-Nodes (1): VehicleImportDataConverter
-
-### Community 146 - "Community 146"
+### Community 142 - "Community 142"
 Cohesion: 0.4
 Nodes (1): VariantOptionCodeConverter
 
-### Community 147 - "Community 147"
+### Community 143 - "Community 143"
 Cohesion: 0.4
 Nodes (1): PlatformConverter
 
-### Community 148 - "Community 148"
+### Community 144 - "Community 144"
 Cohesion: 0.4
 Nodes (1): VariantConverter
 
-### Community 149 - "Community 149"
+### Community 145 - "Community 145"
 Cohesion: 0.4
 Nodes (1): ConfigurationOptionCodeConverter
 
-### Community 150 - "Community 150"
+### Community 146 - "Community 146"
 Cohesion: 0.4
 Nodes (1): BrandConverter
 
-### Community 151 - "Community 151"
+### Community 147 - "Community 147"
 Cohesion: 0.4
 Nodes (1): ConfigurationConverter
 
-### Community 152 - "Community 152"
+### Community 148 - "Community 148"
 Cohesion: 0.4
 Nodes (1): ModelConverter
 
-### Community 153 - "Community 153"
+### Community 149 - "Community 149"
 Cohesion: 0.4
 Nodes (1): PartConverter
 
-### Community 154 - "Community 154"
+### Community 150 - "Community 150"
 Cohesion: 0.4
 Nodes (1): VehicleNodeConverter
 
-### Community 155 - "Community 155"
+### Community 151 - "Community 151"
 Cohesion: 0.4
 Nodes (1): PlantConverter
 
-### Community 156 - "Community 156"
+### Community 152 - "Community 152"
 Cohesion: 0.4
 Nodes (1): VehicleLifecycleConverter
 
-### Community 157 - "Community 157"
+### Community 153 - "Community 153"
 Cohesion: 0.4
 Nodes (1): MdmConfigurationMapper
 
-### Community 158 - "Community 158"
+### Community 154 - "Community 154"
 Cohesion: 0.4
 Nodes (1): MdmVehicleNodeMapper
 
-### Community 159 - "Community 159"
+### Community 155 - "Community 155"
 Cohesion: 0.4
 Nodes (1): MdmBrandMapper
 
-### Community 160 - "Community 160"
+### Community 156 - "Community 156"
 Cohesion: 0.4
 Nodes (1): MdmOptionCodeMapper
 
-### Community 161 - "Community 161"
+### Community 157 - "Community 157"
 Cohesion: 0.4
 Nodes (1): MdmCarLineMapper
 
-### Community 162 - "Community 162"
+### Community 158 - "Community 158"
 Cohesion: 0.4
 Nodes (1): MdmVariantMapper
 
-### Community 163 - "Community 163"
+### Community 159 - "Community 159"
 Cohesion: 0.4
 Nodes (1): MdmPlantMapper
 
-### Community 164 - "Community 164"
+### Community 160 - "Community 160"
 Cohesion: 0.4
 Nodes (1): MdmPlatformMapper
 
-### Community 165 - "Community 165"
+### Community 161 - "Community 161"
 Cohesion: 0.4
 Nodes (1): MdmModelMapper
 
-### Community 166 - "Community 166"
+### Community 162 - "Community 162"
 Cohesion: 0.4
 Nodes (1): MdmOptionFamilyMapper
 
-### Community 167 - "Community 167"
+### Community 163 - "Community 163"
+Cohesion: 0.4
+Nodes (1): VmdPartService
+
+### Community 164 - "Community 164"
+Cohesion: 0.4
+Nodes (1): VehicleImportDataAssembler
+
+### Community 165 - "Community 165"
+Cohesion: 0.4
+Nodes (1): VehicleImportDataConverter
+
+### Community 166 - "Community 166"
 Cohesion: 0.4
 Nodes (1): DeviceExServiceAssembler
 
-### Community 168 - "Community 168"
+### Community 167 - "Community 167"
 Cohesion: 0.4
 Nodes (1): DeviceAssembler
 
-### Community 169 - "Community 169"
+### Community 168 - "Community 168"
 Cohesion: 0.4
 Nodes (1): SupplierAssembler
 
-### Community 170 - "Community 170"
+### Community 169 - "Community 169"
 Cohesion: 0.4
 Nodes (1): DeviceConverter
 
-### Community 171 - "Community 171"
+### Community 170 - "Community 170"
 Cohesion: 0.4
 Nodes (1): VehCarLineMapper
 
-### Community 172 - "Community 172"
+### Community 171 - "Community 171"
 Cohesion: 0.4
 Nodes (1): VehPlantMapper
 
-### Community 173 - "Community 173"
+### Community 172 - "Community 172"
 Cohesion: 0.4
 Nodes (1): VehModelMapper
 
-### Community 174 - "Community 174"
+### Community 173 - "Community 173"
 Cohesion: 0.4
 Nodes (1): DeviceMapper
 
-### Community 175 - "Community 175"
+### Community 174 - "Community 174"
 Cohesion: 0.4
 Nodes (1): VehVariantMapper
 
-### Community 176 - "Community 176"
+### Community 175 - "Community 175"
 Cohesion: 0.4
 Nodes (1): VehOptionFamilyMapper
 
-### Community 177 - "Community 177"
+### Community 176 - "Community 176"
 Cohesion: 0.4
 Nodes (1): VehPlatformMapper
 
-### Community 178 - "Community 178"
+### Community 177 - "Community 177"
 Cohesion: 0.4
 Nodes (1): VehBrandMapper
 
-### Community 179 - "Community 179"
+### Community 178 - "Community 178"
 Cohesion: 0.4
 Nodes (1): VehOptionCodeMapper
 
-### Community 180 - "Community 180"
+### Community 179 - "Community 179"
 Cohesion: 0.4
 Nodes (1): FeatureCodeAssembler
 
-### Community 181 - "Community 181"
+### Community 180 - "Community 180"
 Cohesion: 0.4
 Nodes (1): FeatureFamilyAssembler
 
-### Community 182 - "Community 182"
+### Community 181 - "Community 181"
 Cohesion: 0.4
 Nodes (1): BaseModelFeatureCodeAssembler
 
-### Community 183 - "Community 183"
+### Community 182 - "Community 182"
 Cohesion: 0.4
 Nodes (1): ConfigurationFeatureCodeAssembler
 
-### Community 184 - "Community 184"
+### Community 183 - "Community 183"
 Cohesion: 0.4
 Nodes (1): BaseModelAssembler
 
-### Community 185 - "Community 185"
+### Community 184 - "Community 184"
 Cohesion: 0.4
 Nodes (1): SupplierConverter
 
-### Community 186 - "Community 186"
+### Community 185 - "Community 185"
 Cohesion: 0.4
 Nodes (1): BaseModelFeatureCodeConverter
 
-### Community 187 - "Community 187"
+### Community 186 - "Community 186"
 Cohesion: 0.4
 Nodes (1): ConfigurationFeatureCodeConverter
 
-### Community 188 - "Community 188"
+### Community 187 - "Community 187"
 Cohesion: 0.4
 Nodes (1): BaseModelConverter
 
-### Community 189 - "Community 189"
+### Community 188 - "Community 188"
 Cohesion: 0.4
 Nodes (1): ManufacturerAssembler
 
-### Community 190 - "Community 190"
+### Community 189 - "Community 189"
 Cohesion: 0.4
 Nodes (1): BuildConfigFeatureCodeAssembler
 
-### Community 191 - "Community 191"
+### Community 190 - "Community 190"
 Cohesion: 0.4
 Nodes (1): BuildConfigAssembler
 
-### Community 192 - "Community 192"
+### Community 191 - "Community 191"
 Cohesion: 0.4
 Nodes (1): ManufacturerConverter
 
-### Community 193 - "Community 193"
+### Community 192 - "Community 192"
 Cohesion: 0.4
 Nodes (1): BuildConfigFeatureCodeConverter
 
-### Community 194 - "Community 194"
+### Community 193 - "Community 193"
 Cohesion: 0.4
 Nodes (1): BuildConfigConverter
 
-### Community 195 - "Community 195"
+### Community 194 - "Community 194"
 Cohesion: 0.4
 Nodes (1): SeriesAssembler
 
-### Community 196 - "Community 196"
+### Community 195 - "Community 195"
 Cohesion: 0.4
 Nodes (1): SeriesConverter
 
-### Community 197 - "Community 197"
+### Community 196 - "Community 196"
 Cohesion: 0.5
 Nodes (1): MptVehicleAssembler
+
+### Community 197 - "Community 197"
+Cohesion: 0.5
+Nodes (1): MptPartImportDataAssembler
 
 ### Community 198 - "Community 198"
 Cohesion: 0.5
@@ -1276,35 +1281,35 @@ Nodes (1): VehicleWebAssembler
 
 ### Community 199 - "Community 199"
 Cohesion: 0.5
-Nodes (1): VehicleLifecycleNodeAssembler
+Nodes (1): DownstreamProcessor
 
 ### Community 200 - "Community 200"
 Cohesion: 0.5
-Nodes (1): VehicleBasicInfoAssembler
+Nodes (1): VehicleLifecycleNodeAssembler
 
 ### Community 201 - "Community 201"
+Cohesion: 0.5
+Nodes (1): VehicleBasicInfoAssembler
+
+### Community 202 - "Community 202"
 Cohesion: 0.67
 Nodes (2): ApplicationEvent, BaseEvent
 
-### Community 202 - "Community 202"
+### Community 203 - "Community 203"
 Cohesion: 0.5
 Nodes (1): VehicleLifecycleNodeConverter
 
-### Community 203 - "Community 203"
+### Community 204 - "Community 204"
 Cohesion: 0.5
 Nodes (1): VehicleConverter
 
-### Community 204 - "Community 204"
+### Community 205 - "Community 205"
 Cohesion: 0.5
 Nodes (1): MdmConfigurationOptionCodeMapper
 
-### Community 205 - "Community 205"
-Cohesion: 0.5
-Nodes (1): VehicleLifecycleNodeRepository
-
 ### Community 206 - "Community 206"
 Cohesion: 0.5
-Nodes (1): VmdPartService
+Nodes (1): VehicleLifecycleNodeRepository
 
 ### Community 207 - "Community 207"
 Cohesion: 0.5
@@ -1500,83 +1505,83 @@ Nodes (1): VehicleConfigItemResponse
 
 ### Community 255 - "Community 255"
 Cohesion: 1.0
-Nodes (1): PartInfoResponse
+Nodes (1): PartImportDataResponse
 
 ### Community 256 - "Community 256"
 Cohesion: 1.0
-Nodes (1): ConfigurationOptionCodeResponse
+Nodes (1): PartInfoResponse
 
 ### Community 257 - "Community 257"
 Cohesion: 1.0
-Nodes (1): PlantResponse
+Nodes (1): ConfigurationOptionCodeResponse
 
 ### Community 258 - "Community 258"
 Cohesion: 1.0
-Nodes (1): VehicleNodeResponse
+Nodes (1): PlantResponse
 
 ### Community 259 - "Community 259"
 Cohesion: 1.0
-Nodes (1): CarLineResponse
+Nodes (1): VehicleNodeResponse
 
 ### Community 260 - "Community 260"
 Cohesion: 1.0
-Nodes (1): VehiclePartResponse
+Nodes (1): CarLineResponse
 
 ### Community 261 - "Community 261"
 Cohesion: 1.0
-Nodes (1): VehicleResponse
+Nodes (1): VehiclePartResponse
 
 ### Community 262 - "Community 262"
 Cohesion: 1.0
-Nodes (1): OptionCodeResponse
+Nodes (1): VehicleResponse
 
 ### Community 263 - "Community 263"
 Cohesion: 1.0
-Nodes (1): BrandResponse
+Nodes (1): OptionCodeResponse
 
 ### Community 264 - "Community 264"
 Cohesion: 1.0
-Nodes (1): ConfigItemResponse
+Nodes (1): BrandResponse
 
 ### Community 265 - "Community 265"
 Cohesion: 1.0
-Nodes (1): ConfigurationResponse
+Nodes (1): ConfigItemResponse
 
 ### Community 266 - "Community 266"
 Cohesion: 1.0
-Nodes (1): VehicleLifecycleResponse
+Nodes (1): ConfigurationResponse
 
 ### Community 267 - "Community 267"
 Cohesion: 1.0
-Nodes (1): VehicleConfigResponse
+Nodes (1): VehicleLifecycleResponse
 
 ### Community 268 - "Community 268"
 Cohesion: 1.0
-Nodes (1): ImportResultResponse
+Nodes (1): VehicleConfigResponse
 
 ### Community 269 - "Community 269"
 Cohesion: 1.0
-Nodes (1): ConfigItemMappingResponse
+Nodes (1): ImportResultResponse
 
 ### Community 270 - "Community 270"
 Cohesion: 1.0
-Nodes (1): OptionFamilyResponse
+Nodes (1): ConfigItemMappingResponse
 
 ### Community 271 - "Community 271"
 Cohesion: 1.0
-Nodes (1): VariantResponse
+Nodes (1): OptionFamilyResponse
 
 ### Community 272 - "Community 272"
 Cohesion: 1.0
-Nodes (1): PlatformResponse
+Nodes (1): VariantResponse
 
 ### Community 273 - "Community 273"
 Cohesion: 1.0
-Nodes (1): ConfigItemOptionResponse
+Nodes (1): PlatformResponse
 
 ### Community 274 - "Community 274"
 Cohesion: 1.0
-Nodes (1): VehicleImportDataResponse
+Nodes (1): ConfigItemOptionResponse
 
 ### Community 275 - "Community 275"
 Cohesion: 1.0
@@ -1640,39 +1645,39 @@ Nodes (1): PlantCmd
 
 ### Community 290 - "Community 290"
 Cohesion: 1.0
-Nodes (1): VehicleImportDataCmd
+Nodes (1): ConfigItemOptionCmd
 
 ### Community 291 - "Community 291"
 Cohesion: 1.0
-Nodes (1): ConfigItemOptionCmd
+Nodes (1): VariantCmd
 
 ### Community 292 - "Community 292"
 Cohesion: 1.0
-Nodes (1): VariantCmd
+Nodes (1): VehicleCmd
 
 ### Community 293 - "Community 293"
 Cohesion: 1.0
-Nodes (1): VehicleCmd
+Nodes (1): VehicleConfigItemCmd
 
 ### Community 294 - "Community 294"
 Cohesion: 1.0
-Nodes (1): VehicleConfigItemCmd
+Nodes (1): ConfigurationCmd
 
 ### Community 295 - "Community 295"
 Cohesion: 1.0
-Nodes (1): ConfigurationCmd
+Nodes (1): ConfigurationOptionCodeCmd
 
 ### Community 296 - "Community 296"
 Cohesion: 1.0
-Nodes (1): ConfigurationOptionCodeCmd
+Nodes (1): CarLineCmd
 
 ### Community 297 - "Community 297"
 Cohesion: 1.0
-Nodes (1): CarLineCmd
+Nodes (1): VehicleNodeCmd
 
 ### Community 298 - "Community 298"
 Cohesion: 1.0
-Nodes (1): VehicleNodeCmd
+Nodes (1): PartImportDataCmd
 
 ### Community 299 - "Community 299"
 Cohesion: 1.0
@@ -1724,35 +1729,35 @@ Nodes (1): VehicleNodeDto
 
 ### Community 311 - "Community 311"
 Cohesion: 1.0
-Nodes (1): VehicleLifecycleDto
+Nodes (1): PartImportDataDto
 
 ### Community 312 - "Community 312"
 Cohesion: 1.0
-Nodes (1): OptionFamilyDto
+Nodes (1): VehicleLifecycleDto
 
 ### Community 313 - "Community 313"
 Cohesion: 1.0
-Nodes (1): ConfigItemDto
+Nodes (1): OptionFamilyDto
 
 ### Community 314 - "Community 314"
 Cohesion: 1.0
-Nodes (1): PartDto
+Nodes (1): ConfigItemDto
 
 ### Community 315 - "Community 315"
 Cohesion: 1.0
-Nodes (1): BrandDto
+Nodes (1): PartDto
 
 ### Community 316 - "Community 316"
 Cohesion: 1.0
-Nodes (1): PlatformDto
+Nodes (1): BrandDto
 
 ### Community 317 - "Community 317"
 Cohesion: 1.0
-Nodes (1): ModelDto
+Nodes (1): PlatformDto
 
 ### Community 318 - "Community 318"
 Cohesion: 1.0
-Nodes (1): VehicleImportDataDto
+Nodes (1): ModelDto
 
 ### Community 319 - "Community 319"
 Cohesion: 1.0
@@ -1812,7 +1817,7 @@ Nodes (1): ConfigurationQuery
 
 ### Community 333 - "Community 333"
 Cohesion: 1.0
-Nodes (1): VehicleImportDataQuery
+Nodes (1): PartImportDataQuery
 
 ### Community 334 - "Community 334"
 Cohesion: 1.0
@@ -1884,15 +1889,15 @@ Nodes (1): Variant
 
 ### Community 358 - "Community 358"
 Cohesion: 1.0
-Nodes (1): VehicleImportData
+Nodes (1): Configuration
 
 ### Community 359 - "Community 359"
 Cohesion: 1.0
-Nodes (1): Configuration
+Nodes (1): Part
 
 ### Community 360 - "Community 360"
 Cohesion: 1.0
-Nodes (1): Part
+Nodes (1): PartImportData
 
 ### Community 361 - "Community 361"
 Cohesion: 1.0
@@ -2008,282 +2013,300 @@ Nodes (1): VehicleOrderExRequest
 
 ### Community 389 - "Community 389"
 Cohesion: 1.0
-Nodes (1): InteriorResponse
+Nodes (1): VehicleImportDataResponse
 
 ### Community 390 - "Community 390"
 Cohesion: 1.0
-Nodes (1): WheelResponse
+Nodes (1): VehicleImportDataCmd
 
 ### Community 391 - "Community 391"
 Cohesion: 1.0
-Nodes (1): VehiclePartHistoryMapper
+Nodes (1): VehicleImportDataDto
 
 ### Community 392 - "Community 392"
 Cohesion: 1.0
-Nodes (1): VehiclePartHistory
+Nodes (1): VehicleImportDataQuery
 
 ### Community 393 - "Community 393"
 Cohesion: 1.0
-Nodes (1): SupplierResponse
+Nodes (1): VehicleImportData
 
 ### Community 394 - "Community 394"
 Cohesion: 1.0
-Nodes (1): DeviceResponse
+Nodes (1): InteriorResponse
 
 ### Community 395 - "Community 395"
 Cohesion: 1.0
-Nodes (1): DeviceCmd
+Nodes (1): WheelResponse
 
 ### Community 396 - "Community 396"
 Cohesion: 1.0
-Nodes (1): DeviceDto
+Nodes (1): VehiclePartHistoryMapper
 
 ### Community 397 - "Community 397"
 Cohesion: 1.0
-Nodes (1): DeviceQuery
+Nodes (1): VehiclePartHistory
 
 ### Community 398 - "Community 398"
 Cohesion: 1.0
-Nodes (1): Device
+Nodes (1): SupplierResponse
 
 ### Community 399 - "Community 399"
 Cohesion: 1.0
-Nodes (1): DeviceExResponse
+Nodes (1): DeviceResponse
 
 ### Community 400 - "Community 400"
 Cohesion: 1.0
-Nodes (1): FeatureFamilyResponse
+Nodes (1): DeviceCmd
 
 ### Community 401 - "Community 401"
 Cohesion: 1.0
-Nodes (1): BaseModelResponse
+Nodes (1): DeviceDto
 
 ### Community 402 - "Community 402"
 Cohesion: 1.0
-Nodes (1): BaseModelFeatureCodeResponse
+Nodes (1): DeviceQuery
 
 ### Community 403 - "Community 403"
 Cohesion: 1.0
-Nodes (1): FeatureCodeResponse
+Nodes (1): Device
 
 ### Community 404 - "Community 404"
 Cohesion: 1.0
-Nodes (1): ConfigurationFeatureCodeResponse
+Nodes (1): DeviceExResponse
 
 ### Community 405 - "Community 405"
 Cohesion: 1.0
-Nodes (1): SupplierCmd
+Nodes (1): FeatureFamilyResponse
 
 ### Community 406 - "Community 406"
 Cohesion: 1.0
-Nodes (1): BaseModelFeatureCodeCmd
+Nodes (1): BaseModelResponse
 
 ### Community 407 - "Community 407"
 Cohesion: 1.0
-Nodes (1): ConfigurationFeatureCodeCmd
+Nodes (1): BaseModelFeatureCodeResponse
 
 ### Community 408 - "Community 408"
 Cohesion: 1.0
-Nodes (1): FeatureFamilyCmd
+Nodes (1): FeatureCodeResponse
 
 ### Community 409 - "Community 409"
 Cohesion: 1.0
-Nodes (1): BaseModelCmd
+Nodes (1): ConfigurationFeatureCodeResponse
 
 ### Community 410 - "Community 410"
 Cohesion: 1.0
-Nodes (1): FeatureCodeCmd
+Nodes (1): SupplierCmd
 
 ### Community 411 - "Community 411"
 Cohesion: 1.0
-Nodes (1): ConfigurationFeatureCodeDto
+Nodes (1): BaseModelFeatureCodeCmd
 
 ### Community 412 - "Community 412"
 Cohesion: 1.0
-Nodes (1): FeatureCodeDto
+Nodes (1): ConfigurationFeatureCodeCmd
 
 ### Community 413 - "Community 413"
 Cohesion: 1.0
-Nodes (1): FeatureFamilyDto
+Nodes (1): FeatureFamilyCmd
 
 ### Community 414 - "Community 414"
 Cohesion: 1.0
-Nodes (1): BaseModelDto
+Nodes (1): BaseModelCmd
 
 ### Community 415 - "Community 415"
 Cohesion: 1.0
-Nodes (1): BaseModelFeatureCodeDto
+Nodes (1): FeatureCodeCmd
 
 ### Community 416 - "Community 416"
 Cohesion: 1.0
-Nodes (1): SupplierDto
+Nodes (1): ConfigurationFeatureCodeDto
 
 ### Community 417 - "Community 417"
 Cohesion: 1.0
-Nodes (1): SupplierQuery
+Nodes (1): FeatureCodeDto
 
 ### Community 418 - "Community 418"
 Cohesion: 1.0
-Nodes (1): BaseModelQuery
+Nodes (1): FeatureFamilyDto
 
 ### Community 419 - "Community 419"
 Cohesion: 1.0
-Nodes (1): FeatureCodeQuery
+Nodes (1): BaseModelDto
 
 ### Community 420 - "Community 420"
 Cohesion: 1.0
-Nodes (1): FeatureFamilyQuery
+Nodes (1): BaseModelFeatureCodeDto
 
 ### Community 421 - "Community 421"
 Cohesion: 1.0
-Nodes (1): ConfigurationFeatureCode
+Nodes (1): SupplierDto
 
 ### Community 422 - "Community 422"
 Cohesion: 1.0
-Nodes (1): BaseModel
+Nodes (1): SupplierQuery
 
 ### Community 423 - "Community 423"
 Cohesion: 1.0
-Nodes (1): Supplier
+Nodes (1): BaseModelQuery
 
 ### Community 424 - "Community 424"
 Cohesion: 1.0
-Nodes (1): FeatureFamily
+Nodes (1): FeatureCodeQuery
 
 ### Community 425 - "Community 425"
 Cohesion: 1.0
-Nodes (1): VmdConfigurationFeatureCodeResponse
+Nodes (1): FeatureFamilyQuery
 
 ### Community 426 - "Community 426"
 Cohesion: 1.0
-Nodes (1): VmdBuildConfigFeatureCodeResponse
+Nodes (1): ConfigurationFeatureCode
 
 ### Community 427 - "Community 427"
 Cohesion: 1.0
-Nodes (1): ManufacturerResponse
+Nodes (1): BaseModel
 
 ### Community 428 - "Community 428"
 Cohesion: 1.0
-Nodes (1): BuildConfigFeatureCodeResponse
+Nodes (1): Supplier
 
 ### Community 429 - "Community 429"
 Cohesion: 1.0
-Nodes (1): BuildConfigResponse
+Nodes (1): FeatureFamily
 
 ### Community 430 - "Community 430"
 Cohesion: 1.0
-Nodes (1): BuildConfigCmd
+Nodes (1): VmdConfigurationFeatureCodeResponse
 
 ### Community 431 - "Community 431"
 Cohesion: 1.0
-Nodes (1): BuildConfigFeatureCodeCmd
+Nodes (1): VmdBuildConfigFeatureCodeResponse
 
 ### Community 432 - "Community 432"
 Cohesion: 1.0
-Nodes (1): ManufacturerCmd
+Nodes (1): ManufacturerResponse
 
 ### Community 433 - "Community 433"
 Cohesion: 1.0
-Nodes (1): ManufacturerDto
+Nodes (1): BuildConfigFeatureCodeResponse
 
 ### Community 434 - "Community 434"
 Cohesion: 1.0
-Nodes (1): BuildConfigFeatureCodeDto
+Nodes (1): BuildConfigResponse
 
 ### Community 435 - "Community 435"
 Cohesion: 1.0
-Nodes (1): BuildConfigDto
+Nodes (1): BuildConfigCmd
 
 ### Community 436 - "Community 436"
 Cohesion: 1.0
-Nodes (1): BuildConfigQuery
+Nodes (1): BuildConfigFeatureCodeCmd
 
 ### Community 437 - "Community 437"
 Cohesion: 1.0
-Nodes (1): ManufacturerQuery
+Nodes (1): ManufacturerCmd
 
 ### Community 438 - "Community 438"
 Cohesion: 1.0
-Nodes (1): BuildConfigFeatureCode
+Nodes (1): ManufacturerDto
 
 ### Community 439 - "Community 439"
 Cohesion: 1.0
-Nodes (1): Manufacturer
+Nodes (1): BuildConfigFeatureCodeDto
 
 ### Community 440 - "Community 440"
 Cohesion: 1.0
-Nodes (1): BuildConfig
+Nodes (1): BuildConfigDto
 
 ### Community 441 - "Community 441"
 Cohesion: 1.0
-Nodes (1): SeriesResponse
+Nodes (1): BuildConfigQuery
 
 ### Community 442 - "Community 442"
 Cohesion: 1.0
-Nodes (1): SeriesCmd
+Nodes (1): ManufacturerQuery
 
 ### Community 443 - "Community 443"
 Cohesion: 1.0
-Nodes (1): SeriesDto
+Nodes (1): BuildConfigFeatureCode
 
 ### Community 444 - "Community 444"
 Cohesion: 1.0
-Nodes (1): SeriesQuery
+Nodes (1): Manufacturer
 
 ### Community 445 - "Community 445"
 Cohesion: 1.0
-Nodes (1): Series
+Nodes (1): BuildConfig
 
 ### Community 446 - "Community 446"
 Cohesion: 1.0
-Nodes (1): QrcodeCmd
+Nodes (1): SeriesResponse
 
 ### Community 447 - "Community 447"
 Cohesion: 1.0
-Nodes (1): QrcodeDto
+Nodes (1): SeriesCmd
 
 ### Community 448 - "Community 448"
 Cohesion: 1.0
-Nodes (1): QrcodeResponse
+Nodes (1): SeriesDto
+
+### Community 449 - "Community 449"
+Cohesion: 1.0
+Nodes (1): SeriesQuery
+
+### Community 450 - "Community 450"
+Cohesion: 1.0
+Nodes (1): Series
 
 ### Community 451 - "Community 451"
 Cohesion: 1.0
-Nodes (1): QrcodeRequest
+Nodes (1): QrcodeCmd
 
 ### Community 452 - "Community 452"
 Cohesion: 1.0
-Nodes (2): Vehicle Part Binding, Import Data Parser
+Nodes (1): QrcodeDto
 
-### Community 454 - "Community 454"
+### Community 453 - "Community 453"
 Cohesion: 1.0
-Nodes (1): EOL End of Line
-
-### Community 455 - "Community 455"
-Cohesion: 1.0
-Nodes (1): IDCM
+Nodes (1): QrcodeResponse
 
 ### Community 456 - "Community 456"
 Cohesion: 1.0
-Nodes (1): Feature Family
+Nodes (1): QrcodeRequest
 
 ### Community 457 - "Community 457"
 Cohesion: 1.0
+Nodes (2): Vehicle Part Binding, Import Data Parser
+
+### Community 459 - "Community 459"
+Cohesion: 1.0
+Nodes (1): EOL End of Line
+
+### Community 460 - "Community 460"
+Cohesion: 1.0
+Nodes (1): IDCM
+
+### Community 461 - "Community 461"
+Cohesion: 1.0
+Nodes (1): Feature Family
+
+### Community 462 - "Community 462"
+Cohesion: 1.0
 Nodes (1): Feature Code
 
-### Community 458 - "Community 458"
+### Community 463 - "Community 463"
 Cohesion: 1.0
 Nodes (1): Config Item
 
 ## Knowledge Gaps
-- **215 isolated node(s):** `VehicleConfigItemResponse`, `PartInfoResponse`, `ConfigurationOptionCodeResponse`, `PlantResponse`, `VehicleNodeResponse` (+210 more)
+- **220 isolated node(s):** `VehicleConfigItemResponse`, `PartImportDataResponse`, `PartInfoResponse`, `ConfigurationOptionCodeResponse`, `PlantResponse` (+215 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **Thin community `Community 27`** (34 nodes): `VariantAppService`, `.checkCodeUnique()`, `.checkFeatureCodeUnique()`, `.checkOptionCodeUnique()`, `.checkVariantBuildConfigExist()`, `.checkVariantVehicleExist()`, `.createVariant()`, `.createVariantFeatureCode()`, `.createVariantOptionCode()`, `.deleteVariantByIds()`, `.deleteVariantFeatureCodeByIds()`, `.deleteVariantOptionCodeByIds()`, `.getVariantByCode()`, `.getVariantById()`, `.getVariantFeatureCodeById()`, `.getVariantOptionCodeById()`, `.modifyVariant()`, `.modifyVariantFeatureCode()`, `.modifyVariantOptionCode()`, `.search()`, `VariantAppServiceTest`, `.testCheckCodeUnique()`, `.testCheckCodeUnique_duplicate()`, `.testCheckCodeUnique_sameVariant()`, `.testCheckVariantBuildConfigExist()`, `.testCheckVariantBuildConfigExist_noBuildConfig()`, `.testCheckVariantVehicleExist()`, `.testCheckVariantVehicleExist_noVehicle()`, `.testCreateVariant_sourceMdm_throwsException()`, `.testDeleteVariant_sourceManual_success()`, `.testDeleteVariant_sourceMdm_throwsException()`, `.testModifyVariant_sourceManual_success()`, `.testModifyVariant_sourceMdm_throwsException()`, `.testSearch()`
+- **Thin community `Community 29`** (34 nodes): `VariantAppService`, `.checkCodeUnique()`, `.checkFeatureCodeUnique()`, `.checkOptionCodeUnique()`, `.checkVariantBuildConfigExist()`, `.checkVariantVehicleExist()`, `.createVariant()`, `.createVariantFeatureCode()`, `.createVariantOptionCode()`, `.deleteVariantByIds()`, `.deleteVariantFeatureCodeByIds()`, `.deleteVariantOptionCodeByIds()`, `.getVariantByCode()`, `.getVariantById()`, `.getVariantFeatureCodeById()`, `.getVariantOptionCodeById()`, `.modifyVariant()`, `.modifyVariantFeatureCode()`, `.modifyVariantOptionCode()`, `.search()`, `VariantAppServiceTest`, `.testCheckCodeUnique()`, `.testCheckCodeUnique_duplicate()`, `.testCheckCodeUnique_sameVariant()`, `.testCheckVariantBuildConfigExist()`, `.testCheckVariantBuildConfigExist_noBuildConfig()`, `.testCheckVariantVehicleExist()`, `.testCheckVariantVehicleExist_noVehicle()`, `.testCreateVariant_sourceMdm_throwsException()`, `.testDeleteVariant_sourceManual_success()`, `.testDeleteVariant_sourceMdm_throwsException()`, `.testModifyVariant_sourceManual_success()`, `.testModifyVariant_sourceMdm_throwsException()`, `.testSearch()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 31`** (26 nodes): `PlantAppService`, `.checkCodeUnique()`, `.checkPlantVehicleExist()`, `.countBySource()`, `.createPlant()`, `.deletePlantByIds()`, `.getPlantByCode()`, `.getPlantByExternalRefId()`, `.getPlantById()`, `.modifyPlant()`, `.search()`, `PlantAppServiceTest`, `.checkCodeUnique_shouldReturnFalseWhenCodeAlreadyExists()`, `.checkCodeUnique_shouldReturnTrueWhenCodeBelongsToSamePlant()`, `.checkCodeUnique_shouldReturnTrueWhenCodeIsUnique()`, `.checkPlantVehicleExist_shouldReturnFalseWhenNoVehicles()`, `.checkPlantVehicleExist_shouldReturnTrueWhenVehiclesExist()`, `.countBySource_shouldReturnCountForSource()`, `.createPlant_shouldSuccessfullyCreatePlant()`, `.deletePlantByIds_shouldSuccessfullyDeletePlants()`, `.getPlantByCode_shouldReturnPlantEntity()`, `.getPlantByExternalRefId_shouldReturnPlantEntity()`, `.getPlantById_shouldReturnPlantDto()`, `.modifyPlant_shouldSuccessfullyModifyPlant()`, `.search_shouldReturnEmptyListWhenNoMatch()`, `.search_shouldReturnMatchingPlantList()`
+- **Thin community `Community 32`** (26 nodes): `PlantAppService`, `.checkCodeUnique()`, `.checkPlantVehicleExist()`, `.countBySource()`, `.createPlant()`, `.deletePlantByIds()`, `.getPlantByCode()`, `.getPlantByExternalRefId()`, `.getPlantById()`, `.modifyPlant()`, `.search()`, `PlantAppServiceTest`, `.checkCodeUnique_shouldReturnFalseWhenCodeAlreadyExists()`, `.checkCodeUnique_shouldReturnTrueWhenCodeBelongsToSamePlant()`, `.checkCodeUnique_shouldReturnTrueWhenCodeIsUnique()`, `.checkPlantVehicleExist_shouldReturnFalseWhenNoVehicles()`, `.checkPlantVehicleExist_shouldReturnTrueWhenVehiclesExist()`, `.countBySource_shouldReturnCountForSource()`, `.createPlant_shouldSuccessfullyCreatePlant()`, `.deletePlantByIds_shouldSuccessfullyDeletePlants()`, `.getPlantByCode_shouldReturnPlantEntity()`, `.getPlantByExternalRefId_shouldReturnPlantEntity()`, `.getPlantById_shouldReturnPlantDto()`, `.modifyPlant_shouldSuccessfullyModifyPlant()`, `.search_shouldReturnEmptyListWhenNoMatch()`, `.search_shouldReturnMatchingPlantList()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 33`** (23 nodes): `VehConfigurationRepository.java`, `VehConfigurationRepository`, `.batchInsertFeatureCode()`, `.batchInsertOptionCode()`, `.batchPhysicalDelete()`, `.batchPhysicalDeleteFeatureCode()`, `.batchPhysicalDeleteOptionCode()`, `.countByMap()`, `.countBySource()`, `.insert()`, `.selectByCode()`, `.selectByExample()`, `.selectByExternalRefId()`, `.selectById()`, `.selectByMap()`, `.selectConfigurationCodeByFeatureCodeMap()`, `.selectConfigurationCodeByOptionCodeMap()`, `.selectFeatureCodeByExample()`, `.selectOptionCodeByExample()`, `.update()`, `.updateById()`, `.updateFeatureCode()`, `.updateOptionCode()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 34`** (22 nodes): `VehConfigurationRepositoryImpl`, `.batchInsertFeatureCode()`, `.batchInsertOptionCode()`, `.batchPhysicalDelete()`, `.batchPhysicalDeleteFeatureCode()`, `.batchPhysicalDeleteOptionCode()`, `.countByMap()`, `.countBySource()`, `.insert()`, `.selectByCode()`, `.selectByExample()`, `.selectByExternalRefId()`, `.selectById()`, `.selectByMap()`, `.selectConfigurationCodeByFeatureCodeMap()`, `.selectConfigurationCodeByOptionCodeMap()`, `.selectFeatureCodeByExample()`, `.selectOptionCodeByExample()`, `.update()`, `.updateById()`, `.updateFeatureCode()`, `.updateOptionCode()`
+- **Thin community `Community 34`** (23 nodes): `VehConfigurationRepository.java`, `VehConfigurationRepository`, `.batchInsertFeatureCode()`, `.batchInsertOptionCode()`, `.batchPhysicalDelete()`, `.batchPhysicalDeleteFeatureCode()`, `.batchPhysicalDeleteOptionCode()`, `.countByMap()`, `.countBySource()`, `.insert()`, `.selectByCode()`, `.selectByExample()`, `.selectByExternalRefId()`, `.selectById()`, `.selectByMap()`, `.selectConfigurationCodeByFeatureCodeMap()`, `.selectConfigurationCodeByOptionCodeMap()`, `.selectFeatureCodeByExample()`, `.selectOptionCodeByExample()`, `.update()`, `.updateById()`, `.updateFeatureCode()`, `.updateOptionCode()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 35`** (21 nodes): `ConfigItemRepository.java`, `ConfigItemRepository`, `.batchPhysicalDelete()`, `.batchPhysicalDeleteMapping()`, `.batchPhysicalDeleteOption()`, `.insert()`, `.insertMapping()`, `.insertOption()`, `.selectByCode()`, `.selectById()`, `.selectByMap()`, `.selectMappingById()`, `.selectMappingByMap()`, `.selectMappingBySourceCode()`, `.selectMappingBySourceValue()`, `.selectOptionByCode()`, `.selectOptionById()`, `.selectOptionByMap()`, `.update()`, `.updateMapping()`, `.updateOption()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
@@ -2293,331 +2316,325 @@ Nodes (1): Config Item
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 38`** (20 nodes): `VehOptionFamilyRepository.java`, `VehOptionFamilyRepository`, `.batchPhysicalDelete()`, `.batchPhysicalDeleteOptionCode()`, `.countBySource()`, `.countOptionCodeBySource()`, `.insert()`, `.insertOptionCode()`, `.selectByCode()`, `.selectByExternalRefId()`, `.selectById()`, `.selectByMap()`, `.selectOptionCodeByCode()`, `.selectOptionCodeByExternalRefId()`, `.selectOptionCodeById()`, `.selectOptionCodeByOptionFamilyCode()`, `.update()`, `.updateById()`, `.updateOptionCode()`, `.updateOptionCodeById()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 39`** (19 nodes): `VehVariantRepositoryImpl`, `.batchInsertFeatureCode()`, `.batchInsertOptionCode()`, `.batchPhysicalDelete()`, `.batchPhysicalDeleteFeatureCode()`, `.batchPhysicalDeleteOptionCode()`, `.countByMap()`, `.countBySource()`, `.insert()`, `.selectByCode()`, `.selectByExternalRefId()`, `.selectById()`, `.selectByMap()`, `.selectFeatureCodeByExample()`, `.selectOptionCodeByExample()`, `.update()`, `.updateById()`, `.updateFeatureCode()`, `.updateOptionCode()`
+- **Thin community `Community 40`** (18 nodes): `MdmConfigurationRepository.java`, `MdmConfigurationRepository`, `.batchInsertOptionCode()`, `.batchPhysicalDelete()`, `.batchPhysicalDeleteOptionCode()`, `.countByMap()`, `.countBySource()`, `.insert()`, `.selectByCode()`, `.selectByExample()`, `.selectByExternalRefId()`, `.selectById()`, `.selectByMap()`, `.selectConfigurationCodeByOptionCodeMap()`, `.selectOptionCodeByExample()`, `.update()`, `.updateById()`, `.updateOptionCode()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 41`** (18 nodes): `MdmConfigurationRepository.java`, `MdmConfigurationRepository`, `.batchInsertOptionCode()`, `.batchPhysicalDelete()`, `.batchPhysicalDeleteOptionCode()`, `.countByMap()`, `.countBySource()`, `.insert()`, `.selectByCode()`, `.selectByExample()`, `.selectByExternalRefId()`, `.selectById()`, `.selectByMap()`, `.selectConfigurationCodeByOptionCodeMap()`, `.selectOptionCodeByExample()`, `.update()`, `.updateById()`, `.updateOptionCode()`
+- **Thin community `Community 42`** (16 nodes): `FlywayMigrationTest.java`, `FlywayMigrationTest`, `.allMigrationScripts_shouldExist()`, `.v5MigrationScript_shouldContainColumnRename()`, `.v5MigrationScript_shouldContainDataBackfill()`, `.v5MigrationScript_shouldContainMdmProjectionFields()`, `.v5MigrationScript_shouldContainPlantCodeColumnAddition()`, `.v5MigrationScript_shouldContainRenameTable()`, `.v5MigrationScript_shouldContainTableCommentUpdate()`, `.v5MigrationScript_shouldContainUniqueConstraint()`, `.v5MigrationScript_shouldExist()`, `.v6MigrationScript_shouldContainDataBackfill()`, `.v6MigrationScript_shouldContainMdmProjectionFields()`, `.v6MigrationScript_shouldContainUniqueConstraint()`, `.v6MigrationScript_shouldExist()`, `.v6MigrationScript_shouldTargetVehModelTable()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 42`** (16 nodes): `MdmModelRepositoryTest`, `.batchPhysicalDelete_shouldSuccessfullyDeleteModels()`, `.countByMap_shouldReturnCorrectCount()`, `.countBySource_shouldReturnCountForSource()`, `.generateUniqueCode()`, `.insert_shouldSuccessfullyInsertMdmModelWithProjectionFields()`, `.insert_shouldSuccessfullyInsertModel()`, `.selectByCode_shouldReturnModelWhenCodeExists()`, `.selectByExternalRefId_shouldReturnModelWhenExternalRefIdExists()`, `.selectById_shouldReturnModelWhenExists()`, `.selectByMap_shouldReturnModelsMatchingCriteria()`, `.selectByPlatformCodeAndCarLineCode_shouldReturnModelsForPlatformAndCarLine()`, `.setUp()`, `.update_shouldSuccessfullyUpdateMdmProjectionFields()`, `.update_shouldSuccessfullyUpdateModel()`, `.update_shouldSuccessfullyUpdatePlatformAndCarLineFields()`
+- **Thin community `Community 43`** (16 nodes): `MdmVariantRepository.java`, `MdmVariantRepository`, `.batchInsertOptionCode()`, `.batchPhysicalDelete()`, `.batchPhysicalDeleteOptionCode()`, `.countByMap()`, `.countBySource()`, `.insert()`, `.selectByCode()`, `.selectByExternalRefId()`, `.selectById()`, `.selectByMap()`, `.selectOptionCodeByExample()`, `.update()`, `.updateById()`, `.updateOptionCode()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 43`** (16 nodes): `FlywayMigrationTest.java`, `FlywayMigrationTest`, `.allMigrationScripts_shouldExist()`, `.v5MigrationScript_shouldContainColumnRename()`, `.v5MigrationScript_shouldContainDataBackfill()`, `.v5MigrationScript_shouldContainMdmProjectionFields()`, `.v5MigrationScript_shouldContainPlantCodeColumnAddition()`, `.v5MigrationScript_shouldContainRenameTable()`, `.v5MigrationScript_shouldContainTableCommentUpdate()`, `.v5MigrationScript_shouldContainUniqueConstraint()`, `.v5MigrationScript_shouldExist()`, `.v6MigrationScript_shouldContainDataBackfill()`, `.v6MigrationScript_shouldContainMdmProjectionFields()`, `.v6MigrationScript_shouldContainUniqueConstraint()`, `.v6MigrationScript_shouldExist()`, `.v6MigrationScript_shouldTargetVehModelTable()`
+- **Thin community `Community 44`** (15 nodes): `VehModelRepositoryTest`, `.batchPhysicalDelete_shouldSuccessfullyDeleteModels()`, `.countByMap_shouldReturnCorrectCount()`, `.countBySource_shouldReturnCountForSource()`, `.generateUniqueCode()`, `.insert_shouldSuccessfullyInsertMdmModelWithProjectionFields()`, `.insert_shouldSuccessfullyInsertModel()`, `.selectByCode_shouldReturnModelWhenCodeExists()`, `.selectByExternalRefId_shouldReturnModelWhenExternalRefIdExists()`, `.selectById_shouldReturnModelWhenExists()`, `.selectByMap_shouldReturnModelsMatchingCriteria()`, `.selectByPlatformCodeAndCarLineCode_shouldReturnModelsForPlatformAndCarLine()`, `.update_shouldSuccessfullyUpdateMdmProjectionFields()`, `.update_shouldSuccessfullyUpdateModel()`, `.update_shouldSuccessfullyUpdatePlatformAndCarLineFields()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 44`** (16 nodes): `MdmVariantRepository.java`, `MdmVariantRepository`, `.batchInsertOptionCode()`, `.batchPhysicalDelete()`, `.batchPhysicalDeleteOptionCode()`, `.countByMap()`, `.countBySource()`, `.insert()`, `.selectByCode()`, `.selectByExternalRefId()`, `.selectById()`, `.selectByMap()`, `.selectOptionCodeByExample()`, `.update()`, `.updateById()`, `.updateOptionCode()`
+- **Thin community `Community 45`** (15 nodes): `VehBuildConfigRepository.java`, `VehBuildConfigRepository`, `.batchInsertFeatureCode()`, `.batchPhysicalDelete()`, `.batchPhysicalDeleteFeatureCode()`, `.countByMap()`, `.insert()`, `.selectBuildConfigCodeByFeatureCodeMap()`, `.selectByCode()`, `.selectByExample()`, `.selectById()`, `.selectByMap()`, `.selectFeatureCodeByExample()`, `.update()`, `.updateFeatureCode()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 45`** (15 nodes): `VehModelRepositoryTest`, `.batchPhysicalDelete_shouldSuccessfullyDeleteModels()`, `.countByMap_shouldReturnCorrectCount()`, `.countBySource_shouldReturnCountForSource()`, `.generateUniqueCode()`, `.insert_shouldSuccessfullyInsertMdmModelWithProjectionFields()`, `.insert_shouldSuccessfullyInsertModel()`, `.selectByCode_shouldReturnModelWhenCodeExists()`, `.selectByExternalRefId_shouldReturnModelWhenExternalRefIdExists()`, `.selectById_shouldReturnModelWhenExists()`, `.selectByMap_shouldReturnModelsMatchingCriteria()`, `.selectByPlatformCodeAndCarLineCode_shouldReturnModelsForPlatformAndCarLine()`, `.update_shouldSuccessfullyUpdateMdmProjectionFields()`, `.update_shouldSuccessfullyUpdateModel()`, `.update_shouldSuccessfullyUpdatePlatformAndCarLineFields()`
+- **Thin community `Community 46`** (14 nodes): `VehiclePartRepository.java`, `VehiclePartRepository`, `.batchInsert()`, `.batchInsertHistory()`, `.batchPhysicalDelete()`, `.insert()`, `.insertHistory()`, `.selectActiveByPartId()`, `.selectActiveByVinAndPartId()`, `.selectActiveByVinAndVehicleNodeCode()`, `.selectById()`, `.selectByMap()`, `.selectByPnAndSn()`, `.update()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 46`** (15 nodes): `VehBuildConfigRepository.java`, `VehBuildConfigRepository`, `.batchInsertFeatureCode()`, `.batchPhysicalDelete()`, `.batchPhysicalDeleteFeatureCode()`, `.countByMap()`, `.insert()`, `.selectBuildConfigCodeByFeatureCodeMap()`, `.selectByCode()`, `.selectByExample()`, `.selectById()`, `.selectByMap()`, `.selectFeatureCodeByExample()`, `.update()`, `.updateFeatureCode()`
+- **Thin community `Community 47`** (14 nodes): `VehFeatureFamilyRepository.java`, `VehFeatureFamilyRepository`, `.batchPhysicalDelete()`, `.batchPhysicalDeleteFeatureCode()`, `.insert()`, `.insertFeatureCode()`, `.selectByCode()`, `.selectById()`, `.selectByMap()`, `.selectFeatureCodeByCode()`, `.selectFeatureCodeByFamilyCode()`, `.selectFeatureCodeById()`, `.update()`, `.updateFeatureCode()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 47`** (14 nodes): `VehiclePartRepository.java`, `VehiclePartRepository`, `.batchInsert()`, `.batchInsertHistory()`, `.batchPhysicalDelete()`, `.insert()`, `.insertHistory()`, `.selectActiveByPartId()`, `.selectActiveByVinAndPartId()`, `.selectActiveByVinAndVehicleNodeCode()`, `.selectById()`, `.selectByMap()`, `.selectByPnAndSn()`, `.update()`
+- **Thin community `Community 48`** (13 nodes): `CarLineTest.java`, `CarLineTest`, `.builder_shouldHandleNullFields()`, `.builder_shouldSetAllFields()`, `.carLine_fieldsShouldBeUpdatable()`, `.carLine_shouldImplementDomainObjInterface()`, `.carLine_shouldRetainBrandCodeRedundantField()`, `.carLine_shouldSupportBrandCodeForMdmSource()`, `.carLine_shouldSupportExternalReferenceFields()`, `.carLine_shouldSupportManualLegacyDataSemantics()`, `.carLine_shouldSupportMdmReadOnlyProjectionSemantics()`, `.carLine_shouldSupportSourceTypeValues()`, `.carLine_shouldSupportSyncTime()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 48`** (14 nodes): `VehFeatureFamilyRepository.java`, `VehFeatureFamilyRepository`, `.batchPhysicalDelete()`, `.batchPhysicalDeleteFeatureCode()`, `.insert()`, `.insertFeatureCode()`, `.selectByCode()`, `.selectById()`, `.selectByMap()`, `.selectFeatureCodeByCode()`, `.selectFeatureCodeByFamilyCode()`, `.selectFeatureCodeById()`, `.update()`, `.updateFeatureCode()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 49`** (13 nodes): `CarLineTest.java`, `CarLineTest`, `.builder_shouldHandleNullFields()`, `.builder_shouldSetAllFields()`, `.carLine_fieldsShouldBeUpdatable()`, `.carLine_shouldImplementDomainObjInterface()`, `.carLine_shouldRetainBrandCodeRedundantField()`, `.carLine_shouldSupportBrandCodeForMdmSource()`, `.carLine_shouldSupportExternalReferenceFields()`, `.carLine_shouldSupportManualLegacyDataSemantics()`, `.carLine_shouldSupportMdmReadOnlyProjectionSemantics()`, `.carLine_shouldSupportSourceTypeValues()`, `.carLine_shouldSupportSyncTime()`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 50`** (13 nodes): `MdmPlatformRepositoryTest`, `.batchPhysicalDelete_shouldSuccessfullyDeletePlatforms()`, `.countByMap_shouldReturnCorrectCount()`, `.countBySource_shouldReturnCountForSource()`, `.insert_shouldSuccessfullyInsertMdmPlatformWithProjectionFields()`, `.insert_shouldSuccessfullyInsertPlatform()`, `.selectByCode_shouldReturnPlatformWhenCodeExists()`, `.selectByExternalRefId_shouldReturnPlatformWhenExternalRefIdExists()`, `.selectById_shouldReturnPlatformWhenExists()`, `.selectByMap_shouldReturnPlatformsMatchingCriteria()`, `.setUp()`, `.update_shouldSuccessfullyUpdateMdmProjectionFields()`, `.update_shouldSuccessfullyUpdatePlatform()`
+- **Thin community `Community 50`** (13 nodes): `MdmPartRepository.java`, `MdmPartRepository`, `.batchPhysicalDelete()`, `.countByMap()`, `.countBySource()`, `.insert()`, `.selectByCode()`, `.selectByExternalRefId()`, `.selectById()`, `.selectByMap()`, `.selectByPn()`, `.update()`, `.updateById()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 51`** (13 nodes): `VmdVehicleModelConfigService.java`, `VmdVehicleModelConfigService`, `.getBuildConfigByCode()`, `.getBuildConfigCodeByOptionCodes()`, `.getBuildConfigListByBaseModelCode()`, `.getBuildConfigListByVariantCode()`, `.getConfigurationByCode()`, `.getConfigurationCodeByFeatureCodes()`, `.getConfigurationCodeByOptionCodeMap()`, `.getConfigurationCodeByOptionCodes()`, `.getConfigurationListByBaseModelCode()`, `.getConfigurationListByVariantCode()`, `.getVehicleBuildConfigCode()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 52`** (13 nodes): `VehBaseModelRepository.java`, `VehBaseModelRepository`, `.batchInsertFeatureCode()`, `.batchPhysicalDelete()`, `.batchPhysicalDeleteFeatureCode()`, `.countByMap()`, `.insert()`, `.selectByCode()`, `.selectById()`, `.selectByMap()`, `.selectFeatureCodeByExample()`, `.update()`, `.updateFeatureCode()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 53`** (12 nodes): `VehBrandRepositoryTest`, `.batchPhysicalDelete_shouldSuccessfullyDeleteBrands()`, `.countByMap_shouldReturnCorrectCount()`, `.countBySource_shouldReturnCountForSource()`, `.insert_shouldSuccessfullyInsertBrand()`, `.insert_shouldSuccessfullyInsertMdmBrandWithProjectionFields()`, `.selectByCode_shouldReturnBrandWhenCodeExists()`, `.selectByExternalRefId_shouldReturnBrandWhenExternalRefIdExists()`, `.selectById_shouldReturnBrandWhenExists()`, `.selectByMap_shouldReturnBrandsMatchingCriteria()`, `.update_shouldSuccessfullyUpdateBrand()`, `.update_shouldSuccessfullyUpdateMdmProjectionFields()`
+- **Thin community `Community 53`** (12 nodes): `MdmVehicleNodeRepositoryImplTest.java`, `MdmVehicleNodeRepositoryImplTest`, `.testBatchPhysicalDelete()`, `.testCountByMap()`, `.testCountBySource()`, `.testInsert()`, `.testSelectByCode()`, `.testSelectByExternalRefId()`, `.testSelectById()`, `.testSelectByMap()`, `.testUpdate()`, `.testUpdateById()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 54`** (12 nodes): `MdmVehicleNodeRepositoryImplTest.java`, `MdmVehicleNodeRepositoryImplTest`, `.testBatchPhysicalDelete()`, `.testCountByMap()`, `.testCountBySource()`, `.testInsert()`, `.testSelectByCode()`, `.testSelectByExternalRefId()`, `.testSelectById()`, `.testSelectByMap()`, `.testUpdate()`, `.testUpdateById()`
+- **Thin community `Community 54`** (12 nodes): `ModelTest.java`, `ModelTest`, `.builder_shouldHandleNullFields()`, `.builder_shouldSetAllFields()`, `.model_fieldsShouldBeUpdatable()`, `.model_shouldImplementDomainObjInterface()`, `.model_shouldSupportExternalReferenceFields()`, `.model_shouldSupportManualLegacyDataSemantics()`, `.model_shouldSupportMdmReadOnlyProjectionSemantics()`, `.model_shouldSupportPlatformAndCarLineAssociation()`, `.model_shouldSupportSourceTypeValues()`, `.model_shouldSupportSyncTime()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 55`** (12 nodes): `ModelTest.java`, `ModelTest`, `.builder_shouldHandleNullFields()`, `.builder_shouldSetAllFields()`, `.model_fieldsShouldBeUpdatable()`, `.model_shouldImplementDomainObjInterface()`, `.model_shouldSupportExternalReferenceFields()`, `.model_shouldSupportManualLegacyDataSemantics()`, `.model_shouldSupportMdmReadOnlyProjectionSemantics()`, `.model_shouldSupportPlatformAndCarLineAssociation()`, `.model_shouldSupportSourceTypeValues()`, `.model_shouldSupportSyncTime()`
+- **Thin community `Community 55`** (12 nodes): `MptConfigurationAssembler`, `.fromDto()`, `.fromDtoList()`, `.fromFeatureCodeDto()`, `.fromFeatureCodeDtoList()`, `.fromOptionCodeDto()`, `.fromOptionCodeDtoList()`, `.toCmd()`, `.toDto()`, `.toFeatureCodeCmd()`, `.toOptionCodeCmd()`, `MptConfigurationAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 56`** (12 nodes): `MptConfigurationAssembler`, `.fromDto()`, `.fromDtoList()`, `.fromFeatureCodeDto()`, `.fromFeatureCodeDtoList()`, `.fromOptionCodeDto()`, `.fromOptionCodeDtoList()`, `.toCmd()`, `.toDto()`, `.toFeatureCodeCmd()`, `.toOptionCodeCmd()`, `MptConfigurationAssembler.java`
+- **Thin community `Community 56`** (12 nodes): `MdmModelRepository.java`, `MdmModelRepository`, `.batchPhysicalDelete()`, `.countByMap()`, `.countBySource()`, `.insert()`, `.selectByCode()`, `.selectByExternalRefId()`, `.selectById()`, `.selectByMap()`, `.update()`, `.updateById()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 57`** (12 nodes): `MdmModelRepository.java`, `MdmModelRepository`, `.batchPhysicalDelete()`, `.countByMap()`, `.countBySource()`, `.insert()`, `.selectByCode()`, `.selectByExternalRefId()`, `.selectById()`, `.selectByMap()`, `.update()`, `.updateById()`
+- **Thin community `Community 57`** (12 nodes): `VehBasicInfoRepository.java`, `VehBasicInfoRepository`, `.batchInsertDetail()`, `.batchPhysicalDelete()`, `.countByMap()`, `.insert()`, `.selectById()`, `.selectByMap()`, `.selectByVin()`, `.selectDetailByVin()`, `.selectPresetOwnerByExample()`, `.update()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 58`** (12 nodes): `MdmPartRepository.java`, `MdmPartRepository`, `.batchPhysicalDelete()`, `.countByMap()`, `.countBySource()`, `.insert()`, `.selectByExternalRefId()`, `.selectById()`, `.selectByMap()`, `.selectByPn()`, `.update()`, `.updateById()`
+- **Thin community `Community 58`** (12 nodes): `MdmPlatformRepository.java`, `MdmPlatformRepository`, `.batchPhysicalDelete()`, `.countByMap()`, `.countBySource()`, `.insert()`, `.selectByCode()`, `.selectByExternalRefId()`, `.selectById()`, `.selectByMap()`, `.update()`, `.updateById()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 59`** (12 nodes): `VehBasicInfoRepository.java`, `VehBasicInfoRepository`, `.batchInsertDetail()`, `.batchPhysicalDelete()`, `.countByMap()`, `.insert()`, `.selectById()`, `.selectByMap()`, `.selectByVin()`, `.selectDetailByVin()`, `.selectPresetOwnerByExample()`, `.update()`
+- **Thin community `Community 59`** (12 nodes): `MdmCarLineRepository.java`, `MdmCarLineRepository`, `.batchPhysicalDelete()`, `.countByMap()`, `.countBySource()`, `.insert()`, `.selectByCode()`, `.selectByExternalRefId()`, `.selectById()`, `.selectByMap()`, `.update()`, `.updateById()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 60`** (12 nodes): `MdmPlatformRepository.java`, `MdmPlatformRepository`, `.batchPhysicalDelete()`, `.countByMap()`, `.countBySource()`, `.insert()`, `.selectByCode()`, `.selectByExternalRefId()`, `.selectById()`, `.selectByMap()`, `.update()`, `.updateById()`
+- **Thin community `Community 60`** (12 nodes): `MdmBrandRepository.java`, `MdmBrandRepository`, `.batchPhysicalDelete()`, `.countByMap()`, `.countBySource()`, `.insert()`, `.selectByCode()`, `.selectByExternalRefId()`, `.selectById()`, `.selectByMap()`, `.update()`, `.updateById()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 61`** (12 nodes): `MdmCarLineRepository.java`, `MdmCarLineRepository`, `.batchPhysicalDelete()`, `.countByMap()`, `.countBySource()`, `.insert()`, `.selectByCode()`, `.selectByExternalRefId()`, `.selectById()`, `.selectByMap()`, `.update()`, `.updateById()`
+- **Thin community `Community 61`** (12 nodes): `VehicleConfigRepository.java`, `VehicleConfigRepository`, `.batchPhysicalDelete()`, `.batchPhysicalDeleteConfigItem()`, `.insert()`, `.insertConfigItem()`, `.selectById()`, `.selectByMap()`, `.selectConfigItemById()`, `.selectConfigItemByMap()`, `.update()`, `.updateConfigItem()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 62`** (12 nodes): `MdmBrandRepository.java`, `MdmBrandRepository`, `.batchPhysicalDelete()`, `.countByMap()`, `.countBySource()`, `.insert()`, `.selectByCode()`, `.selectByExternalRefId()`, `.selectById()`, `.selectByMap()`, `.update()`, `.updateById()`
+- **Thin community `Community 62`** (12 nodes): `PartRepository.java`, `PartRepository`, `.batchPhysicalDelete()`, `.countBySource()`, `.insert()`, `.selectByCode()`, `.selectByExternalRefId()`, `.selectById()`, `.selectByMap()`, `.selectByPn()`, `.update()`, `.updateById()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 63`** (12 nodes): `VehicleConfigRepository.java`, `VehicleConfigRepository`, `.batchPhysicalDelete()`, `.batchPhysicalDeleteConfigItem()`, `.insert()`, `.insertConfigItem()`, `.selectById()`, `.selectByMap()`, `.selectConfigItemById()`, `.selectConfigItemByMap()`, `.update()`, `.updateConfigItem()`
+- **Thin community `Community 63`** (12 nodes): `MdmVehicleNodeRepository.java`, `MdmVehicleNodeRepository`, `.batchPhysicalDelete()`, `.countByMap()`, `.countBySource()`, `.insert()`, `.selectByCode()`, `.selectByExternalRefId()`, `.selectById()`, `.selectByMap()`, `.update()`, `.updateById()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 64`** (12 nodes): `MdmVehicleNodeRepository.java`, `MdmVehicleNodeRepository`, `.batchPhysicalDelete()`, `.countByMap()`, `.countBySource()`, `.insert()`, `.selectByCode()`, `.selectByExternalRefId()`, `.selectById()`, `.selectByMap()`, `.update()`, `.updateById()`
+- **Thin community `Community 64`** (12 nodes): `VehBrandRepository.java`, `VehBrandRepository`, `.batchPhysicalDelete()`, `.countByMap()`, `.countBySource()`, `.insert()`, `.selectByCode()`, `.selectByExternalRefId()`, `.selectById()`, `.selectByMap()`, `.update()`, `.updateById()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 65`** (12 nodes): `VehBrandRepository.java`, `VehBrandRepository`, `.batchPhysicalDelete()`, `.countByMap()`, `.countBySource()`, `.insert()`, `.selectByCode()`, `.selectByExternalRefId()`, `.selectById()`, `.selectByMap()`, `.update()`, `.updateById()`
+- **Thin community `Community 65`** (12 nodes): `VehPlatformRepository.java`, `VehPlatformRepository`, `.batchPhysicalDelete()`, `.countByMap()`, `.countBySource()`, `.insert()`, `.selectByCode()`, `.selectByExternalRefId()`, `.selectById()`, `.selectByMap()`, `.update()`, `.updateById()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 66`** (12 nodes): `VehPlatformRepository.java`, `VehPlatformRepository`, `.batchPhysicalDelete()`, `.countByMap()`, `.countBySource()`, `.insert()`, `.selectByCode()`, `.selectByExternalRefId()`, `.selectById()`, `.selectByMap()`, `.update()`, `.updateById()`
+- **Thin community `Community 66`** (12 nodes): `VehModelRepository.java`, `VehModelRepository`, `.batchPhysicalDelete()`, `.countByMap()`, `.countBySource()`, `.insert()`, `.selectByCode()`, `.selectByExternalRefId()`, `.selectById()`, `.selectByMap()`, `.update()`, `.updateById()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 67`** (12 nodes): `VehModelRepository.java`, `VehModelRepository`, `.batchPhysicalDelete()`, `.countByMap()`, `.countBySource()`, `.insert()`, `.selectByCode()`, `.selectByExternalRefId()`, `.selectById()`, `.selectByMap()`, `.update()`, `.updateById()`
+- **Thin community `Community 67`** (12 nodes): `VehCarLineRepository.java`, `VehCarLineRepository`, `.batchPhysicalDelete()`, `.countByMap()`, `.countBySource()`, `.insert()`, `.selectByCode()`, `.selectByExternalRefId()`, `.selectById()`, `.selectByMap()`, `.update()`, `.updateById()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 68`** (12 nodes): `VehCarLineRepository.java`, `VehCarLineRepository`, `.batchPhysicalDelete()`, `.countByMap()`, `.countBySource()`, `.insert()`, `.selectByCode()`, `.selectByExternalRefId()`, `.selectById()`, `.selectByMap()`, `.update()`, `.updateById()`
+- **Thin community `Community 68`** (11 nodes): `VariantIntegrationTest.java`, `VariantIntegrationTest`, `.testMptVariantAssembler_fromDto()`, `.testMptVariantAssembler_toCmd()`, `.testProductDataReadOnlyException()`, `.testSourceType()`, `.testVariantAssembler_fromDomain()`, `.testVariantAssembler_toDomain()`, `.testVariantConverter_fromDomain()`, `.testVariantConverter_toDomain()`, `.testVariantEntityBuild()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 69`** (12 nodes): `VehBaseModelRepositoryImpl`, `.batchInsertFeatureCode()`, `.batchPhysicalDelete()`, `.batchPhysicalDeleteFeatureCode()`, `.countByMap()`, `.insert()`, `.selectByCode()`, `.selectById()`, `.selectByMap()`, `.selectFeatureCodeByExample()`, `.update()`, `.updateFeatureCode()`
+- **Thin community `Community 69`** (11 nodes): `VehicleNodeIntegrationTest.java`, `VehicleNodeIntegrationTest`, `.testMptVehicleNodeAssembler_fromDto()`, `.testMptVehicleNodeAssembler_toCmd()`, `.testProductDataReadOnlyException()`, `.testSourceType()`, `.testVehicleNodeAssembler_fromDomain()`, `.testVehicleNodeAssembler_toDomain()`, `.testVehicleNodeConverter_fromDomain()`, `.testVehicleNodeConverter_toDomain()`, `.testVehicleNodeEntityBuild()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 70`** (11 nodes): `VariantIntegrationTest.java`, `VariantIntegrationTest`, `.testMptVariantAssembler_fromDto()`, `.testMptVariantAssembler_toCmd()`, `.testProductDataReadOnlyException()`, `.testSourceType()`, `.testVariantAssembler_fromDomain()`, `.testVariantAssembler_toDomain()`, `.testVariantConverter_fromDomain()`, `.testVariantConverter_toDomain()`, `.testVariantEntityBuild()`
+- **Thin community `Community 70`** (11 nodes): `BrandTest.java`, `BrandTest`, `.brand_fieldsShouldBeUpdatable()`, `.brand_shouldImplementDomainObjInterface()`, `.brand_shouldSupportExternalReferenceFields()`, `.brand_shouldSupportManualLegacyDataSemantics()`, `.brand_shouldSupportMdmReadOnlyProjectionSemantics()`, `.brand_shouldSupportSourceTypeValues()`, `.brand_shouldSupportSyncTime()`, `.builder_shouldHandleNullFields()`, `.builder_shouldSetAllFields()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 71`** (11 nodes): `VehicleNodeIntegrationTest.java`, `VehicleNodeIntegrationTest`, `.testMptVehicleNodeAssembler_fromDto()`, `.testMptVehicleNodeAssembler_toCmd()`, `.testProductDataReadOnlyException()`, `.testSourceType()`, `.testVehicleNodeAssembler_fromDomain()`, `.testVehicleNodeAssembler_toDomain()`, `.testVehicleNodeConverter_fromDomain()`, `.testVehicleNodeConverter_toDomain()`, `.testVehicleNodeEntityBuild()`
+- **Thin community `Community 71`** (11 nodes): `PlatformTest.java`, `PlatformTest`, `.builder_shouldHandleNullFields()`, `.builder_shouldSetAllFields()`, `.platform_fieldsShouldBeUpdatable()`, `.platform_shouldImplementDomainObjInterface()`, `.platform_shouldSupportExternalReferenceFields()`, `.platform_shouldSupportManualLegacyDataSemantics()`, `.platform_shouldSupportMdmReadOnlyProjectionSemantics()`, `.platform_shouldSupportSourceTypeValues()`, `.platform_shouldSupportSyncTime()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 72`** (11 nodes): `BrandTest.java`, `BrandTest`, `.brand_fieldsShouldBeUpdatable()`, `.brand_shouldImplementDomainObjInterface()`, `.brand_shouldSupportExternalReferenceFields()`, `.brand_shouldSupportManualLegacyDataSemantics()`, `.brand_shouldSupportMdmReadOnlyProjectionSemantics()`, `.brand_shouldSupportSourceTypeValues()`, `.brand_shouldSupportSyncTime()`, `.builder_shouldHandleNullFields()`, `.builder_shouldSetAllFields()`
+- **Thin community `Community 72`** (11 nodes): `MptVariantAssembler`, `.fromDto()`, `.fromDtoList()`, `.fromFeatureCodeDto()`, `.fromFeatureCodeDtoList()`, `.fromOptionCodeDto()`, `.fromOptionCodeDtoList()`, `.toCmd()`, `.toFeatureCodeCmd()`, `.toOptionCodeCmd()`, `MptVariantAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 73`** (11 nodes): `PlatformTest.java`, `PlatformTest`, `.builder_shouldHandleNullFields()`, `.builder_shouldSetAllFields()`, `.platform_fieldsShouldBeUpdatable()`, `.platform_shouldImplementDomainObjInterface()`, `.platform_shouldSupportExternalReferenceFields()`, `.platform_shouldSupportManualLegacyDataSemantics()`, `.platform_shouldSupportMdmReadOnlyProjectionSemantics()`, `.platform_shouldSupportSourceTypeValues()`, `.platform_shouldSupportSyncTime()`
+- **Thin community `Community 73`** (11 nodes): `MdmPlantRepository.java`, `MdmPlantRepository`, `.batchPhysicalDelete()`, `.countByMap()`, `.countBySource()`, `.insert()`, `.selectByCode()`, `.selectByExternalRefId()`, `.selectById()`, `.selectByMap()`, `.update()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 74`** (11 nodes): `MptVariantAssembler`, `.fromDto()`, `.fromDtoList()`, `.fromFeatureCodeDto()`, `.fromFeatureCodeDtoList()`, `.fromOptionCodeDto()`, `.fromOptionCodeDtoList()`, `.toCmd()`, `.toFeatureCodeCmd()`, `.toOptionCodeCmd()`, `MptVariantAssembler.java`
+- **Thin community `Community 74`** (11 nodes): `VmdVehicleLifecycleService.java`, `VmdVehicleLifecycleService`, `.recordFirstApplyAdcmCertNode()`, `.recordFirstApplyAdcmCommSkNode()`, `.recordFirstApplyCcpCertNode()`, `.recordFirstApplyCcpCommSkNode()`, `.recordFirstApplyIdcmCertNode()`, `.recordFirstApplyIdcmCommSkNode()`, `.recordFirstApplyNode()`, `.recordFirstApplyTboxCertNode()`, `.recordFirstApplyTboxCommSkNode()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 75`** (11 nodes): `MdmBrandRepositoryImpl`, `.batchPhysicalDelete()`, `.countByMap()`, `.countBySource()`, `.insert()`, `.selectByCode()`, `.selectByExternalRefId()`, `.selectById()`, `.selectByMap()`, `.update()`, `.updateById()`
+- **Thin community `Community 75`** (11 nodes): `VehPlantRepository.java`, `VehPlantRepository`, `.batchPhysicalDelete()`, `.countByMap()`, `.countBySource()`, `.insert()`, `.selectByCode()`, `.selectByExternalRefId()`, `.selectById()`, `.selectByMap()`, `.update()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 76`** (11 nodes): `PartRepository.java`, `PartRepository`, `.batchPhysicalDelete()`, `.countBySource()`, `.insert()`, `.selectByExternalRefId()`, `.selectById()`, `.selectByMap()`, `.selectByPn()`, `.update()`, `.updateById()`
+- **Thin community `Community 76`** (10 nodes): `MdmVariantRepositoryImplTest.java`, `MdmVariantRepositoryImplTest`, `.buildPo()`, `.testCountBySource()`, `.testInsert()`, `.testSelectByCode()`, `.testSelectByCode_notFound()`, `.testSelectByExternalRefId()`, `.testUpdate()`, `.testUpdateById()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 77`** (11 nodes): `MdmPlantRepository.java`, `MdmPlantRepository`, `.batchPhysicalDelete()`, `.countByMap()`, `.countBySource()`, `.insert()`, `.selectByCode()`, `.selectByExternalRefId()`, `.selectById()`, `.selectByMap()`, `.update()`
+- **Thin community `Community 77`** (10 nodes): `PartInfoConverter`, `.fromDomain()`, `.fromDomainList()`, `.mapInboundSourceTypeToString()`, `.mapPartTypeToString()`, `.mapStringToInboundSourceType()`, `.mapStringToPartType()`, `.toDomain()`, `.toDomainList()`, `PartInfoConverter.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 78`** (11 nodes): `VmdVehicleLifecycleService.java`, `VmdVehicleLifecycleService`, `.recordFirstApplyAdcmCertNode()`, `.recordFirstApplyAdcmCommSkNode()`, `.recordFirstApplyCcpCertNode()`, `.recordFirstApplyCcpCommSkNode()`, `.recordFirstApplyIdcmCertNode()`, `.recordFirstApplyIdcmCommSkNode()`, `.recordFirstApplyNode()`, `.recordFirstApplyTboxCertNode()`, `.recordFirstApplyTboxCommSkNode()`
+- **Thin community `Community 78`** (10 nodes): `VehVariantRepositoryImplTest.java`, `VehVariantRepositoryImplTest`, `.buildPo()`, `.testCountBySource()`, `.testInsert()`, `.testSelectByCode()`, `.testSelectByCode_notFound()`, `.testSelectByExternalRefId()`, `.testUpdate()`, `.testUpdateById()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 79`** (11 nodes): `VehPlantRepository.java`, `VehPlantRepository`, `.batchPhysicalDelete()`, `.countByMap()`, `.countBySource()`, `.insert()`, `.selectByCode()`, `.selectByExternalRefId()`, `.selectById()`, `.selectByMap()`, `.update()`
+- **Thin community `Community 80`** (9 nodes): `PlantTest.java`, `PlantTest`, `.builder_shouldHandleNullFields()`, `.builder_shouldSetAllFields()`, `.plant_fieldsShouldBeUpdatable()`, `.plant_shouldImplementDomainObjInterface()`, `.plant_shouldSupportExternalReferenceFields()`, `.plant_shouldSupportSourceTypeValues()`, `.plant_shouldSupportSyncTime()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 80`** (10 nodes): `MdmVariantRepositoryImplTest.java`, `MdmVariantRepositoryImplTest`, `.buildPo()`, `.testCountBySource()`, `.testInsert()`, `.testSelectByCode()`, `.testSelectByCode_notFound()`, `.testSelectByExternalRefId()`, `.testUpdate()`, `.testUpdateById()`
+- **Thin community `Community 81`** (9 nodes): `VehLifecycleRepository.java`, `VehLifecycleRepository`, `.batchPhysicalDelete()`, `.insert()`, `.physicalDeleteByVin()`, `.selectById()`, `.selectByMap()`, `.selectByVin()`, `.update()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 81`** (10 nodes): `PartInfoConverter`, `.fromDomain()`, `.fromDomainList()`, `.mapInboundSourceTypeToString()`, `.mapPartTypeToString()`, `.mapStringToInboundSourceType()`, `.mapStringToPartType()`, `.toDomain()`, `.toDomainList()`, `PartInfoConverter.java`
+- **Thin community `Community 82`** (9 nodes): `PartImportDataRepository.java`, `PartImportDataRepository`, `.checkBatchNumUnique()`, `.deleteByIds()`, `.insert()`, `.selectByBatchNum()`, `.selectById()`, `.selectList()`, `.update()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 82`** (10 nodes): `VehVariantRepositoryImplTest.java`, `VehVariantRepositoryImplTest`, `.buildPo()`, `.testCountBySource()`, `.testInsert()`, `.testSelectByCode()`, `.testSelectByCode_notFound()`, `.testSelectByExternalRefId()`, `.testUpdate()`, `.testUpdateById()`
+- **Thin community `Community 83`** (9 nodes): `PartInfoRepository.java`, `PartInfoRepository`, `.batchInsert()`, `.batchPhysicalDelete()`, `.insert()`, `.selectById()`, `.selectByMap()`, `.selectByPartCodeAndSn()`, `.update()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 84`** (9 nodes): `PlantTest.java`, `PlantTest`, `.builder_shouldHandleNullFields()`, `.builder_shouldSetAllFields()`, `.plant_fieldsShouldBeUpdatable()`, `.plant_shouldImplementDomainObjInterface()`, `.plant_shouldSupportExternalReferenceFields()`, `.plant_shouldSupportSourceTypeValues()`, `.plant_shouldSupportSyncTime()`
+- **Thin community `Community 84`** (9 nodes): `MptBuildConfigAssembler`, `.fromDto()`, `.fromDtoList()`, `.fromFeatureCodeDto()`, `.fromFeatureCodeDtoList()`, `.toCmd()`, `.toDto()`, `.toFeatureCodeCmd()`, `MptBuildConfigAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 85`** (9 nodes): `VehicleInfoPersister.java`, `VehicleInfoPersisterTest.java`, `VehicleInfoPersister`, `.persist()`, `VehicleInfoPersisterTest`, `.persist_existingVehicle_updatesAndReturnsFalse()`, `.persist_mixedDetails_insertsOnlyNew()`, `.persist_newVehicle_insertsAndReturnsTrue()`, `.persist_noNewDetails_skipsBatchInsert()`
+- **Thin community `Community 85`** (9 nodes): `VehManufacturerRepository.java`, `VehManufacturerRepository`, `.batchPhysicalDelete()`, `.countByMap()`, `.insert()`, `.selectByCode()`, `.selectById()`, `.selectByMap()`, `.update()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 86`** (9 nodes): `VehLifecycleRepository.java`, `VehLifecycleRepository`, `.batchPhysicalDelete()`, `.insert()`, `.physicalDeleteByVin()`, `.selectById()`, `.selectByMap()`, `.selectByVin()`, `.update()`
+- **Thin community `Community 86`** (9 nodes): `VehSeriesRepository.java`, `VehSeriesRepository`, `.batchPhysicalDelete()`, `.countByMap()`, `.insert()`, `.selectByCode()`, `.selectById()`, `.selectByMap()`, `.update()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 87`** (9 nodes): `PartInfoRepository.java`, `PartInfoRepository`, `.batchInsert()`, `.batchPhysicalDelete()`, `.insert()`, `.selectById()`, `.selectByMap()`, `.selectByPartCodeAndSn()`, `.update()`
+- **Thin community `Community 87`** (8 nodes): `VehImportDataRepository.java`, `VehImportDataRepository`, `.batchPhysicalDelete()`, `.insert()`, `.selectByBatchNum()`, `.selectById()`, `.selectByMap()`, `.update()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 88`** (9 nodes): `MptBuildConfigAssembler`, `.fromDto()`, `.fromDtoList()`, `.fromFeatureCodeDto()`, `.fromFeatureCodeDtoList()`, `.toCmd()`, `.toDto()`, `.toFeatureCodeCmd()`, `MptBuildConfigAssembler.java`
+- **Thin community `Community 88`** (8 nodes): `DeviceRepository.java`, `DeviceRepository`, `.batchPhysicalDelete()`, `.insert()`, `.selectByCode()`, `.selectById()`, `.selectByMap()`, `.update()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 89`** (9 nodes): `VehManufacturerRepository.java`, `VehManufacturerRepository`, `.batchPhysicalDelete()`, `.countByMap()`, `.insert()`, `.selectByCode()`, `.selectById()`, `.selectByMap()`, `.update()`
+- **Thin community `Community 89`** (8 nodes): `SupplierRepository.java`, `SupplierRepository`, `.batchPhysicalDelete()`, `.insert()`, `.selectByCode()`, `.selectById()`, `.selectByMap()`, `.update()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 90`** (9 nodes): `VehSeriesRepository.java`, `VehSeriesRepository`, `.batchPhysicalDelete()`, `.countByMap()`, `.insert()`, `.selectByCode()`, `.selectById()`, `.selectByMap()`, `.update()`
+- **Thin community `Community 90`** (7 nodes): `MptPlantAssembler`, `.fromDto()`, `.fromDtoList()`, `.toCmd()`, `.toDto()`, `.toQuery()`, `MptPlantAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 91`** (8 nodes): `VehImportDataRepository.java`, `VehImportDataRepository`, `.batchPhysicalDelete()`, `.insert()`, `.selectByBatchNum()`, `.selectById()`, `.selectByMap()`, `.update()`
+- **Thin community `Community 91`** (7 nodes): `VehicleAssembler`, `.fromBasicInfo()`, `.fromBasicInfoList()`, `.toDomain()`, `.toDto()`, `.toDtoList()`, `VehicleAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 92`** (8 nodes): `DeviceRepository.java`, `DeviceRepository`, `.batchPhysicalDelete()`, `.insert()`, `.selectByCode()`, `.selectById()`, `.selectByMap()`, `.update()`
+- **Thin community `Community 93`** (6 nodes): `InboundSourceTypeTest.java`, `InboundSourceTypeTest`, `.getLabel_returnsCorrectLabel()`, `.getValue_returnsCorrectValue()`, `.valOf_invalidValue_returnsNull()`, `.valOf_validValue_returnsEnum()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 93`** (8 nodes): `SupplierRepository.java`, `SupplierRepository`, `.batchPhysicalDelete()`, `.insert()`, `.selectByCode()`, `.selectById()`, `.selectByMap()`, `.update()`
+- **Thin community `Community 94`** (6 nodes): `PartTypeTest.java`, `PartTypeTest`, `.getLabel_returnsCorrectLabel()`, `.getValue_returnsCorrectValue()`, `.valOf_invalidValue_returnsNull()`, `.valOf_validValue_returnsEnum()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 94`** (7 nodes): `MptPlantAssembler`, `.fromDto()`, `.fromDtoList()`, `.toCmd()`, `.toDto()`, `.toQuery()`, `MptPlantAssembler.java`
+- **Thin community `Community 95`** (6 nodes): `MptCarLineAssembler`, `.fromDto()`, `.fromDtoList()`, `.toCmd()`, `.toDto()`, `MptCarLineAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 95`** (7 nodes): `VehicleAssembler`, `.fromBasicInfo()`, `.fromBasicInfoList()`, `.toDomain()`, `.toDto()`, `.toDtoList()`, `VehicleAssembler.java`
+- **Thin community `Community 96`** (6 nodes): `MptModelAssembler`, `.fromDto()`, `.fromDtoList()`, `.toCmd()`, `.toDto()`, `MptModelAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 97`** (6 nodes): `InboundSourceTypeTest.java`, `InboundSourceTypeTest`, `.getLabel_returnsCorrectLabel()`, `.getValue_returnsCorrectValue()`, `.valOf_invalidValue_returnsNull()`, `.valOf_validValue_returnsEnum()`
+- **Thin community `Community 97`** (6 nodes): `MptVehiclePartAssembler`, `.fromDto()`, `.fromDtoList()`, `.toCmd()`, `.toDto()`, `MptVehiclePartAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 98`** (6 nodes): `PartTypeTest.java`, `PartTypeTest`, `.getLabel_returnsCorrectLabel()`, `.getValue_returnsCorrectValue()`, `.valOf_invalidValue_returnsNull()`, `.valOf_validValue_returnsEnum()`
+- **Thin community `Community 98`** (6 nodes): `MptPartInfoAssembler`, `.fromDto()`, `.fromDtoList()`, `.toCmd()`, `.toDto()`, `MptPartInfoAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 99`** (6 nodes): `MptCarLineAssembler`, `.fromDto()`, `.fromDtoList()`, `.toCmd()`, `.toDto()`, `MptCarLineAssembler.java`
+- **Thin community `Community 99`** (6 nodes): `MptPartAssembler`, `.fromDto()`, `.fromDtoList()`, `.toCmd()`, `.toDto()`, `MptPartAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 100`** (6 nodes): `MptModelAssembler`, `.fromDto()`, `.fromDtoList()`, `.toCmd()`, `.toDto()`, `MptModelAssembler.java`
+- **Thin community `Community 100`** (6 nodes): `MptVehicleLifecycleAssembler`, `.fromDto()`, `.fromDtoList()`, `.toCmd()`, `.toDto()`, `MptVehicleLifecycleAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 101`** (6 nodes): `MptVehiclePartAssembler`, `.fromDto()`, `.fromDtoList()`, `.toCmd()`, `.toDto()`, `MptVehiclePartAssembler.java`
+- **Thin community `Community 101`** (6 nodes): `MptPlatformAssembler`, `.fromDto()`, `.fromDtoList()`, `.toCmd()`, `.toDto()`, `MptPlatformAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 102`** (6 nodes): `MptPartInfoAssembler`, `.fromDto()`, `.fromDtoList()`, `.toCmd()`, `.toDto()`, `MptPartInfoAssembler.java`
+- **Thin community `Community 102`** (6 nodes): `MptVehicleNodeAssembler`, `.fromDto()`, `.fromDtoList()`, `.toCmd()`, `.toDto()`, `MptVehicleNodeAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 103`** (6 nodes): `MptPartAssembler`, `.fromDto()`, `.fromDtoList()`, `.toCmd()`, `.toDto()`, `MptPartAssembler.java`
+- **Thin community `Community 104`** (6 nodes): `VehicleVoAssembler`, `.fromDomain()`, `.fromDomainList()`, `.fromDto()`, `.toDomain()`, `VehicleVoAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 104`** (6 nodes): `MptVehicleImportDataAssembler`, `.fromDto()`, `.fromDtoList()`, `.toCmd()`, `.toDto()`, `MptVehicleImportDataAssembler.java`
+- **Thin community `Community 105`** (6 nodes): `CacheService`, `.getQrcode()`, `.getVehicle()`, `.setQrcode()`, `.setVehicle()`, `CacheService.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 105`** (6 nodes): `MptVehicleLifecycleAssembler`, `.fromDto()`, `.fromDtoList()`, `.toCmd()`, `.toDto()`, `MptVehicleLifecycleAssembler.java`
+- **Thin community `Community 106`** (6 nodes): `MptVehicleImportDataAssembler`, `.fromDto()`, `.fromDtoList()`, `.toCmd()`, `.toDto()`, `MptVehicleImportDataAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 106`** (6 nodes): `MptPlatformAssembler`, `.fromDto()`, `.fromDtoList()`, `.toCmd()`, `.toDto()`, `MptPlatformAssembler.java`
+- **Thin community `Community 107`** (6 nodes): `MptDeviceAssembler`, `.fromDto()`, `.fromDtoList()`, `.toCmd()`, `.toDto()`, `MptDeviceAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 107`** (6 nodes): `MptVehicleNodeAssembler`, `.fromDto()`, `.fromDtoList()`, `.toCmd()`, `.toDto()`, `MptVehicleNodeAssembler.java`
+- **Thin community `Community 108`** (6 nodes): `MptSupplierAssembler`, `.fromDto()`, `.fromDtoList()`, `.toCmd()`, `.toDto()`, `MptSupplierAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 108`** (6 nodes): `VehicleVoAssembler`, `.fromDomain()`, `.fromDomainList()`, `.fromDto()`, `.toDomain()`, `VehicleVoAssembler.java`
+- **Thin community `Community 109`** (6 nodes): `MptManufacturerAssembler`, `.fromDto()`, `.fromDtoList()`, `.toCmd()`, `.toDto()`, `MptManufacturerAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 109`** (6 nodes): `CacheService`, `.getQrcode()`, `.getVehicle()`, `.setQrcode()`, `.setVehicle()`, `CacheService.java`
+- **Thin community `Community 110`** (6 nodes): `MptSeriesAssembler`, `.fromDto()`, `.fromDtoList()`, `.toCmd()`, `.toDto()`, `MptSeriesAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 110`** (6 nodes): `MptDeviceAssembler`, `.fromDto()`, `.fromDtoList()`, `.toCmd()`, `.toDto()`, `MptDeviceAssembler.java`
+- **Thin community `Community 112`** (5 nodes): `BaseTest.java`, `BaseTest`, `.beforeAll()`, `.main()`, `.newHttpHeader()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 111`** (6 nodes): `MptSupplierAssembler`, `.fromDto()`, `.fromDtoList()`, `.toCmd()`, `.toDto()`, `MptSupplierAssembler.java`
+- **Thin community `Community 113`** (5 nodes): `DownstreamProcessorTest.java`, `DownstreamProcessorTest`, `.testIdkDownstreamProcessorGetSupportedVehicleNodeCode()`, `.testOtaDownstreamProcessorGetSupportedVehicleNodeCode()`, `.testTspDownstreamProcessorGetSupportedVehicleNodeCode()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 112`** (6 nodes): `MptManufacturerAssembler`, `.fromDto()`, `.fromDtoList()`, `.toCmd()`, `.toDto()`, `MptManufacturerAssembler.java`
+- **Thin community `Community 114`** (5 nodes): `MptBrandAssembler`, `.fromDto()`, `.fromDtoList()`, `.toCmd()`, `MptBrandAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 113`** (6 nodes): `MptSeriesAssembler`, `.fromDto()`, `.fromDtoList()`, `.toCmd()`, `.toDto()`, `MptSeriesAssembler.java`
+- **Thin community `Community 116`** (5 nodes): `ImportDataParser.java`, `ImportDataParser`, `.getType()`, `.getVersion()`, `.parse()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 115`** (5 nodes): `BaseTest.java`, `BaseTest`, `.beforeAll()`, `.main()`, `.newHttpHeader()`
+- **Thin community `Community 117`** (5 nodes): `CarLineAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `CarLineAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 116`** (5 nodes): `MptBrandAssembler`, `.fromDto()`, `.fromDtoList()`, `.toCmd()`, `MptBrandAssembler.java`
+- **Thin community `Community 118`** (5 nodes): `VariantOptionCodeAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `VariantOptionCodeAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 118`** (5 nodes): `ImportDataParser.java`, `ImportDataParser`, `.getType()`, `.getVersion()`, `.parse()`
+- **Thin community `Community 119`** (5 nodes): `PlatformAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `PlatformAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 119`** (5 nodes): `CarLineAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `CarLineAssembler.java`
+- **Thin community `Community 120`** (5 nodes): `ConfigItemAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `ConfigItemAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 120`** (5 nodes): `VehicleImportDataAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `VehicleImportDataAssembler.java`
+- **Thin community `Community 121`** (5 nodes): `ConfigItemOptionAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `ConfigItemOptionAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 121`** (5 nodes): `VariantOptionCodeAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `VariantOptionCodeAssembler.java`
+- **Thin community `Community 122`** (5 nodes): `OptionCodeAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `OptionCodeAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 122`** (5 nodes): `PlatformAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `PlatformAssembler.java`
+- **Thin community `Community 123`** (5 nodes): `VehiclePartAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `VehiclePartAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 123`** (5 nodes): `ConfigItemAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `ConfigItemAssembler.java`
+- **Thin community `Community 124`** (5 nodes): `VariantAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `VariantAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 124`** (5 nodes): `ConfigItemOptionAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `ConfigItemOptionAssembler.java`
+- **Thin community `Community 125`** (5 nodes): `VmdVehicleExServiceAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `VmdVehicleExServiceAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 125`** (5 nodes): `OptionCodeAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `OptionCodeAssembler.java`
+- **Thin community `Community 126`** (5 nodes): `ConfigurationOptionCodeAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `ConfigurationOptionCodeAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 126`** (5 nodes): `VehiclePartAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `VehiclePartAssembler.java`
+- **Thin community `Community 127`** (5 nodes): `VehicleNodeExServiceAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `VehicleNodeExServiceAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 127`** (5 nodes): `VariantAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `VariantAssembler.java`
+- **Thin community `Community 128`** (5 nodes): `BrandAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `BrandAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 128`** (5 nodes): `VmdVehicleExServiceAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `VmdVehicleExServiceAssembler.java`
+- **Thin community `Community 129`** (5 nodes): `VehicleConfigAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `VehicleConfigAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 129`** (5 nodes): `ConfigurationOptionCodeAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `ConfigurationOptionCodeAssembler.java`
+- **Thin community `Community 130`** (5 nodes): `ConfigurationAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `ConfigurationAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 130`** (5 nodes): `VehicleNodeExServiceAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `VehicleNodeExServiceAssembler.java`
+- **Thin community `Community 131`** (5 nodes): `ModelAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `ModelAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 131`** (5 nodes): `BrandAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `BrandAssembler.java`
+- **Thin community `Community 132`** (5 nodes): `PartAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `PartAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 132`** (5 nodes): `VehicleConfigAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `VehicleConfigAssembler.java`
+- **Thin community `Community 133`** (5 nodes): `VehicleNodeAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `VehicleNodeAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 133`** (5 nodes): `ConfigurationAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `ConfigurationAssembler.java`
+- **Thin community `Community 134`** (5 nodes): `VehicleConfigItemAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `VehicleConfigItemAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 134`** (5 nodes): `ModelAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `ModelAssembler.java`
+- **Thin community `Community 135`** (5 nodes): `PlantAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `PlantAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 135`** (5 nodes): `PartAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `PartAssembler.java`
+- **Thin community `Community 136`** (5 nodes): `PartExServiceAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `PartExServiceAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 136`** (5 nodes): `VehicleNodeAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `VehicleNodeAssembler.java`
+- **Thin community `Community 137`** (5 nodes): `OptionFamilyAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `OptionFamilyAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 137`** (5 nodes): `VehicleConfigItemAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `VehicleConfigItemAssembler.java`
+- **Thin community `Community 138`** (5 nodes): `ConfigItemMappingAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `ConfigItemMappingAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 138`** (5 nodes): `PlantAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `PlantAssembler.java`
+- **Thin community `Community 139`** (5 nodes): `PartInfoAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `PartInfoAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 139`** (5 nodes): `PartExServiceAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `PartExServiceAssembler.java`
+- **Thin community `Community 140`** (5 nodes): `VehicleEolTspOtaSubscribe.java`, `VehicleEolTspOtaSubscribe`, `.notifyOta()`, `.notifyTsp()`, `.onVehicleEolPartBoundEvent()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 140`** (5 nodes): `OptionFamilyAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `OptionFamilyAssembler.java`
+- **Thin community `Community 141`** (5 nodes): `CarLineConverter`, `.fromDomain()`, `.toDomain()`, `.toDomainList()`, `CarLineConverter.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 141`** (5 nodes): `ConfigItemMappingAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `ConfigItemMappingAssembler.java`
+- **Thin community `Community 142`** (5 nodes): `VariantOptionCodeConverter`, `.fromDomain()`, `.toDomain()`, `.toDomainList()`, `VariantOptionCodeConverter.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 142`** (5 nodes): `PartInfoAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `PartInfoAssembler.java`
+- **Thin community `Community 143`** (5 nodes): `PlatformConverter`, `.fromDomain()`, `.toDomain()`, `.toDomainList()`, `PlatformConverter.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 143`** (5 nodes): `VehicleEolTspOtaSubscribe.java`, `VehicleEolTspOtaSubscribe`, `.notifyOta()`, `.notifyTsp()`, `.onVehicleEolPartBoundEvent()`
+- **Thin community `Community 144`** (5 nodes): `VariantConverter`, `.fromDomain()`, `.toDomain()`, `.toDomainList()`, `VariantConverter.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 144`** (5 nodes): `CarLineConverter`, `.fromDomain()`, `.toDomain()`, `.toDomainList()`, `CarLineConverter.java`
+- **Thin community `Community 145`** (5 nodes): `ConfigurationOptionCodeConverter`, `.fromDomain()`, `.toDomain()`, `.toDomainList()`, `ConfigurationOptionCodeConverter.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 145`** (5 nodes): `VehicleImportDataConverter`, `.fromDomain()`, `.toDomain()`, `.toDomainList()`, `VehicleImportDataConverter.java`
+- **Thin community `Community 146`** (5 nodes): `BrandConverter`, `.fromDomain()`, `.toDomain()`, `.toDomainList()`, `BrandConverter.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 146`** (5 nodes): `VariantOptionCodeConverter`, `.fromDomain()`, `.toDomain()`, `.toDomainList()`, `VariantOptionCodeConverter.java`
+- **Thin community `Community 147`** (5 nodes): `ConfigurationConverter`, `.fromDomain()`, `.toDomain()`, `.toDomainList()`, `ConfigurationConverter.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 147`** (5 nodes): `PlatformConverter`, `.fromDomain()`, `.toDomain()`, `.toDomainList()`, `PlatformConverter.java`
+- **Thin community `Community 148`** (5 nodes): `ModelConverter`, `.fromDomain()`, `.toDomain()`, `.toDomainList()`, `ModelConverter.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 148`** (5 nodes): `VariantConverter`, `.fromDomain()`, `.toDomain()`, `.toDomainList()`, `VariantConverter.java`
+- **Thin community `Community 149`** (5 nodes): `PartConverter`, `.fromDomain()`, `.toDomain()`, `.toDomainList()`, `PartConverter.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 149`** (5 nodes): `ConfigurationOptionCodeConverter`, `.fromDomain()`, `.toDomain()`, `.toDomainList()`, `ConfigurationOptionCodeConverter.java`
+- **Thin community `Community 150`** (5 nodes): `VehicleNodeConverter`, `.fromDomain()`, `.toDomain()`, `.toDomainList()`, `VehicleNodeConverter.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 150`** (5 nodes): `BrandConverter`, `.fromDomain()`, `.toDomain()`, `.toDomainList()`, `BrandConverter.java`
+- **Thin community `Community 151`** (5 nodes): `PlantConverter`, `.fromDomain()`, `.toDomain()`, `.toDomainList()`, `PlantConverter.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 151`** (5 nodes): `ConfigurationConverter`, `.fromDomain()`, `.toDomain()`, `.toDomainList()`, `ConfigurationConverter.java`
+- **Thin community `Community 152`** (5 nodes): `VehicleLifecycleConverter`, `.fromDomain()`, `.toDomain()`, `.toDomainList()`, `VehicleLifecycleConverter.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 152`** (5 nodes): `ModelConverter`, `.fromDomain()`, `.toDomain()`, `.toDomainList()`, `ModelConverter.java`
+- **Thin community `Community 153`** (5 nodes): `MdmConfigurationMapper.java`, `MdmConfigurationMapper`, `.countPoBySource()`, `.selectPoByCode()`, `.selectPoByExternalRefId()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 153`** (5 nodes): `PartConverter`, `.fromDomain()`, `.toDomain()`, `.toDomainList()`, `PartConverter.java`
+- **Thin community `Community 154`** (5 nodes): `MdmVehicleNodeMapper.java`, `MdmVehicleNodeMapper`, `.countPoBySource()`, `.selectPoByCode()`, `.selectPoByExternalRefId()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 154`** (5 nodes): `VehicleNodeConverter`, `.fromDomain()`, `.toDomain()`, `.toDomainList()`, `VehicleNodeConverter.java`
+- **Thin community `Community 155`** (5 nodes): `MdmBrandMapper.java`, `MdmBrandMapper`, `.countPoBySource()`, `.selectPoByCode()`, `.selectPoByExternalRefId()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 155`** (5 nodes): `PlantConverter`, `.fromDomain()`, `.toDomain()`, `.toDomainList()`, `PlantConverter.java`
+- **Thin community `Community 156`** (5 nodes): `MdmOptionCodeMapper.java`, `MdmOptionCodeMapper`, `.countPoBySource()`, `.selectPoByCode()`, `.selectPoByExternalRefId()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 156`** (5 nodes): `VehicleLifecycleConverter`, `.fromDomain()`, `.toDomain()`, `.toDomainList()`, `VehicleLifecycleConverter.java`
+- **Thin community `Community 157`** (5 nodes): `MdmCarLineMapper.java`, `MdmCarLineMapper`, `.countPoBySource()`, `.selectPoByCode()`, `.selectPoByExternalRefId()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 157`** (5 nodes): `MdmConfigurationMapper.java`, `MdmConfigurationMapper`, `.countPoBySource()`, `.selectPoByCode()`, `.selectPoByExternalRefId()`
+- **Thin community `Community 158`** (5 nodes): `MdmVariantMapper.java`, `MdmVariantMapper`, `.countPoBySource()`, `.selectPoByCode()`, `.selectPoByExternalRefId()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 158`** (5 nodes): `MdmVehicleNodeMapper.java`, `MdmVehicleNodeMapper`, `.countPoBySource()`, `.selectPoByCode()`, `.selectPoByExternalRefId()`
+- **Thin community `Community 159`** (5 nodes): `MdmPlantMapper.java`, `MdmPlantMapper`, `.countPoBySource()`, `.selectPoByCode()`, `.selectPoByExternalRefId()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 159`** (5 nodes): `MdmBrandMapper.java`, `MdmBrandMapper`, `.countPoBySource()`, `.selectPoByCode()`, `.selectPoByExternalRefId()`
+- **Thin community `Community 160`** (5 nodes): `MdmPlatformMapper.java`, `MdmPlatformMapper`, `.countPoBySource()`, `.selectPoByCode()`, `.selectPoByExternalRefId()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 160`** (5 nodes): `MdmOptionCodeMapper.java`, `MdmOptionCodeMapper`, `.countPoBySource()`, `.selectPoByCode()`, `.selectPoByExternalRefId()`
+- **Thin community `Community 161`** (5 nodes): `MdmModelMapper.java`, `MdmModelMapper`, `.countPoBySource()`, `.selectPoByCode()`, `.selectPoByExternalRefId()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 161`** (5 nodes): `MdmCarLineMapper.java`, `MdmCarLineMapper`, `.countPoBySource()`, `.selectPoByCode()`, `.selectPoByExternalRefId()`
+- **Thin community `Community 162`** (5 nodes): `MdmOptionFamilyMapper.java`, `MdmOptionFamilyMapper`, `.countPoBySource()`, `.selectPoByCode()`, `.selectPoByExternalRefId()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 162`** (5 nodes): `MdmVariantMapper.java`, `MdmVariantMapper`, `.countPoBySource()`, `.selectPoByCode()`, `.selectPoByExternalRefId()`
+- **Thin community `Community 163`** (5 nodes): `VmdPartService.java`, `VmdPartService`, `.getByCode()`, `.getByPn()`, `.listAllFota()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 163`** (5 nodes): `MdmPlantMapper.java`, `MdmPlantMapper`, `.countPoBySource()`, `.selectPoByCode()`, `.selectPoByExternalRefId()`
+- **Thin community `Community 164`** (5 nodes): `VehicleImportDataAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `VehicleImportDataAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 164`** (5 nodes): `MdmPlatformMapper.java`, `MdmPlatformMapper`, `.countPoBySource()`, `.selectPoByCode()`, `.selectPoByExternalRefId()`
+- **Thin community `Community 165`** (5 nodes): `VehicleImportDataConverter`, `.fromDomain()`, `.toDomain()`, `.toDomainList()`, `VehicleImportDataConverter.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 165`** (5 nodes): `MdmModelMapper.java`, `MdmModelMapper`, `.countPoBySource()`, `.selectPoByCode()`, `.selectPoByExternalRefId()`
+- **Thin community `Community 166`** (5 nodes): `DeviceExServiceAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `DeviceExServiceAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 166`** (5 nodes): `MdmOptionFamilyMapper.java`, `MdmOptionFamilyMapper`, `.countPoBySource()`, `.selectPoByCode()`, `.selectPoByExternalRefId()`
+- **Thin community `Community 167`** (5 nodes): `DeviceAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `DeviceAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 167`** (5 nodes): `DeviceExServiceAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `DeviceExServiceAssembler.java`
+- **Thin community `Community 168`** (5 nodes): `SupplierAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `SupplierAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 168`** (5 nodes): `DeviceAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `DeviceAssembler.java`
+- **Thin community `Community 169`** (5 nodes): `DeviceConverter`, `.fromDomain()`, `.toDomain()`, `.toDomainList()`, `DeviceConverter.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 169`** (5 nodes): `SupplierAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `SupplierAssembler.java`
+- **Thin community `Community 170`** (5 nodes): `VehCarLineMapper.java`, `VehCarLineMapper`, `.countPoBySource()`, `.selectPoByCode()`, `.selectPoByExternalRefId()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 170`** (5 nodes): `DeviceConverter`, `.fromDomain()`, `.toDomain()`, `.toDomainList()`, `DeviceConverter.java`
+- **Thin community `Community 171`** (5 nodes): `VehPlantMapper.java`, `VehPlantMapper`, `.countPoBySource()`, `.selectPoByCode()`, `.selectPoByExternalRefId()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 171`** (5 nodes): `VehCarLineMapper.java`, `VehCarLineMapper`, `.countPoBySource()`, `.selectPoByCode()`, `.selectPoByExternalRefId()`
+- **Thin community `Community 172`** (5 nodes): `VehModelMapper.java`, `VehModelMapper`, `.countPoBySource()`, `.selectPoByCode()`, `.selectPoByExternalRefId()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 172`** (5 nodes): `VehPlantMapper.java`, `VehPlantMapper`, `.countPoBySource()`, `.selectPoByCode()`, `.selectPoByExternalRefId()`
+- **Thin community `Community 173`** (5 nodes): `DeviceMapper.java`, `DeviceMapper`, `.selectAllFotaPo()`, `.selectAllPo()`, `.selectPoByCode()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 173`** (5 nodes): `VehModelMapper.java`, `VehModelMapper`, `.countPoBySource()`, `.selectPoByCode()`, `.selectPoByExternalRefId()`
+- **Thin community `Community 174`** (5 nodes): `VehVariantMapper.java`, `VehVariantMapper`, `.countPoBySource()`, `.selectPoByCode()`, `.selectPoByExternalRefId()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 174`** (5 nodes): `DeviceMapper.java`, `DeviceMapper`, `.selectAllFotaPo()`, `.selectAllPo()`, `.selectPoByCode()`
+- **Thin community `Community 175`** (5 nodes): `VehOptionFamilyMapper.java`, `VehOptionFamilyMapper`, `.countPoBySource()`, `.selectPoByCode()`, `.selectPoByExternalRefId()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 175`** (5 nodes): `VehVariantMapper.java`, `VehVariantMapper`, `.countPoBySource()`, `.selectPoByCode()`, `.selectPoByExternalRefId()`
+- **Thin community `Community 176`** (5 nodes): `VehPlatformMapper.java`, `VehPlatformMapper`, `.countPoBySource()`, `.selectPoByCode()`, `.selectPoByExternalRefId()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 176`** (5 nodes): `VehOptionFamilyMapper.java`, `VehOptionFamilyMapper`, `.countPoBySource()`, `.selectPoByCode()`, `.selectPoByExternalRefId()`
+- **Thin community `Community 177`** (5 nodes): `VehBrandMapper.java`, `VehBrandMapper`, `.countPoBySource()`, `.selectPoByCode()`, `.selectPoByExternalRefId()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 177`** (5 nodes): `VehPlatformMapper.java`, `VehPlatformMapper`, `.countPoBySource()`, `.selectPoByCode()`, `.selectPoByExternalRefId()`
+- **Thin community `Community 178`** (5 nodes): `VehOptionCodeMapper.java`, `VehOptionCodeMapper`, `.countPoBySource()`, `.selectPoByCode()`, `.selectPoByExternalRefId()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 178`** (5 nodes): `VehBrandMapper.java`, `VehBrandMapper`, `.countPoBySource()`, `.selectPoByCode()`, `.selectPoByExternalRefId()`
+- **Thin community `Community 179`** (5 nodes): `FeatureCodeAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `FeatureCodeAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 179`** (5 nodes): `VehOptionCodeMapper.java`, `VehOptionCodeMapper`, `.countPoBySource()`, `.selectPoByCode()`, `.selectPoByExternalRefId()`
+- **Thin community `Community 180`** (5 nodes): `FeatureFamilyAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `FeatureFamilyAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 180`** (5 nodes): `FeatureCodeAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `FeatureCodeAssembler.java`
+- **Thin community `Community 181`** (5 nodes): `BaseModelFeatureCodeAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `BaseModelFeatureCodeAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 181`** (5 nodes): `FeatureFamilyAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `FeatureFamilyAssembler.java`
+- **Thin community `Community 182`** (5 nodes): `ConfigurationFeatureCodeAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `ConfigurationFeatureCodeAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 182`** (5 nodes): `BaseModelFeatureCodeAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `BaseModelFeatureCodeAssembler.java`
+- **Thin community `Community 183`** (5 nodes): `BaseModelAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `BaseModelAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 183`** (5 nodes): `ConfigurationFeatureCodeAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `ConfigurationFeatureCodeAssembler.java`
+- **Thin community `Community 184`** (5 nodes): `SupplierConverter`, `.fromDomain()`, `.toDomain()`, `.toDomainList()`, `SupplierConverter.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 184`** (5 nodes): `BaseModelAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `BaseModelAssembler.java`
+- **Thin community `Community 185`** (5 nodes): `BaseModelFeatureCodeConverter`, `.fromDomain()`, `.toDomain()`, `.toDomainList()`, `BaseModelFeatureCodeConverter.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 185`** (5 nodes): `SupplierConverter`, `.fromDomain()`, `.toDomain()`, `.toDomainList()`, `SupplierConverter.java`
+- **Thin community `Community 186`** (5 nodes): `ConfigurationFeatureCodeConverter`, `.fromDomain()`, `.toDomain()`, `.toDomainList()`, `ConfigurationFeatureCodeConverter.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 186`** (5 nodes): `BaseModelFeatureCodeConverter`, `.fromDomain()`, `.toDomain()`, `.toDomainList()`, `BaseModelFeatureCodeConverter.java`
+- **Thin community `Community 187`** (5 nodes): `BaseModelConverter`, `.fromDomain()`, `.toDomain()`, `.toDomainList()`, `BaseModelConverter.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 187`** (5 nodes): `ConfigurationFeatureCodeConverter`, `.fromDomain()`, `.toDomain()`, `.toDomainList()`, `ConfigurationFeatureCodeConverter.java`
+- **Thin community `Community 188`** (5 nodes): `ManufacturerAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `ManufacturerAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 188`** (5 nodes): `BaseModelConverter`, `.fromDomain()`, `.toDomain()`, `.toDomainList()`, `BaseModelConverter.java`
+- **Thin community `Community 189`** (5 nodes): `BuildConfigFeatureCodeAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `BuildConfigFeatureCodeAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 189`** (5 nodes): `ManufacturerAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `ManufacturerAssembler.java`
+- **Thin community `Community 190`** (5 nodes): `BuildConfigAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `BuildConfigAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 190`** (5 nodes): `BuildConfigFeatureCodeAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `BuildConfigFeatureCodeAssembler.java`
+- **Thin community `Community 191`** (5 nodes): `ManufacturerConverter`, `.fromDomain()`, `.toDomain()`, `.toDomainList()`, `ManufacturerConverter.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 191`** (5 nodes): `BuildConfigAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `BuildConfigAssembler.java`
+- **Thin community `Community 192`** (5 nodes): `BuildConfigFeatureCodeConverter`, `.fromDomain()`, `.toDomain()`, `.toDomainList()`, `BuildConfigFeatureCodeConverter.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 192`** (5 nodes): `ManufacturerConverter`, `.fromDomain()`, `.toDomain()`, `.toDomainList()`, `ManufacturerConverter.java`
+- **Thin community `Community 193`** (5 nodes): `BuildConfigConverter`, `.fromDomain()`, `.toDomain()`, `.toDomainList()`, `BuildConfigConverter.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 193`** (5 nodes): `BuildConfigFeatureCodeConverter`, `.fromDomain()`, `.toDomain()`, `.toDomainList()`, `BuildConfigFeatureCodeConverter.java`
+- **Thin community `Community 194`** (5 nodes): `SeriesAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `SeriesAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 194`** (5 nodes): `BuildConfigConverter`, `.fromDomain()`, `.toDomain()`, `.toDomainList()`, `BuildConfigConverter.java`
+- **Thin community `Community 195`** (5 nodes): `SeriesConverter`, `.fromDomain()`, `.toDomain()`, `.toDomainList()`, `SeriesConverter.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 195`** (5 nodes): `SeriesAssembler`, `.fromDomain()`, `.fromDomainList()`, `.toDomain()`, `SeriesAssembler.java`
+- **Thin community `Community 196`** (4 nodes): `MptVehicleAssembler`, `.fromDto()`, `.fromDtoList()`, `MptVehicleAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 196`** (5 nodes): `SeriesConverter`, `.fromDomain()`, `.toDomain()`, `.toDomainList()`, `SeriesConverter.java`
-  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 197`** (4 nodes): `MptVehicleAssembler`, `.fromDto()`, `.fromDtoList()`, `MptVehicleAssembler.java`
+- **Thin community `Community 197`** (4 nodes): `MptPartImportDataAssembler`, `.fromDto()`, `.toCmd()`, `MptPartImportDataAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 198`** (4 nodes): `VehicleWebAssembler`, `.toResponse()`, `.toResponseList()`, `VehicleWebAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 199`** (4 nodes): `VehicleLifecycleNodeAssembler`, `.fromNode()`, `.toNode()`, `VehicleLifecycleNodeAssembler.java`
+- **Thin community `Community 199`** (4 nodes): `DownstreamProcessor.java`, `DownstreamProcessor`, `.getSupportedVehicleNodeCode()`, `.process()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 200`** (4 nodes): `VehicleBasicInfoAssembler`, `.fromAggregate()`, `.toAggregate()`, `VehicleBasicInfoAssembler.java`
+- **Thin community `Community 200`** (4 nodes): `VehicleLifecycleNodeAssembler`, `.fromNode()`, `.toNode()`, `VehicleLifecycleNodeAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 201`** (4 nodes): `ApplicationEvent`, `BaseEvent.java`, `BaseEvent`, `.BaseEvent()`
+- **Thin community `Community 201`** (4 nodes): `VehicleBasicInfoAssembler`, `.fromAggregate()`, `.toAggregate()`, `VehicleBasicInfoAssembler.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 202`** (4 nodes): `VehicleLifecycleNodeConverter`, `.fromDomain()`, `.toDomain()`, `VehicleLifecycleNodeConverter.java`
+- **Thin community `Community 202`** (4 nodes): `ApplicationEvent`, `BaseEvent.java`, `BaseEvent`, `.BaseEvent()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 203`** (4 nodes): `VehicleConverter`, `.fromDomain()`, `.toDomain()`, `VehicleConverter.java`
+- **Thin community `Community 203`** (4 nodes): `VehicleLifecycleNodeConverter`, `.fromDomain()`, `.toDomain()`, `VehicleLifecycleNodeConverter.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 204`** (4 nodes): `MdmConfigurationOptionCodeMapper.java`, `MdmConfigurationOptionCodeMapper`, `.selectConfigurationCodeByOptionCodeMap()`, `.selectPoByConfigurationCodeAndOptionFamilyCode()`
+- **Thin community `Community 204`** (4 nodes): `VehicleConverter`, `.fromDomain()`, `.toDomain()`, `VehicleConverter.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 205`** (4 nodes): `VehicleLifecycleNodeRepository.java`, `VehicleLifecycleNodeRepository`, `.existsByVinAndNode()`, `.selectByVin()`
+- **Thin community `Community 205`** (4 nodes): `MdmConfigurationOptionCodeMapper.java`, `MdmConfigurationOptionCodeMapper`, `.selectConfigurationCodeByOptionCodeMap()`, `.selectPoByConfigurationCodeAndOptionFamilyCode()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 206`** (4 nodes): `VmdPartService.java`, `VmdPartService`, `.getByPn()`, `.listAllFota()`
+- **Thin community `Community 206`** (4 nodes): `VehicleLifecycleNodeRepository.java`, `VehicleLifecycleNodeRepository`, `.existsByVinAndNode()`, `.selectByVin()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 207`** (4 nodes): `VmdVehicleService.java`, `VmdVehicleService`, `.bindOrder()`, `.getByVin()`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
@@ -2713,45 +2730,45 @@ Nodes (1): Config Item
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 254`** (2 nodes): `VehicleConfigItemResponse.java`, `VehicleConfigItemResponse`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 255`** (2 nodes): `PartInfoResponse.java`, `PartInfoResponse`
+- **Thin community `Community 255`** (2 nodes): `PartImportDataResponse.java`, `PartImportDataResponse`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 256`** (2 nodes): `ConfigurationOptionCodeResponse.java`, `ConfigurationOptionCodeResponse`
+- **Thin community `Community 256`** (2 nodes): `PartInfoResponse.java`, `PartInfoResponse`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 257`** (2 nodes): `PlantResponse.java`, `PlantResponse`
+- **Thin community `Community 257`** (2 nodes): `ConfigurationOptionCodeResponse.java`, `ConfigurationOptionCodeResponse`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 258`** (2 nodes): `VehicleNodeResponse.java`, `VehicleNodeResponse`
+- **Thin community `Community 258`** (2 nodes): `PlantResponse.java`, `PlantResponse`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 259`** (2 nodes): `CarLineResponse.java`, `CarLineResponse`
+- **Thin community `Community 259`** (2 nodes): `VehicleNodeResponse.java`, `VehicleNodeResponse`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 260`** (2 nodes): `VehiclePartResponse.java`, `VehiclePartResponse`
+- **Thin community `Community 260`** (2 nodes): `CarLineResponse.java`, `CarLineResponse`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 261`** (2 nodes): `VehicleResponse.java`, `VehicleResponse`
+- **Thin community `Community 261`** (2 nodes): `VehiclePartResponse.java`, `VehiclePartResponse`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 262`** (2 nodes): `OptionCodeResponse.java`, `OptionCodeResponse`
+- **Thin community `Community 262`** (2 nodes): `VehicleResponse.java`, `VehicleResponse`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 263`** (2 nodes): `BrandResponse.java`, `BrandResponse`
+- **Thin community `Community 263`** (2 nodes): `OptionCodeResponse.java`, `OptionCodeResponse`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 264`** (2 nodes): `ConfigItemResponse.java`, `ConfigItemResponse`
+- **Thin community `Community 264`** (2 nodes): `BrandResponse.java`, `BrandResponse`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 265`** (2 nodes): `ConfigurationResponse.java`, `ConfigurationResponse`
+- **Thin community `Community 265`** (2 nodes): `ConfigItemResponse.java`, `ConfigItemResponse`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 266`** (2 nodes): `VehicleLifecycleResponse.java`, `VehicleLifecycleResponse`
+- **Thin community `Community 266`** (2 nodes): `ConfigurationResponse.java`, `ConfigurationResponse`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 267`** (2 nodes): `VehicleConfigResponse.java`, `VehicleConfigResponse`
+- **Thin community `Community 267`** (2 nodes): `VehicleLifecycleResponse.java`, `VehicleLifecycleResponse`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 268`** (2 nodes): `ImportResultResponse.java`, `ImportResultResponse`
+- **Thin community `Community 268`** (2 nodes): `VehicleConfigResponse.java`, `VehicleConfigResponse`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 269`** (2 nodes): `ConfigItemMappingResponse.java`, `ConfigItemMappingResponse`
+- **Thin community `Community 269`** (2 nodes): `ImportResultResponse.java`, `ImportResultResponse`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 270`** (2 nodes): `OptionFamilyResponse.java`, `OptionFamilyResponse`
+- **Thin community `Community 270`** (2 nodes): `ConfigItemMappingResponse.java`, `ConfigItemMappingResponse`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 271`** (2 nodes): `VariantResponse.java`, `VariantResponse`
+- **Thin community `Community 271`** (2 nodes): `OptionFamilyResponse.java`, `OptionFamilyResponse`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 272`** (2 nodes): `PlatformResponse.java`, `PlatformResponse`
+- **Thin community `Community 272`** (2 nodes): `VariantResponse.java`, `VariantResponse`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 273`** (2 nodes): `ConfigItemOptionResponse.java`, `ConfigItemOptionResponse`
+- **Thin community `Community 273`** (2 nodes): `PlatformResponse.java`, `PlatformResponse`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 274`** (2 nodes): `VehicleImportDataResponse.java`, `VehicleImportDataResponse`
+- **Thin community `Community 274`** (2 nodes): `ConfigItemOptionResponse.java`, `ConfigItemOptionResponse`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 275`** (2 nodes): `PartResponse.java`, `PartResponse`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
@@ -2783,23 +2800,23 @@ Nodes (1): Config Item
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 289`** (2 nodes): `PlantCmd`, `PlantCmd.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 290`** (2 nodes): `VehicleImportDataCmd`, `VehicleImportDataCmd.java`
+- **Thin community `Community 290`** (2 nodes): `ConfigItemOptionCmd`, `ConfigItemOptionCmd.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 291`** (2 nodes): `ConfigItemOptionCmd`, `ConfigItemOptionCmd.java`
+- **Thin community `Community 291`** (2 nodes): `VariantCmd`, `VariantCmd.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 292`** (2 nodes): `VariantCmd`, `VariantCmd.java`
+- **Thin community `Community 292`** (2 nodes): `VehicleCmd`, `VehicleCmd.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 293`** (2 nodes): `VehicleCmd`, `VehicleCmd.java`
+- **Thin community `Community 293`** (2 nodes): `VehicleConfigItemCmd`, `VehicleConfigItemCmd.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 294`** (2 nodes): `VehicleConfigItemCmd`, `VehicleConfigItemCmd.java`
+- **Thin community `Community 294`** (2 nodes): `ConfigurationCmd`, `ConfigurationCmd.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 295`** (2 nodes): `ConfigurationCmd`, `ConfigurationCmd.java`
+- **Thin community `Community 295`** (2 nodes): `ConfigurationOptionCodeCmd`, `ConfigurationOptionCodeCmd.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 296`** (2 nodes): `ConfigurationOptionCodeCmd`, `ConfigurationOptionCodeCmd.java`
+- **Thin community `Community 296`** (2 nodes): `CarLineCmd`, `CarLineCmd.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 297`** (2 nodes): `CarLineCmd`, `CarLineCmd.java`
+- **Thin community `Community 297`** (2 nodes): `VehicleNodeCmd`, `VehicleNodeCmd.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 298`** (2 nodes): `VehicleNodeCmd`, `VehicleNodeCmd.java`
+- **Thin community `Community 298`** (2 nodes): `PartImportDataCmd`, `PartImportDataCmd.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 299`** (2 nodes): `VariantOptionCodeCmd`, `VariantOptionCodeCmd.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
@@ -2825,21 +2842,21 @@ Nodes (1): Config Item
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 310`** (2 nodes): `VehicleNodeDto.java`, `VehicleNodeDto`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 311`** (2 nodes): `VehicleLifecycleDto.java`, `VehicleLifecycleDto`
+- **Thin community `Community 311`** (2 nodes): `PartImportDataDto.java`, `PartImportDataDto`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 312`** (2 nodes): `OptionFamilyDto.java`, `OptionFamilyDto`
+- **Thin community `Community 312`** (2 nodes): `VehicleLifecycleDto.java`, `VehicleLifecycleDto`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 313`** (2 nodes): `ConfigItemDto.java`, `ConfigItemDto`
+- **Thin community `Community 313`** (2 nodes): `OptionFamilyDto.java`, `OptionFamilyDto`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 314`** (2 nodes): `PartDto.java`, `PartDto`
+- **Thin community `Community 314`** (2 nodes): `ConfigItemDto.java`, `ConfigItemDto`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 315`** (2 nodes): `BrandDto.java`, `BrandDto`
+- **Thin community `Community 315`** (2 nodes): `PartDto.java`, `PartDto`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 316`** (2 nodes): `PlatformDto.java`, `PlatformDto`
+- **Thin community `Community 316`** (2 nodes): `BrandDto.java`, `BrandDto`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 317`** (2 nodes): `ModelDto.java`, `ModelDto`
+- **Thin community `Community 317`** (2 nodes): `PlatformDto.java`, `PlatformDto`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 318`** (2 nodes): `VehicleImportDataDto.java`, `VehicleImportDataDto`
+- **Thin community `Community 318`** (2 nodes): `ModelDto.java`, `ModelDto`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 319`** (2 nodes): `PlantDto.java`, `PlantDto`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
@@ -2869,7 +2886,7 @@ Nodes (1): Config Item
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 332`** (2 nodes): `ConfigurationQuery.java`, `ConfigurationQuery`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 333`** (2 nodes): `VehicleImportDataQuery.java`, `VehicleImportDataQuery`
+- **Thin community `Community 333`** (2 nodes): `PartImportDataQuery.java`, `PartImportDataQuery`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 334`** (2 nodes): `VehicleLifecycleQuery.java`, `VehicleLifecycleQuery`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
@@ -2905,11 +2922,11 @@ Nodes (1): Config Item
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 357`** (2 nodes): `Variant.java`, `Variant`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 358`** (2 nodes): `VehicleImportData.java`, `VehicleImportData`
+- **Thin community `Community 358`** (2 nodes): `Configuration.java`, `Configuration`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 359`** (2 nodes): `Configuration.java`, `Configuration`
+- **Thin community `Community 359`** (2 nodes): `Part.java`, `Part`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 360`** (2 nodes): `Part.java`, `Part`
+- **Thin community `Community 360`** (2 nodes): `PartImportData.java`, `PartImportData`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 361`** (2 nodes): `OptionFamily.java`, `OptionFamily`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
@@ -2967,155 +2984,165 @@ Nodes (1): Config Item
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 - **Thin community `Community 388`** (2 nodes): `VehicleOrderExRequest.java`, `VehicleOrderExRequest`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 389`** (2 nodes): `InteriorResponse.java`, `InteriorResponse`
+- **Thin community `Community 389`** (2 nodes): `VehicleImportDataResponse.java`, `VehicleImportDataResponse`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 390`** (2 nodes): `WheelResponse.java`, `WheelResponse`
+- **Thin community `Community 390`** (2 nodes): `VehicleImportDataCmd`, `VehicleImportDataCmd.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 391`** (2 nodes): `VehiclePartHistoryMapper.java`, `VehiclePartHistoryMapper`
+- **Thin community `Community 391`** (2 nodes): `VehicleImportDataDto.java`, `VehicleImportDataDto`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 392`** (2 nodes): `VehiclePartHistory.java`, `VehiclePartHistory`
+- **Thin community `Community 392`** (2 nodes): `VehicleImportDataQuery.java`, `VehicleImportDataQuery`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 393`** (2 nodes): `SupplierResponse.java`, `SupplierResponse`
+- **Thin community `Community 393`** (2 nodes): `VehicleImportData.java`, `VehicleImportData`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 394`** (2 nodes): `DeviceResponse.java`, `DeviceResponse`
+- **Thin community `Community 394`** (2 nodes): `InteriorResponse.java`, `InteriorResponse`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 395`** (2 nodes): `DeviceCmd`, `DeviceCmd.java`
+- **Thin community `Community 395`** (2 nodes): `WheelResponse.java`, `WheelResponse`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 396`** (2 nodes): `DeviceDto.java`, `DeviceDto`
+- **Thin community `Community 396`** (2 nodes): `VehiclePartHistoryMapper.java`, `VehiclePartHistoryMapper`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 397`** (2 nodes): `DeviceQuery.java`, `DeviceQuery`
+- **Thin community `Community 397`** (2 nodes): `VehiclePartHistory.java`, `VehiclePartHistory`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 398`** (2 nodes): `Device.java`, `Device`
+- **Thin community `Community 398`** (2 nodes): `SupplierResponse.java`, `SupplierResponse`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 399`** (2 nodes): `DeviceExResponse.java`, `DeviceExResponse`
+- **Thin community `Community 399`** (2 nodes): `DeviceResponse.java`, `DeviceResponse`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 400`** (2 nodes): `FeatureFamilyResponse.java`, `FeatureFamilyResponse`
+- **Thin community `Community 400`** (2 nodes): `DeviceCmd`, `DeviceCmd.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 401`** (2 nodes): `BaseModelResponse.java`, `BaseModelResponse`
+- **Thin community `Community 401`** (2 nodes): `DeviceDto.java`, `DeviceDto`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 402`** (2 nodes): `BaseModelFeatureCodeResponse.java`, `BaseModelFeatureCodeResponse`
+- **Thin community `Community 402`** (2 nodes): `DeviceQuery.java`, `DeviceQuery`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 403`** (2 nodes): `FeatureCodeResponse.java`, `FeatureCodeResponse`
+- **Thin community `Community 403`** (2 nodes): `Device.java`, `Device`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 404`** (2 nodes): `ConfigurationFeatureCodeResponse.java`, `ConfigurationFeatureCodeResponse`
+- **Thin community `Community 404`** (2 nodes): `DeviceExResponse.java`, `DeviceExResponse`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 405`** (2 nodes): `SupplierCmd`, `SupplierCmd.java`
+- **Thin community `Community 405`** (2 nodes): `FeatureFamilyResponse.java`, `FeatureFamilyResponse`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 406`** (2 nodes): `BaseModelFeatureCodeCmd`, `BaseModelFeatureCodeCmd.java`
+- **Thin community `Community 406`** (2 nodes): `BaseModelResponse.java`, `BaseModelResponse`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 407`** (2 nodes): `ConfigurationFeatureCodeCmd`, `ConfigurationFeatureCodeCmd.java`
+- **Thin community `Community 407`** (2 nodes): `BaseModelFeatureCodeResponse.java`, `BaseModelFeatureCodeResponse`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 408`** (2 nodes): `FeatureFamilyCmd`, `FeatureFamilyCmd.java`
+- **Thin community `Community 408`** (2 nodes): `FeatureCodeResponse.java`, `FeatureCodeResponse`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 409`** (2 nodes): `BaseModelCmd`, `BaseModelCmd.java`
+- **Thin community `Community 409`** (2 nodes): `ConfigurationFeatureCodeResponse.java`, `ConfigurationFeatureCodeResponse`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 410`** (2 nodes): `FeatureCodeCmd`, `FeatureCodeCmd.java`
+- **Thin community `Community 410`** (2 nodes): `SupplierCmd`, `SupplierCmd.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 411`** (2 nodes): `ConfigurationFeatureCodeDto.java`, `ConfigurationFeatureCodeDto`
+- **Thin community `Community 411`** (2 nodes): `BaseModelFeatureCodeCmd`, `BaseModelFeatureCodeCmd.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 412`** (2 nodes): `FeatureCodeDto.java`, `FeatureCodeDto`
+- **Thin community `Community 412`** (2 nodes): `ConfigurationFeatureCodeCmd`, `ConfigurationFeatureCodeCmd.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 413`** (2 nodes): `FeatureFamilyDto.java`, `FeatureFamilyDto`
+- **Thin community `Community 413`** (2 nodes): `FeatureFamilyCmd`, `FeatureFamilyCmd.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 414`** (2 nodes): `BaseModelDto.java`, `BaseModelDto`
+- **Thin community `Community 414`** (2 nodes): `BaseModelCmd`, `BaseModelCmd.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 415`** (2 nodes): `BaseModelFeatureCodeDto.java`, `BaseModelFeatureCodeDto`
+- **Thin community `Community 415`** (2 nodes): `FeatureCodeCmd`, `FeatureCodeCmd.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 416`** (2 nodes): `SupplierDto.java`, `SupplierDto`
+- **Thin community `Community 416`** (2 nodes): `ConfigurationFeatureCodeDto.java`, `ConfigurationFeatureCodeDto`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 417`** (2 nodes): `SupplierQuery.java`, `SupplierQuery`
+- **Thin community `Community 417`** (2 nodes): `FeatureCodeDto.java`, `FeatureCodeDto`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 418`** (2 nodes): `BaseModelQuery.java`, `BaseModelQuery`
+- **Thin community `Community 418`** (2 nodes): `FeatureFamilyDto.java`, `FeatureFamilyDto`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 419`** (2 nodes): `FeatureCodeQuery.java`, `FeatureCodeQuery`
+- **Thin community `Community 419`** (2 nodes): `BaseModelDto.java`, `BaseModelDto`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 420`** (2 nodes): `FeatureFamilyQuery.java`, `FeatureFamilyQuery`
+- **Thin community `Community 420`** (2 nodes): `BaseModelFeatureCodeDto.java`, `BaseModelFeatureCodeDto`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 421`** (2 nodes): `ConfigurationFeatureCode.java`, `ConfigurationFeatureCode`
+- **Thin community `Community 421`** (2 nodes): `SupplierDto.java`, `SupplierDto`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 422`** (2 nodes): `BaseModel.java`, `BaseModel`
+- **Thin community `Community 422`** (2 nodes): `SupplierQuery.java`, `SupplierQuery`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 423`** (2 nodes): `Supplier.java`, `Supplier`
+- **Thin community `Community 423`** (2 nodes): `BaseModelQuery.java`, `BaseModelQuery`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 424`** (2 nodes): `FeatureFamily.java`, `FeatureFamily`
+- **Thin community `Community 424`** (2 nodes): `FeatureCodeQuery.java`, `FeatureCodeQuery`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 425`** (2 nodes): `VmdConfigurationFeatureCodeResponse.java`, `VmdConfigurationFeatureCodeResponse`
+- **Thin community `Community 425`** (2 nodes): `FeatureFamilyQuery.java`, `FeatureFamilyQuery`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 426`** (2 nodes): `VmdBuildConfigFeatureCodeResponse.java`, `VmdBuildConfigFeatureCodeResponse`
+- **Thin community `Community 426`** (2 nodes): `ConfigurationFeatureCode.java`, `ConfigurationFeatureCode`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 427`** (2 nodes): `ManufacturerResponse.java`, `ManufacturerResponse`
+- **Thin community `Community 427`** (2 nodes): `BaseModel.java`, `BaseModel`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 428`** (2 nodes): `BuildConfigFeatureCodeResponse.java`, `BuildConfigFeatureCodeResponse`
+- **Thin community `Community 428`** (2 nodes): `Supplier.java`, `Supplier`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 429`** (2 nodes): `BuildConfigResponse.java`, `BuildConfigResponse`
+- **Thin community `Community 429`** (2 nodes): `FeatureFamily.java`, `FeatureFamily`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 430`** (2 nodes): `BuildConfigCmd`, `BuildConfigCmd.java`
+- **Thin community `Community 430`** (2 nodes): `VmdConfigurationFeatureCodeResponse.java`, `VmdConfigurationFeatureCodeResponse`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 431`** (2 nodes): `BuildConfigFeatureCodeCmd`, `BuildConfigFeatureCodeCmd.java`
+- **Thin community `Community 431`** (2 nodes): `VmdBuildConfigFeatureCodeResponse.java`, `VmdBuildConfigFeatureCodeResponse`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 432`** (2 nodes): `ManufacturerCmd`, `ManufacturerCmd.java`
+- **Thin community `Community 432`** (2 nodes): `ManufacturerResponse.java`, `ManufacturerResponse`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 433`** (2 nodes): `ManufacturerDto.java`, `ManufacturerDto`
+- **Thin community `Community 433`** (2 nodes): `BuildConfigFeatureCodeResponse.java`, `BuildConfigFeatureCodeResponse`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 434`** (2 nodes): `BuildConfigFeatureCodeDto.java`, `BuildConfigFeatureCodeDto`
+- **Thin community `Community 434`** (2 nodes): `BuildConfigResponse.java`, `BuildConfigResponse`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 435`** (2 nodes): `BuildConfigDto.java`, `BuildConfigDto`
+- **Thin community `Community 435`** (2 nodes): `BuildConfigCmd`, `BuildConfigCmd.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 436`** (2 nodes): `BuildConfigQuery.java`, `BuildConfigQuery`
+- **Thin community `Community 436`** (2 nodes): `BuildConfigFeatureCodeCmd`, `BuildConfigFeatureCodeCmd.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 437`** (2 nodes): `ManufacturerQuery.java`, `ManufacturerQuery`
+- **Thin community `Community 437`** (2 nodes): `ManufacturerCmd`, `ManufacturerCmd.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 438`** (2 nodes): `BuildConfigFeatureCode.java`, `BuildConfigFeatureCode`
+- **Thin community `Community 438`** (2 nodes): `ManufacturerDto.java`, `ManufacturerDto`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 439`** (2 nodes): `Manufacturer.java`, `Manufacturer`
+- **Thin community `Community 439`** (2 nodes): `BuildConfigFeatureCodeDto.java`, `BuildConfigFeatureCodeDto`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 440`** (2 nodes): `BuildConfig.java`, `BuildConfig`
+- **Thin community `Community 440`** (2 nodes): `BuildConfigDto.java`, `BuildConfigDto`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 441`** (2 nodes): `SeriesResponse.java`, `SeriesResponse`
+- **Thin community `Community 441`** (2 nodes): `BuildConfigQuery.java`, `BuildConfigQuery`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 442`** (2 nodes): `SeriesCmd`, `SeriesCmd.java`
+- **Thin community `Community 442`** (2 nodes): `ManufacturerQuery.java`, `ManufacturerQuery`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 443`** (2 nodes): `SeriesDto.java`, `SeriesDto`
+- **Thin community `Community 443`** (2 nodes): `BuildConfigFeatureCode.java`, `BuildConfigFeatureCode`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 444`** (2 nodes): `SeriesQuery.java`, `SeriesQuery`
+- **Thin community `Community 444`** (2 nodes): `Manufacturer.java`, `Manufacturer`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 445`** (2 nodes): `Series.java`, `Series`
+- **Thin community `Community 445`** (2 nodes): `BuildConfig.java`, `BuildConfig`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 446`** (2 nodes): `QrcodeCmd`, `QrcodeCmd.java`
+- **Thin community `Community 446`** (2 nodes): `SeriesResponse.java`, `SeriesResponse`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 447`** (2 nodes): `QrcodeDto.java`, `QrcodeDto`
+- **Thin community `Community 447`** (2 nodes): `SeriesCmd`, `SeriesCmd.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 448`** (2 nodes): `QrcodeResponse.java`, `QrcodeResponse`
+- **Thin community `Community 448`** (2 nodes): `SeriesDto.java`, `SeriesDto`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 451`** (2 nodes): `QrcodeRequest.java`, `QrcodeRequest`
+- **Thin community `Community 449`** (2 nodes): `SeriesQuery.java`, `SeriesQuery`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 452`** (2 nodes): `Vehicle Part Binding`, `Import Data Parser`
+- **Thin community `Community 450`** (2 nodes): `Series.java`, `Series`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 454`** (1 nodes): `EOL End of Line`
+- **Thin community `Community 451`** (2 nodes): `QrcodeCmd`, `QrcodeCmd.java`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 455`** (1 nodes): `IDCM`
+- **Thin community `Community 452`** (2 nodes): `QrcodeDto.java`, `QrcodeDto`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 456`** (1 nodes): `Feature Family`
+- **Thin community `Community 453`** (2 nodes): `QrcodeResponse.java`, `QrcodeResponse`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 457`** (1 nodes): `Feature Code`
+- **Thin community `Community 456`** (2 nodes): `QrcodeRequest.java`, `QrcodeRequest`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
-- **Thin community `Community 458`** (1 nodes): `Config Item`
+- **Thin community `Community 457`** (2 nodes): `Vehicle Part Binding`, `Import Data Parser`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 459`** (1 nodes): `EOL End of Line`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 460`** (1 nodes): `IDCM`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 461`** (1 nodes): `Feature Family`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 462`** (1 nodes): `Feature Code`
+  Too small to be a meaningful cluster - may be noise or needs more connections extracted.
+- **Thin community `Community 463`** (1 nodes): `Config Item`
   Too small to be a meaningful cluster - may be noise or needs more connections extracted.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `MdmSyncAppService` connect `Community 2` to `Community 0`, `Community 12`?**
+- **Why does `MdmSyncAppService` connect `Community 3` to `Community 0`, `Community 13`?**
+  _High betweenness centrality (0.034) - this node is a cross-community bridge._
+- **Why does `MptMdmSyncController` connect `Community 4` to `Community 3`?**
+  _High betweenness centrality (0.026) - this node is a cross-community bridge._
+- **Why does `MptConfigItemController` connect `Community 14` to `Community 4`?**
   _High betweenness centrality (0.025) - this node is a cross-community bridge._
-- **Why does `MptMdmSyncController` connect `Community 4` to `Community 2`?**
-  _High betweenness centrality (0.023) - this node is a cross-community bridge._
-- **What connects `VehicleConfigItemResponse`, `PartInfoResponse`, `ConfigurationOptionCodeResponse` to the rest of the system?**
-  _215 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **What connects `VehicleConfigItemResponse`, `PartImportDataResponse`, `PartInfoResponse` to the rest of the system?**
+  _220 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `Community 0` be split into smaller, more focused modules?**
   _Cohesion score 0.01 - nodes in this community are weakly interconnected._
 - **Should `Community 1` be split into smaller, more focused modules?**
   _Cohesion score 0.02 - nodes in this community are weakly interconnected._
 - **Should `Community 2` be split into smaller, more focused modules?**
-  _Cohesion score 0.03 - nodes in this community are weakly interconnected._
-- **Should `Community 3` be split into smaller, more focused modules?**
   _Cohesion score 0.02 - nodes in this community are weakly interconnected._

@@ -5,19 +5,13 @@ import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ImportResult;
-import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartInboundAppService.PartInboundRecord;
-import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartInboundAppService.PartInboundResult;
-import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParser;
-import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParserRegistry;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.InboundSourceType;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartInboundAppService;
+import net.hwyz.iov.cloud.edd.vmd.service.application.vid.DownstreamProcessor;
 import net.hwyz.iov.cloud.framework.common.util.StrUtil;
 import net.hwyz.iov.cloud.iov.tsp.api.service.TspTboxInfoService;
 import net.hwyz.iov.cloud.iov.tsp.api.vo.TboxVo;
 import net.hwyz.iov.cloud.iov.tsp.api.vo.request.BatchImportTboxRequest;
 import org.springframework.stereotype.Component;
-
-import jakarta.annotation.PostConstruct;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -25,43 +19,31 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 5G车载远程通信终端数据解析器V1.0
+ * TSP下游处理器
+ * 处理TSP相关的下游联动
  *
  * @author hwyz_leo
  */
 @Slf4j
+@Component
 @RequiredArgsConstructor
-@Component("tbox5gDataParserV1.0")
-public class Tbox5gDataParserV1_0 extends BaseProcessor implements ImportDataParser {
+public class Tbox5gDownstreamProcessor extends BaseProcessor implements DownstreamProcessor {
 
     private final TspTboxInfoService tspTboxInfoService;
-    private final ImportDataParserRegistry parserRegistry;
-
-    @PostConstruct
-    public void init() {
-        parserRegistry.register(this);
-    }
 
     @Override
-    public String getType() {
-        return "TBOX_5G";
-    }
+    public void process(String batchNum, String partCode, String vehicleNodeCode, JSONObject data) {
+        log.info("TSP处理器处理零件导入下游联动, batchNum={}, partCode={}, vehicleNodeCode={}",
+                batchNum, partCode, vehicleNodeCode);
 
-    @Override
-    public String getVersion() {
-        return "1.0";
-    }
-
-    @Override
-    public ImportResult parse(String batchNum, JSONObject dataJson) {
-        String supplier = getSupplier(dataJson);
+        String supplier = getSupplier(data);
         if (StrUtil.isBlank(supplier)) {
             log.warn("车联终端导入数据批次号[{}]供应商代码为空", batchNum);
         }
-        JSONObject data = getData(dataJson);
-        JSONArray items = data.getJSONArray("ITEMS");
+        JSONObject dataContent = getData(data);
+        JSONArray items = dataContent.getJSONArray("ITEMS");
 
-        List<PartInboundRecord> records = new ArrayList<>();
+        List<PartInboundAppService.PartInboundRecord> records = new ArrayList<>();
         List<TboxVo> tboxList = new ArrayList<>();
         int invalidCount = 0;
 
@@ -85,7 +67,7 @@ public class Tbox5gDataParserV1_0 extends BaseProcessor implements ImportDataPar
             extraFields.put("iccid2", iccid2);
             extraFields.put("hsm", hsm);
 
-            PartInboundRecord record = buildInboundRecord(pn, sn, "TBOX", "TBOX", "TBOX",
+            PartInboundAppService.PartInboundRecord record = buildInboundRecord(pn, sn, "TBOX", "TBOX", "TBOX",
                     supplier, batchNum, extraFields);
             records.add(record);
 
@@ -98,9 +80,6 @@ public class Tbox5gDataParserV1_0 extends BaseProcessor implements ImportDataPar
                     .iccid2(iccid2)
                     .build());
         }
-
-        // 使用入站内核处理
-        PartInboundResult result = partInboundAppService.processInbound(records, InboundSourceType.MES, null);
 
         if (invalidCount > 0) {
             log.warn("车联终端导入数据批次号[{}]存在无效车联终端数据[{}]", batchNum, invalidCount);
@@ -115,11 +94,11 @@ public class Tbox5gDataParserV1_0 extends BaseProcessor implements ImportDataPar
             tspTboxInfoService.batchImport(request);
         }
 
-        return ImportResult.builder()
-                .totalCount(result.getTotalCount())
-                .successCount(result.getSuccessCount())
-                .failureCount(result.getFailureCount())
-                .invalidCount(invalidCount)
-                .build();
+        log.info("TSP处理器处理完成, batchNum={}, partCode={}", batchNum, partCode);
+    }
+
+    @Override
+    public String getSupportedVehicleNodeCode() {
+        return "TBOX_5G";
     }
 }

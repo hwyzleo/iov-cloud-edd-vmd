@@ -28,7 +28,7 @@ import java.util.Map;
 @Slf4j
 @RequiredArgsConstructor
 @Component("cptDcu8295DataParserV1.0")
-public class CptDcu8295DataParserV1_0 extends BaseParser implements ImportDataParser {
+public class CptDcu8295DataParserV1_0 extends BaseProcessor implements ImportDataParser {
 
     private final ImportDataParserRegistry parserRegistry;
 

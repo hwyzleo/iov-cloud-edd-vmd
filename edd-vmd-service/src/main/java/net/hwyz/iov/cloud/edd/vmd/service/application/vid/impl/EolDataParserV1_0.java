@@ -37,7 +37,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @RequiredArgsConstructor
 @Component("eolDataParserV1.0")
-public class EolDataParserV1_0 extends BaseParser implements ImportDataParser {
+public class EolDataParserV1_0 extends BaseProcessor implements ImportDataParser {
 
     private final VehiclePublish vehiclePublish;
     private final VehBasicInfoRepository vehBasicInfoRepository;
