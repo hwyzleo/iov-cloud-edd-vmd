@@ -30,17 +30,8 @@ public class MdmOptionCodePo extends BasePo {
     @TableField("name")
     private String name;
 
-    @TableField("name_en")
-    private String nameEn;
-
-    @TableField("val")
-    private String val;
-
-    @TableField("enable")
-    private Boolean enable;
-
-    @TableField("sort")
-    private Integer sort;
+    @TableField("name_local")
+    private String nameLocal;
 
     @TableField("source")
     private String source;

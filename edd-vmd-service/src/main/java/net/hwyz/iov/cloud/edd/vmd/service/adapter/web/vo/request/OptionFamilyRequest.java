@@ -22,10 +22,7 @@ public class OptionFamilyRequest extends BaseRequest {
     private Long id;
     private String code;
     private String name;
-    private String nameEn;
+    private String nameLocal;
     private String type;
-    private Boolean mandatory;
-    private Boolean enable;
-    private Integer sort;
 
 }

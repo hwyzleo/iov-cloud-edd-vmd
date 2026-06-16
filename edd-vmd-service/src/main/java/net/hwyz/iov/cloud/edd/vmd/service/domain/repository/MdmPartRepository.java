@@ -40,10 +40,10 @@ public interface MdmPartRepository {
     /**
      * 根据零件号查询零件
      *
-     * @param pn 零件号
+     * @param code 零件号
      * @return 零件
      */
-    Part selectByPn(String pn);
+    Part selectByCode(String code);
 
     /**
      * 根据MDM外部引用ID查询零件

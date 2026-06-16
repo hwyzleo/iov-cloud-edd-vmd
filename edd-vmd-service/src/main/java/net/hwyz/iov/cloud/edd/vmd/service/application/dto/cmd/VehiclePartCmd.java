@@ -20,7 +20,7 @@ public class VehiclePartCmd {
 
     private Long id;
     private String vin;
-    private String pn;
+    private String code;
     private String sn;
     private String hardwareVersion;
     private String softwareVersion;

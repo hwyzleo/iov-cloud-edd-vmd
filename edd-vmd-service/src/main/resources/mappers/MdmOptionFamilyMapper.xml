@@ -7,11 +7,8 @@
         <id column="id" property="id" />
         <result column="code" property="code" />
         <result column="name" property="name" />
-        <result column="name_en" property="nameEn" />
+        <result column="name_local" property="nameLocal" />
         <result column="type" property="type" />
-        <result column="mandatory" property="mandatory" />
-        <result column="enable" property="enable" />
-        <result column="sort" property="sort" />
         <result column="source" property="source" />
         <result column="external_ref_id" property="externalRefId" />
         <result column="external_version" property="externalVersion" />
@@ -27,7 +24,7 @@
 
     <!-- 通用查询结果列 -->
     <sql id="baseColumnList">
-        id, code, name, name_en, type, mandatory, enable, sort, source,
+        id, code, name, name_local, type, source,
         external_ref_id, external_version, last_sync_time,
         description, create_time, create_by, modify_time, modify_by, row_version, row_valid
     </sql>
@@ -35,12 +32,12 @@
     <!-- 插入 -->
     <insert id="insertPo" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO tb_mdm_option_family (
-            id, code, name, name_en, type, mandatory, enable, sort, source,
+            id, code, name, name_local, type, source,
             external_ref_id, external_version, last_sync_time,
             description, create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
         VALUES (
-            #{id}, #{code}, #{name}, #{nameEn}, #{type}, #{mandatory}, #{enable}, #{sort}, #{source},
+            #{id}, #{code}, #{name}, #{nameLocal}, #{type}, #{source},
             #{externalRefId}, #{externalVersion}, #{lastSyncTime},
             #{description}, now(), #{createBy}, now(), #{modifyBy}, 1, 1
         )
@@ -49,14 +46,14 @@
     <!-- 批量插入 -->
     <insert id="batchInsertPo" useGeneratedKeys="true" keyProperty="id" parameterType="java.util.List">
         INSERT INTO tb_mdm_option_family (
-            id, code, name, name_en, type, mandatory, enable, sort, source,
+            id, code, name, name_local, type, source,
             external_ref_id, external_version, last_sync_time,
             description, create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
         VALUES
         <foreach collection="list" item="item" index="index" separator=",">
         (
-            #{item.id}, #{item.code}, #{item.name}, #{item.nameEn}, #{item.type}, #{item.mandatory}, #{item.enable}, #{item.sort}, #{item.source},
+            #{item.id}, #{item.code}, #{item.name}, #{item.nameLocal}, #{item.type}, #{item.source},
             #{item.externalRefId}, #{item.externalVersion}, #{item.lastSyncTime},
             #{item.description}, now(), #{item.createBy}, now(), #{item.modifyBy}, 1, 1
         )
@@ -72,20 +69,11 @@
         <if test="name != null and name != ''">
             t.name = #{name},
         </if>
-        <if test="nameEn != null and nameEn != ''">
-            t.name_en = #{nameEn},
+        <if test="nameLocal != null and nameLocal != ''">
+            t.name_local = #{nameLocal},
         </if>
         <if test="type != null and type != ''">
             t.type = #{type},
-        </if>
-        <if test="mandatory != null">
-            t.mandatory = #{mandatory},
-        </if>
-        <if test="enable != null">
-            t.enable = #{enable},
-        </if>
-        <if test="sort != null">
-            t.sort = #{sort},
         </if>
         <if test="source != null and source != ''">
             t.source = #{source},
@@ -156,20 +144,11 @@
         <if test="name != null and name != ''">
             AND t.name = #{name}
         </if>
-        <if test="nameEn != null and nameEn != ''">
-            AND t.name_en = #{nameEn}
+        <if test="nameLocal != null and nameLocal != ''">
+            AND t.name_local = #{nameLocal}
         </if>
         <if test="type != null and type != ''">
             AND t.type = #{type}
-        </if>
-        <if test="mandatory != null">
-            AND t.mandatory = #{mandatory}
-        </if>
-        <if test="enable != null">
-            AND t.enable = #{enable}
-        </if>
-        <if test="sort != null">
-            AND t.sort = #{sort}
         </if>
         <if test="source != null and source != ''">
             AND t.source = #{source}

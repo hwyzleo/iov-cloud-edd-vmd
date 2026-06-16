@@ -1,5 +1,6 @@
 package net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity;
 
+import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
@@ -8,7 +9,6 @@ import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.framework.common.domain.DomainObj;
 import java.time.LocalDateTime;
-import java.util.Date;
 
 /**
  * 零件领域对象
@@ -27,9 +27,9 @@ public class Part implements DomainObj<Part> {
     private Long id;
 
     /**
-     * 零件号
+     * 零件号（对齐MDM code）
      */
-    private String pn;
+    private String code;
 
     /**
      * 零件中文名称
@@ -37,19 +37,20 @@ public class Part implements DomainObj<Part> {
     private String name;
 
     /**
-     * 零件英文名称
+     * 本地化名称
      */
-    private String nameEn;
+    private String nameLocal;
 
     /**
      * 零件类型
      */
-    private String type;
+    private String partType;
 
     /**
-     * 零件分类
+     * 是否是软件
      */
-    private String ffa;
+    @Builder.Default
+    private Boolean isSoftware = false;
 
     /**
      * 零件状态
@@ -57,139 +58,14 @@ public class Part implements DomainObj<Part> {
     private String status;
 
     /**
-     * 数字模型
-     */
-    private String digitalModel;
-
-    /**
-     * 单位
-     */
-    private String unit;
-
-    /**
-     * 是否是架构件
-     */
-    private Boolean framePart;
-
-    /**
-     * 是否是本色件
-     */
-    private Boolean naturePart;
-
-    /**
-     * 颜色区域
-     */
-    private String colorArea;
-
-    /**
-     * 本色件零件号
-     */
-    private String naturePn;
-
-    /**
-     * 是否是法规件
-     */
-    private Boolean regulatoryPart;
-
-    /**
-     * 关键程度
-     */
-    private String keyPart;
-
-    /**
      * 是否精准追溯
      */
-    private Boolean accuratelyTraced;
+    private Boolean isAccuratelyTraced;
 
     /**
-     * 是否是配件
+     * 车辆节点代码
      */
-    private Boolean aftersalePart;
-
-    /**
-     * 标准件分类
-     */
-    private String standardPartClass;
-
-    /**
-     * 扳拧形式
-     */
-    private String wrenchType;
-
-    /**
-     * 杆部形式
-     */
-    private String rodType;
-
-    /**
-     * 头部形状
-     */
-    private String headShape;
-
-    /**
-     * 末端形状
-     */
-    private String endShape;
-
-    /**
-     * 是否带垫圈
-     */
-    private Boolean washer;
-
-    /**
-     * 垫圈类型
-     */
-    private String washerType;
-
-    /**
-     * 直径
-     */
-    private String diameter;
-
-    /**
-     * 长度
-     */
-    private String length;
-
-    /**
-     * 螺距
-     */
-    private String pitch;
-
-    /**
-     * 牙型
-     */
-    private String dentalForm;
-
-    /**
-     * 强度等级
-     */
-    private String strengthGrade;
-
-    /**
-     * 机械性能
-     */
-    private String mechanicalProperty;
-
-    /**
-     * 表面处理
-     */
-    private String surfaceTreatment;
-
-    /**
-     * 结构特征
-     */
-    private String structureCharacter;
-
-    /**
-     * 设备形态
-     */
-    private String deviceForm;
-
-    /**
-     * 设备代码
-     */
-    private String deviceCode;
+    private String vehicleNodeCode;
 
     /**
      * 供应商代码
@@ -200,61 +76,6 @@ public class Part implements DomainObj<Part> {
      * 是否支持FOTA升级
      */
     private Boolean fotaUpgradeable;
-
-    /**
-     * 设计工程师
-     */
-    private String designer;
-
-    /**
-     * 设计工程师部门
-     */
-    private String designerDept;
-
-    /**
-     * 不作为备件原因
-     */
-    private String nonRepairReason;
-
-    /**
-     * 是否颜色件维修
-     */
-    private Boolean colorRepair;
-
-    /**
-     * 是否底漆件维修
-     */
-    private Boolean primerRepair;
-
-    /**
-     * 是否电泳件维修
-     */
-    private Boolean electrophoresisRepair;
-
-    /**
-     * 对应生产件号
-     */
-    private String productionCode;
-
-    /**
-     * 售后配件属性
-     */
-    private String spareProperty;
-
-    /**
-     * 售后备注
-     */
-    private String saleNote;
-
-    /**
-     * 首次投产时间
-     */
-    private String firstProductionDate;
-
-    /**
-     * 初始车型
-     */
-    private String initialModel;
 
     /**
      * 数据来源：MDM=来自MDM系统，MANUAL=本地手动维护
@@ -275,10 +96,5 @@ public class Part implements DomainObj<Part> {
      * 最后一次同步时间
      */
     private LocalDateTime lastSyncTime;
-
-    /**
-     * 创建时间
-     */
-    private Date createTime;
 
 }

@@ -27,35 +27,16 @@ public class MdmOptionCodeEvent extends MdmEvent {
     private String name;
 
     /**
-     * 英文名称
+     * 本地名称
      */
-    private String nameEn;
-
-    /**
-     * 选项值
-     */
-    private String val;
-
-    /**
-     * 是否启用
-     */
-    private Boolean enable;
-
-    /**
-     * 排序
-     */
-    private Integer sort;
+    private String nameLocal;
 
     public MdmOptionCodeEvent(String eventType, String entityId, Long version, String code,
-                               String optionFamilyCode, String name, String nameEn, String val,
-                               Boolean enable, Integer sort, LocalDateTime occurredAt) {
+                               String optionFamilyCode, String name, String nameLocal, LocalDateTime occurredAt) {
         super(eventType, entityId, version, code, occurredAt);
         this.optionFamilyCode = optionFamilyCode;
         this.name = name;
-        this.nameEn = nameEn;
-        this.val = val;
-        this.enable = enable;
-        this.sort = sort;
+        this.nameLocal = nameLocal;
     }
 
 }

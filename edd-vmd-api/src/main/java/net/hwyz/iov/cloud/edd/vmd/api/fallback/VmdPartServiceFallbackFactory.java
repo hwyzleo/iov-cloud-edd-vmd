@@ -21,8 +21,8 @@ public class VmdPartServiceFallbackFactory implements FallbackFactory<VmdPartSer
     public VmdPartService create(Throwable throwable) {
         return new VmdPartService() {
             @Override
-            public PartExResponse getByPn(String pn) {
-                log.error("零件服务根据零件号[{}]查询零件信息调用失败", pn, throwable);
+            public PartExResponse getByCode(String code) {
+                log.error("零件服务根据零件号[{}]查询零件信息调用失败", code, throwable);
                 return null;
             }
 

@@ -10,9 +10,9 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class PartNotAllowBindException extends VmdBaseException {
 
-    public PartNotAllowBindException(String pn, String sn, Integer partState) {
+    public PartNotAllowBindException(String code, String sn, Integer partState) {
         super(VmdErrorCode.PART_NOT_ALLOW_BIND);
-        log.warn("零件[{}:{}]状态[{}]不允许绑定", pn, sn, partState);
+        log.warn("零件[{}:{}]状态[{}]不允许绑定", code, sn, partState);
     }
 
 }

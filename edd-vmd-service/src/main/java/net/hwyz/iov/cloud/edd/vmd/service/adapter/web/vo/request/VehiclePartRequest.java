@@ -25,7 +25,7 @@ public class VehiclePartRequest extends BaseRequest {
     /**
      * 零件编号
      */
-    private String pn;
+    private String code;
 
     /**
      * 车架号

@@ -23,9 +23,6 @@ public class OptionCodeRequest extends BaseRequest {
     private String optionFamilyCode;
     private String code;
     private String name;
-    private String nameEn;
-    private String val;
-    private Boolean enable;
-    private Integer sort;
+    private String nameLocal;
 
 }

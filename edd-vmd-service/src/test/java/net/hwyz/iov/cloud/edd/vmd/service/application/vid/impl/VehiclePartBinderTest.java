@@ -66,8 +66,8 @@ class VehiclePartBinderTest {
         assertEquals(1, result.size());
         VehicleEolPartBoundEvent.PartMeta meta = result.get(0);
         assertEquals("SN001", meta.getSn());
-        assertEquals("PN001", meta.getPn());
-        assertEquals("TBOX001", meta.getDeviceCode());
+        assertEquals("PN001", meta.getCode());
+        assertEquals("TBOX001", meta.getVehicleNodeCode());
         assertEquals("TBOX", meta.getDeviceItem());
         verify(partInfoAppService).upsertPartInfo(any(PartInfo.class));
         verify(vehiclePartAppService).bindVehiclePart(any(VehiclePart.class));

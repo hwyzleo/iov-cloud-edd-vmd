@@ -10,9 +10,9 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class PartNotExistException extends VmdBaseException {
 
-    public PartNotExistException(String pn, String sn) {
+    public PartNotExistException(String code, String sn) {
         super(VmdErrorCode.PART_NOT_EXIST);
-        log.warn("零件[{}:{}]不存在", pn, sn);
+        log.warn("零件[{}:{}]不存在", code, sn);
     }
 
 }

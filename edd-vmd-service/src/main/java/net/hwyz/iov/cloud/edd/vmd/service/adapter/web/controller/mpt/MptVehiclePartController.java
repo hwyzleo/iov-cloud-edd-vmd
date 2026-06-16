@@ -49,7 +49,7 @@ public class MptVehiclePartController extends BaseController {
         startPage();
         VehiclePartQuery query = VehiclePartQuery.builder()
                 .vin(vehiclePart.getVin())
-                .pn(vehiclePart.getPn())
+                .code(vehiclePart.getCode())
                 .beginTime(getBeginTime(vehiclePart))
                 .endTime(getEndTime(vehiclePart))
                 .build();
@@ -93,7 +93,7 @@ public class MptVehiclePartController extends BaseController {
     @RequiresPermissions("completeVehicle:vehicle:vehiclePart:add")
     @PostMapping
     public ApiResponse<Void> add(@Validated @RequestBody VehiclePartRequest vehiclePart) {
-        log.info("管理后台用户[{}]新增车辆[{}]绑定关系[{}]", SecurityContextHolder.getUserName(), vehiclePart.getVin(), vehiclePart.getPn());
+        log.info("管理后台用户[{}]新增车辆[{}]绑定关系[{}]", SecurityContextHolder.getUserName(), vehiclePart.getVin(), vehiclePart.getCode());
         vehiclePartAppService.createVehiclePart(MptVehiclePartAssembler.INSTANCE.toCmd(vehiclePart), SecurityUtils.getUserId().toString());
         return ApiResponse.ok();
     }
@@ -108,7 +108,7 @@ public class MptVehiclePartController extends BaseController {
     @RequiresPermissions("completeVehicle:vehicle:vehiclePart:edit")
     @PutMapping
     public ApiResponse<Void> edit(@Validated @RequestBody VehiclePartRequest vehiclePart) {
-        log.info("管理后台用户[{}]修改保存车辆[{}]绑定关系[{}]", SecurityContextHolder.getUserName(), vehiclePart.getVin(), vehiclePart.getPn());
+        log.info("管理后台用户[{}]修改保存车辆[{}]绑定关系[{}]", SecurityContextHolder.getUserName(), vehiclePart.getVin(), vehiclePart.getCode());
         vehiclePartAppService.modifyVehiclePart(MptVehiclePartAssembler.INSTANCE.toCmd(vehiclePart), SecurityUtils.getUserId().toString());
         return ApiResponse.ok();
     }

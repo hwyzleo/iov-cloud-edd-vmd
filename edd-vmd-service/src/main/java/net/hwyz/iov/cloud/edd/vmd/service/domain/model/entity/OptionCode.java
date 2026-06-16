@@ -17,10 +17,7 @@ public class OptionCode implements DomainObj<OptionCode> {
     private String optionFamilyCode;
     private String code;
     private String name;
-    private String nameEn;
-    private String val;
-    private Boolean enable;
-    private Integer sort;
+    private String nameLocal;
     private String source;
     private String externalRefId;
     private Long externalVersion;

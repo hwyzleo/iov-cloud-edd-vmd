@@ -39,10 +39,10 @@ public class PartAppService {
     public List<PartDto> search(PartQuery query) {
         Map<String, Object> map = new HashMap<>();
         map.put("keyPart", query.getKey());
-        map.put("pn", query.getPn());
+        map.put("code", query.getCode());
         map.put("name", ParamHelper.fuzzyQueryParam(query.getName()));
-        map.put("type", query.getType());
-        map.put("deviceCode", query.getDeviceCode());
+        map.put("partType", query.getPartType());
+        map.put("vehicleNodeCode", query.getVehicleNodeCode());
         map.put("beginTime", query.getBeginTime());
         map.put("endTime", query.getEndTime());
         List<Part> partList = partRepository.selectByMap(map);
@@ -53,14 +53,14 @@ public class PartAppService {
      * 检查零件号是否唯一
      *
      * @param partId 零件ID
-     * @param pn     零件号
+     * @param code   零件号
      * @return 结果
      */
-    public Boolean checkPnUnique(Long partId, String pn) {
+    public Boolean checkCodeUnique(Long partId, String code) {
         if (ObjUtil.isNull(partId)) {
             partId = -1L;
         }
-        Part part = partRepository.selectByPn(pn);
+        Part part = partRepository.selectByCode(code);
         return !ObjUtil.isNotNull(part) || part.getId().longValue() == partId.longValue();
     }
 
@@ -87,11 +87,11 @@ public class PartAppService {
     /**
      * 根据零件号获取零件信息
      *
-     * @param pn 零件号
+     * @param code 零件号
      * @return 零件领域对象
      */
-    public Part getPartByPn(String pn) {
-        return partRepository.selectByPn(pn);
+    public Part getPartByCode(String code) {
+        return partRepository.selectByCode(code);
     }
 
     /**
@@ -103,7 +103,7 @@ public class PartAppService {
     public List<Part> listAllFota(Boolean software) {
         Map<String, Object> map = new HashMap<>();
         if (software != null) {
-            map.put("naturePart", software ? 1 : 0);
+            map.put("isSoftware", software ? 1 : 0);
         }
         return partRepository.selectByMap(map);
     }
@@ -120,7 +120,7 @@ public class PartAppService {
         if (partCmd.getId() != null) {
             Part existingPart = partRepository.selectById(partCmd.getId());
             if (existingPart != null && SourceType.MDM.name().equals(existingPart.getSource())) {
-                throw new RuntimeException("零件'" + partCmd.getPn() + "'来源为MDM，不允许通过VMD后台修改/删除");
+                throw new RuntimeException("零件'" + partCmd.getCode() + "'来源为MDM，不允许通过VMD后台修改/删除");
             }
         }
         Part part = PartAssembler.INSTANCE.toDomain(partCmd);
@@ -138,7 +138,7 @@ public class PartAppService {
         // CR-021: source=MDM 只读保护
         Part existingPart = partRepository.selectById(partCmd.getId());
         if (existingPart != null && SourceType.MDM.name().equals(existingPart.getSource())) {
-            throw new RuntimeException("零件'" + partCmd.getPn() + "'来源为MDM，不允许通过VMD后台修改/删除");
+            throw new RuntimeException("零件'" + partCmd.getCode() + "'来源为MDM，不允许通过VMD后台修改/删除");
         }
         Part part = PartAssembler.INSTANCE.toDomain(partCmd);
         return partRepository.update(part);
@@ -155,7 +155,7 @@ public class PartAppService {
         for (Long id : ids) {
             Part existingPart = partRepository.selectById(id);
             if (existingPart != null && SourceType.MDM.name().equals(existingPart.getSource())) {
-                throw new RuntimeException("零件'" + existingPart.getPn() + "'来源为MDM，不允许通过VMD后台修改/删除");
+                throw new RuntimeException("零件'" + existingPart.getCode() + "'来源为MDM，不允许通过VMD后台修改/删除");
             }
         }
         return partRepository.batchPhysicalDelete(ids);

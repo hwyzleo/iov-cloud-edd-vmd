@@ -21,10 +21,10 @@ public interface PartMapper extends BaseDao<MdmPartPo, Long> {
     /**
      * 根据零件号查询零件信息
      *
-     * @param pn 零件号
+     * @param code 零件号
      * @return 零件信息
      */
-    MdmPartPo selectPoByPn(String pn);
+    MdmPartPo selectPoByCode(String code);
 
     /**
      * 获取所有FOTA升级零件

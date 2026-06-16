@@ -27,20 +27,11 @@ public class MdmOptionFamilyPo extends BasePo {
     @TableField("name")
     private String name;
 
-    @TableField("name_en")
-    private String nameEn;
+    @TableField("name_local")
+    private String nameLocal;
 
     @TableField("type")
     private String type;
-
-    @TableField("mandatory")
-    private Boolean mandatory;
-
-    @TableField("enable")
-    private Boolean enable;
-
-    @TableField("sort")
-    private Integer sort;
 
     @TableField("source")
     private String source;

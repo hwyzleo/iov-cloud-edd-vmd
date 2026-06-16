@@ -27,13 +27,13 @@ public class ServicePartController extends BaseController {
     /**
      * 根据零件号查询零件信息
      *
-     * @param pn 零件号
+     * @param code 零件号
      * @return 零件信息
      */
-    @GetMapping("/{pn}")
-    public PartExResponse getByPn(@PathVariable String pn) {
-        log.info("内部服务请求根据零件号[{}]查询零件信息", pn);
-        return PartExServiceAssembler.INSTANCE.fromDomain(partAppService.getPartByPn(pn));
+    @GetMapping("/{code}")
+    public PartExResponse getByCode(@PathVariable String code) {
+        log.info("内部服务请求根据零件号[{}]查询零件信息", code);
+        return PartExServiceAssembler.INSTANCE.fromDomain(partAppService.getPartByCode(code));
     }
 
     /**

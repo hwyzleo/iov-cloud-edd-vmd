@@ -15,7 +15,7 @@ import java.util.Date;
 public class VehiclePartQuery {
 
     private String vin;
-    private String pn;
+    private String code;
     private String sn;
     private Integer partState;
     private Date beginTime;

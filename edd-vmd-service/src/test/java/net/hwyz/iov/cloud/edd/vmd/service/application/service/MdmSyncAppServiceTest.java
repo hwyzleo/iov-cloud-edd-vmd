@@ -484,7 +484,7 @@ class MdmSyncAppServiceTest {
     void handleOptionFamilyEvent_shouldInsertWhenLocalOptionFamilyNotExists() {
         // Given
         MdmOptionFamilyEvent event = new MdmOptionFamilyEvent("CREATED", "mdm-of-001", 1L, "OF001",
-                "选装族1", "Option Family 1", "EXTERIOR", true, true, 1, LocalDateTime.now());
+                "选装族1", "Option Family 1", "EXTERIOR", LocalDateTime.now());
 
         when(mdmOptionFamilyRepository.selectByExternalRefId("mdm-of-001")).thenReturn(null);
         when(mdmOptionFamilyRepository.insert(any(OptionFamily.class))).thenReturn(1);
@@ -502,17 +502,14 @@ class MdmSyncAppServiceTest {
     void handleOptionFamilyEvent_shouldUpdateWhenLocalOptionFamilyExistsAndVersionHigher() {
         // Given
         MdmOptionFamilyEvent event = new MdmOptionFamilyEvent("UPDATED", "mdm-of-002", 2L, "OF002",
-                "更新后的选装族", "Updated Option Family", "INTERIOR", false, true, 2, LocalDateTime.now());
+                "更新后的选装族", "Updated Option Family", "INTERIOR", LocalDateTime.now());
 
         OptionFamily localOptionFamily = OptionFamily.builder()
                 .id(1L)
                 .code("OF002")
                 .name("原始选装族")
-                .nameEn("Original Option Family")
+                .nameLocal("Original Option Family")
                 .type("EXTERIOR")
-                .mandatory(true)
-                .enable(false)
-                .sort(1)
                 .source(SourceType.MDM.name())
                 .externalRefId("mdm-of-002")
                 .externalVersion(1L)
@@ -534,17 +531,14 @@ class MdmSyncAppServiceTest {
     void handleOptionFamilyEvent_shouldIgnoreWhenVersionNotHigher() {
         // Given
         MdmOptionFamilyEvent event = new MdmOptionFamilyEvent("UPDATED", "mdm-of-003", 1L, "OF003",
-                "旧版本选装族", "Old Option Family", "EXTERIOR", true, true, 1, LocalDateTime.now());
+                "旧版本选装族", "Old Option Family", "EXTERIOR", LocalDateTime.now());
 
         OptionFamily localOptionFamily = OptionFamily.builder()
                 .id(1L)
                 .code("OF003")
                 .name("本地选装族")
-                .nameEn("Local Option Family")
+                .nameLocal("Local Option Family")
                 .type("EXTERIOR")
-                .mandatory(true)
-                .enable(true)
-                .sort(1)
                 .source(SourceType.MDM.name())
                 .externalRefId("mdm-of-003")
                 .externalVersion(2L)
@@ -565,7 +559,7 @@ class MdmSyncAppServiceTest {
     void handleOptionCodeEvent_shouldInsertWhenLocalOptionCodeNotExists() {
         // Given
         MdmOptionCodeEvent event = new MdmOptionCodeEvent("CREATED", "mdm-oc-001", 1L, "OC001",
-                "OF001", "选装值1", "Option Code 1", "V001", true, 1, LocalDateTime.now());
+                "OF001", "选装值1", "Option Code 1", LocalDateTime.now());
 
         when(mdmOptionFamilyRepository.selectOptionCodeByExternalRefId("mdm-oc-001")).thenReturn(null);
         when(mdmOptionFamilyRepository.insertOptionCode(any(OptionCode.class))).thenReturn(1);
@@ -583,17 +577,14 @@ class MdmSyncAppServiceTest {
     void handleOptionCodeEvent_shouldUpdateWhenLocalOptionCodeExistsAndVersionHigher() {
         // Given
         MdmOptionCodeEvent event = new MdmOptionCodeEvent("UPDATED", "mdm-oc-002", 2L, "OC002",
-                "OF002", "更新后的选装值", "Updated Option Code", "V002", true, 2, LocalDateTime.now());
+                "OF002", "更新后的选装值", "Updated Option Code", LocalDateTime.now());
 
         OptionCode localOptionCode = OptionCode.builder()
                 .id(1L)
                 .code("OC002")
                 .optionFamilyCode("OF001")
                 .name("原始选装值")
-                .nameEn("Original Option Code")
-                .val("V001")
-                .enable(false)
-                .sort(1)
+                .nameLocal("Original Option Code")
                 .source(SourceType.MDM.name())
                 .externalRefId("mdm-oc-002")
                 .externalVersion(1L)
@@ -615,17 +606,14 @@ class MdmSyncAppServiceTest {
     void handleOptionCodeEvent_shouldIgnoreWhenVersionNotHigher() {
         // Given
         MdmOptionCodeEvent event = new MdmOptionCodeEvent("UPDATED", "mdm-oc-003", 1L, "OC003",
-                "OF003", "旧版本选装值", "Old Option Code", "V003", true, 1, LocalDateTime.now());
+                "OF003", "旧版本选装值", "Old Option Code", LocalDateTime.now());
 
         OptionCode localOptionCode = OptionCode.builder()
                 .id(1L)
                 .code("OC003")
                 .optionFamilyCode("OF003")
                 .name("本地选装值")
-                .nameEn("Local Option Code")
-                .val("V003")
-                .enable(true)
-                .sort(1)
+                .nameLocal("Local Option Code")
                 .source(SourceType.MDM.name())
                 .externalRefId("mdm-oc-003")
                 .externalVersion(2L)
@@ -648,14 +636,14 @@ class MdmSyncAppServiceTest {
         MdmPartEvent event = new MdmPartEvent("CREATED", "mdm-part-001", 1L, "PART001",
                 "零件1", "NORMAL", "NODE001", "SUPPLIER001", true, true, true, "PRODUCTION", LocalDateTime.now());
 
-        when(mdmPartRepository.selectByPn("PART001")).thenReturn(null);
+        when(mdmPartRepository.selectByCode("PART001")).thenReturn(null);
         when(mdmPartRepository.insert(any(Part.class))).thenReturn(1);
 
         // When
         mdmSyncAppService.handlePartEvent(event);
 
         // Then
-        verify(mdmPartRepository).selectByPn("PART001");
+        verify(mdmPartRepository).selectByCode("PART001");
         verify(mdmPartRepository).insert(any(Part.class));
     }
 
@@ -668,21 +656,21 @@ class MdmSyncAppServiceTest {
 
         Part localPart = Part.builder()
                 .id(1L)
-                .pn("PART002")
+                .code("PART002")
                 .name("原始零件")
                 .source(SourceType.MDM)
                 .externalRefId("mdm-part-002")
                 .externalVersion(1L)
                 .build();
 
-        when(mdmPartRepository.selectByPn("PART002")).thenReturn(localPart);
+        when(mdmPartRepository.selectByCode("PART002")).thenReturn(localPart);
         when(mdmPartRepository.updateById(any(Part.class))).thenReturn(1);
 
         // When
         mdmSyncAppService.handlePartEvent(event);
 
         // Then
-        verify(mdmPartRepository).selectByPn("PART002");
+        verify(mdmPartRepository).selectByCode("PART002");
         verify(mdmPartRepository).updateById(any(Part.class));
     }
 
@@ -695,20 +683,20 @@ class MdmSyncAppServiceTest {
 
         Part localPart = Part.builder()
                 .id(1L)
-                .pn("PART003")
+                .code("PART003")
                 .name("本地零件")
                 .source(SourceType.MDM)
                 .externalRefId("mdm-part-003")
                 .externalVersion(2L)
                 .build();
 
-        when(mdmPartRepository.selectByPn("PART003")).thenReturn(localPart);
+        when(mdmPartRepository.selectByCode("PART003")).thenReturn(localPart);
 
         // When
         mdmSyncAppService.handlePartEvent(event);
 
         // Then
-        verify(mdmPartRepository).selectByPn("PART003");
+        verify(mdmPartRepository).selectByCode("PART003");
         verify(mdmPartRepository, never()).updateById(any(Part.class));
     }
 

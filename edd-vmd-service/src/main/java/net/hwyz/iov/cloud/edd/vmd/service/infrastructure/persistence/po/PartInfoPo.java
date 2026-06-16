@@ -35,7 +35,7 @@ public class PartInfoPo extends BasePo {
     private Long id;
 
     /**
-     * 零件编码（关联tb_mdm_part.pn）
+     * 零件编码（关联tb_mdm_part.code）
      */
     @TableField("part_code")
     private String partCode;
@@ -120,7 +120,7 @@ public class PartInfoPo extends BasePo {
 
     /**
      * 零件类型
-     * CR-025: 一律取自 MDM Part 投影（partCode -> part.pn），不再人工录入
+     * CR-025: 一律取自 MDM Part 投影（partCode -> part.code），不再人工录入
      */
     @TableField("part_type")
     private String partType;

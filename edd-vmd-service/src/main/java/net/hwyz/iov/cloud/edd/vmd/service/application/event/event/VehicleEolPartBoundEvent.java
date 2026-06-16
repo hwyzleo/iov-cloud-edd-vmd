@@ -35,8 +35,8 @@ public class VehicleEolPartBoundEvent extends BaseEvent {
     @Getter
     public static class PartMeta {
         private final String sn;
-        private final String pn;
-        private final String deviceCode;
+        private final String code;
+        private final String vehicleNodeCode;
         private final String deviceItem;
         private final String supplierCode;
         private final String batchNum;
@@ -48,13 +48,13 @@ public class VehicleEolPartBoundEvent extends BaseEvent {
         private final String iccid1;
         private final String iccid2;
 
-        public PartMeta(String sn, String pn, String deviceCode, String deviceItem,
+        public PartMeta(String sn, String code, String vehicleNodeCode, String deviceItem,
                         String supplierCode, String batchNum, String configWord,
                         String hardwareVer, String softwareVer, String hardwarePn,
                         String softwarePn, String iccid1, String iccid2) {
             this.sn = sn;
-            this.pn = pn;
-            this.deviceCode = deviceCode;
+            this.code = code;
+            this.vehicleNodeCode = vehicleNodeCode;
             this.deviceItem = deviceItem;
             this.supplierCode = supplierCode;
             this.batchNum = batchNum;

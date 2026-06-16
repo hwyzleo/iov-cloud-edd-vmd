@@ -52,7 +52,7 @@ public class VehicleEolTspOtaSubscribe {
             try {
                 notifyTsp(vin, part);
             } catch (Exception e) {
-                log.warn("车辆[{}]零件[{}]通知TSP异常", vin, part.getDeviceCode(), e);
+                log.warn("车辆[{}]零件[{}]通知TSP异常", vin, part.getVehicleNodeCode(), e);
             }
         }
         // 同步零件列表到 OTA
@@ -87,8 +87,8 @@ public class VehicleEolTspOtaSubscribe {
         for (VehicleEolPartBoundEvent.PartMeta part : parts) {
             vehiclePartList.add(VehiclePartExService.builder()
                     .sn(part.getSn())
-                    .pn(part.getPn())
-                    .deviceCode(part.getDeviceCode())
+                    .pn(part.getCode())
+                    .deviceCode(part.getVehicleNodeCode())
                     .deviceItem(part.getDeviceItem())
                     .supplierCode(part.getSupplierCode())
                     .batchNum(part.getBatchNum())

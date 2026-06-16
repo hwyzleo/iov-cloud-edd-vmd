@@ -173,7 +173,7 @@ public class PartInboundAppService {
         }
 
         // 1. 验证 partCode 存在于 MDM Part 投影
-        Part mdmPart = mdmPartRepository.selectByPn(record.getPartCode());
+        Part mdmPart = mdmPartRepository.selectByCode(record.getPartCode());
         if (mdmPart == null) {
             throw new PartNotFoundException(record.getPartCode());
         }
@@ -184,7 +184,7 @@ public class PartInboundAppService {
         }
 
         // 3. 从 MDM Part 投影获取零件类型
-        String mdmPartType = mdmPart.getType();
+        String mdmPartType = mdmPart.getPartType();
         if (mdmPartType == null || mdmPartType.isBlank()) {
             log.warn("MDM Part 类型为空, partCode={}, 使用默认类型 OTHER", record.getPartCode());
             mdmPartType = "OTHER";

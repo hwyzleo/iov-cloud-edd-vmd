@@ -151,13 +151,13 @@ public class PartImportDataAppService {
             result = handleProduceImport(batchNum, dataJson);
         } else {
             // 根据 partCode 查询 MDM Part 投影，获取 deviceCode
-            Part mdmPart = mdmPartRepository.selectByPn(partCode);
+            Part mdmPart = mdmPartRepository.selectByCode(partCode);
             if (ObjUtil.isNull(mdmPart)) {
                 log.error("零件编码[{}]在MDM主数据中不存在", partCode);
                 return ImportResult.builder().build();
             }
             
-            String deviceCode = mdmPart.getDeviceCode();
+            String deviceCode = mdmPart.getVehicleNodeCode();
             if (StrUtil.isBlank(deviceCode)) {
                 log.error("零件编码[{}]对应的设备编码为空", partCode);
                 return ImportResult.builder().build();

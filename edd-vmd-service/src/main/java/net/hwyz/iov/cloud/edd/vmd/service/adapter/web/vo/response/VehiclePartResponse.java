@@ -24,7 +24,7 @@ public class VehiclePartResponse {
     /**
      * 零件编号
      */
-    private String pn;
+    private String code;
 
     /**
      * 车架号

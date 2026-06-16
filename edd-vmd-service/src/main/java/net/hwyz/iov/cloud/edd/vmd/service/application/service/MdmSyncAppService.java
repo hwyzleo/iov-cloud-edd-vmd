@@ -338,11 +338,8 @@ public class MdmSyncAppService {
             OptionFamily newOptionFamily = OptionFamily.builder()
                     .code(event.getCode())
                     .name(event.getName())
-                    .nameEn(event.getNameEn())
+                    .nameLocal(event.getNameLocal())
                     .type(event.getType())
-                    .mandatory(event.getMandatory())
-                    .enable(event.getEnable())
-                    .sort(event.getSort())
                     .source(SourceType.MDM.name())
                     .externalRefId(event.getEntityId())
                     .externalVersion(event.getVersion())
@@ -353,11 +350,8 @@ public class MdmSyncAppService {
         } else {
             if (event.getVersion() > localOptionFamily.getExternalVersion()) {
                 localOptionFamily.setName(event.getName());
-                localOptionFamily.setNameEn(event.getNameEn());
+                localOptionFamily.setNameLocal(event.getNameLocal());
                 localOptionFamily.setType(event.getType());
-                localOptionFamily.setMandatory(event.getMandatory());
-                localOptionFamily.setEnable(event.getEnable());
-                localOptionFamily.setSort(event.getSort());
                 localOptionFamily.setExternalVersion(event.getVersion());
                 localOptionFamily.setLastSyncTime(LocalDateTime.now());
                 mdmOptionFamilyRepository.updateById(localOptionFamily);
@@ -380,10 +374,7 @@ public class MdmSyncAppService {
                     .code(event.getCode())
                     .optionFamilyCode(event.getOptionFamilyCode())
                     .name(event.getName())
-                    .nameEn(event.getNameEn())
-                    .val(event.getVal())
-                    .enable(event.getEnable())
-                    .sort(event.getSort())
+                    .nameLocal(event.getNameLocal())
                     .source(SourceType.MDM.name())
                     .externalRefId(event.getEntityId())
                     .externalVersion(event.getVersion())
@@ -395,10 +386,7 @@ public class MdmSyncAppService {
             if (event.getVersion() > localOptionCode.getExternalVersion()) {
                 localOptionCode.setOptionFamilyCode(event.getOptionFamilyCode());
                 localOptionCode.setName(event.getName());
-                localOptionCode.setNameEn(event.getNameEn());
-                localOptionCode.setVal(event.getVal());
-                localOptionCode.setEnable(event.getEnable());
-                localOptionCode.setSort(event.getSort());
+                localOptionCode.setNameLocal(event.getNameLocal());
                 localOptionCode.setExternalVersion(event.getVersion());
                 localOptionCode.setLastSyncTime(LocalDateTime.now());
                 mdmOptionFamilyRepository.updateOptionCodeById(localOptionCode);
@@ -493,23 +481,23 @@ public class MdmSyncAppService {
     /**
      * 处理 MDM 零件事件
      * <p>
-     * 幂等策略：按零件编号(pn)查找本地记录，按externalVersion判断是否需要更新。
-     * 使用pn而非MDM主键作为查找条件，确保Bootstrap全量同步和Kafka增量同步的幂等一致性。
+     * 幂等策略：按零件编号(code)查找本地记录，按externalVersion判断是否需要更新。
+     * 使用code而非MDM主键作为查找条件，确保Bootstrap全量同步和Kafka增量同步的幂等一致性。
      * </p>
      */
     public void handlePartEvent(MdmPartEvent event) {
         log.info("处理MDM零件事件: code={}, version={}", event.getCode(), event.getVersion());
-        Part localPart = mdmPartRepository.selectByPn(event.getCode());
+        Part localPart = mdmPartRepository.selectByCode(event.getCode());
         if (localPart == null) {
             Part newPart = Part.builder()
-                    .pn(event.getCode())
+                    .code(event.getCode())
                     .name(event.getName())
-                    .type(event.getPartType())
-                    .deviceCode(event.getVehicleNodeCode())
+                    .partType(event.getPartType())
+                    .vehicleNodeCode(event.getVehicleNodeCode())
                     .supplierCode(event.getSupplierCode())
-                    .naturePart(event.getIsSoftware())
+                    .isSoftware(event.getIsSoftware())
                     .fotaUpgradeable(event.getFotaUpgradeable())
-                    .accuratelyTraced(event.getIsAccuratelyTraced())
+                    .isAccuratelyTraced(event.getIsAccuratelyTraced())
                     .status(event.getStatus())
                     .source(SourceType.MDM)
                     .externalRefId(event.getEntityId())
@@ -517,24 +505,24 @@ public class MdmSyncAppService {
                     .lastSyncTime(LocalDateTime.now())
                     .build();
             mdmPartRepository.insert(newPart);
-            log.info("新增零件: pn={}", event.getCode());
+            log.info("新增零件: code={}", event.getCode());
         } else {
             if (event.getVersion() > localPart.getExternalVersion()) {
                 localPart.setName(event.getName());
-                localPart.setType(event.getPartType());
-                localPart.setDeviceCode(event.getVehicleNodeCode());
+                localPart.setPartType(event.getPartType());
+                localPart.setVehicleNodeCode(event.getVehicleNodeCode());
                 localPart.setSupplierCode(event.getSupplierCode());
-                localPart.setNaturePart(event.getIsSoftware());
+                localPart.setIsSoftware(event.getIsSoftware());
                 localPart.setFotaUpgradeable(event.getFotaUpgradeable());
-                localPart.setAccuratelyTraced(event.getIsAccuratelyTraced());
+                localPart.setIsAccuratelyTraced(event.getIsAccuratelyTraced());
                 localPart.setStatus(event.getStatus());
                 localPart.setExternalRefId(event.getEntityId());
                 localPart.setExternalVersion(event.getVersion());
                 localPart.setLastSyncTime(LocalDateTime.now());
                 mdmPartRepository.updateById(localPart);
-                log.info("更新零件: pn={}, version={}", event.getCode(), event.getVersion());
+                log.info("更新零件: code={}, version={}", event.getCode(), event.getVersion());
             } else {
-                log.info("忽略零件事件（版本不高于本地）: pn={}, eventVersion={}, localVersion={}",
+                log.info("忽略零件事件（版本不高于本地）: code={}, eventVersion={}, localVersion={}",
                         event.getCode(), event.getVersion(), localPart.getExternalVersion());
             }
         }
@@ -955,8 +943,6 @@ public class MdmSyncAppService {
                             OptionFamily optionFamily = OptionFamily.builder()
                                     .code(optionFamilyData.getCode())
                                     .name(optionFamilyData.getName())
-                                    .enable(true)
-                                    .sort(0)
                                     .source(SourceType.MDM.name())
                                     .externalRefId(optionFamilyData.getSourceId())
                                     .externalVersion(optionFamilyData.getVersion() != null ? optionFamilyData.getVersion().longValue() : 0L)
@@ -1014,8 +1000,6 @@ public class MdmSyncAppService {
                                     .code(optionCodeData.getCode())
                                     .optionFamilyCode(optionCodeData.getOptionFamilyCode())
                                     .name(optionCodeData.getName())
-                                    .enable(true)
-                                    .sort(0)
                                     .source(SourceType.MDM.name())
                                     .externalRefId(optionCodeData.getSourceId())
                                     .externalVersion(optionCodeData.getVersion() != null ? optionCodeData.getVersion().longValue() : 0L)
@@ -1149,14 +1133,14 @@ public class MdmSyncAppService {
                     Part localPart = mdmPartRepository.selectByExternalRefId(partData.getSourceId());
                     if (localPart == null) {
                         Part newPart = Part.builder()
-                                .pn(partData.getCode())
+                                .code(partData.getCode())
                                 .name(partData.getName())
-                                .type(partData.getPartType())
-                                .deviceCode(partData.getVehicleNodeCode())
+                                .partType(partData.getPartType())
+                                .vehicleNodeCode(partData.getVehicleNodeCode())
                                 .supplierCode(partData.getSupplierCode())
-                                .naturePart(partData.getIsSoftware())
+                                .isSoftware(partData.getIsSoftware())
                                 .fotaUpgradeable(partData.getFotaUpgradeable())
-                                .accuratelyTraced(partData.getIsAccuratelyTraced())
+                                .isAccuratelyTraced(partData.getIsAccuratelyTraced())
                                 .status(partData.getStatus())
                                 .source(SourceType.MDM)
                                 .externalRefId(partData.getSourceId())
@@ -1164,24 +1148,24 @@ public class MdmSyncAppService {
                                 .lastSyncTime(convertToLocalDateTime(partData.getModifyTime()))
                                 .build();
                         mdmPartRepository.insert(newPart);
-                        log.info("Bootstrap 新增 MDM 零件投影: pn={}", partData.getCode());
+                        log.info("Bootstrap 新增 MDM 零件投影: code={}", partData.getCode());
                         insertCount++;
                     } else {
                         Long remoteVersion = partData.getVersion() != null ? partData.getVersion().longValue() : 0L;
                         if (remoteVersion > localPart.getExternalVersion()) {
-                            localPart.setPn(partData.getCode());
+                            localPart.setCode(partData.getCode());
                             localPart.setName(partData.getName());
-                            localPart.setType(partData.getPartType());
-                            localPart.setDeviceCode(partData.getVehicleNodeCode());
+                            localPart.setPartType(partData.getPartType());
+                            localPart.setVehicleNodeCode(partData.getVehicleNodeCode());
                             localPart.setSupplierCode(partData.getSupplierCode());
-                            localPart.setNaturePart(partData.getIsSoftware());
+                            localPart.setIsSoftware(partData.getIsSoftware());
                             localPart.setFotaUpgradeable(partData.getFotaUpgradeable());
-                            localPart.setAccuratelyTraced(partData.getIsAccuratelyTraced());
+                            localPart.setIsAccuratelyTraced(partData.getIsAccuratelyTraced());
                             localPart.setStatus(partData.getStatus());
                             localPart.setExternalVersion(remoteVersion);
                             localPart.setLastSyncTime(convertToLocalDateTime(partData.getModifyTime()));
                             mdmPartRepository.updateById(localPart);
-                            log.info("Bootstrap 更新 MDM 零件投影: pn={}, version={}", partData.getCode(), remoteVersion);
+                            log.info("Bootstrap 更新 MDM 零件投影: code={}, version={}", partData.getCode(), remoteVersion);
                             updateCount++;
                         } else {
                             skipCount++;
@@ -1223,14 +1207,14 @@ public class MdmSyncAppService {
                     Part localPart = mdmPartRepository.selectByExternalRefId(partData.getSourceId());
                     if (localPart == null) {
                         Part newPart = Part.builder()
-                                .pn(partData.getCode())
+                                .code(partData.getCode())
                                 .name(partData.getName())
-                                .type(partData.getPartType())
-                                .deviceCode(partData.getVehicleNodeCode())
+                                .partType(partData.getPartType())
+                                .vehicleNodeCode(partData.getVehicleNodeCode())
                                 .supplierCode(partData.getSupplierCode())
-                                .naturePart(partData.getIsSoftware())
+                                .isSoftware(partData.getIsSoftware())
                                 .fotaUpgradeable(partData.getFotaUpgradeable())
-                                .accuratelyTraced(partData.getIsAccuratelyTraced())
+                                .isAccuratelyTraced(partData.getIsAccuratelyTraced())
                                 .status(partData.getStatus())
                                 .source(SourceType.MDM)
                                 .externalRefId(partData.getSourceId())
@@ -1238,24 +1222,24 @@ public class MdmSyncAppService {
                                 .lastSyncTime(convertToLocalDateTime(partData.getModifyTime()))
                                 .build();
                         mdmPartRepository.insert(newPart);
-                        log.info("强制 Bootstrap 新增 MDM 零件投影: pn={}", partData.getCode());
+                        log.info("强制 Bootstrap 新增 MDM 零件投影: code={}", partData.getCode());
                         insertCount++;
                     } else {
                         Long remoteVersion = partData.getVersion() != null ? partData.getVersion().longValue() : 0L;
                         if (remoteVersion > localPart.getExternalVersion()) {
-                            localPart.setPn(partData.getCode());
+                            localPart.setCode(partData.getCode());
                             localPart.setName(partData.getName());
-                            localPart.setType(partData.getPartType());
-                            localPart.setDeviceCode(partData.getVehicleNodeCode());
+                            localPart.setPartType(partData.getPartType());
+                            localPart.setVehicleNodeCode(partData.getVehicleNodeCode());
                             localPart.setSupplierCode(partData.getSupplierCode());
-                            localPart.setNaturePart(partData.getIsSoftware());
+                            localPart.setIsSoftware(partData.getIsSoftware());
                             localPart.setFotaUpgradeable(partData.getFotaUpgradeable());
-                            localPart.setAccuratelyTraced(partData.getIsAccuratelyTraced());
+                            localPart.setIsAccuratelyTraced(partData.getIsAccuratelyTraced());
                             localPart.setStatus(partData.getStatus());
                             localPart.setExternalVersion(remoteVersion);
                             localPart.setLastSyncTime(convertToLocalDateTime(partData.getModifyTime()));
                             mdmPartRepository.updateById(localPart);
-                            log.info("强制 Bootstrap 更新 MDM 零件投影: pn={}, version={}", partData.getCode(), remoteVersion);
+                            log.info("强制 Bootstrap 更新 MDM 零件投影: code={}, version={}", partData.getCode(), remoteVersion);
                             updateCount++;
                         } else {
                             skipCount++;

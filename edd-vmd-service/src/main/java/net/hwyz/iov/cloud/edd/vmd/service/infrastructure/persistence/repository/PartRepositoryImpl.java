@@ -37,8 +37,8 @@ public class PartRepositoryImpl implements PartRepository {
     }
 
     @Override
-    public Part selectByPn(String pn) {
-        return PartConverter.INSTANCE.toDomain(partMapper.selectPoByPn(pn));
+    public Part selectByCode(String code) {
+        return PartConverter.INSTANCE.toDomain(partMapper.selectPoByCode(code));
     }
 
     @Override

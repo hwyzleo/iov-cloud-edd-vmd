@@ -38,7 +38,7 @@ public class VehiclePartAppService {
     public List<VehiclePartDto> search(VehiclePartQuery query) {
         Map<String, Object> map = new HashMap<>();
         map.put("vin", query.getVin());
-        map.put("pn", query.getPn());
+        map.put("code", query.getCode());
         map.put("sn", query.getSn());
         map.put("partState", query.getPartState());
         map.put("beginTime", query.getBeginTime());

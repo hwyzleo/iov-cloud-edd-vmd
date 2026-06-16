@@ -15,10 +15,10 @@ import java.util.Date;
 public class PartQuery {
 
     private String key;
-    private String pn;
+    private String code;
     private String name;
-    private String type;
-    private String deviceCode;
+    private String partType;
+    private String vehicleNodeCode;
     private Date beginTime;
     private Date endTime;
 

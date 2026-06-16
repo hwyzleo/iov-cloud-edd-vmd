@@ -24,7 +24,7 @@ public class PartExResponse {
     /**
      * 零件号
      */
-    private String pn;
+    private String code;
 
     /**
      * 零件中文名称
@@ -32,19 +32,19 @@ public class PartExResponse {
     private String name;
 
     /**
-     * 零件英文名称
+     * 本地化名称
      */
-    private String nameEn;
+    private String nameLocal;
 
     /**
      * 零件类型
      */
-    private String type;
+    private String partType;
 
     /**
-     * 零件分类
+     * 是否是软件
      */
-    private String ffa;
+    private Boolean isSoftware;
 
     /**
      * 零件状态：PRODUCTION-量产，TRIAL-试生产，DISCONTINUE-停用
@@ -52,193 +52,43 @@ public class PartExResponse {
     private String status;
 
     /**
-     * 数字模型：NO-无，PART-零件级，PRODUCT-总成级
-     */
-    private String digitalModel;
-
-    /**
-     * 单位：EA-个，KG-千克，ML-毫升，M2-平方米，M-米
-     */
-    private String unit;
-
-    /**
-     * 是否是架构件
-     */
-    private Boolean framePart;
-
-    /**
-     * 是否是本色件
-     */
-    private Boolean naturePart;
-
-    /**
-     * 颜色区域：INTERNAL-内部，EXTERNAL-外部
-     */
-    private String colorArea;
-
-    /**
-     * 本色件零件号
-     */
-    private String naturePn;
-
-    /**
-     * 是否是法规件
-     */
-    private Boolean regulatoryPart;
-
-    /**
-     * 关键程度：KEY-关键，MAJOR-主要，SIMPLE-普通
-     */
-    private String keyPart;
-
-    /**
      * 是否精准追溯
      */
-    private Boolean accuratelyTraced;
+    private Boolean isAccuratelyTraced;
 
     /**
-     * 是否是配件
+     * 车辆节点代码
      */
-    private Boolean aftersalePart;
+    private String vehicleNodeCode;
 
     /**
-     * 标准件分类
+     * 供应商代码
      */
-    private String standardPartClass;
+    private String supplierCode;
 
     /**
-     * 扳拧形式
+     * 是否支持FOTA升级
      */
-    private String wrenchType;
+    private Boolean fotaUpgradeable;
 
     /**
-     * 杆部形式
+     * 数据来源
      */
-    private String rodType;
+    private String source;
 
     /**
-     * 头部形状
+     * MDM侧实体主键ID
      */
-    private String headShape;
+    private String externalRefId;
 
     /**
-     * 末端形状
+     * MDM侧实体版本号
      */
-    private String endShape;
+    private Long externalVersion;
 
     /**
-     * 是否带垫圈
+     * 最后一次同步时间
      */
-    private Boolean washer;
-
-    /**
-     * 垫圈类型
-     */
-    private String washerType;
-
-    /**
-     * 直径
-     */
-    private String diameter;
-
-    /**
-     * 长度
-     */
-    private String length;
-
-    /**
-     * 螺距
-     */
-    private String pitch;
-
-    /**
-     * 牙型
-     */
-    private String dentalForm;
-
-    /**
-     * 强度等级
-     */
-    private String strengthGrade;
-
-    /**
-     * 机械性能
-     */
-    private String mechanicalProperty;
-
-    /**
-     * 表面处理
-     */
-    private String surfaceTreatment;
-
-    /**
-     * 结构特征
-     */
-    private String structureCharacter;
-
-    /**
-     * 设备形态
-     */
-    private String deviceForm;
-
-    /**
-     * 设备代码
-     */
-    private String deviceCode;
-
-    /**
-     * 设计工程师
-     */
-    private String designer;
-
-    /**
-     * 设计工程师部门
-     */
-    private String designerDept;
-
-    /**
-     * 不作为备件原因
-     */
-    private String nonRepairReason;
-
-    /**
-     * 是否颜色件维修
-     */
-    private Boolean colorRepair;
-
-    /**
-     * 是否底漆件维修
-     */
-    private Boolean primerRepair;
-
-    /**
-     * 是否电泳件维修
-     */
-    private Boolean electrophoresisRepair;
-
-    /**
-     * 对应生产件号
-     */
-    private String productionCode;
-
-    /**
-     * 售后配件属性
-     */
-    private String spareProperty;
-
-    /**
-     * 售后备注
-     */
-    private String saleNote;
-
-    /**
-     * 首次投产时间
-     */
-    private String firstProductionDate;
-
-    /**
-     * 初始车型
-     */
-    private String initialModel;
+    private java.time.LocalDateTime lastSyncTime;
 
 }

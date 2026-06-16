@@ -42,7 +42,7 @@ class MdmPartSyncIntegrationTest extends BaseTest {
     void setUp() {
         // 由于使用@Transactional注解，每个测试方法会自动回滚
         // 但为了确保测试独立性，清理可能存在的测试数据
-        Part existing = mdmPartRepository.selectByPn(TEST_PN);
+        Part existing = mdmPartRepository.selectByCode(TEST_PN);
         if (existing != null) {
             mdmPartRepository.batchPhysicalDelete(new Long[]{existing.getId()});
         }
@@ -58,9 +58,9 @@ class MdmPartSyncIntegrationTest extends BaseTest {
         mdmSyncAppService.handlePartEvent(event);
 
         // Then
-        Part saved = mdmPartRepository.selectByPn(TEST_PN);
+        Part saved = mdmPartRepository.selectByCode(TEST_PN);
         assertNotNull(saved, "零件应该被保存");
-        assertEquals(TEST_PN, saved.getPn());
+        assertEquals(TEST_PN, saved.getCode());
         assertEquals(MDM_ENTITY_ID, saved.getExternalRefId());
         assertEquals(1L, saved.getExternalVersion());
         assertEquals(SourceType.MDM, saved.getSource());
@@ -79,7 +79,7 @@ class MdmPartSyncIntegrationTest extends BaseTest {
         mdmSyncAppService.handlePartEvent(event2);
 
         // Then
-        Part updated = mdmPartRepository.selectByPn(TEST_PN);
+            Part updated = mdmPartRepository.selectByCode(TEST_PN);
         assertNotNull(updated);
         assertEquals(2L, updated.getExternalVersion());
         assertEquals("更新后的零件名称", updated.getName());
@@ -99,7 +99,7 @@ class MdmPartSyncIntegrationTest extends BaseTest {
         mdmSyncAppService.handlePartEvent(event2);
 
         // Then - 应该保留版本2的数据
-        Part part = mdmPartRepository.selectByPn(TEST_PN);
+        Part part = mdmPartRepository.selectByCode(TEST_PN);
         assertNotNull(part);
         assertEquals(2L, part.getExternalVersion());
         assertEquals("版本2的零件", part.getName());
@@ -116,7 +116,7 @@ class MdmPartSyncIntegrationTest extends BaseTest {
         mdmSyncAppService.handlePartEvent(event);
 
         // Then - 应该只有一条记录
-        Part part = mdmPartRepository.selectByPn(TEST_PN);
+        Part part = mdmPartRepository.selectByCode(TEST_PN);
         assertNotNull(part);
         assertEquals(MDM_ENTITY_ID, part.getExternalRefId());
         assertEquals(1L, part.getExternalVersion());
@@ -127,7 +127,7 @@ class MdmPartSyncIntegrationTest extends BaseTest {
     void handlePartEvent_shouldHandleIdMappingBetweenBootstrapAndKafka() {
         // Given - 模拟Bootstrap同步：用code作为external_ref_id
         Part bootstrappedPart = Part.builder()
-                .pn(TEST_PN)
+                .code(TEST_PN)
                 .name("Bootstrap同步的零件")
                 .source(SourceType.MDM)
                 .externalRefId(MDM_CODE)  // Bootstrap用code作为external_ref_id
@@ -146,7 +146,7 @@ class MdmPartSyncIntegrationTest extends BaseTest {
             mdmSyncAppService.handlePartEvent(kafkaEvent);
 
             // 如果成功，说明代码已经正确处理了ID映射
-            Part updated = mdmPartRepository.selectByPn(TEST_PN);
+        Part updated = mdmPartRepository.selectByCode(TEST_PN);
             assertNotNull(updated);
             // 验证是更新而不是新增
             assertEquals(2L, updated.getExternalVersion());
@@ -166,7 +166,7 @@ class MdmPartSyncIntegrationTest extends BaseTest {
         mdmSyncAppService.handlePartEvent(createEvent(MDM_ENTITY_ID, MDM_CODE, 4L));
 
         // Then - 最终应该是版本4
-        Part part = mdmPartRepository.selectByPn(TEST_PN);
+        Part part = mdmPartRepository.selectByCode(TEST_PN);
         assertNotNull(part);
         assertEquals(4L, part.getExternalVersion());
     }
