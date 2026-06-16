@@ -6,7 +6,6 @@ import lombok.experimental.SuperBuilder;
 import lombok.extern.slf4j.Slf4j;
 
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.InboundSourceType;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.PartType;
 import net.hwyz.iov.cloud.framework.common.domain.DomainObj;
 
 import java.time.Instant;
@@ -106,7 +105,7 @@ public class PartInfo implements DomainObj<PartInfo> {
      * 零件类型
      * CR-025: 一律取自 MDM Part 投影（partCode -> part.code），不再人工录入
      */
-    private PartType partType;
+    private String partType;
 
     /**
      * 入站批次号

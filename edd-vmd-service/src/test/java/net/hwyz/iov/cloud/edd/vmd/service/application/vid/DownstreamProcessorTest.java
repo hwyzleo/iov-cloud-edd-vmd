@@ -1,13 +1,11 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.vid;
 
+import net.hwyz.iov.cloud.edd.vmd.service.application.vid.impl.PepsComboDownstreamProcessor;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.impl.Tbox5gDownstreamProcessor;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.impl.OtaDownstreamProcessor;
-import net.hwyz.iov.cloud.edd.vmd.service.application.vid.impl.IdkDownstreamProcessor;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -38,7 +36,7 @@ class DownstreamProcessorTest {
     @Test
     @DisplayName("IdkDownstreamProcessor应返回正确的车载节点代码")
     void testIdkDownstreamProcessorGetSupportedVehicleNodeCode() {
-        IdkDownstreamProcessor processor = new IdkDownstreamProcessor();
+        PepsComboDownstreamProcessor processor = new PepsComboDownstreamProcessor();
         assertEquals("IDK", processor.getSupportedVehicleNodeCode());
     }
 }

@@ -6,7 +6,6 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartInboundAppServ
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartInboundAppService.PartInboundResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParserRegistry;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.InboundSourceType;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.PartTypeSchemaRegistry;
 import net.hwyz.iov.cloud.iov.idk.api.service.IdkBtmInfoService;
 import net.hwyz.iov.cloud.iov.tsp.api.service.TspCcpInfoService;
 
@@ -42,12 +41,10 @@ class ImportDataParserIntegrationTest {
     private TspCcpInfoService tspCcpInfoService;
 
     private ImportDataParserRegistry parserRegistry;
-    private PartTypeSchemaRegistry partTypeSchemaRegistry;
 
     @BeforeEach
     void setUp() {
         parserRegistry = new ImportDataParserRegistry();
-        partTypeSchemaRegistry = new PartTypeSchemaRegistry();
     }
 
     @Test

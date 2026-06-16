@@ -1,6 +1,6 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 
-import cn.hutool.core.util.ObjUtil;
+import cn.hutool.json.JSONUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.mdm.api.service.SupplierService;
@@ -8,16 +8,12 @@ import net.hwyz.iov.cloud.edd.mdm.api.vo.response.SupplierResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.PartInboundValidateFailedException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.PartNotActiveException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.PartNotFoundException;
-import net.hwyz.iov.cloud.edd.vmd.service.common.exception.PartTypeSchemaNotFoundException;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Part;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartInfo;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehiclePart;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmPartRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.InboundSourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.PartInstanceState;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.PartType;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.PartTypeSchema;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.PartTypeSchemaRegistry;
 import net.hwyz.iov.cloud.framework.common.util.StrUtil;
 import org.springframework.stereotype.Service;
 
@@ -42,7 +38,6 @@ public class PartInboundAppService {
 
     private final PartInfoAppService partInfoAppService;
     private final VehiclePartAppService vehiclePartAppService;
-    private final PartTypeSchemaRegistry partTypeSchemaRegistry;
     private final MdmPartRepository mdmPartRepository;
     private final SupplierService supplierService;
 
@@ -113,10 +108,6 @@ public class PartInboundAppService {
                 invalidCount++;
                 errors.add("零件[" + record.getPartCode() + ":" + record.getSn() + "]校验失败: " + e.getMessage());
                 log.warn("零件入站校验失败: {}", e.getMessage());
-            } catch (PartTypeSchemaNotFoundException e) {
-                failureCount++;
-                errors.add("零件[" + record.getPartCode() + ":" + record.getSn() + "]类型契约不存在: " + e.getMessage());
-                log.warn("零件类型契约不存在: {}", e.getMessage());
             } catch (Exception e) {
                 failureCount++;
                 errors.add("零件[" + record.getPartCode() + ":" + record.getSn() + "]处理异常: " + e.getMessage());
@@ -172,6 +163,10 @@ public class PartInboundAppService {
             throw new PartInboundValidateFailedException("零件编码不能为空");
         }
 
+        if (StrUtil.isBlank(record.getSn())) {
+            throw new PartInboundValidateFailedException("SN不能为空");
+        }
+
         // 1. 验证 partCode 存在于 MDM Part 投影
         Part mdmPart = mdmPartRepository.selectByCode(record.getPartCode());
         if (mdmPart == null) {
@@ -204,68 +199,40 @@ public class PartInboundAppService {
                 log.warn("零件[{}:{}]供应商编码[{}]校验调用MDM服务失败", record.getPartCode(), record.getSn(), record.getSupplierCode(), e);
             }
         }
-
-        // 解析零件类型
-        PartType partType = PartType.valOf(record.getPartType());
-        if (partType == null) {
-            throw new PartTypeSchemaNotFoundException(record.getPartType());
-        }
-
-        // 获取类型契约
-        PartTypeSchema schema = partTypeSchemaRegistry.getSchema(partType);
-        if (schema == null) {
-            throw new PartTypeSchemaNotFoundException(record.getPartType());
-        }
-
-        // 校验必需字段
-        Map<String, String> fields = new HashMap<>();
-        fields.put("sn", record.getSn());
-        if (record.getExtraFields() != null) {
-            fields.putAll(record.getExtraFields());
-        }
-
-        List<String> missingFields = schema.validateRequired(fields);
-        if (!missingFields.isEmpty()) {
-            throw new PartInboundValidateFailedException("缺失必需字段: " + String.join(", ", missingFields));
-        }
     }
 
     /**
      * 步骤2: 标准化记录为PartInfo实体
      */
     private PartInfo normalizeRecord(PartInboundRecord record, InboundSourceType source) {
-        PartType partType = PartType.valOf(record.getPartType());
-        PartTypeSchema schema = partTypeSchemaRegistry.getSchema(partType);
-
-        // 处理SIM类型的特殊映射
+        // 处理SIM类型的特殊映射：SIM类型使用iccid作为sn
         String sn = record.getSn();
-        if (partType == PartType.SIM && StrUtil.isBlank(sn)) {
-            // SIM类型使用iccid作为sn
+        if ("SIM".equals(record.getPartType()) && StrUtil.isBlank(sn)) {
             sn = record.getExtraFields() != null ? record.getExtraFields().get("iccid") : null;
         }
 
         // 标准化extra字段
         String extra = null;
         if (record.getExtraFields() != null && !record.getExtraFields().isEmpty()) {
-            extra = schema.normalizeExtra(new HashMap<>(record.getExtraFields()));
-        }
-
-        // 确定vehicleNodeCode
-        String vehicleNodeCode = record.getVehicleNodeCode();
-        if (StrUtil.isBlank(vehicleNodeCode) && schema != null) {
-            vehicleNodeCode = schema.getDefaultVehicleNodeCode();
+            Map<String, String> filtered = new HashMap<>();
+            record.getExtraFields().forEach((k, v) -> {
+                if (v != null && !v.isBlank()) {
+                    filtered.put(k, v);
+                }
+            });
+            extra = filtered.isEmpty() ? null : JSONUtil.toJsonStr(filtered);
         }
 
         return PartInfo.builder()
                 .partCode(record.getPartCode())
                 .sn(sn)
-                .vehicleNodeCode(vehicleNodeCode)
+                .vehicleNodeCode(record.getVehicleNodeCode())
                 .supplierCode(record.getSupplierCode())
                 .batchNum(record.getBatchNum())
                 .extra(extra)
                 .instanceState(PartInstanceState.IN_STOCK.value)
                 .source(source)
-                .partType(partType)
+                .partType(record.getPartType())
                 .inboundBatchNo(record.getInboundBatchNo())
                 .sourceEventId(record.getSourceEventId())
                 .lastInboundTime(Instant.now())
@@ -276,19 +243,11 @@ public class PartInboundAppService {
      * 建立车辆-零件绑定
      */
     private void bindVehiclePart(String vin, PartInfo partInfo, PartInboundRecord record, InboundSourceType source) {
-        PartType partType = PartType.valOf(record.getPartType());
-        PartTypeSchema schema = partTypeSchemaRegistry.getSchema(partType);
-
-        String deviceItem = record.getDeviceItem();
-        if (StrUtil.isBlank(deviceItem) && schema != null) {
-            deviceItem = schema.getDefaultDeviceItem();
-        }
-
         VehiclePart vehiclePart = VehiclePart.builder()
                 .vin(vin)
                 .partId(partInfo.getId())
                 .vehicleNodeCode(partInfo.getVehicleNodeCode())
-                .deviceItem(deviceItem)
+                .deviceItem(record.getDeviceItem())
                 .bindOrg(source.getValue())
                 .build();
         vehiclePartAppService.bindVehiclePart(vehiclePart);

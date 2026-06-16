@@ -4,13 +4,10 @@ import net.hwyz.iov.cloud.edd.mdm.api.service.SupplierService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartInboundAppService.PartInboundRecord;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartInboundAppService.PartInboundResult;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.PartInboundValidateFailedException;
-import net.hwyz.iov.cloud.edd.vmd.service.common.exception.PartTypeSchemaNotFoundException;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Part;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartInfo;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehiclePart;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.InboundSourceType;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.PartType;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.PartTypeSchemaRegistry;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmPartRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -19,7 +16,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -42,15 +38,12 @@ class PartInboundAppServiceTest {
     @Mock
     private SupplierService supplierService;
 
-    private PartTypeSchemaRegistry partTypeSchemaRegistry;
-
     private PartInboundAppService partInboundAppService;
 
     @BeforeEach
     void setUp() {
-        partTypeSchemaRegistry = new PartTypeSchemaRegistry();
         partInboundAppService = new PartInboundAppService(
-                partInfoAppService, vehiclePartAppService, partTypeSchemaRegistry,
+                partInfoAppService, vehiclePartAppService,
                 mdmPartRepository, supplierService);
     }
 
@@ -110,7 +103,7 @@ class PartInboundAppServiceTest {
         assertEquals(1, result.getSuccessCount());
         verify(partInfoAppService).upsertPartInfo(argThat(partInfo ->
                 "ICCID001".equals(partInfo.getSn()) &&
-                PartType.SIM.equals(partInfo.getPartType())));
+                "SIM".equals(partInfo.getPartType())));
     }
 
     @Test
@@ -132,28 +125,6 @@ class PartInboundAppServiceTest {
         assertEquals(0, result.getFailureCount());
         assertEquals(1, result.getInvalidCount());
         verify(partInfoAppService, never()).upsertPartInfo(any());
-    }
-
-    @Test
-    void processInbound_invalidPartType_failureCount() {
-        // Given
-        PartInboundRecord record = PartInboundRecord.builder()
-                .partCode("PN001")
-                .sn("SN001")
-                .partType("INVALID_TYPE")
-                .build();
-
-        when(mdmPartRepository.selectByCode("PN001")).thenReturn(Part.builder().status("ACTIVE").partType("INVALID_TYPE").build());
-
-        // When
-        PartInboundResult result = partInboundAppService.processInbound(
-                List.of(record), InboundSourceType.MES, null);
-
-        // Then
-        assertEquals(1, result.getTotalCount());
-        assertEquals(0, result.getSuccessCount());
-        assertEquals(1, result.getFailureCount());
-        assertEquals(0, result.getInvalidCount());
     }
 
     @Test
@@ -244,7 +215,7 @@ class PartInboundAppServiceTest {
 
         // Then
         assertNotNull(result);
-        assertEquals("TBOX", result.getPartType().name());
+        assertEquals("TBOX", result.getPartType());
         verify(mdmPartRepository).selectByCode("TEST_PART_001");
     }
 
@@ -274,7 +245,7 @@ class PartInboundAppServiceTest {
         assertNotNull(result);
         assertEquals("PN001", result.getPartCode());
         assertEquals("SN001", result.getSn());
-        assertEquals(PartType.TBOX, result.getPartType());
+        assertEquals("TBOX", result.getPartType());
         assertEquals(InboundSourceType.MES, result.getSource());
         verify(vehiclePartAppService).bindVehiclePart(any(VehiclePart.class));
     }

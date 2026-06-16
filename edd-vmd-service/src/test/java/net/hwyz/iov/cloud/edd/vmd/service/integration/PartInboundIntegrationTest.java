@@ -3,9 +3,6 @@ package net.hwyz.iov.cloud.edd.vmd.service.integration;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartInfo;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.InboundSourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.PartInstanceState;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.PartType;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.PartTypeSchema;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.PartTypeSchemaRegistry;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter.PartInfoConverter;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.PartInfoPo;
 import org.junit.jupiter.api.DisplayName;
@@ -16,9 +13,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -138,7 +132,7 @@ class PartInboundIntegrationTest {
         assertEquals("SN001", partInfo.getSn());
         assertEquals("TBOX", partInfo.getVehicleNodeCode());
         assertEquals(InboundSourceType.MES, partInfo.getSource());
-        assertEquals(PartType.TBOX, partInfo.getPartType());
+        assertEquals("TBOX", partInfo.getPartType());
         assertEquals("BATCH001", partInfo.getInboundBatchNo());
         assertEquals("EVENT001", partInfo.getSourceEventId());
         assertNotNull(partInfo.getLastInboundTime());
@@ -158,7 +152,7 @@ class PartInboundIntegrationTest {
                 .instanceState(PartInstanceState.IN_STOCK.value)
                 .firstSeenTime(Instant.now())
                 .source(InboundSourceType.MES)
-                .partType(PartType.TBOX)
+                .partType("TBOX")
                 .inboundBatchNo("BATCH001")
                 .sourceEventId("EVENT001")
                 .lastInboundTime(Instant.now())
@@ -208,85 +202,6 @@ class PartInboundIntegrationTest {
     }
 
     @Test
-    @DisplayName("PartTypeSchemaRegistry应包含所有默认契约")
-    void testPartTypeSchemaRegistry_defaultSchemas() {
-        PartTypeSchemaRegistry registry = new PartTypeSchemaRegistry();
-
-        // TBOX
-        PartTypeSchema tboxSchema = registry.getSchema(PartType.TBOX);
-        assertNotNull(tboxSchema, "TBOX契约应存在");
-        assertTrue(tboxSchema.getRequiredFields().contains("sn"), "TBOX应要求sn");
-        assertEquals("TBOX", tboxSchema.getDefaultVehicleNodeCode());
-        assertEquals("TBOX", tboxSchema.getDefaultDeviceItem());
-
-        // BTM
-        PartTypeSchema btmSchema = registry.getSchema(PartType.BTM);
-        assertNotNull(btmSchema, "BTM契约应存在");
-        assertTrue(btmSchema.getRequiredFields().contains("sn"), "BTM应要求sn");
-        assertEquals("BTM_M", btmSchema.getDefaultVehicleNodeCode());
-        assertEquals("BTM", btmSchema.getDefaultDeviceItem());
-
-        // CCP
-        PartTypeSchema ccpSchema = registry.getSchema(PartType.CCP);
-        assertNotNull(ccpSchema, "CCP契约应存在");
-        assertEquals("CCP", ccpSchema.getDefaultVehicleNodeCode());
-
-        // IDCM
-        PartTypeSchema idcmSchema = registry.getSchema(PartType.IDCM);
-        assertNotNull(idcmSchema, "IDCM契约应存在");
-        assertEquals("IDCM", idcmSchema.getDefaultVehicleNodeCode());
-
-        // SIM
-        PartTypeSchema simSchema = registry.getSchema(PartType.SIM);
-        assertNotNull(simSchema, "SIM契约应存在");
-        assertTrue(simSchema.getRequiredFields().contains("iccid"), "SIM应要求iccid");
-        assertNull(simSchema.getDefaultVehicleNodeCode(), "SIM应无默认vehicleNodeCode");
-    }
-
-    @Test
-    @DisplayName("PartTypeSchema应正确校验必需字段")
-    void testPartTypeSchema_validateRequired() {
-        PartTypeSchemaRegistry registry = new PartTypeSchemaRegistry();
-        PartTypeSchema tboxSchema = registry.getSchema(PartType.TBOX);
-
-        // 所有字段齐全
-        Map<String, String> validFields = new HashMap<>();
-        validFields.put("sn", "SN001");
-        assertTrue(tboxSchema.validateRequired(validFields).isEmpty());
-
-        // 缺少sn
-        Map<String, String> missingSn = new HashMap<>();
-        assertEquals(1, tboxSchema.validateRequired(missingSn).size());
-        assertTrue(tboxSchema.validateRequired(missingSn).contains("sn"));
-
-        // sn为空
-        Map<String, String> blankSn = new HashMap<>();
-        blankSn.put("sn", "");
-        assertEquals(1, tboxSchema.validateRequired(blankSn).size());
-    }
-
-    @Test
-    @DisplayName("PartTypeSchema应正确标准化extra字段")
-    void testPartTypeSchema_normalizeExtra() {
-        PartTypeSchemaRegistry registry = new PartTypeSchemaRegistry();
-        PartTypeSchema btmSchema = registry.getSchema(PartType.BTM);
-
-        Map<String, Object> rawFields = new HashMap<>();
-        rawFields.put("hsm", "HSM001");
-        rawFields.put("mac", "MAC001");
-        rawFields.put("emptyField", null);
-
-        String extra = btmSchema.normalizeExtra(rawFields);
-
-        assertNotNull(extra);
-        assertTrue(extra.contains("hsm"));
-        assertTrue(extra.contains("HSM001"));
-        assertTrue(extra.contains("mac"));
-        assertTrue(extra.contains("MAC001"));
-        assertFalse(extra.contains("emptyField"));
-    }
-
-    @Test
     @DisplayName("PartInfo实体应包含所有入站字段")
     void testPartInfoEntity_inboundFields() {
         PartInfo partInfo = PartInfo.builder()
@@ -299,7 +214,7 @@ class PartInboundIntegrationTest {
                 .instanceState(PartInstanceState.IN_STOCK.value)
                 .firstSeenTime(Instant.now())
                 .source(InboundSourceType.MES)
-                .partType(PartType.TBOX)
+                .partType("TBOX")
                 .inboundBatchNo("BATCH001")
                 .sourceEventId("EVENT001")
                 .lastInboundTime(Instant.now())
@@ -307,7 +222,7 @@ class PartInboundIntegrationTest {
                 .build();
 
         assertEquals(InboundSourceType.MES, partInfo.getSource());
-        assertEquals(PartType.TBOX, partInfo.getPartType());
+        assertEquals("TBOX", partInfo.getPartType());
         assertEquals("BATCH001", partInfo.getInboundBatchNo());
         assertEquals("EVENT001", partInfo.getSourceEventId());
         assertNotNull(partInfo.getLastInboundTime());
@@ -324,39 +239,6 @@ class PartInboundIntegrationTest {
         assertNotNull(InboundSourceType.valOf("IQC"));
         assertNotNull(InboundSourceType.valOf("OTHER"));
         assertNull(InboundSourceType.valOf("INVALID"));
-    }
-
-    @Test
-    @DisplayName("PartType枚举应包含所有预期值")
-    void testPartType_allValues() {
-        assertEquals(6, PartType.values().length);
-        assertNotNull(PartType.valOf("TBOX"));
-        assertNotNull(PartType.valOf("BTM"));
-        assertNotNull(PartType.valOf("CCP"));
-        assertNotNull(PartType.valOf("IDCM"));
-        assertNotNull(PartType.valOf("SIM"));
-        assertNotNull(PartType.valOf("OTHER"));
-        assertNull(PartType.valOf("INVALID"));
-    }
-
-    @Test
-    @DisplayName("SIM类型契约应要求iccid字段")
-    void testSimTypeSchema_requireIccid() {
-        PartTypeSchemaRegistry registry = new PartTypeSchemaRegistry();
-        PartTypeSchema simSchema = registry.getSchema(PartType.SIM);
-
-        assertNotNull(simSchema);
-        assertTrue(simSchema.getRequiredFields().contains("iccid"), "SIM应要求iccid");
-        assertFalse(simSchema.getRequiredFields().contains("sn"), "SIM不应要求sn");
-
-        // 验证iccid为空时校验失败
-        Map<String, String> emptyFields = new HashMap<>();
-        assertFalse(simSchema.validateRequired(emptyFields).isEmpty());
-
-        // 验证iccid有值时校验通过
-        Map<String, String> validFields = new HashMap<>();
-        validFields.put("iccid", "ICCID001");
-        assertTrue(simSchema.validateRequired(validFields).isEmpty());
     }
 
     @Test
