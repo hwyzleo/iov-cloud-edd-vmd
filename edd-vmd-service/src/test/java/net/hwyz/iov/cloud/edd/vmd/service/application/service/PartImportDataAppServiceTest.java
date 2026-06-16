@@ -5,9 +5,6 @@ import cn.hutool.json.JSONUtil;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ImportResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.DownstreamProcessor;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.DownstreamProcessorRegistry;
-import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParser;
-import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParserRegistry;
-import net.hwyz.iov.cloud.edd.vmd.service.application.vid.impl.ProduceDataParserV1_0;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Part;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartImportData;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmPartRepository;
@@ -19,10 +16,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
 /**
@@ -34,16 +33,13 @@ import static org.mockito.Mockito.*;
 class PartImportDataAppServiceTest {
 
     @Mock
-    private ImportDataParserRegistry parserRegistry;
-
-    @Mock
     private PartImportDataRepository partImportDataRepository;
 
     @Mock
     private MdmPartRepository mdmPartRepository;
 
     @Mock
-    private ProduceDataParserV1_0 produceDataParserV1_0Bean;
+    private PartInboundAppService partInboundAppService;
 
     @Mock
     private DownstreamProcessorRegistry downstreamProcessorRegistry;
@@ -53,32 +49,7 @@ class PartImportDataAppServiceTest {
     @BeforeEach
     void setUp() {
         partImportDataAppService = new PartImportDataAppService(
-                parserRegistry, partImportDataRepository, mdmPartRepository, produceDataParserV1_0Bean, downstreamProcessorRegistry);
-    }
-
-    @Test
-    @DisplayName("Should separate PRODUCE type from other part types")
-    void shouldSeparateProduceTypeFromOtherPartTypes() {
-        // Given
-        String batchNum = "TEST_BATCH_001";
-        PartImportData importData = PartImportData.builder()
-                .batchNum(batchNum)
-                .partCode("PRODUCE")
-                .version("1.0")
-                .data("{\"VIN\":\"TEST_VIN\",\"PARTS\":[]}")
-                .handle(false)
-                .build();
-
-        when(partImportDataRepository.selectByBatchNum(batchNum)).thenReturn(importData);
-        when(produceDataParserV1_0Bean.parse(eq(batchNum), any(JSONObject.class)))
-                .thenReturn(ImportResult.builder().build());
-
-        // When
-        partImportDataAppService.parsePartImportData(batchNum);
-
-        // Then
-        verify(produceDataParserV1_0Bean).parse(eq(batchNum), any(JSONObject.class));
-        verify(parserRegistry, never()).getParser(anyString(), anyString());
+                partImportDataRepository, mdmPartRepository, partInboundAppService, downstreamProcessorRegistry);
     }
 
     @Test
@@ -91,7 +62,7 @@ class PartImportDataAppServiceTest {
                 .batchNum(batchNum)
                 .partCode("TEST_PART_001")
                 .version("1.0")
-                .data("{\"vin\":\"TEST_VIN\",\"sn\":\"TEST_SN\",\"deviceItem\":\"TSP\",\"vehicleNodeCode\":\"TSP\"}")
+                .data("{\"vin\":\"TEST_VIN\",\"sn\":\"TEST_SN\",\"deviceItem\":\"TSP\",\"vehicleNodeCode\":\"TSP\",\"supplier\":\"SUP001\",\"ITEMS\":[{\"SN\":\"SN001\",\"vehicleNodeCode\":\"TSP\",\"deviceItem\":\"TSP\"}]}")
                 .handle(false)
                 .build();
 
@@ -100,7 +71,6 @@ class PartImportDataAppServiceTest {
                 .vehicleNodeCode("TSP")
                 .build();
 
-        ImportDataParser mockParser = mock(ImportDataParser.class);
         ImportResult expectedResult = ImportResult.builder()
                 .totalCount(1)
                 .successCount(1)
@@ -112,8 +82,12 @@ class PartImportDataAppServiceTest {
         // 设置mock行为
         when(partImportDataRepository.selectByBatchNum(batchNum)).thenReturn(importData);
         when(mdmPartRepository.selectByCode("TEST_PART_001")).thenReturn(mdmPart);
-        when(parserRegistry.getParser("TSP", "1.0")).thenReturn(mockParser);
-        when(mockParser.parse(anyString(), any(JSONObject.class))).thenReturn(expectedResult);
+        when(partInboundAppService.processInbound(any(), any(), any())).thenReturn(
+                PartInboundAppService.PartInboundResult.builder()
+                        .totalCount(1)
+                        .successCount(1)
+                        .failureCount(0)
+                        .build());
         when(downstreamProcessorRegistry.getProcessor("TSP")).thenReturn(mockProcessor);
 
         // 执行测试
@@ -139,7 +113,7 @@ class PartImportDataAppServiceTest {
                 .batchNum(batchNum)
                 .partCode("TEST_PART_001")
                 .version("1.0")
-                .data("{\"vin\":\"TEST_VIN\",\"sn\":\"TEST_SN\",\"deviceItem\":\"TSP\",\"vehicleNodeCode\":\"TSP\"}")
+                .data("{\"vin\":\"TEST_VIN\",\"sn\":\"TEST_SN\",\"deviceItem\":\"TSP\",\"vehicleNodeCode\":\"TSP\",\"supplier\":\"SUP001\",\"ITEMS\":[{\"SN\":\"SN001\",\"vehicleNodeCode\":\"TSP\",\"deviceItem\":\"TSP\"}]}")
                 .handle(false)
                 .build();
 
@@ -148,20 +122,17 @@ class PartImportDataAppServiceTest {
                 .vehicleNodeCode("TSP")
                 .build();
 
-        ImportDataParser mockParser = mock(ImportDataParser.class);
-        ImportResult generalResult = ImportResult.builder()
-                .totalCount(1)
-                .successCount(1)
-                .failureCount(0)
-                .build();
-
         DownstreamProcessor mockProcessor = mock(DownstreamProcessor.class);
 
         // 设置mock行为
         when(partImportDataRepository.selectByBatchNum(batchNum)).thenReturn(importData);
         when(mdmPartRepository.selectByCode("TEST_PART_001")).thenReturn(mdmPart);
-        when(parserRegistry.getParser("TSP", "1.0")).thenReturn(mockParser);
-        when(mockParser.parse(anyString(), any(JSONObject.class))).thenReturn(generalResult);
+        when(partInboundAppService.processInbound(any(), any(), any())).thenReturn(
+                PartInboundAppService.PartInboundResult.builder()
+                        .totalCount(1)
+                        .successCount(1)
+                        .failureCount(0)
+                        .build());
         when(downstreamProcessorRegistry.getProcessor("TSP")).thenReturn(mockProcessor);
 
         // 模拟下游处理器抛出异常
@@ -188,7 +159,7 @@ class PartImportDataAppServiceTest {
                 .batchNum("TEST_BATCH_001")
                 .partCode("TEST_PART_001")
                 .version("1.0")
-                .data("{\"vin\":\"TEST_VIN\",\"sn\":\"TEST_SN\",\"deviceItem\":\"TSP\"}")
+                .data("{\"vin\":\"TEST_VIN\",\"sn\":\"TEST_SN\",\"deviceItem\":\"TSP\",\"supplier\":\"SUP001\",\"ITEMS\":[{\"SN\":\"SN001\",\"deviceItem\":\"TSP\"}]}")
                 .handle(false)
                 .build();
 
@@ -198,7 +169,6 @@ class PartImportDataAppServiceTest {
                 .vehicleNodeCode("TSP")
                 .build();
 
-        ImportDataParser mockParser = mock(ImportDataParser.class);
         ImportResult expectedResult = ImportResult.builder()
                 .totalCount(1)
                 .successCount(1)
@@ -208,8 +178,12 @@ class PartImportDataAppServiceTest {
         // 设置mock行为
         when(partImportDataRepository.selectByBatchNum(batchNum)).thenReturn(importDataWithoutVehicleNodeCode);
         when(mdmPartRepository.selectByCode("TEST_PART_001")).thenReturn(mdmPart);
-        when(parserRegistry.getParser("TSP", "1.0")).thenReturn(mockParser);
-        when(mockParser.parse(anyString(), any(JSONObject.class))).thenReturn(expectedResult);
+        when(partInboundAppService.processInbound(any(), any(), any())).thenReturn(
+                PartInboundAppService.PartInboundResult.builder()
+                        .totalCount(1)
+                        .successCount(1)
+                        .failureCount(0)
+                        .build());
 
         // 执行测试
         ImportResult result = partImportDataAppService.parsePartImportData(batchNum);

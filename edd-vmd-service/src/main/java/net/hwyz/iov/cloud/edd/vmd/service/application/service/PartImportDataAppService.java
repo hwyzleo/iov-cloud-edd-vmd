@@ -1,5 +1,6 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 
+import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import lombok.RequiredArgsConstructor;
@@ -10,18 +11,17 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ImportResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.PartImportDataDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.DownstreamProcessor;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.DownstreamProcessorRegistry;
-import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParser;
-import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParserRegistry;
-import net.hwyz.iov.cloud.edd.vmd.service.application.vid.impl.ProduceDataParserV1_0;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Part;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartImportData;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmPartRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartImportDataRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.InboundSourceType;
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.StrUtil;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -34,10 +34,9 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PartImportDataAppService {
 
-    private final ImportDataParserRegistry parserRegistry;
     private final PartImportDataRepository partImportDataRepository;
     private final MdmPartRepository mdmPartRepository;
-    private final ProduceDataParserV1_0 produceDataParserV1_0;
+    private final PartInboundAppService partInboundAppService;
     private final DownstreamProcessorRegistry downstreamProcessorRegistry;
 
     /**
@@ -184,25 +183,89 @@ public class PartImportDataAppService {
      * @return 导入结果
      */
     private ImportResult handleGeneralImport(String batchNum, String partCode, String version, PartImportData partImportData) {
-        // 根据 partCode 查询 MDM Part 投影，获取 deviceCode
+        // 根据 partCode 查询 MDM Part 投影，获取基本信息
         Part mdmPart = mdmPartRepository.selectByCode(partCode);
         if (ObjUtil.isNull(mdmPart)) {
             log.error("零件编码[{}]在MDM主数据中不存在", partCode);
             return ImportResult.builder().failureCount(1).description("零件编码[" + partCode + "]在MDM主数据中不存在").build();
         }
         
-        String deviceCode = mdmPart.getVehicleNodeCode();
-        if (StrUtil.isBlank(deviceCode)) {
-            log.error("零件编码[{}]对应的设备编码为空", partCode);
-            return ImportResult.builder().failureCount(1).description("零件编码[" + partCode + "]对应的设备编码为空").build();
+        log.info("通用导入处理零件编码[{}], batchNum={}", partCode, batchNum);
+        
+        // 解析导入数据JSON
+        JSONObject dataJson = JSONUtil.parseObj(partImportData.getData());
+        
+        // 构建通用入站记录
+        List<PartInboundAppService.PartInboundRecord> records = buildGeneralInboundRecords(batchNum, partCode, dataJson);
+        
+        if (records.isEmpty()) {
+            log.warn("批次号[{}]没有有效的入站记录", batchNum);
+            return ImportResult.builder().totalCount(0).successCount(0).failureCount(1).description("没有有效的入站记录").build();
         }
         
-        log.info("根据零件编码[{}]找到设备编码[{}]", partCode, deviceCode);
+        // 调用统一的入站处理
+        PartInboundAppService.PartInboundResult inboundResult = partInboundAppService.processInbound(
+                records, InboundSourceType.MANUAL, null);
         
-        // 根据 deviceCode 选择解析器
-        ImportDataParser parser = parserRegistry.getParser(deviceCode, version);
-        JSONObject dataJson = JSONUtil.parseObj(partImportData.getData());
-        return parser.parse(batchNum, dataJson);
+        // 转换为ImportResult
+        return ImportResult.builder()
+                .totalCount(inboundResult.getTotalCount())
+                .successCount(inboundResult.getSuccessCount())
+                .failureCount(inboundResult.getFailureCount())
+                .invalidCount(inboundResult.getInvalidCount())
+                .description(inboundResult.getErrors() != null ? String.join("; ", inboundResult.getErrors()) : null)
+                .build();
+    }
+    
+    /**
+     * 构建通用入站记录
+     *
+     * @param batchNum 批次号
+     * @param partCode 零件编码
+     * @param dataJson 数据JSON
+     * @return 入站记录列表
+     */
+    private List<PartInboundAppService.PartInboundRecord> buildGeneralInboundRecords(String batchNum, String partCode, JSONObject dataJson) {
+        List<PartInboundAppService.PartInboundRecord> records = new ArrayList<>();
+        
+        // 获取供应商信息
+        String supplier = dataJson.getStr("supplier");
+        
+        // 获取items数组
+        JSONArray items = dataJson.getJSONArray("ITEMS");
+        if (items == null || items.isEmpty()) {
+            log.warn("批次号[{}]数据中没有ITEMS数组", batchNum);
+            return records;
+        }
+        
+        for (Object item : items) {
+            JSONObject itemJson = JSONUtil.parseObj(item);
+            
+            // 提取通用字段
+            String sn = itemJson.getStr("SN");
+            String vehicleNodeCode = itemJson.getStr("vehicleNodeCode");
+            String deviceItem = itemJson.getStr("deviceItem");
+            
+            // 校验必填字段
+            if (StrUtil.isBlank(sn)) {
+                log.warn("批次号[{}]存在空SN的记录，跳过", batchNum);
+                continue;
+            }
+            
+            // 构建入站记录
+            PartInboundAppService.PartInboundRecord record = PartInboundAppService.PartInboundRecord.builder()
+                    .partCode(partCode)
+                    .sn(sn)
+                    .vehicleNodeCode(vehicleNodeCode)
+                    .deviceItem(deviceItem)
+                    .supplierCode(supplier)
+                    .batchNum(batchNum)
+                    .build();
+            
+            records.add(record);
+        }
+        
+        return records;
     }
 
     /**
@@ -268,7 +331,8 @@ public class PartImportDataAppService {
      */
     public ImportResult handleProduceImport(String batchNum, JSONObject dataJson) {
         log.info("US-040: 处理整车主档导入, batchNum={}", batchNum);
-        return produceDataParserV1_0.parse(batchNum, dataJson);
+        // TODO: 实现整车主档批量导入逻辑
+        return ImportResult.builder().build();
     }
 
     private PartImportDataDto toDto(PartImportData entity) {
