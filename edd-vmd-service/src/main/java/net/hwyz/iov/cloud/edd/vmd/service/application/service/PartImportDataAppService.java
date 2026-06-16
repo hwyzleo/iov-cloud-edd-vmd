@@ -8,6 +8,8 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.PartImportDataCmd;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.PartImportDataQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ImportResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.PartImportDataDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.vid.DownstreamProcessor;
+import net.hwyz.iov.cloud.edd.vmd.service.application.vid.DownstreamProcessorRegistry;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParser;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParserRegistry;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.impl.ProduceDataParserV1_0;
@@ -36,6 +38,7 @@ public class PartImportDataAppService {
     private final PartImportDataRepository partImportDataRepository;
     private final MdmPartRepository mdmPartRepository;
     private final ProduceDataParserV1_0 produceDataParserV1_0;
+    private final DownstreamProcessorRegistry downstreamProcessorRegistry;
 
     /**
      * 查询零件导入数据信息
@@ -125,7 +128,7 @@ public class PartImportDataAppService {
     }
 
     /**
-     * 解析零件导入数据
+     * 解析零件导入数据（两段式设计）
      *
      * @param batchNum 批次号
      * @return 导入结果
@@ -150,33 +153,110 @@ public class PartImportDataAppService {
             JSONObject dataJson = JSONUtil.parseObj(partImportData.getData());
             result = handleProduceImport(batchNum, dataJson);
         } else {
-            // 根据 partCode 查询 MDM Part 投影，获取 deviceCode
-            Part mdmPart = mdmPartRepository.selectByCode(partCode);
-            if (ObjUtil.isNull(mdmPart)) {
-                log.error("零件编码[{}]在MDM主数据中不存在", partCode);
-                return ImportResult.builder().build();
+            // 第一段：通用导入阶段
+            result = handleGeneralImport(batchNum, partCode, version, partImportData);
+            
+            // 第二段：下游联动定制化阶段
+            if (result.getFailureCount() == 0) {
+                result = handleDownstreamLinkage(batchNum, partCode, partImportData, result);
             }
-            
-            String deviceCode = mdmPart.getVehicleNodeCode();
-            if (StrUtil.isBlank(deviceCode)) {
-                log.error("零件编码[{}]对应的设备编码为空", partCode);
-                return ImportResult.builder().build();
-            }
-            
-            log.info("根据零件编码[{}]找到设备编码[{}]", partCode, deviceCode);
-            
-            // 根据 deviceCode 选择解析器
-            ImportDataParser parser = parserRegistry.getParser(deviceCode, version);
-            JSONObject dataJson = JSONUtil.parseObj(partImportData.getData());
-            result = parser.parse(batchNum, dataJson);
         }
         
         // 标记为已处理
         partImportData.setHandle(true);
+        if (result.getDescription() != null) {
+            partImportData.setDescription(result.getDescription());
+        }
         partImportDataRepository.update(partImportData);
         
-        log.info("导入数据解析完成, batchNum={}", batchNum);
+        log.info("导入数据解析完成, batchNum={}, totalCount={}, successCount={}, failureCount={}", 
+                batchNum, result.getTotalCount(), result.getSuccessCount(), result.getFailureCount());
         return result;
+    }
+
+    /**
+     * 处理通用导入阶段
+     *
+     * @param batchNum 批次号
+     * @param partCode 零件编码
+     * @param version 版本
+     * @param partImportData 导入数据
+     * @return 导入结果
+     */
+    private ImportResult handleGeneralImport(String batchNum, String partCode, String version, PartImportData partImportData) {
+        // 根据 partCode 查询 MDM Part 投影，获取 deviceCode
+        Part mdmPart = mdmPartRepository.selectByCode(partCode);
+        if (ObjUtil.isNull(mdmPart)) {
+            log.error("零件编码[{}]在MDM主数据中不存在", partCode);
+            return ImportResult.builder().failureCount(1).description("零件编码[" + partCode + "]在MDM主数据中不存在").build();
+        }
+        
+        String deviceCode = mdmPart.getVehicleNodeCode();
+        if (StrUtil.isBlank(deviceCode)) {
+            log.error("零件编码[{}]对应的设备编码为空", partCode);
+            return ImportResult.builder().failureCount(1).description("零件编码[" + partCode + "]对应的设备编码为空").build();
+        }
+        
+        log.info("根据零件编码[{}]找到设备编码[{}]", partCode, deviceCode);
+        
+        // 根据 deviceCode 选择解析器
+        ImportDataParser parser = parserRegistry.getParser(deviceCode, version);
+        JSONObject dataJson = JSONUtil.parseObj(partImportData.getData());
+        return parser.parse(batchNum, dataJson);
+    }
+
+    /**
+     * 处理下游联动定制化阶段
+     *
+     * @param batchNum 批次号
+     * @param partCode 零件编码
+     * @param partImportData 导入数据
+     * @param generalResult 通用导入结果
+     * @return 最终导入结果
+     */
+    private ImportResult handleDownstreamLinkage(String batchNum, String partCode, PartImportData partImportData, ImportResult generalResult) {
+        JSONObject dataJson = JSONUtil.parseObj(partImportData.getData());
+        String vehicleNodeCode = dataJson.getStr("vehicleNodeCode");
+        
+        // 检查vehicleNodeCode是否非空
+        if (StrUtil.isBlank(vehicleNodeCode)) {
+            log.info("零件编码[{}]的vehicleNodeCode为空，跳过下游联动", partCode);
+            return generalResult;
+        }
+        
+        // 从DownstreamProcessorRegistry获取对应处理器
+        DownstreamProcessor processor = downstreamProcessorRegistry.getProcessor(vehicleNodeCode);
+        if (processor == null) {
+            log.warn("车载节点代码[{}]的处理器不存在，跳过下游联动", vehicleNodeCode);
+            return generalResult;
+        }
+        
+        // 同步调用processor.process()
+        try {
+            processor.process(batchNum, partCode, vehicleNodeCode, dataJson);
+            log.info("下游联动处理成功, batchNum={}, partCode={}, vehicleNodeCode={}", batchNum, partCode, vehicleNodeCode);
+        } catch (Exception e) {
+            // 如果失败，捕获异常，写入part_import_data.description，计入failureCount
+            log.warn("零件导入[{}]下游联动处理异常, batchNum={}, partCode={}, vehicleNodeCode={}", 
+                    batchNum, partCode, vehicleNodeCode, e);
+            
+            String errorMsg = "[" + vehicleNodeCode + "] 处理失败: " + e.getMessage();
+            String description = generalResult.getDescription();
+            if (description != null) {
+                description = description + "; " + errorMsg;
+            } else {
+                description = errorMsg;
+            }
+            
+            return ImportResult.builder()
+                    .totalCount(generalResult.getTotalCount())
+                    .successCount(generalResult.getSuccessCount())
+                    .failureCount(generalResult.getFailureCount() + 1)
+                    .description(description)
+                    .build();
+        }
+        
+        return generalResult;
     }
 
     /**
