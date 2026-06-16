@@ -2,6 +2,7 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 
 import cn.hutool.json.JSONObject;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ImportResult;
+import net.hwyz.iov.cloud.edd.vmd.service.application.vid.DownstreamProcessorRegistry;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParser;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParserRegistry;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.impl.ProduceDataParserV1_0;
@@ -35,12 +36,15 @@ class PartImportDataAppServiceTest {
     @Mock
     private ProduceDataParserV1_0 produceDataParserV1_0Bean;
 
+    @Mock
+    private DownstreamProcessorRegistry downstreamProcessorRegistry;
+
     private PartImportDataAppService partImportDataAppService;
 
     @BeforeEach
     void setUp() {
         partImportDataAppService = new PartImportDataAppService(
-                parserRegistry, partImportDataRepository, mdmPartRepository, produceDataParserV1_0Bean);
+                parserRegistry, partImportDataRepository, mdmPartRepository, produceDataParserV1_0Bean, downstreamProcessorRegistry);
     }
 
     @Test
