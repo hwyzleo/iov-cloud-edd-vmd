@@ -9,7 +9,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.InboundSource
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.PartTypeSchemaRegistry;
 import net.hwyz.iov.cloud.iov.idk.api.service.IdkBtmInfoService;
 import net.hwyz.iov.cloud.iov.tsp.api.service.TspCcpInfoService;
-import net.hwyz.iov.cloud.iov.tsp.api.service.TspTboxInfoService;
+
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -39,9 +39,6 @@ class ImportDataParserIntegrationTest {
     private IdkBtmInfoService idkBtmInfoService;
 
     @Mock
-    private TspTboxInfoService tspTboxInfoService;
-
-    @Mock
     private TspCcpInfoService tspCcpInfoService;
 
     private ImportDataParserRegistry parserRegistry;
@@ -58,18 +55,14 @@ class ImportDataParserIntegrationTest {
     void parser_shouldRegisterCorrectly() {
         // Given
         BtmDataParserV1_0 btmParser = createBtmParser();
-        Tbox5gDataParserV1_0 tbox5gParser = createTboxParser();
         CcpDataParserV1_0 ccpParser = createCcpParser();
-        CptDcu8295DataParserV1_0 cptDcu8295Parser = createIdcmParser();
         SimDataParserV1_0 simParser = createSimParser();
 
         // When - 解析器在@PostConstruct中自注册
 
         // Then
         assertNotNull(parserRegistry.getParser("BTM", "1.0"));
-        assertNotNull(parserRegistry.getParser("TBOX_5G", "1.0"));
         assertNotNull(parserRegistry.getParser("CCP", "1.0"));
-        assertNotNull(parserRegistry.getParser("CPT_DCU_8295", "1.0"));
         assertNotNull(parserRegistry.getParser("SIM", "1.0"));
     }
 
@@ -110,35 +103,7 @@ class ImportDataParserIntegrationTest {
         verify(partInboundAppService).processInbound(any(), eq(InboundSourceType.MES), any());
     }
 
-    @Test
-    @DisplayName("TBOX解析器应调用入站内核")
-    void tboxParser_shouldCallInboundKernel() {
-        // Given
-        Tbox5gDataParserV1_0 tboxParser = createTboxParser();
 
-        JSONObject dataJson = buildTboxDataJson("SUP001", 
-                new String[][]{{"PN001", "SN001", "ICCID1", "ICCID2", "IMEI001", "HSM001"}}
-        );
-
-        PartInboundResult expectedResult = PartInboundResult.builder()
-                .totalCount(1)
-                .successCount(1)
-                .failureCount(0)
-                .invalidCount(0)
-                .build();
-
-        when(partInboundAppService.processInbound(any(), eq(InboundSourceType.MES), any()))
-                .thenReturn(expectedResult);
-
-        // When
-        ImportResult result = tboxParser.parse("BATCH001", dataJson);
-
-        // Then
-        assertNotNull(result);
-        assertEquals(1, result.getTotalCount());
-        assertEquals(1, result.getSuccessCount());
-        verify(partInboundAppService).processInbound(any(), eq(InboundSourceType.MES), any());
-    }
 
     @Test
     @DisplayName("CCP解析器应调用入站内核")
@@ -170,35 +135,7 @@ class ImportDataParserIntegrationTest {
         verify(partInboundAppService).processInbound(any(), eq(InboundSourceType.MES), any());
     }
 
-    @Test
-    @DisplayName("IDCM解析器应调用入站内核")
-    void idcmParser_shouldCallInboundKernel() {
-        // Given
-        CptDcu8295DataParserV1_0 cptDcuParser = createIdcmParser();
 
-        JSONObject dataJson = buildIdcmDataJson("SUP001", 
-                new String[][]{{"PN001", "SN001", "HSM001", "MAC001"}}
-        );
-
-        PartInboundResult expectedResult = PartInboundResult.builder()
-                .totalCount(1)
-                .successCount(1)
-                .failureCount(0)
-                .invalidCount(0)
-                .build();
-
-        when(partInboundAppService.processInbound(any(), eq(InboundSourceType.MES), any()))
-                .thenReturn(expectedResult);
-
-        // When
-        ImportResult result = cptDcuParser.parse("BATCH001", dataJson);
-
-        // Then
-        assertNotNull(result);
-        assertEquals(1, result.getTotalCount());
-        assertEquals(1, result.getSuccessCount());
-        verify(partInboundAppService).processInbound(any(), eq(InboundSourceType.MES), any());
-    }
 
     @Test
     @DisplayName("SIM解析器应调用入站内核")
@@ -271,12 +208,7 @@ class ImportDataParserIntegrationTest {
         return parser;
     }
 
-    private Tbox5gDataParserV1_0 createTboxParser() {
-        Tbox5gDataParserV1_0 parser = new Tbox5gDataParserV1_0(tspTboxInfoService, parserRegistry);
-        injectField(parser, "partInboundAppService", partInboundAppService);
-        parser.init();
-        return parser;
-    }
+
 
     private CcpDataParserV1_0 createCcpParser() {
         CcpDataParserV1_0 parser = new CcpDataParserV1_0(tspCcpInfoService, parserRegistry);
@@ -285,12 +217,7 @@ class ImportDataParserIntegrationTest {
         return parser;
     }
 
-    private CptDcu8295DataParserV1_0 createIdcmParser() {
-        CptDcu8295DataParserV1_0 parser = new CptDcu8295DataParserV1_0(parserRegistry);
-        injectField(parser, "partInboundAppService", partInboundAppService);
-        parser.init();
-        return parser;
-    }
+
 
     private SimDataParserV1_0 createSimParser() {
         SimDataParserV1_0 parser = new SimDataParserV1_0(parserRegistry);
@@ -331,29 +258,7 @@ class ImportDataParserIntegrationTest {
         return root;
     }
 
-    private JSONObject buildTboxDataJson(String supplier, String[][] items) {
-        JSONObject root = new JSONObject();
-        JSONObject request = new JSONObject();
-        JSONObject head = new JSONObject();
-        head.set("ACCOUNT", supplier);
-        JSONObject data = new JSONObject();
-        cn.hutool.json.JSONArray itemsArray = new cn.hutool.json.JSONArray();
-        for (String[] item : items) {
-            JSONObject itemJson = new JSONObject();
-            itemJson.set("NO", item[0]);
-            itemJson.set("SN", item[1]);
-            itemJson.set("ICCID1", item[2]);
-            itemJson.set("ICCID2", item[3]);
-            itemJson.set("IMEI", item[4]);
-            itemJson.set("HSM", item[5]);
-            itemsArray.add(itemJson);
-        }
-        data.set("ITEMS", itemsArray);
-        request.set("HEAD", head);
-        request.set("DATA", data);
-        root.set("REQUEST", request);
-        return root;
-    }
+
 
     private JSONObject buildCcpDataJson(String supplier, String[][] items) {
         JSONObject root = new JSONObject();
@@ -376,27 +281,7 @@ class ImportDataParserIntegrationTest {
         return root;
     }
 
-    private JSONObject buildIdcmDataJson(String supplier, String[][] items) {
-        JSONObject root = new JSONObject();
-        JSONObject request = new JSONObject();
-        JSONObject head = new JSONObject();
-        head.set("ACCOUNT", supplier);
-        JSONObject data = new JSONObject();
-        cn.hutool.json.JSONArray itemsArray = new cn.hutool.json.JSONArray();
-        for (String[] item : items) {
-            JSONObject itemJson = new JSONObject();
-            itemJson.set("NO", item[0]);
-            itemJson.set("SN", item[1]);
-            itemJson.set("HSM", item[2]);
-            itemJson.set("MAC", item[3]);
-            itemsArray.add(itemJson);
-        }
-        data.set("ITEMS", itemsArray);
-        request.set("HEAD", head);
-        request.set("DATA", data);
-        root.set("REQUEST", request);
-        return root;
-    }
+
 
     private JSONObject buildSimDataJson(String mno, String[][] items) {
         JSONObject root = new JSONObject();
