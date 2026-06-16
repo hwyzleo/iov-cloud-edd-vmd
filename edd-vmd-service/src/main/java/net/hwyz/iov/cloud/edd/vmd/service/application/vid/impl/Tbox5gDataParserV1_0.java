@@ -25,14 +25,14 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * 车联终端数据解析器V1.0
+ * 5G车载远程通信终端数据解析器V1.0
  *
  * @author hwyz_leo
  */
 @Slf4j
 @RequiredArgsConstructor
-@Component("tboxDataParserV1.0")
-public class TboxDataParserV1_0 extends BaseParser implements ImportDataParser {
+@Component("tbox5gDataParserV1.0")
+public class Tbox5gDataParserV1_0 extends BaseParser implements ImportDataParser {
 
     private final TspTboxInfoService tspTboxInfoService;
     private final ImportDataParserRegistry parserRegistry;
@@ -44,7 +44,7 @@ public class TboxDataParserV1_0 extends BaseParser implements ImportDataParser {
 
     @Override
     public String getType() {
-        return "TBOX";
+        return "TBOX_5G";
     }
 
     @Override

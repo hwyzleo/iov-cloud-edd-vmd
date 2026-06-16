@@ -27,8 +27,8 @@ import java.util.Map;
  */
 @Slf4j
 @RequiredArgsConstructor
-@Component("cptDcuDataParserV1.0")
-public class CptDcuDataParserV1_0 extends BaseParser implements ImportDataParser {
+@Component("cptDcu8295DataParserV1.0")
+public class CptDcu8295DataParserV1_0 extends BaseParser implements ImportDataParser {
 
     private final ImportDataParserRegistry parserRegistry;
 
@@ -39,7 +39,7 @@ public class CptDcuDataParserV1_0 extends BaseParser implements ImportDataParser
 
     @Override
     public String getType() {
-        return "CPT_DCU";
+        return "CPT_DCU_8295";
     }
 
     @Override

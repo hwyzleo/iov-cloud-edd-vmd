@@ -58,18 +58,18 @@ class ImportDataParserIntegrationTest {
     void parser_shouldRegisterCorrectly() {
         // Given
         BtmDataParserV1_0 btmParser = createBtmParser();
-        TboxDataParserV1_0 tboxParser = createTboxParser();
+        Tbox5gDataParserV1_0 tbox5gParser = createTboxParser();
         CcpDataParserV1_0 ccpParser = createCcpParser();
-        CptDcuDataParserV1_0 idcmParser = createIdcmParser();
+        CptDcu8295DataParserV1_0 cptDcu8295Parser = createIdcmParser();
         SimDataParserV1_0 simParser = createSimParser();
 
         // When - 解析器在@PostConstruct中自注册
 
         // Then
         assertNotNull(parserRegistry.getParser("BTM", "1.0"));
-        assertNotNull(parserRegistry.getParser("TBOX", "1.0"));
+        assertNotNull(parserRegistry.getParser("TBOX_5G", "1.0"));
         assertNotNull(parserRegistry.getParser("CCP", "1.0"));
-        assertNotNull(parserRegistry.getParser("CPT_DCU", "1.0"));
+        assertNotNull(parserRegistry.getParser("CPT_DCU_8295", "1.0"));
         assertNotNull(parserRegistry.getParser("SIM", "1.0"));
     }
 
@@ -114,7 +114,7 @@ class ImportDataParserIntegrationTest {
     @DisplayName("TBOX解析器应调用入站内核")
     void tboxParser_shouldCallInboundKernel() {
         // Given
-        TboxDataParserV1_0 tboxParser = createTboxParser();
+        Tbox5gDataParserV1_0 tboxParser = createTboxParser();
 
         JSONObject dataJson = buildTboxDataJson("SUP001", 
                 new String[][]{{"PN001", "SN001", "ICCID1", "ICCID2", "IMEI001", "HSM001"}}
@@ -174,7 +174,7 @@ class ImportDataParserIntegrationTest {
     @DisplayName("IDCM解析器应调用入站内核")
     void idcmParser_shouldCallInboundKernel() {
         // Given
-        CptDcuDataParserV1_0 idcmParser = createIdcmParser();
+        CptDcu8295DataParserV1_0 cptDcuParser = createIdcmParser();
 
         JSONObject dataJson = buildIdcmDataJson("SUP001", 
                 new String[][]{{"PN001", "SN001", "HSM001", "MAC001"}}
@@ -191,7 +191,7 @@ class ImportDataParserIntegrationTest {
                 .thenReturn(expectedResult);
 
         // When
-        ImportResult result = idcmParser.parse("BATCH001", dataJson);
+        ImportResult result = cptDcuParser.parse("BATCH001", dataJson);
 
         // Then
         assertNotNull(result);
@@ -271,8 +271,8 @@ class ImportDataParserIntegrationTest {
         return parser;
     }
 
-    private TboxDataParserV1_0 createTboxParser() {
-        TboxDataParserV1_0 parser = new TboxDataParserV1_0(tspTboxInfoService, parserRegistry);
+    private Tbox5gDataParserV1_0 createTboxParser() {
+        Tbox5gDataParserV1_0 parser = new Tbox5gDataParserV1_0(tspTboxInfoService, parserRegistry);
         injectField(parser, "partInboundAppService", partInboundAppService);
         parser.init();
         return parser;
@@ -285,8 +285,8 @@ class ImportDataParserIntegrationTest {
         return parser;
     }
 
-    private CptDcuDataParserV1_0 createIdcmParser() {
-        CptDcuDataParserV1_0 parser = new CptDcuDataParserV1_0(parserRegistry);
+    private CptDcu8295DataParserV1_0 createIdcmParser() {
+        CptDcu8295DataParserV1_0 parser = new CptDcu8295DataParserV1_0(parserRegistry);
         injectField(parser, "partInboundAppService", partInboundAppService);
         parser.init();
         return parser;
