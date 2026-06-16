@@ -34,9 +34,9 @@ class DownstreamProcessorTest {
     }
 
     @Test
-    @DisplayName("IdkDownstreamProcessor应返回正确的车载节点代码")
-    void testIdkDownstreamProcessorGetSupportedVehicleNodeCode() {
-        PepsComboDownstreamProcessor processor = new PepsComboDownstreamProcessor();
-        assertEquals("IDK", processor.getSupportedVehicleNodeCode());
+    @DisplayName("PepsComboDownstreamProcessor应返回正确的车载节点代码")
+    void testPepsComboDownstreamProcessorGetSupportedVehicleNodeCode() {
+        PepsComboDownstreamProcessor processor = new PepsComboDownstreamProcessor(null);
+        assertEquals("PEPS_COMBO", processor.getSupportedVehicleNodeCode());
     }
 }

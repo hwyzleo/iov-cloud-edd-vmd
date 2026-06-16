@@ -33,7 +33,7 @@ public class PepsComboDownstreamProcessor extends BaseProcessor implements Downs
 
     @Override
     public void process(String batchNum, String partCode, String vehicleNodeCode, JSONObject data) {
-        log.info("IDK处理器处理零件导入下游联动, batchNum={}, partCode={}, vehicleNodeCode={}", 
+        log.info("PEPS_COMBO处理器处理零件导入下游联动, batchNum={}, partCode={}, vehicleNodeCode={}", 
                 batchNum, partCode, vehicleNodeCode);
 
         String supplier = getSupplier(data);
@@ -88,11 +88,11 @@ public class PepsComboDownstreamProcessor extends BaseProcessor implements Downs
             idkBtmInfoService.batchImport(request);
         }
         
-        log.info("IDK处理器处理完成, batchNum={}, partCode={}", batchNum, partCode);
+        log.info("PEPS_COMBO处理器处理完成, batchNum={}, partCode={}", batchNum, partCode);
     }
 
     @Override
     public String getSupportedVehicleNodeCode() {
-        return "IDK";
+        return "PEPS_COMBO";
     }
 }
