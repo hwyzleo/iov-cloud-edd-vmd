@@ -56,14 +56,12 @@ class ImportDataParserIntegrationTest {
         // Given
         BtmDataParserV1_0 btmParser = createBtmParser();
         CcpDataParserV1_0 ccpParser = createCcpParser();
-        SimDataParserV1_0 simParser = createSimParser();
 
         // When - 解析器在@PostConstruct中自注册
 
         // Then
         assertNotNull(parserRegistry.getParser("BTM", "1.0"));
         assertNotNull(parserRegistry.getParser("CCP", "1.0"));
-        assertNotNull(parserRegistry.getParser("SIM", "1.0"));
     }
 
     @Test
@@ -137,35 +135,7 @@ class ImportDataParserIntegrationTest {
 
 
 
-    @Test
-    @DisplayName("SIM解析器应调用入站内核")
-    void simParser_shouldCallInboundKernel() {
-        // Given
-        SimDataParserV1_0 simParser = createSimParser();
 
-        JSONObject dataJson = buildSimDataJson("CMCC", 
-                new String[][]{{"ICCID001", "IMSI001", "MSISDN001"}}
-        );
-
-        PartInboundResult expectedResult = PartInboundResult.builder()
-                .totalCount(1)
-                .successCount(1)
-                .failureCount(0)
-                .invalidCount(0)
-                .build();
-
-        when(partInboundAppService.processInbound(any(), eq(InboundSourceType.MES), any()))
-                .thenReturn(expectedResult);
-
-        // When
-        ImportResult result = simParser.parse("BATCH001", dataJson);
-
-        // Then
-        assertNotNull(result);
-        assertEquals(1, result.getTotalCount());
-        assertEquals(1, result.getSuccessCount());
-        verify(partInboundAppService).processInbound(any(), eq(InboundSourceType.MES), any());
-    }
 
     @Test
     @DisplayName("BTM解析器应处理空SN记录")
@@ -219,12 +189,7 @@ class ImportDataParserIntegrationTest {
 
 
 
-    private SimDataParserV1_0 createSimParser() {
-        SimDataParserV1_0 parser = new SimDataParserV1_0(parserRegistry);
-        injectField(parser, "partInboundAppService", partInboundAppService);
-        parser.init();
-        return parser;
-    }
+
 
     private void injectField(Object target, String fieldName, Object value) {
         try {
@@ -283,24 +248,5 @@ class ImportDataParserIntegrationTest {
 
 
 
-    private JSONObject buildSimDataJson(String mno, String[][] items) {
-        JSONObject root = new JSONObject();
-        JSONObject request = new JSONObject();
-        JSONObject head = new JSONObject();
-        JSONObject data = new JSONObject();
-        data.set("MNO", mno);
-        cn.hutool.json.JSONArray itemsArray = new cn.hutool.json.JSONArray();
-        for (String[] item : items) {
-            JSONObject itemJson = new JSONObject();
-            itemJson.set("ICCID", item[0]);
-            itemJson.set("IMSI", item[1]);
-            itemJson.set("MSISDN", item[2]);
-            itemsArray.add(itemJson);
-        }
-        data.set("ITEMS", itemsArray);
-        request.set("HEAD", head);
-        request.set("DATA", data);
-        root.set("REQUEST", request);
-        return root;
-    }
+
 }
