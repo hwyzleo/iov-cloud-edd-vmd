@@ -21,6 +21,7 @@ public enum PartType {
     CCP("CCP", "域控制器"),
     IDCM("IDCM", "智能驾驶控制"),
     SIM("SIM", "SIM卡"),
+    STANDARD_PART("STANDARD_PART", "标准零件"),
     OTHER("OTHER", "其他");
 
     private final String value;

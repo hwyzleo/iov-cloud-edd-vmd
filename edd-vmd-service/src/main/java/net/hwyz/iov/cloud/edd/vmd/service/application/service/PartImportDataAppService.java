@@ -22,7 +22,10 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * 零件导入数据应用服务类
@@ -228,15 +231,28 @@ public class PartImportDataAppService {
     private List<PartInboundAppService.PartInboundRecord> buildGeneralInboundRecords(String batchNum, String partCode, JSONObject dataJson) {
         List<PartInboundAppService.PartInboundRecord> records = new ArrayList<>();
         
-        // 获取供应商信息
-        String supplier = dataJson.getStr("supplier");
+        // 获取供应商信息（从HEAD部分）
+        JSONObject request = dataJson.getJSONObject("REQUEST");
+        JSONObject head = (request != null) ? request.getJSONObject("HEAD") : null;
+        String supplier = (head != null) ? head.getStr("ACCOUNT") : null;
+        
+        // 获取DATA部分
+        JSONObject data = (request != null) ? request.getJSONObject("DATA") : null;
+        if (data == null) {
+            log.warn("批次号[{}]数据中没有DATA部分", batchNum);
+            return records;
+        }
         
         // 获取items数组
-        JSONArray items = dataJson.getJSONArray("ITEMS");
+        JSONArray items = data.getJSONArray("ITEMS");
         if (items == null || items.isEmpty()) {
             log.warn("批次号[{}]数据中没有ITEMS数组", batchNum);
             return records;
         }
+        
+        // 通用字段列表（映射到PartInfo表列）
+        java.util.Set<String> commonFields = java.util.Set.of(
+                "SN", "vehicleNodeCode", "deviceItem");
         
         for (Object item : items) {
             JSONObject itemJson = JSONUtil.parseObj(item);
@@ -252,6 +268,17 @@ public class PartImportDataAppService {
                 continue;
             }
             
+            // 提取非通用字段到extraFields
+            Map<String, String> extraFields = new HashMap<>();
+            for (String key : itemJson.keySet()) {
+                if (!commonFields.contains(key)) {
+                    String value = itemJson.getStr(key);
+                    if (StrUtil.isNotBlank(value)) {
+                        extraFields.put(key.toLowerCase(), value);
+                    }
+                }
+            }
+            
             // 构建入站记录
             PartInboundAppService.PartInboundRecord record = PartInboundAppService.PartInboundRecord.builder()
                     .partCode(partCode)
@@ -260,6 +287,7 @@ public class PartImportDataAppService {
                     .deviceItem(deviceItem)
                     .supplierCode(supplier)
                     .batchNum(batchNum)
+                    .extraFields(extraFields.isEmpty() ? null : extraFields)
                     .build();
             
             records.add(record);
@@ -279,7 +307,16 @@ public class PartImportDataAppService {
      */
     private ImportResult handleDownstreamLinkage(String batchNum, String partCode, PartImportData partImportData, ImportResult generalResult) {
         JSONObject dataJson = JSONUtil.parseObj(partImportData.getData());
-        String vehicleNodeCode = dataJson.getStr("vehicleNodeCode");
+        
+        // 获取DATA部分
+        JSONObject request = dataJson.getJSONObject("REQUEST");
+        JSONObject data = (request != null) ? request.getJSONObject("DATA") : null;
+        if (data == null) {
+            log.info("零件编码[{}]的数据中没有DATA部分，跳过下游联动", partCode);
+            return generalResult;
+        }
+        
+        String vehicleNodeCode = data.getStr("vehicleNodeCode");
         
         // 检查vehicleNodeCode是否非空
         if (StrUtil.isBlank(vehicleNodeCode)) {

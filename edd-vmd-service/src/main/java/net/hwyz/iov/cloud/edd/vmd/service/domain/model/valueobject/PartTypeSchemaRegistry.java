@@ -73,6 +73,13 @@ public class PartTypeSchemaRegistry {
                 .requiredFields(List.of("sn"))
                 .optionalFields(List.of())
                 .build());
+
+        // STANDARD_PART: 标准零件，仅需sn，其他字段进EXTRA
+        schemas.put(PartType.STANDARD_PART, PartTypeSchema.builder()
+                .partType(PartType.STANDARD_PART)
+                .requiredFields(List.of("sn"))
+                .optionalFields(List.of())
+                .build());
     }
 
     /**
