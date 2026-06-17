@@ -52,6 +52,16 @@ public class ImportDataParserRegistry {
     }
 
     /**
+     * 判断是否为 TOL 类型
+     *
+     * @param type 数据类型
+     * @return 是否为 TOL 类型
+     */
+    public boolean isTolType(String type) {
+        return "TOL".equals(type);
+    }
+
+    /**
      * 获取解析器，不存在时抛出 {@link ParserNotFoundException}
      *
      * @param type    数据类型
