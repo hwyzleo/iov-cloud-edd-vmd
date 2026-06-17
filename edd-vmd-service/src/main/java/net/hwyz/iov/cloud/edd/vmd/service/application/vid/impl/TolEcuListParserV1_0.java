@@ -60,6 +60,15 @@ public class TolEcuListParserV1_0 extends BaseProcessor implements VehicleImport
     public ImportResult parse(String batchNum, JSONObject dataJson) {
         JSONObject data = getData(dataJson);
         JSONArray items = data.getJSONArray("ITEMS");
+        if (items == null || items.isEmpty()) {
+            log.warn("TOL导入数据批次号[{}]ITEMS为空", batchNum);
+            return ImportResult.builder()
+                    .totalCount(0)
+                    .successCount(0)
+                    .failureCount(0)
+                    .invalidCount(0)
+                    .build();
+        }
         int totalCount = items.size();
         int successCount = 0;
         int failureCount = 0;
@@ -142,12 +151,25 @@ public class TolEcuListParserV1_0 extends BaseProcessor implements VehicleImport
     }
 
     /**
+     * description 字段最大长度（与数据库列定义一致）
+     */
+    private static final int DESCRIPTION_MAX_LENGTH = 500;
+
+    /**
      * 追加描述信息，自动截断
      */
     private void appendDescription(StringBuilder sb, String message) {
         if (sb.length() > 0) {
             sb.append("; ");
         }
-        sb.append(message);
+        if (sb.length() + message.length() > DESCRIPTION_MAX_LENGTH) {
+            int remaining = DESCRIPTION_MAX_LENGTH - sb.length() - 3;
+            if (remaining > 0) {
+                sb.append(message, 0, remaining);
+                sb.append("...");
+            }
+        } else {
+            sb.append(message);
+        }
     }
 }
