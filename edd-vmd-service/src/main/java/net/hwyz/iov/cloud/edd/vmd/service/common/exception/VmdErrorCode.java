@@ -26,7 +26,9 @@ public enum VmdErrorCode implements ErrorCode {
     PART_INBOUND_VALIDATE_FAILED("202019", "零件实例入站校验失败"),
     PART_NOT_FOUND_IN_MDM("202021", "零件编码在MDM主数据中不存在"),
     PART_NOT_ACTIVE_IN_MDM("202022", "零件在MDM主数据中非ACTIVE状态"),
-    PART_IMPORT_DATA_EXCEPTION("202023", "零件导入数据异常");
+    PART_IMPORT_DATA_EXCEPTION("202023", "零件导入数据异常"),
+    KMS_HSM_UNAVAILABLE("202024", "KMS/HSM服务不可用"),
+    SECURITY_CONSTANT_PRESET_FAILED("202025", "安全常量预置失败");
 
     private final String code;
     private final String message;
