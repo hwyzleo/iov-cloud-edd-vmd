@@ -46,13 +46,13 @@ class VehicleInfoExtractorTest {
 
         assertNotNull(result);
         assertEquals(VIN, result.getVin());
-        assertEquals("M001", result.getManufacturerCode());
+        assertEquals("M001", result.getPlantCode());
         assertEquals("B001", result.getBrandCode());
         assertEquals("P001", result.getPlatformCode());
         assertEquals("S001", result.getCarLineCode());
         assertEquals("MOD01", result.getModelCode());
         assertEquals("BM01", result.getVariantCode());
-        assertEquals("BC01", result.getBuildConfigCode());
+        assertEquals("BC01", result.getConfigurationCode());
         assertEquals("V1.0", result.getVehicleBaseVersion());
     }
 
@@ -61,13 +61,13 @@ class VehicleInfoExtractorTest {
         VehicleBasicInfo existing = VehicleBasicInfo.builder()
                 .id(1L)
                 .vin(VIN)
-                .manufacturerCode("OLD_MFG")
+                .plantCode("OLD_MFG")
                 .build();
 
         VehicleBasicInfo result = extractor.extractBasicInfo(itemJson, existing, BATCH_NUM, VIN);
 
         assertEquals(1L, result.getId());
-        assertEquals("OLD_MFG", result.getManufacturerCode());
+        assertEquals("OLD_MFG", result.getPlantCode());
     }
 
     @Test

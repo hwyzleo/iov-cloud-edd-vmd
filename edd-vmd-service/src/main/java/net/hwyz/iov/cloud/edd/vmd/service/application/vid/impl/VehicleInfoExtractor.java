@@ -30,13 +30,13 @@ public class VehicleInfoExtractor extends BaseProcessor {
      * 车辆基础信息字段映射定义
      */
     private static final List<FieldMapping> BASIC_INFO_MAPPINGS = List.of(
-            new FieldMapping("MANUFACTURER", "manufacturerCode", "工厂数据"),
+            new FieldMapping("MANUFACTURER", "plantCode", "工厂数据"),
             new FieldMapping("BRAND", "brandCode", "品牌数据"),
             new FieldMapping("PLATFORM", "platformCode", "平台数据"),
             new FieldMapping("SERIES", "carLineCode", "车系数据"),
             new FieldMapping("MODEL", "modelCode", "车型数据"),
             new FieldMapping("BASE_MODEL", "variantCode", "版本数据"),
-            new FieldMapping("BUILD_CONFIG", "buildConfigCode", "生产配置数据"),
+            new FieldMapping("BUILD_CONFIG", "configurationCode", "生产配置数据"),
             new FieldMapping("VEHICLE_BASE_VERSION", "vehicleBaseVersion", "车辆基线版本")
     );
 
