@@ -4,11 +4,11 @@ import cn.hutool.json.JSONObject;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ImportResult;
 
 /**
- * 导入数据解析器
+ * 车辆导入数据解析器
  *
  * @author hwyz_leo
  */
-public interface ImportDataParser {
+public interface VehicleImportDataParser {
 
     /**
      * 获取数据类型（如 PRODUCE、EOL、IDCM）

@@ -43,7 +43,7 @@ public class VehicleAppService {
     public List<VehicleDto> search(VehicleQuery query) {
         Map<String, Object> map = new HashMap<>();
         map.put("vin", ParamHelper.fuzzyQueryParam(query.getVin()));
-        map.put("buildConfigCode", query.getBuildConfigCode());
+        map.put("configurationCode", query.getConfigurationCode());
         map.put("beginTime", query.getBeginTime());
         map.put("endTime", query.getEndTime());
         map.put("isEol", query.getIsEol());

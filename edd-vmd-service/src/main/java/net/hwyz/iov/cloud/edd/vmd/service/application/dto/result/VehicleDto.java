@@ -20,13 +20,13 @@ public class VehicleDto {
 
     private Long id;
     private String vin;
-    private String manufacturerCode;
+    private String plantCode;
     private String brandCode;
     private String platformCode;
     private String carLineCode;
     private String modelCode;
-    private String baseModelCode;
-    private String buildConfigCode;
+    private String variantCode;
+    private String configurationCode;
     private Instant eolTime;
     private String orderNum;
 

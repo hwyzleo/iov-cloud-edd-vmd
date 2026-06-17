@@ -49,7 +49,7 @@ public class MptVehicleController extends BaseController {
         startPage();
         VehicleQuery query = VehicleQuery.builder()
                 .vin(vehicle.getVin())
-                .buildConfigCode(vehicle.getBuildConfigCode())
+                .configurationCode(vehicle.getConfigurationCode())
                 .beginTime(getBeginTime(vehicle))
                 .endTime(getEndTime(vehicle))
                 .build();

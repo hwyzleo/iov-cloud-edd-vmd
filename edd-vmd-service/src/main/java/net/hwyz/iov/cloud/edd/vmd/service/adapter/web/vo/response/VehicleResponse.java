@@ -27,9 +27,9 @@ public class VehicleResponse {
     private String vin;
 
     /**
-     * 工厂代码
+     * 生产工厂代码
      */
-    private String manufacturerCode;
+    private String plantCode;
 
     /**
      * 品牌代码
@@ -52,14 +52,14 @@ public class VehicleResponse {
     private String modelCode;
 
     /**
-     * 基础车型代码
+     * 版本代码
      */
-    private String baseModelCode;
+    private String variantCode;
 
     /**
-     * 生产配置代码
+     * 配置代码
      */
-    private String buildConfigCode;
+    private String configurationCode;
 
     /**
      * 车辆下线时间

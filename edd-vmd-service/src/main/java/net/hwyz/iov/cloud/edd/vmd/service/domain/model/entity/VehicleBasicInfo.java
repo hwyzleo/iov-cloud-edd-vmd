@@ -31,12 +31,7 @@ public class VehicleBasicInfo implements DomainObj<VehicleBasicInfo> {
     private String vin;
 
     /**
-     * 工厂代码（历史遗留，兼容期保留）
-     */
-    private String manufacturerCode;
-
-    /**
-     * 生产工厂代码（CR-011新增，承接manufacturerCode语义）
+     * 生产工厂代码
      */
     private String plantCode;
 
@@ -61,19 +56,14 @@ public class VehicleBasicInfo implements DomainObj<VehicleBasicInfo> {
     private String modelCode;
 
     /**
-     * 基础车型代码
-     */
-    private String baseModelCode;
-
-    /**
-     * 版本代码（CR-016新增，承接 baseModelCode 语义）
+     * 版本代码
      */
     private String variantCode;
 
     /**
-     * 生产配置代码
+     * 配置代码
      */
-    private String buildConfigCode;
+    private String configurationCode;
 
     /**
      * 车辆下线时间

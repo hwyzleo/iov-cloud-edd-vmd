@@ -20,9 +20,9 @@ public class VehicleQuery {
     private String vin;
 
     /**
-     * 生产配置代码
+     * 配置代码
      */
-    private String buildConfigCode;
+    private String configurationCode;
 
     /**
      * 开始时间

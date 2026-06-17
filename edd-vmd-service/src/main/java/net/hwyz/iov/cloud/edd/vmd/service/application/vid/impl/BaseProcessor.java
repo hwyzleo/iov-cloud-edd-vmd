@@ -79,11 +79,11 @@ public class BaseProcessor {
             if (ObjUtil.isNull(fieldValue) || StrUtil.isBlank(fieldValue.toString())) {
                 BeanUtil.setFieldValue(vehicleInfoDo, propertyName, keyValue.trim().toUpperCase());
             } else if (!keyValue.trim().equalsIgnoreCase(fieldValue.toString())) {
-                log.warn("零件导入数据批次号[{}]车辆[{}]{}[{}]与原数据[{}]不一致", batchNum, vin, keyDesc, keyValue.trim(),
+                log.warn("车辆导入数据批次号[{}]车辆[{}]{}[{}]与原数据[{}]不一致", batchNum, vin, keyDesc, keyValue.trim(),
                         fieldValue);
             }
         } else {
-            log.warn("零件导入数据批次号[{}]车辆[{}]{}为空", batchNum, vin, keyDesc);
+            log.warn("车辆导入数据批次号[{}]车辆[{}]{}为空", batchNum, vin, keyDesc);
         }
     }
 
