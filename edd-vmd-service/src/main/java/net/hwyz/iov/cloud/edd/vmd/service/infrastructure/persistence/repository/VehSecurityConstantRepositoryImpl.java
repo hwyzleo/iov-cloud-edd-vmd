@@ -31,7 +31,9 @@ public class VehSecurityConstantRepositoryImpl implements VehSecurityConstantRep
     @Override
     public int insert(VehSecurityConstant vehSecurityConstant) {
         VehSecurityConstantPo po = VehSecurityConstantConverter.INSTANCE.fromDomain(vehSecurityConstant);
-        return vehSecurityConstantMapper.insertPo(po);
+        int rows = vehSecurityConstantMapper.insertPo(po);
+        vehSecurityConstant.setId(po.getId());
+        return rows;
     }
 
     @Override
