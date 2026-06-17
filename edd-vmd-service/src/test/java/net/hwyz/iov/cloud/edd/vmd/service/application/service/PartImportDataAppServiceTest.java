@@ -62,7 +62,7 @@ class PartImportDataAppServiceTest {
                 .batchNum(batchNum)
                 .partCode("TEST_PART_001")
                 .version("1.0")
-                .data("{\"vin\":\"TEST_VIN\",\"sn\":\"TEST_SN\",\"deviceItem\":\"TSP\",\"vehicleNodeCode\":\"TSP\",\"supplier\":\"SUP001\",\"ITEMS\":[{\"SN\":\"SN001\",\"vehicleNodeCode\":\"TSP\",\"deviceItem\":\"TSP\"}]}")
+                .data("{\"REQUEST\":{\"HEAD\":{\"ACCOUNT\":\"SUP001\"},\"DATA\":{\"vehicleNodeCode\":\"TSP\",\"ITEMS\":[{\"SN\":\"SN001\",\"vehicleNodeCode\":\"TSP\",\"deviceItem\":\"TSP\"}]}}}")
                 .handle(false)
                 .build();
 
@@ -113,7 +113,7 @@ class PartImportDataAppServiceTest {
                 .batchNum(batchNum)
                 .partCode("TEST_PART_001")
                 .version("1.0")
-                .data("{\"vin\":\"TEST_VIN\",\"sn\":\"TEST_SN\",\"deviceItem\":\"TSP\",\"vehicleNodeCode\":\"TSP\",\"supplier\":\"SUP001\",\"ITEMS\":[{\"SN\":\"SN001\",\"vehicleNodeCode\":\"TSP\",\"deviceItem\":\"TSP\"}]}")
+                .data("{\"REQUEST\":{\"HEAD\":{\"ACCOUNT\":\"SUP001\"},\"DATA\":{\"vehicleNodeCode\":\"TSP\",\"ITEMS\":[{\"SN\":\"SN001\",\"vehicleNodeCode\":\"TSP\",\"deviceItem\":\"TSP\"}]}}}")
                 .handle(false)
                 .build();
 
@@ -159,7 +159,7 @@ class PartImportDataAppServiceTest {
                 .batchNum("TEST_BATCH_001")
                 .partCode("TEST_PART_001")
                 .version("1.0")
-                .data("{\"vin\":\"TEST_VIN\",\"sn\":\"TEST_SN\",\"deviceItem\":\"TSP\",\"supplier\":\"SUP001\",\"ITEMS\":[{\"SN\":\"SN001\",\"deviceItem\":\"TSP\"}]}")
+                .data("{\"REQUEST\":{\"HEAD\":{\"ACCOUNT\":\"SUP001\"},\"DATA\":{\"ITEMS\":[{\"SN\":\"SN001\",\"deviceItem\":\"TSP\"}]}}}")
                 .handle(false)
                 .build();
 
