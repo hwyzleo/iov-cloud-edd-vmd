@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ImportResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.publish.VehiclePublish;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleSecurityPresetAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.VehicleImportDataParser;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParserRegistry;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleBasicInfo;
@@ -34,6 +35,7 @@ public class VehicleProduceDataParserV1_0 extends BaseProcessor implements Vehic
     private final VehiclePublish vehiclePublish;
     private final VehBasicInfoRepository vehBasicInfoRepository;
     private final ImportDataParserRegistry parserRegistry;
+    private final VehicleSecurityPresetAppService vehicleSecurityPresetAppService;
 
     @PostConstruct
     public void init() {
@@ -90,6 +92,13 @@ public class VehicleProduceDataParserV1_0 extends BaseProcessor implements Vehic
                     vehBasicInfoRepository.update(vehicleBasicInfo);
                 }
                 vehiclePublish.produce(vin);
+                // 预置安全常量
+                try {
+                    vehicleSecurityPresetAppService.preset(vin, batchNum);
+                } catch (Exception e) {
+                    log.warn("车辆[{}]安全常量预置失败: {}", vin, e.getMessage());
+                    // 安全常量预置失败不计入failureCount，因为它是后置步骤
+                }
                 successCount++;
             } catch (Exception e) {
                 failureCount++;

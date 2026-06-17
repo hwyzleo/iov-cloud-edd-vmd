@@ -1,0 +1,227 @@
+package net.hwyz.iov.cloud.edd.vmd.service.application.vid.impl;
+
+import cn.hutool.json.JSONObject;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ImportResult;
+import net.hwyz.iov.cloud.edd.vmd.service.application.event.publish.VehiclePublish;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleSecurityPresetAppService;
+import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParserRegistry;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleBasicInfo;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+/**
+ * VehicleProduceDataParserV1_0 单元测试
+ * <p>
+ * VMD-DSN-CR-028: 验证车辆安全常量预置集成行为
+ *
+ * @author hwyz_leo
+ * @since 2026-06-17
+ */
+@ExtendWith(MockitoExtension.class)
+class VehicleProduceDataParserV1_0Test {
+
+    @Mock
+    private VehiclePublish vehiclePublish;
+
+    @Mock
+    private VehBasicInfoRepository vehBasicInfoRepository;
+
+    @Mock
+    private ImportDataParserRegistry parserRegistry;
+
+    @Mock
+    private VehicleSecurityPresetAppService vehicleSecurityPresetAppService;
+
+    private VehicleProduceDataParserV1_0 parser;
+
+    @BeforeEach
+    void setUp() {
+        parser = new VehicleProduceDataParserV1_0(
+                vehiclePublish, vehBasicInfoRepository, parserRegistry, vehicleSecurityPresetAppService);
+    }
+
+    @Test
+    @DisplayName("成功导入后应调用安全常量预置")
+    void testPresetCalledAfterSuccessfulProduce() {
+        // Given
+        String batchNum = "BATCH_001";
+        String vin = "TEST_VIN_001";
+        JSONObject dataJson = buildDataJson(vin);
+
+        when(vehBasicInfoRepository.selectByVin(vin)).thenReturn(null);
+        when(vehBasicInfoRepository.insert(any(VehicleBasicInfo.class))).thenReturn(1);
+
+        // When
+        ImportResult result = parser.parse(batchNum, dataJson);
+
+        // Then
+        assertEquals(1, result.getTotalCount());
+        assertEquals(1, result.getSuccessCount());
+        assertEquals(0, result.getFailureCount());
+        assertEquals(0, result.getInvalidCount());
+
+        verify(vehBasicInfoRepository).insert(any(VehicleBasicInfo.class));
+        verify(vehiclePublish).produce(vin);
+        verify(vehicleSecurityPresetAppService).preset(vin, batchNum);
+    }
+
+    @Test
+    @DisplayName("安全常量预置失败不应影响successCount")
+    void testPresetFailureDoesNotAffectSuccessCount() {
+        // Given
+        String batchNum = "BATCH_002";
+        String vin = "TEST_VIN_002";
+        JSONObject dataJson = buildDataJson(vin);
+
+        when(vehBasicInfoRepository.selectByVin(vin)).thenReturn(null);
+        when(vehBasicInfoRepository.insert(any(VehicleBasicInfo.class))).thenReturn(1);
+        doThrow(new RuntimeException("KMS/HSM unavailable"))
+                .when(vehicleSecurityPresetAppService).preset(vin, batchNum);
+
+        // When
+        ImportResult result = parser.parse(batchNum, dataJson);
+
+        // Then
+        assertEquals(1, result.getTotalCount());
+        assertEquals(1, result.getSuccessCount());
+        assertEquals(0, result.getFailureCount());
+        assertEquals(0, result.getInvalidCount());
+
+        verify(vehicleSecurityPresetAppService).preset(vin, batchNum);
+    }
+
+    @Test
+    @DisplayName("VIN为空时应计入invalidCount")
+    void testBlankVinIncrementsInvalidCount() {
+        // Given
+        String batchNum = "BATCH_003";
+        JSONObject dataJson = buildDataJson("");
+
+        // When
+        ImportResult result = parser.parse(batchNum, dataJson);
+
+        // Then
+        assertEquals(1, result.getTotalCount());
+        assertEquals(0, result.getSuccessCount());
+        assertEquals(0, result.getFailureCount());
+        assertEquals(1, result.getInvalidCount());
+
+        verify(vehicleSecurityPresetAppService, never()).preset(any(), any());
+    }
+
+    @Test
+    @DisplayName("车辆数据处理失败时应计入failureCount且不调用预置")
+    void testVehicleProcessingFailureDoesNotCallPreset() {
+        // Given
+        String batchNum = "BATCH_004";
+        String vin = "TEST_VIN_004";
+        JSONObject dataJson = buildDataJson(vin);
+
+        when(vehBasicInfoRepository.selectByVin(vin)).thenThrow(new RuntimeException("DB error"));
+
+        // When
+        ImportResult result = parser.parse(batchNum, dataJson);
+
+        // Then
+        assertEquals(1, result.getTotalCount());
+        assertEquals(0, result.getSuccessCount());
+        assertEquals(1, result.getFailureCount());
+        assertEquals(0, result.getInvalidCount());
+
+        verify(vehicleSecurityPresetAppService, never()).preset(any(), any());
+    }
+
+    @Test
+    @DisplayName("多条记录混合场景应正确计数")
+    void testMixedScenarioWithMultipleRecords() {
+        // Given
+        String batchNum = "BATCH_005";
+        String vin1 = "VIN_001";
+        String vin2 = "VIN_002";
+        String vin3 = "";
+        JSONObject dataJson = buildDataJsonWithMultipleVins(vin1, vin2, vin3);
+
+        when(vehBasicInfoRepository.selectByVin(vin1)).thenReturn(null);
+        when(vehBasicInfoRepository.insert(any(VehicleBasicInfo.class))).thenReturn(1);
+        when(vehBasicInfoRepository.selectByVin(vin2)).thenThrow(new RuntimeException("DB error"));
+        // vin3 is empty string - will be invalid
+
+        // When
+        ImportResult result = parser.parse(batchNum, dataJson);
+
+        // Then
+        assertEquals(3, result.getTotalCount());
+        assertEquals(1, result.getSuccessCount());
+        assertEquals(1, result.getFailureCount());
+        assertEquals(1, result.getInvalidCount());
+
+        verify(vehicleSecurityPresetAppService).preset(vin1, batchNum);
+    }
+
+    private JSONObject buildDataJson(String vin) {
+        JSONObject data = new JSONObject();
+        JSONObject request = new JSONObject();
+        JSONObject dataObj = new JSONObject();
+        cn.hutool.json.JSONArray items = new cn.hutool.json.JSONArray();
+
+        JSONObject item = new JSONObject();
+        item.set("VIN", vin);
+        item.set("PLANT", "P001");
+        item.set("BRAND", "B001");
+        item.set("PLATFORM", "PL001");
+        item.set("CAR_LINE", "CL001");
+        item.set("MODEL", "M001");
+        item.set("VARIANT", "V001");
+        item.set("CONFIGURATION", "C001");
+        items.add(item);
+
+        dataObj.set("ITEMS", items);
+        request.set("DATA", dataObj);
+        data.set("REQUEST", request);
+        return data;
+    }
+
+    private JSONObject buildDataJsonWithMultipleVins(String vin1, String vin2, String vin3) {
+        JSONObject data = new JSONObject();
+        JSONObject request = new JSONObject();
+        JSONObject dataObj = new JSONObject();
+        cn.hutool.json.JSONArray items = new cn.hutool.json.JSONArray();
+
+        // Valid vin1
+        JSONObject item1 = new JSONObject();
+        item1.set("VIN", vin1);
+        item1.set("PLANT", "P001");
+        item1.set("BRAND", "B001");
+        item1.set("PLATFORM", "PL001");
+        item1.set("CAR_LINE", "CL001");
+        item1.set("MODEL", "M001");
+        item1.set("VARIANT", "V001");
+        item1.set("CONFIGURATION", "C001");
+        items.add(item1);
+
+        // vin2 will cause exception
+        JSONObject item2 = new JSONObject();
+        item2.set("VIN", vin2);
+        item2.set("PLANT", "P002");
+        items.add(item2);
+
+        // vin3 is empty - invalid
+        JSONObject item3 = new JSONObject();
+        item3.set("VIN", vin3);
+        items.add(item3);
+
+        dataObj.set("ITEMS", items);
+        request.set("DATA", dataObj);
+        data.set("REQUEST", request);
+        return data;
+    }
+}

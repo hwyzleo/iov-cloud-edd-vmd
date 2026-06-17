@@ -32,4 +32,11 @@ public class VehSecurityConstant extends BaseDo<Long> {
     private LocalDateTime lastAttemptTime;
     private String constantType;
     private LocalDateTime createTime;
+
+    /**
+     * 初始化实体状态
+     */
+    public void init() {
+        stateInit();
+    }
 }
