@@ -25,8 +25,6 @@ public interface VehicleNodeConverter {
      * @param po PO
      * @return 领域对象
      */
-    @Mapping(source = "nameLocal", target = "nameEn")
-    @Mapping(source = "deviceCategory", target = "type")
     VehicleNode toDomain(MdmVehicleNodePo po);
 
     /**
@@ -43,8 +41,6 @@ public interface VehicleNodeConverter {
      * @param vehicleNode 领域对象
      * @return PO
      */
-    @Mapping(source = "nameEn", target = "nameLocal")
-    @Mapping(source = "type", target = "deviceCategory")
     MdmVehicleNodePo fromDomain(VehicleNode vehicleNode);
 
     /**

@@ -136,8 +136,8 @@ public class VehicleTolDataParserV1_0 extends BaseProcessor implements VehicleIm
                         throw new IllegalArgumentException(
                                 String.format("车载节点[%s]不存在", deviceCode));
                     }
-                    // 从 vehicle_node 获取 device_item（节点类型）
-                    String deviceItem = vehicleNode.getDeviceItem();
+                    // 从 vehicle_node 获取 device_category（节点类型）
+                    String deviceItem = vehicleNode.getDeviceCategory();
 
                     // 创建零件实例
                     PartInfo partInfo = PartInfo.builder()

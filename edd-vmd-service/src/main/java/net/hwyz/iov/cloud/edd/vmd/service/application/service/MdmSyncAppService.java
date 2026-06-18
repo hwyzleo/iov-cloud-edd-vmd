@@ -459,30 +459,28 @@ public class MdmSyncAppService {
         log.info("处理MDM车载节点事件: entityId={}, version={}", event.getEntityId(), event.getVersion());
         VehicleNode localVehicleNode = mdmVehicleNodeRepository.selectByCode(event.getCode());
         if (localVehicleNode == null) {
-            VehicleNode newVehicleNode = VehicleNode.builder()
-                    .code(event.getCode())
-                    .name(event.getName())
-                    .nameEn(event.getNameEn())
-                    .type(event.getType())
-                    .deviceItem(event.getDeviceItem())
-                    .funcDomain(event.getFuncDomain())
-                    .nodeType(event.getNodeType())
-                    .otaSupport(event.getOtaSupport())
-                    .core(event.getCore())
-                    .sort(event.getSort())
-                    .source(SourceType.MDM)
-                    .externalRefId(event.getEntityId())
-                    .externalVersion(event.getVersion())
-                    .lastSyncTime(LocalDateTime.now())
-                    .build();
+                    VehicleNode newVehicleNode = VehicleNode.builder()
+                            .code(event.getCode())
+                            .name(event.getName())
+                            .nameLocal(event.getNameEn())
+                            .deviceCategory(event.getDeviceItem())
+                            .funcDomain(event.getFuncDomain())
+                            .nodeType(event.getNodeType())
+                            .otaSupport(event.getOtaSupport())
+                            .core(event.getCore())
+                            .sort(event.getSort())
+                            .source(SourceType.MDM)
+                            .externalRefId(event.getEntityId())
+                            .externalVersion(event.getVersion())
+                            .lastSyncTime(LocalDateTime.now())
+                            .build();
             mdmVehicleNodeRepository.insert(newVehicleNode);
             log.info("新增车载节点: code={}", event.getCode());
         } else {
             if (event.getVersion() > localVehicleNode.getExternalVersion()) {
                 localVehicleNode.setName(event.getName());
-                localVehicleNode.setNameEn(event.getNameEn());
-                localVehicleNode.setType(event.getType());
-                localVehicleNode.setDeviceItem(event.getDeviceItem());
+                localVehicleNode.setNameLocal(event.getNameEn());
+                localVehicleNode.setDeviceCategory(event.getDeviceItem());
                 localVehicleNode.setFuncDomain(event.getFuncDomain());
                 localVehicleNode.setNodeType(event.getNodeType());
                 localVehicleNode.setOtaSupport(event.getOtaSupport());
@@ -1079,9 +1077,8 @@ public class MdmSyncAppService {
                             VehicleNode vehicleNode = VehicleNode.builder()
                                     .code(vehicleNodeData.getNodeCode())
                                     .name(vehicleNodeData.getName())
-                                    .nameEn(vehicleNodeData.getNameLocal())
-                                    .type(vehicleNodeData.getNodeType() != null ? vehicleNodeData.getNodeType() : "ECU")
-                                    .deviceItem(vehicleNodeData.getDeviceCategory())
+                                    .nameLocal(vehicleNodeData.getNameLocal())
+                                    .deviceCategory(vehicleNodeData.getDeviceCategory())
                                     .funcDomain(vehicleNodeData.getFunctionalDomain() != null ? vehicleNodeData.getFunctionalDomain() : "GENERAL")
                                     .nodeType(vehicleNodeData.getNodeType() != null ? vehicleNodeData.getNodeType() : "ECU")
                                     .otaSupport(vehicleNodeData.getOtaSupportType() != null ? vehicleNodeData.getOtaSupportType() : "NONE")
@@ -1096,9 +1093,8 @@ public class MdmSyncAppService {
                             log.info("Bootstrap 新增 MDM 车载节点投影: code={}", vehicleNodeData.getNodeCode());
                         } else {
                             existingVehicleNode.setName(vehicleNodeData.getName());
-                            existingVehicleNode.setNameEn(vehicleNodeData.getNameLocal());
-                            existingVehicleNode.setType(vehicleNodeData.getNodeType() != null ? vehicleNodeData.getNodeType() : "ECU");
-                            existingVehicleNode.setDeviceItem(vehicleNodeData.getDeviceCategory());
+                            existingVehicleNode.setNameLocal(vehicleNodeData.getNameLocal());
+                            existingVehicleNode.setDeviceCategory(vehicleNodeData.getDeviceCategory());
                             existingVehicleNode.setFuncDomain(vehicleNodeData.getFunctionalDomain() != null ? vehicleNodeData.getFunctionalDomain() : "GENERAL");
                             existingVehicleNode.setNodeType(vehicleNodeData.getNodeType() != null ? vehicleNodeData.getNodeType() : "ECU");
                             existingVehicleNode.setOtaSupport(vehicleNodeData.getOtaSupportType() != null ? vehicleNodeData.getOtaSupportType() : "NONE");

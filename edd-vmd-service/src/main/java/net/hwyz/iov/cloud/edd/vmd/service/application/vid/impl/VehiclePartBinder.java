@@ -77,7 +77,7 @@ public class VehiclePartBinder {
             if (ObjUtil.isNull(vehicleNode)) {
                 log.warn("零件导入数据批次号[{}]车架号[{}]设备[{}]异常", batchNum, vin, deviceCode);
             }
-            String deviceItem = vehicleNode != null ? vehicleNode.getDeviceItem() : null;
+            String deviceItem = vehicleNode != null ? vehicleNode.getDeviceCategory() : null;
             partMetaList.add(new VehicleEolPartBoundEvent.PartMeta(
                     sn, pn, deviceCode, deviceItem, supplierCode, batchNum,
                     configWord, hardwareVersion, softwareVersion, hardwarePn, softwarePn,
