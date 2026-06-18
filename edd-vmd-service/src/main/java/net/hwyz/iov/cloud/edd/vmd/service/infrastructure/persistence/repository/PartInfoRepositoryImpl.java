@@ -43,7 +43,13 @@ public class PartInfoRepositoryImpl implements PartInfoRepository {
 
     @Override
     public int insert(PartInfo partInfo) {
-        return partInfoMapper.insertPo(PartInfoConverter.INSTANCE.fromDomain(partInfo));
+        PartInfoPo po = PartInfoConverter.INSTANCE.fromDomain(partInfo);
+        int result = partInfoMapper.insertPo(po);
+        // 将生成的 ID 回写到领域对象
+        if (result > 0 && po.getId() != null) {
+            partInfo.setId(po.getId());
+        }
+        return result;
     }
 
     @Override

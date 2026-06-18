@@ -75,7 +75,12 @@ class TolEcuListParserV1_0Test {
 
         VehicleBasicInfo vehicleBasicInfo = VehicleBasicInfo.builder().vin(vin).build();
         when(vehBasicInfoRepository.selectByVin(vin)).thenReturn(vehicleBasicInfo);
-        when(partInfoAppService.upsertPartInfo(any(PartInfo.class))).thenReturn(1);
+        // 模拟 upsertPartInfo 设置 ID
+        doAnswer(invocation -> {
+            PartInfo partInfo = invocation.getArgument(0);
+            partInfo.setId(1L);
+            return 1;
+        }).when(partInfoAppService).upsertPartInfo(any(PartInfo.class));
 
         // When
         ImportResult result = parser.parse(batchNum, dataJson);
@@ -193,7 +198,12 @@ class TolEcuListParserV1_0Test {
 
         VehicleBasicInfo vehicleBasicInfo = VehicleBasicInfo.builder().vin(vin).build();
         when(vehBasicInfoRepository.selectByVin(vin)).thenReturn(vehicleBasicInfo);
-        when(partInfoAppService.upsertPartInfo(any(PartInfo.class))).thenReturn(1);
+        // 模拟 upsertPartInfo 设置 ID
+        doAnswer(invocation -> {
+            PartInfo partInfo = invocation.getArgument(0);
+            partInfo.setId(1L);
+            return 1;
+        }).when(partInfoAppService).upsertPartInfo(any(PartInfo.class));
 
         // When
         ImportResult result = parser.parse(batchNum, dataJson);
@@ -216,7 +226,12 @@ class TolEcuListParserV1_0Test {
 
         VehicleBasicInfo vehicleBasicInfo1 = VehicleBasicInfo.builder().vin(vin1).build();
         when(vehBasicInfoRepository.selectByVin(vin1)).thenReturn(vehicleBasicInfo1);
-        when(partInfoAppService.upsertPartInfo(any(PartInfo.class))).thenReturn(1);
+        // 模拟 upsertPartInfo 设置 ID
+        doAnswer(invocation -> {
+            PartInfo partInfo = invocation.getArgument(0);
+            partInfo.setId(1L);
+            return 1;
+        }).when(partInfoAppService).upsertPartInfo(any(PartInfo.class));
 
         when(vehBasicInfoRepository.selectByVin(vin2)).thenReturn(null);
 

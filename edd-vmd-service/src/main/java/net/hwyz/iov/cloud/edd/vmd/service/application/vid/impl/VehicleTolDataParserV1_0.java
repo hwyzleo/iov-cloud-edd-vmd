@@ -133,6 +133,12 @@ public class VehicleTolDataParserV1_0 extends BaseProcessor implements VehicleIm
                             .build();
                     partInfoAppService.upsertPartInfo(partInfo);
 
+                    // 校验零件实例 ID 是否有效
+                    if (partInfo.getId() == null) {
+                        throw new IllegalStateException(
+                                String.format("零件实例[%s/%s]创建/更新失败，未获取到ID", partNo, sn));
+                    }
+
                     // 绑定零件↔VIN
                     VehiclePart vehiclePart = VehiclePart.builder()
                             .vin(vin)
