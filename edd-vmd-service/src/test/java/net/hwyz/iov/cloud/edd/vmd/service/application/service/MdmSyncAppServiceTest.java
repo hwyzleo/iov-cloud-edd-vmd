@@ -18,6 +18,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmOptionCodeE
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmOptionFamilyEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmPartEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmPlatformEvent;
+import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmVehicleNodeEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Brand;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.CarLine;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Configuration;
@@ -27,6 +28,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.OptionFamily;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Part;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Plant;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Platform;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleNode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Variant;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmBrandRepository;
@@ -712,5 +714,127 @@ class MdmSyncAppServiceTest {
         // Then
         verify(mdmPartRepository).countBySource(SourceType.MDM);
         verify(partService, never()).snapshot(anyBoolean(), anyInt(), anyInt());
+    }
+
+    @Test
+    @DisplayName("handleVehicleNodeEvent应新增本地不存在的车载节点投影")
+    void handleVehicleNodeEvent_shouldInsertWhenLocalVehicleNodeNotExists() {
+        // Given
+        MdmVehicleNodeEvent event = new MdmVehicleNodeEvent("CREATED", "mdm-vn-001", 1L, "VN001",
+                "车载节点1", "Vehicle Node 1", "CATEGORY001", "FUNC001",
+                "TYPE001", "OTA001", true, 10, LocalDateTime.now());
+
+        when(mdmVehicleNodeRepository.selectByCode("VN001")).thenReturn(null);
+        when(mdmVehicleNodeRepository.insert(any(VehicleNode.class))).thenReturn(1);
+
+        // When
+        mdmSyncAppService.handleVehicleNodeEvent(event);
+
+        // Then
+        verify(mdmVehicleNodeRepository).selectByCode("VN001");
+        verify(mdmVehicleNodeRepository).insert(any(VehicleNode.class));
+    }
+
+    @Test
+    @DisplayName("handleVehicleNodeEvent应在sort为null时使用默认值0")
+    void handleVehicleNodeEvent_shouldInsertWithDefaultSortWhenSortIsNull() {
+        // Given
+        MdmVehicleNodeEvent event = new MdmVehicleNodeEvent("CREATED", "mdm-vn-004", 1L, "VN004",
+                "车载节点4", "Vehicle Node 4", "CATEGORY001", "FUNC001",
+                "TYPE001", "OTA001", true, null, LocalDateTime.now());
+
+        when(mdmVehicleNodeRepository.selectByCode("VN004")).thenReturn(null);
+        when(mdmVehicleNodeRepository.insert(any(VehicleNode.class))).thenReturn(1);
+
+        // When
+        mdmSyncAppService.handleVehicleNodeEvent(event);
+
+        // Then
+        verify(mdmVehicleNodeRepository).selectByCode("VN004");
+        verify(mdmVehicleNodeRepository).insert(argThat(node -> node.getSort() != null && node.getSort() == 0));
+    }
+
+    @Test
+    @DisplayName("handleVehicleNodeEvent应更新本地已存在且版本更高的车载节点投影")
+    void handleVehicleNodeEvent_shouldUpdateWhenLocalVehicleNodeExistsAndVersionHigher() {
+        // Given
+        MdmVehicleNodeEvent event = new MdmVehicleNodeEvent("UPDATED", "mdm-vn-002", 2L, "VN002",
+                "更新后的车载节点", "Updated Vehicle Node", "CATEGORY002", "FUNC002",
+                "TYPE002", "OTA002", false, 20, LocalDateTime.now());
+
+        VehicleNode localVehicleNode = VehicleNode.builder()
+                .id(1L)
+                .code("VN002")
+                .name("原始车载节点")
+                .source(SourceType.MDM)
+                .externalRefId("mdm-vn-002")
+                .externalVersion(1L)
+                .build();
+
+        when(mdmVehicleNodeRepository.selectByCode("VN002")).thenReturn(localVehicleNode);
+        when(mdmVehicleNodeRepository.updateById(any(VehicleNode.class))).thenReturn(1);
+
+        // When
+        mdmSyncAppService.handleVehicleNodeEvent(event);
+
+        // Then
+        verify(mdmVehicleNodeRepository).selectByCode("VN002");
+        verify(mdmVehicleNodeRepository).updateById(any(VehicleNode.class));
+    }
+
+    @Test
+    @DisplayName("handleVehicleNodeEvent应更新时sort为null使用默认值0")
+    void handleVehicleNodeEvent_shouldUpdateWithDefaultSortWhenSortIsNull() {
+        // Given
+        MdmVehicleNodeEvent event = new MdmVehicleNodeEvent("UPDATED", "mdm-vn-005", 2L, "VN005",
+                "更新后的车载节点", "Updated Vehicle Node", "CATEGORY002", "FUNC002",
+                "TYPE002", "OTA002", false, null, LocalDateTime.now());
+
+        VehicleNode localVehicleNode = VehicleNode.builder()
+                .id(1L)
+                .code("VN005")
+                .name("原始车载节点")
+                .sort(10)
+                .source(SourceType.MDM)
+                .externalRefId("mdm-vn-005")
+                .externalVersion(1L)
+                .build();
+
+        when(mdmVehicleNodeRepository.selectByCode("VN005")).thenReturn(localVehicleNode);
+        when(mdmVehicleNodeRepository.updateById(any(VehicleNode.class))).thenReturn(1);
+
+        // When
+        mdmSyncAppService.handleVehicleNodeEvent(event);
+
+        // Then
+        verify(mdmVehicleNodeRepository).selectByCode("VN005");
+        verify(mdmVehicleNodeRepository).updateById(argThat(node -> node.getSort() != null && node.getSort() == 0));
+    }
+
+    @Test
+    @DisplayName("handleVehicleNodeEvent应忽略版本不高于本地的车载节点事件")
+    void handleVehicleNodeEvent_shouldIgnoreWhenVersionNotHigher() {
+        // Given
+        MdmVehicleNodeEvent event = new MdmVehicleNodeEvent("UPDATED", "mdm-vn-003", 1L, "VN003",
+                "旧版本车载节点", "Old Vehicle Node", "CATEGORY001", "FUNC001",
+                "TYPE001", "OTA001", true, 10, LocalDateTime.now());
+
+        VehicleNode localVehicleNode = VehicleNode.builder()
+                .id(1L)
+                .code("VN003")
+                .name("本地车载节点")
+                .source(SourceType.MDM)
+                .externalRefId("mdm-vn-003")
+                .externalVersion(2L)
+                .build();
+
+        when(mdmVehicleNodeRepository.selectByCode("VN003")).thenReturn(localVehicleNode);
+
+        // When
+        mdmSyncAppService.handleVehicleNodeEvent(event);
+
+        // Then
+        verify(mdmVehicleNodeRepository).selectByCode("VN003");
+        verify(mdmVehicleNodeRepository, never()).updateById(any(VehicleNode.class));
     }
 }

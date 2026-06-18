@@ -468,7 +468,7 @@ public class MdmSyncAppService {
                             .nodeType(event.getNodeType())
                             .otaSupport(event.getOtaSupport())
                             .core(event.getCore())
-                            .sort(event.getSort())
+                            .sort(event.getSort() != null ? event.getSort() : 0)
                             .source(SourceType.MDM)
                             .externalRefId(event.getEntityId())
                             .externalVersion(event.getVersion())
@@ -485,7 +485,7 @@ public class MdmSyncAppService {
                 localVehicleNode.setNodeType(event.getNodeType());
                 localVehicleNode.setOtaSupport(event.getOtaSupport());
                 localVehicleNode.setCore(event.getCore());
-                localVehicleNode.setSort(event.getSort());
+                localVehicleNode.setSort(event.getSort() != null ? event.getSort() : 0);
                 localVehicleNode.setExternalRefId(event.getEntityId());
                 localVehicleNode.setExternalVersion(event.getVersion());
                 localVehicleNode.setLastSyncTime(LocalDateTime.now());
