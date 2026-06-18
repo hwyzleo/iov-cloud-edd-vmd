@@ -1,8 +1,10 @@
 package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter;
 
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleNode;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.MdmVehicleNodePo;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 import org.mapstruct.factory.Mappers;
 
 import java.util.List;
@@ -23,6 +25,8 @@ public interface VehicleNodeConverter {
      * @param po PO
      * @return 领域对象
      */
+    @Mapping(source = "nameLocal", target = "nameEn")
+    @Mapping(source = "deviceCategory", target = "type")
     VehicleNode toDomain(MdmVehicleNodePo po);
 
     /**
@@ -39,5 +43,27 @@ public interface VehicleNodeConverter {
      * @param vehicleNode 领域对象
      * @return PO
      */
+    @Mapping(source = "nameEn", target = "nameLocal")
+    @Mapping(source = "type", target = "deviceCategory")
     MdmVehicleNodePo fromDomain(VehicleNode vehicleNode);
+
+    /**
+     * String 转 SourceType
+     *
+     * @param value 字符串值
+     * @return SourceType 枚举
+     */
+    default SourceType stringToSourceType(String value) {
+        return SourceType.valOf(value);
+    }
+
+    /**
+     * SourceType 转 String
+     *
+     * @param sourceType SourceType 枚举
+     * @return 字符串值
+     */
+    default String sourceTypeToString(SourceType sourceType) {
+        return sourceType != null ? sourceType.getValue() : null;
+    }
 }
