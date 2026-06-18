@@ -463,7 +463,7 @@ public class MdmSyncAppService {
                             .code(event.getCode())
                             .name(event.getName())
                             .nameLocal(event.getNameEn())
-                            .deviceCategory(event.getDeviceItem())
+                            .deviceCategory(event.getDeviceCategory())
                             .funcDomain(event.getFuncDomain())
                             .nodeType(event.getNodeType())
                             .otaSupport(event.getOtaSupport())
@@ -480,7 +480,7 @@ public class MdmSyncAppService {
             if (event.getVersion() > localVehicleNode.getExternalVersion()) {
                 localVehicleNode.setName(event.getName());
                 localVehicleNode.setNameLocal(event.getNameEn());
-                localVehicleNode.setDeviceCategory(event.getDeviceItem());
+                localVehicleNode.setDeviceCategory(event.getDeviceCategory());
                 localVehicleNode.setFuncDomain(event.getFuncDomain());
                 localVehicleNode.setNodeType(event.getNodeType());
                 localVehicleNode.setOtaSupport(event.getOtaSupport());

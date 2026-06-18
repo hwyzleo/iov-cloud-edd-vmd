@@ -35,15 +35,10 @@ public class MdmVehicleNodeEvent extends MdmEvent {
     private String nameEn;
 
     /**
-     * 设备类型（对应MDM侧nodeType字段）
-     */
-    private String type;
-
-    /**
-     * 设备项（兼容MDM侧deviceCategory字段名）
+     * 设备分类（兼容MDM侧deviceCategory字段名）
      */
     @JsonAlias("deviceCategory")
-    private String deviceItem;
+    private String deviceCategory;
 
     /**
      * 功能域（兼容MDM侧functionalDomain字段名）
@@ -74,15 +69,14 @@ public class MdmVehicleNodeEvent extends MdmEvent {
     private Integer sort;
 
     public MdmVehicleNodeEvent(String eventType, String entityId, Long version, String code,
-                                String name, String nameEn, String type, String deviceItem,
+                                String name, String nameEn, String deviceCategory,
                                 String funcDomain, String nodeType, String otaSupport,
                                 Boolean core, Integer sort, LocalDateTime occurredAt) {
         super(eventType, entityId, version, code, occurredAt);
         this.code = code;
         this.name = name;
         this.nameEn = nameEn;
-        this.type = type;
-        this.deviceItem = deviceItem;
+        this.deviceCategory = deviceCategory;
         this.funcDomain = funcDomain;
         this.nodeType = nodeType;
         this.otaSupport = otaSupport;
