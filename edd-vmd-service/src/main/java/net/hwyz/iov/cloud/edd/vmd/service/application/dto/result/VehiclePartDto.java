@@ -20,14 +20,22 @@ public class VehiclePartDto {
 
     private Long id;
     private String vin;
-    private String code;
+    private Long partId;
+    private String partCode;
     private String sn;
-    private String hardwareVersion;
-    private String softwareVersion;
-    private String supplierCode;
-    private Integer partState;
+    private String vehicleNodeCode;
+    private String deviceItem;
+    private String position;
     private Instant bindTime;
+    private String bindType;
+    private String bindBy;
+    private String bindOrg;
     private Instant unbindTime;
+    private String unbindReason;
+    private String unbindBy;
+    private String unbindOrg;
+    private Integer bindState;
+    private Long replaceOfBindingId;
     private String description;
 
 }

@@ -1,21 +1,22 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 
-import cn.hutool.core.util.ObjUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.VehiclePartAssembler;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.VehiclePartDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.VehiclePartQuery;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartInfo;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehiclePart;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartInfoRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehiclePartRepository;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Service;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.VehiclePartCmd;
 
 import java.time.Instant;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * 车辆-零件绑定关系应用服务类
@@ -28,6 +29,7 @@ import java.util.Map;
 public class VehiclePartAppService {
 
     private final VehiclePartRepository vehiclePartRepository;
+    private final PartInfoRepository partInfoRepository;
 
     /**
      * 查询绑定关系信息
@@ -38,13 +40,15 @@ public class VehiclePartAppService {
     public List<VehiclePartDto> search(VehiclePartQuery query) {
         Map<String, Object> map = new HashMap<>();
         map.put("vin", query.getVin());
-        map.put("code", query.getCode());
-        map.put("sn", query.getSn());
-        map.put("partState", query.getPartState());
+        map.put("partId", query.getPartId());
+        map.put("vehicleNodeCode", query.getVehicleNodeCode());
+        map.put("bindState", query.getBindState());
         map.put("beginTime", query.getBeginTime());
         map.put("endTime", query.getEndTime());
         List<VehiclePart> vehiclePartList = vehiclePartRepository.selectByMap(map);
-        return PageUtil.convert(vehiclePartList, VehiclePartAssembler.INSTANCE::fromDomain);
+        List<VehiclePartDto> dtoList = PageUtil.convert(vehiclePartList, VehiclePartAssembler.INSTANCE::fromDomain);
+        fillPartInfo(dtoList);
+        return dtoList;
     }
 
     /**
@@ -54,7 +58,15 @@ public class VehiclePartAppService {
      * @return 绑定关系 DTO
      */
     public VehiclePartDto getVehiclePartById(Long id) {
-        return VehiclePartAssembler.INSTANCE.fromDomain(vehiclePartRepository.selectById(id));
+        VehiclePartDto dto = VehiclePartAssembler.INSTANCE.fromDomain(vehiclePartRepository.selectById(id));
+        if (dto != null && dto.getPartId() != null) {
+            PartInfo partInfo = partInfoRepository.selectById(dto.getPartId());
+            if (partInfo != null) {
+                dto.setPartCode(partInfo.getPartCode());
+                dto.setSn(partInfo.getSn());
+            }
+        }
+        return dto;
     }
 
     /**
@@ -153,6 +165,34 @@ public class VehiclePartAppService {
         vehiclePart.setBindState(0); // 0-已解绑
         vehiclePart.setUnbindTime(Instant.now());
         vehiclePartRepository.update(vehiclePart);
+    }
+
+    /**
+     * 填充零件信息（partCode、sn）
+     *
+     * @param dtoList 绑定关系 DTO 列表
+     */
+    private void fillPartInfo(List<VehiclePartDto> dtoList) {
+        Set<Long> partIds = dtoList.stream()
+                .map(VehiclePartDto::getPartId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        if (partIds.isEmpty()) {
+            return;
+        }
+        Map<Long, PartInfo> partInfoMap = partIds.stream()
+                .map(partInfoRepository::selectById)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toMap(PartInfo::getId, Function.identity()));
+        for (VehiclePartDto dto : dtoList) {
+            if (dto.getPartId() != null) {
+                PartInfo partInfo = partInfoMap.get(dto.getPartId());
+                if (partInfo != null) {
+                    dto.setPartCode(partInfo.getPartCode());
+                    dto.setSn(partInfo.getSn());
+                }
+            }
+        }
     }
 
 }

@@ -23,19 +23,19 @@ public class VehiclePartRequest extends BaseRequest {
     private Long id;
 
     /**
-     * 零件编号
-     */
-    private String code;
-
-    /**
      * 车架号
      */
     private String vin;
 
     /**
-     * 设备代码
+     * 零件实例ID
      */
-    private String deviceCode;
+    private Long partId;
+
+    /**
+     * 车载节点代码
+     */
+    private String vehicleNodeCode;
 
     /**
      * 设备项
@@ -43,49 +43,9 @@ public class VehiclePartRequest extends BaseRequest {
     private String deviceItem;
 
     /**
-     * 零件序列号
+     * 安装位置
      */
-    private String sn;
-
-    /**
-     * 配置字
-     */
-    private String configWord;
-
-    /**
-     * 供应商编码
-     */
-    private String supplierCode;
-
-    /**
-     * 批次号
-     */
-    private String batchNum;
-
-    /**
-     * 硬件版本号
-     */
-    private String hardwareVer;
-
-    /**
-     * 软件版本号
-     */
-    private String softwareVer;
-
-    /**
-     * 硬件零件号
-     */
-    private String hardwarePn;
-
-    /**
-     * 软件零件号
-     */
-    private String softwarePn;
-
-    /**
-     * 附加信息
-     */
-    private String extra;
+    private String position;
 
     /**
      * 绑定时间
@@ -128,13 +88,18 @@ public class VehiclePartRequest extends BaseRequest {
     private String unbindOrg;
 
     /**
-     * 零件状态：0-待绑定，1-在用，2-待更换，3-已报废
+     * 绑定状态：0-已解绑，1-绑定中
      */
-    private Integer partState;
+    private Integer bindState;
 
     /**
-     * 创建时间
+     * 换件溯源：被替换的绑定ID
      */
-    private Date createTime;
+    private Long replaceOfBindingId;
+
+    /**
+     * 备注
+     */
+    private String description;
 
 }

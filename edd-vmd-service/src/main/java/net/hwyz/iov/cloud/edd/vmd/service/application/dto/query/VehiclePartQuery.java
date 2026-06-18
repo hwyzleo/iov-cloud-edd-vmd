@@ -15,9 +15,9 @@ import java.util.Date;
 public class VehiclePartQuery {
 
     private String vin;
-    private String code;
-    private String sn;
-    private Integer partState;
+    private Long partId;
+    private String vehicleNodeCode;
+    private Integer bindState;
     private Date beginTime;
     private Date endTime;
 
