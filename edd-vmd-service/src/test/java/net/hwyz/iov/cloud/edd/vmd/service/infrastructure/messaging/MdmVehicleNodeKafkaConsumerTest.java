@@ -45,7 +45,7 @@ class MdmVehicleNodeKafkaConsumerTest {
         ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.eead.vehicleNode.event", 0, 0L, "key", messageJson);
 
         MdmVehicleNodeEvent testEvent = new MdmVehicleNodeEvent("CREATED", "mdm-vn-001", 1L, "CPT_DCU_8295",
-                "车载节点1", "Vehicle Node 1", "DCU", "ITEM001",
+                "车载节点1", "Vehicle Node 1", "DCU",
                 "EEAD", "CONTROLLER", "FOTA", true, 1, LocalDateTime.now());
 
         when(objectMapper.readValue(messageJson, MdmVehicleNodeEvent.class)).thenReturn(testEvent);
@@ -85,7 +85,7 @@ class MdmVehicleNodeKafkaConsumerTest {
         ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.eead.vehicleNode.event", 0, 0L, "key", messageJson);
 
         MdmVehicleNodeEvent testEvent = new MdmVehicleNodeEvent("CREATED", "mdm-vn-001", 1L, "CPT_DCU_8295",
-                "车载节点1", "Vehicle Node 1", "DCU", "ITEM001",
+                "车载节点1", "Vehicle Node 1", "DCU",
                 "EEAD", "CONTROLLER", "FOTA", true, 1, LocalDateTime.now());
 
         when(objectMapper.readValue(messageJson, MdmVehicleNodeEvent.class)).thenReturn(testEvent);
@@ -106,7 +106,7 @@ class MdmVehicleNodeKafkaConsumerTest {
         ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.eead.vehicleNode.event", 0, 0L, "key", messageJson);
 
         MdmVehicleNodeEvent testEvent = new MdmVehicleNodeEvent("CREATED", "mdm-vn-001", 1L, "CPT_DCU_8295",
-                "车载节点1", "Vehicle Node 1", "DCU", "ITEM001",
+                "车载节点1", "Vehicle Node 1", "DCU",
                 "EEAD", "CONTROLLER", "FOTA", true, 1, LocalDateTime.now());
 
         when(objectMapper.readValue(messageJson, MdmVehicleNodeEvent.class)).thenReturn(testEvent);

@@ -80,7 +80,7 @@ class TolEcuListParserV1_0Test {
 
         VehicleBasicInfo vehicleBasicInfo = VehicleBasicInfo.builder().vin(vin).build();
         when(vehBasicInfoRepository.selectByVin(vin)).thenReturn(vehicleBasicInfo);
-        VehicleNode vehicleNode = VehicleNode.builder().code(deviceCode).deviceItem("IBCM_TYPE").build();
+        VehicleNode vehicleNode = VehicleNode.builder().code(deviceCode).deviceCategory("IBCM_TYPE").build();
         when(vehicleNodeAppService.getVehicleNodeByCode(deviceCode)).thenReturn(vehicleNode);
         // 模拟 upsertPartInfo 设置 ID
         doAnswer(invocation -> {
@@ -174,7 +174,7 @@ class TolEcuListParserV1_0Test {
 
         VehicleBasicInfo vehicleBasicInfo = VehicleBasicInfo.builder().vin(vin).build();
         when(vehBasicInfoRepository.selectByVin(vin)).thenReturn(vehicleBasicInfo);
-        VehicleNode vehicleNode = VehicleNode.builder().code(deviceCode).deviceItem("IBCM_TYPE").build();
+        VehicleNode vehicleNode = VehicleNode.builder().code(deviceCode).deviceCategory("IBCM_TYPE").build();
         when(vehicleNodeAppService.getVehicleNodeByCode(deviceCode)).thenReturn(vehicleNode);
         when(partInfoAppService.upsertPartInfo(any(PartInfo.class)))
                 .thenThrow(new PartBindingConflictException("零件已绑定其他VIN"));
@@ -238,11 +238,11 @@ class TolEcuListParserV1_0Test {
 
         VehicleBasicInfo vehicleBasicInfo = VehicleBasicInfo.builder().vin(vin).build();
         when(vehBasicInfoRepository.selectByVin(vin)).thenReturn(vehicleBasicInfo);
-        VehicleNode vehicleNode = VehicleNode.builder().code("IBCM").deviceItem("IBCM_TYPE").build();
+        VehicleNode vehicleNode = VehicleNode.builder().code("IBCM").deviceCategory("IBCM_TYPE").build();
         when(vehicleNodeAppService.getVehicleNodeByCode("IBCM")).thenReturn(vehicleNode);
-        VehicleNode vehicleNode2 = VehicleNode.builder().code("AVAS").deviceItem("AVAS_TYPE").build();
+        VehicleNode vehicleNode2 = VehicleNode.builder().code("AVAS").deviceCategory("AVAS_TYPE").build();
         when(vehicleNodeAppService.getVehicleNodeByCode("AVAS")).thenReturn(vehicleNode2);
-        VehicleNode vehicleNode3 = VehicleNode.builder().code("WCM_L").deviceItem("WCM_TYPE").build();
+        VehicleNode vehicleNode3 = VehicleNode.builder().code("WCM_L").deviceCategory("WCM_TYPE").build();
         when(vehicleNodeAppService.getVehicleNodeByCode("WCM_L")).thenReturn(vehicleNode3);
         // 模拟 upsertPartInfo 设置 ID
         doAnswer(invocation -> {
@@ -272,7 +272,7 @@ class TolEcuListParserV1_0Test {
 
         VehicleBasicInfo vehicleBasicInfo1 = VehicleBasicInfo.builder().vin(vin1).build();
         when(vehBasicInfoRepository.selectByVin(vin1)).thenReturn(vehicleBasicInfo1);
-        VehicleNode vehicleNode = VehicleNode.builder().code("IBCM").deviceItem("IBCM_TYPE").build();
+        VehicleNode vehicleNode = VehicleNode.builder().code("IBCM").deviceCategory("IBCM_TYPE").build();
         when(vehicleNodeAppService.getVehicleNodeByCode("IBCM")).thenReturn(vehicleNode);
         // 模拟 upsertPartInfo 设置 ID
         doAnswer(invocation -> {

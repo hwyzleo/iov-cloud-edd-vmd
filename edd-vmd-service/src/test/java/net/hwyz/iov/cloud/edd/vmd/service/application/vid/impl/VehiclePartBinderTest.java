@@ -58,7 +58,7 @@ class VehiclePartBinderTest {
         part.set("ICCID2", "IC002");
         parts.add(part);
 
-        VehicleNode device = VehicleNode.builder().code("TBOX001").deviceItem("TBOX").build();
+        VehicleNode device = VehicleNode.builder().code("TBOX001").deviceCategory("TBOX").build();
         when(vehicleNodeAppService.getVehicleNodeByCode("TBOX001")).thenReturn(device);
 
         List<VehicleEolPartBoundEvent.PartMeta> result = binder.bindParts(parts, VIN, BATCH_NUM);
@@ -140,8 +140,8 @@ class VehiclePartBinderTest {
         part2.set("PART_SN", "SN2");
         parts.add(part2);
 
-        VehicleNode device1 = VehicleNode.builder().code("DEV1").deviceItem("TBOX").build();
-        VehicleNode device2 = VehicleNode.builder().code("DEV2").deviceItem("CCP").build();
+        VehicleNode device1 = VehicleNode.builder().code("DEV1").deviceCategory("TBOX").build();
+        VehicleNode device2 = VehicleNode.builder().code("DEV2").deviceCategory("CCP").build();
         when(vehicleNodeAppService.getVehicleNodeByCode("DEV1")).thenReturn(device1);
         when(vehicleNodeAppService.getVehicleNodeByCode("DEV2")).thenReturn(device2);
         doThrow(new RuntimeException("bind error")).when(vehiclePartAppService).bindVehiclePart(any());

@@ -27,9 +27,8 @@ class VehicleNodeIntegrationTest {
                 .id(1L)
                 .code("VN001")
                 .name("测试车载节点")
-                .nameEn("Test Vehicle Node")
-                .type("ECU")
-                .deviceItem("TBOX")
+                .nameLocal("Test Vehicle Node")
+                .deviceCategory("TBOX")
                 .funcDomain("ADAS")
                 .nodeType("CONTROLLER")
                 .otaSupport("OTA")
@@ -41,9 +40,8 @@ class VehicleNodeIntegrationTest {
         assertEquals(1L, vehicleNode.getId());
         assertEquals("VN001", vehicleNode.getCode());
         assertEquals("测试车载节点", vehicleNode.getName());
-        assertEquals("Test Vehicle Node", vehicleNode.getNameEn());
-        assertEquals("ECU", vehicleNode.getType());
-        assertEquals("TBOX", vehicleNode.getDeviceItem());
+        assertEquals("Test Vehicle Node", vehicleNode.getNameLocal());
+        assertEquals("TBOX", vehicleNode.getDeviceCategory());
         assertEquals("ADAS", vehicleNode.getFuncDomain());
         assertEquals("CONTROLLER", vehicleNode.getNodeType());
         assertEquals("OTA", vehicleNode.getOtaSupport());
@@ -59,11 +57,10 @@ class VehicleNodeIntegrationTest {
                 .id(1L)
                 .code("VN001")
                 .name("测试车载节点")
-                .nameEn("Test Vehicle Node")
-                .type("ECU")
-                .deviceItem("TBOX")
+                .nameLocal("Test Vehicle Node")
+                .deviceCategory("TBOX")
                 .funcDomain("ADAS")
-                .nodeType("CONTROLLER,Sensor")
+                .nodeType("CONTROLLER")
                 .otaSupport("OTA")
                 .core(true)
                 .sort(1)
@@ -75,14 +72,11 @@ class VehicleNodeIntegrationTest {
         assertEquals(1L, dto.getId());
         assertEquals("VN001", dto.getCode());
         assertEquals("测试车载节点", dto.getName());
-        assertEquals("Test Vehicle Node", dto.getNameEn());
-        assertEquals("ECU", dto.getType());
-        assertEquals("TBOX", dto.getDeviceItem());
+        assertEquals("Test Vehicle Node", dto.getNameLocal());
+        assertEquals("TBOX", dto.getDeviceCategory());
         assertEquals("ADAS", dto.getFuncDomain());
         assertNotNull(dto.getNodeType());
-        assertEquals(2, dto.getNodeType().length);
-        assertEquals("CONTROLLER", dto.getNodeType()[0]);
-        assertEquals("Sensor", dto.getNodeType()[1]);
+        assertEquals("CONTROLLER", dto.getNodeType());
         assertEquals("OTA", dto.getOtaSupport());
         assertTrue(dto.getCore());
         assertEquals(1, dto.getSort());
@@ -95,11 +89,10 @@ class VehicleNodeIntegrationTest {
                 .id(1L)
                 .code("VN001")
                 .name("测试车载节点")
-                .nameEn("Test Vehicle Node")
-                .type("ECU")
-                .deviceItem("TBOX")
+                .nameLocal("Test Vehicle Node")
+                .deviceCategory("TBOX")
                 .funcDomain("ADAS")
-                .nodeType(new String[]{"CONTROLLER", "Sensor"})
+                .nodeType("CONTROLLER")
                 .otaSupport("OTA")
                 .core(true)
                 .sort(1)
@@ -111,13 +104,11 @@ class VehicleNodeIntegrationTest {
         assertEquals(1L, vehicleNode.getId());
         assertEquals("VN001", vehicleNode.getCode());
         assertEquals("测试车载节点", vehicleNode.getName());
-        assertEquals("Test Vehicle Node", vehicleNode.getNameEn());
-        assertEquals("ECU", vehicleNode.getType());
-        assertEquals("TBOX", vehicleNode.getDeviceItem());
+        assertEquals("Test Vehicle Node", vehicleNode.getNameLocal());
+        assertEquals("TBOX", vehicleNode.getDeviceCategory());
         assertEquals("ADAS", vehicleNode.getFuncDomain());
         assertNotNull(vehicleNode.getNodeType());
-        assertTrue(vehicleNode.getNodeType().contains("CONTROLLER"));
-        assertTrue(vehicleNode.getNodeType().contains("Sensor"));
+        assertEquals("CONTROLLER", vehicleNode.getNodeType());
         assertEquals("OTA", vehicleNode.getOtaSupport());
         assertTrue(vehicleNode.getCore());
         assertEquals(1, vehicleNode.getSort());
@@ -130,11 +121,10 @@ class VehicleNodeIntegrationTest {
                 .id(1L)
                 .code("VN001")
                 .name("测试车载节点")
-                .nameEn("Test Vehicle Node")
-                .type("ECU")
-                .deviceItem("TBOX")
+                .nameLocal("Test Vehicle Node")
+                .deviceCategory("TBOX")
                 .funcDomain("ADAS")
-                .nodeType(new String[]{"CONTROLLER", "Sensor"})
+                .nodeType("CONTROLLER")
                 .otaSupport("OTA")
                 .core(true)
                 .sort(1)
@@ -146,12 +136,11 @@ class VehicleNodeIntegrationTest {
         assertEquals(1L, response.getId());
         assertEquals("VN001", response.getCode());
         assertEquals("测试车载节点", response.getName());
-        assertEquals("Test Vehicle Node", response.getNameEn());
-        assertEquals("ECU", response.getType());
-        assertEquals("TBOX", response.getDeviceItem());
+        assertEquals("Test Vehicle Node", response.getNameLocal());
+        assertEquals("TBOX", response.getDeviceCategory());
         assertEquals("ADAS", response.getFuncDomain());
         assertNotNull(response.getNodeType());
-        assertEquals(2, response.getNodeType().length);
+        assertEquals("CONTROLLER", response.getNodeType());
         assertEquals("OTA", response.getOtaSupport());
         assertTrue(response.getCore());
         assertEquals(1, response.getSort());
@@ -164,11 +153,10 @@ class VehicleNodeIntegrationTest {
                 .id(1L)
                 .code("VN001")
                 .name("测试车载节点")
-                .nameEn("Test Vehicle Node")
-                .type("ECU")
-                .deviceItem("TBOX")
+                .nameLocal("Test Vehicle Node")
+                .deviceCategory("TBOX")
                 .funcDomain("ADAS")
-                .nodeType(new String[]{"CONTROLLER", "Sensor"})
+                .nodeType("CONTROLLER")
                 .otaSupport("OTA")
                 .core(true)
                 .sort(1)
@@ -180,12 +168,11 @@ class VehicleNodeIntegrationTest {
         assertEquals(1L, cmd.getId());
         assertEquals("VN001", cmd.getCode());
         assertEquals("测试车载节点", cmd.getName());
-        assertEquals("Test Vehicle Node", cmd.getNameEn());
-        assertEquals("ECU", cmd.getType());
-        assertEquals("TBOX", cmd.getDeviceItem());
+        assertEquals("Test Vehicle Node", cmd.getNameLocal());
+        assertEquals("TBOX", cmd.getDeviceCategory());
         assertEquals("ADAS", cmd.getFuncDomain());
         assertNotNull(cmd.getNodeType());
-        assertEquals(2, cmd.getNodeType().length);
+        assertEquals("CONTROLLER", cmd.getNodeType());
         assertEquals("OTA", cmd.getOtaSupport());
         assertTrue(cmd.getCore());
         assertEquals(1, cmd.getSort());
@@ -217,7 +204,7 @@ class VehicleNodeIntegrationTest {
         assertEquals(1L, vehicleNode.getId());
         assertEquals("VN001", vehicleNode.getCode());
         assertEquals("测试车载节点", vehicleNode.getName());
-        assertEquals("TBOX", vehicleNode.getDeviceItem());
+        assertEquals("TBOX", vehicleNode.getDeviceCategory());
         assertEquals("ADAS", vehicleNode.getFuncDomain());
         assertEquals(SourceType.MDM, vehicleNode.getSource());
         assertEquals("ext-001", vehicleNode.getExternalRefId());
@@ -232,9 +219,8 @@ class VehicleNodeIntegrationTest {
                 .id(1L)
                 .code("VN001")
                 .name("测试车载节点")
-                .nameEn("Test Vehicle Node")
-                .type("ECU")
-                .deviceItem("TBOX")
+                .nameLocal("Test Vehicle Node")
+                .deviceCategory("TBOX")
                 .funcDomain("ADAS")
                 .nodeType("CONTROLLER")
                 .otaSupport("OTA")
