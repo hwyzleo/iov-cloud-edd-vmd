@@ -118,11 +118,13 @@ public class MdmSyncAppService {
     public void handleBrandEvent(MdmBrandEvent event) {
         log.debug("处理 MDM 品牌事件: eventType={}, entityId={}, code={}",
                 event.getEventType(), event.getEntityId(), event.getCode());
-        Brand localBrand = mdmBrandRepository.selectByExternalRefId(event.getEntityId());
+        Brand localBrand = mdmBrandRepository.selectByCode(event.getCode());
         if (localBrand == null) {
             Brand newBrand = Brand.builder()
                     .code(event.getCode())
                     .name(event.getName())
+                    .enable(true)
+                    .sort(0)
                     .source(SourceType.MDM)
                     .externalRefId(event.getEntityId())
                     .externalVersion(event.getVersion())
@@ -133,6 +135,7 @@ public class MdmSyncAppService {
         } else {
             if (event.getVersion() > localBrand.getExternalVersion()) {
                 localBrand.setName(event.getName());
+                localBrand.setExternalRefId(event.getEntityId());
                 localBrand.setExternalVersion(event.getVersion());
                 localBrand.setLastSyncTime(LocalDateTime.now());
                 mdmBrandRepository.updateById(localBrand);
@@ -150,12 +153,14 @@ public class MdmSyncAppService {
      */
     public void handleSeriesEvent(MdmCarLineEvent event) {
         log.info("处理MDM车系事件: entityId={}, version={}", event.getEntityId(), event.getVersion());
-        CarLine localCarLine = mdmCarLineRepository.selectByExternalRefId(event.getEntityId());
+        CarLine localCarLine = mdmCarLineRepository.selectByCode(event.getCode());
         if (localCarLine == null) {
             CarLine newCarLine = CarLine.builder()
                     .code(event.getCode())
                     .name(event.getName())
                     .brandCode(event.getBrandCode())
+                    .enable(true)
+                    .sort(0)
                     .source(SourceType.MDM)
                     .externalRefId(event.getEntityId())
                     .externalVersion(event.getVersion())
@@ -167,6 +172,7 @@ public class MdmSyncAppService {
             if (event.getVersion() > localCarLine.getExternalVersion()) {
                 localCarLine.setName(event.getName());
                 localCarLine.setBrandCode(event.getBrandCode());
+                localCarLine.setExternalRefId(event.getEntityId());
                 localCarLine.setExternalVersion(event.getVersion());
                 localCarLine.setLastSyncTime(LocalDateTime.now());
                 mdmCarLineRepository.updateById(localCarLine);
@@ -183,11 +189,13 @@ public class MdmSyncAppService {
      */
     public void handlePlatformEvent(MdmPlatformEvent event) {
         log.info("处理MDM平台事件: entityId={}, version={}", event.getEntityId(), event.getVersion());
-        Platform localPlatform = mdmPlatformRepository.selectByExternalRefId(event.getEntityId());
+        Platform localPlatform = mdmPlatformRepository.selectByCode(event.getCode());
         if (localPlatform == null) {
             Platform newPlatform = Platform.builder()
                     .code(event.getCode())
                     .name(event.getName())
+                    .enable(true)
+                    .sort(0)
                     .source(SourceType.MDM)
                     .externalRefId(event.getEntityId())
                     .externalVersion(event.getVersion())
@@ -198,6 +206,7 @@ public class MdmSyncAppService {
         } else {
             if (event.getVersion() > localPlatform.getExternalVersion()) {
                 localPlatform.setName(event.getName());
+                localPlatform.setExternalRefId(event.getEntityId());
                 localPlatform.setExternalVersion(event.getVersion());
                 localPlatform.setLastSyncTime(LocalDateTime.now());
                 mdmPlatformRepository.updateById(localPlatform);
@@ -214,13 +223,15 @@ public class MdmSyncAppService {
      */
     public void handleModelEvent(MdmModelEvent event) {
         log.info("处理MDM车型事件: entityId={}, version={}", event.getEntityId(), event.getVersion());
-        Model localModel = mdmModelRepository.selectByExternalRefId(event.getEntityId());
+        Model localModel = mdmModelRepository.selectByCode(event.getCode());
         if (localModel == null) {
             Model newModel = Model.builder()
                     .code(event.getCode())
                     .name(event.getName())
                     .platformCode(event.getPlatformCode())
                     .carLineCode(event.getCarLineCode())
+                    .enable(true)
+                    .sort(0)
                     .source(SourceType.MDM)
                     .externalRefId(event.getEntityId())
                     .externalVersion(event.getVersion())
@@ -233,6 +244,7 @@ public class MdmSyncAppService {
                 localModel.setName(event.getName());
                 localModel.setPlatformCode(event.getPlatformCode());
                 localModel.setCarLineCode(event.getCarLineCode());
+                localModel.setExternalRefId(event.getEntityId());
                 localModel.setExternalVersion(event.getVersion());
                 localModel.setLastSyncTime(LocalDateTime.now());
                 mdmModelRepository.updateById(localModel);
@@ -249,7 +261,7 @@ public class MdmSyncAppService {
      */
     public void handleVariantEvent(MdmVariantEvent event) {
         log.info("处理MDM版本事件: entityId={}, version={}", event.getEntityId(), event.getVersion());
-        Variant localVariant = mdmVariantRepository.selectByExternalRefId(event.getEntityId());
+        Variant localVariant = mdmVariantRepository.selectByCode(event.getCode());
         if (localVariant == null) {
             Variant newVariant = Variant.builder()
                     .code(event.getCode())
@@ -257,6 +269,8 @@ public class MdmSyncAppService {
                     .platformCode(event.getPlatformCode())
                     .carLineCode(event.getCarLineCode())
                     .modelCode(event.getModelCode())
+                    .enable(true)
+                    .sort(0)
                     .source(SourceType.MDM)
                     .externalRefId(event.getEntityId())
                     .externalVersion(event.getVersion())
@@ -270,6 +284,7 @@ public class MdmSyncAppService {
                 localVariant.setPlatformCode(event.getPlatformCode());
                 localVariant.setCarLineCode(event.getCarLineCode());
                 localVariant.setModelCode(event.getModelCode());
+                localVariant.setExternalRefId(event.getEntityId());
                 localVariant.setExternalVersion(event.getVersion());
                 localVariant.setLastSyncTime(LocalDateTime.now());
                 mdmVariantRepository.updateById(localVariant);
@@ -286,7 +301,7 @@ public class MdmSyncAppService {
      */
     public void handleConfigurationEvent(MdmConfigurationEvent event) {
         log.info("处理MDM配置事件: entityId={}, version={}", event.getEntityId(), event.getVersion());
-        Configuration localConfiguration = mdmConfigurationRepository.selectByExternalRefId(event.getEntityId());
+        Configuration localConfiguration = mdmConfigurationRepository.selectByCode(event.getCode());
         if (localConfiguration == null) {
             Configuration newConfiguration = Configuration.builder()
                     .code(event.getCode())
@@ -317,6 +332,7 @@ public class MdmSyncAppService {
                 localConfiguration.setVehicleStageCode(event.getVehicleStageCode());
                 localConfiguration.setEnable(event.getEnable());
                 localConfiguration.setSort(event.getSort());
+                localConfiguration.setExternalRefId(event.getEntityId());
                 localConfiguration.setExternalVersion(event.getVersion());
                 localConfiguration.setLastSyncTime(LocalDateTime.now());
                 mdmConfigurationRepository.updateById(localConfiguration);
@@ -333,7 +349,7 @@ public class MdmSyncAppService {
      */
     public void handleOptionFamilyEvent(MdmOptionFamilyEvent event) {
         log.info("处理MDM选项族事件: entityId={}, version={}", event.getEntityId(), event.getVersion());
-        OptionFamily localOptionFamily = mdmOptionFamilyRepository.selectByExternalRefId(event.getEntityId());
+        OptionFamily localOptionFamily = mdmOptionFamilyRepository.selectByCode(event.getCode());
         if (localOptionFamily == null) {
             OptionFamily newOptionFamily = OptionFamily.builder()
                     .code(event.getCode())
@@ -352,6 +368,7 @@ public class MdmSyncAppService {
                 localOptionFamily.setName(event.getName());
                 localOptionFamily.setNameLocal(event.getNameLocal());
                 localOptionFamily.setType(event.getType());
+                localOptionFamily.setExternalRefId(event.getEntityId());
                 localOptionFamily.setExternalVersion(event.getVersion());
                 localOptionFamily.setLastSyncTime(LocalDateTime.now());
                 mdmOptionFamilyRepository.updateById(localOptionFamily);
@@ -368,7 +385,7 @@ public class MdmSyncAppService {
      */
     public void handleOptionCodeEvent(MdmOptionCodeEvent event) {
         log.info("处理MDM选项值事件: entityId={}, version={}", event.getEntityId(), event.getVersion());
-        OptionCode localOptionCode = mdmOptionFamilyRepository.selectOptionCodeByExternalRefId(event.getEntityId());
+        OptionCode localOptionCode = mdmOptionFamilyRepository.selectOptionCodeByCode(event.getCode());
         if (localOptionCode == null) {
             OptionCode newOptionCode = OptionCode.builder()
                     .code(event.getCode())
@@ -387,6 +404,7 @@ public class MdmSyncAppService {
                 localOptionCode.setOptionFamilyCode(event.getOptionFamilyCode());
                 localOptionCode.setName(event.getName());
                 localOptionCode.setNameLocal(event.getNameLocal());
+                localOptionCode.setExternalRefId(event.getEntityId());
                 localOptionCode.setExternalVersion(event.getVersion());
                 localOptionCode.setLastSyncTime(LocalDateTime.now());
                 mdmOptionFamilyRepository.updateOptionCodeById(localOptionCode);
@@ -404,11 +422,13 @@ public class MdmSyncAppService {
     public void handlePlantEvent(MdmPlantEvent event) {
         log.debug("处理 MDM 工厂事件: eventType={}, entityId={}, code={}",
                 event.getEventType(), event.getEntityId(), event.getCode());
-        Plant localPlant = mdmPlantRepository.selectByExternalRefId(event.getEntityId());
+        Plant localPlant = mdmPlantRepository.selectByCode(event.getCode());
         if (localPlant == null) {
             Plant newPlant = Plant.builder()
                     .code(event.getCode())
                     .name(event.getName())
+                    .enable(true)
+                    .sort(0)
                     .source(SourceType.MDM)
                     .externalRefId(event.getEntityId())
                     .externalVersion(event.getVersion())
@@ -419,6 +439,7 @@ public class MdmSyncAppService {
         } else {
             if (event.getVersion() > localPlant.getExternalVersion()) {
                 localPlant.setName(event.getName());
+                localPlant.setExternalRefId(event.getEntityId());
                 localPlant.setExternalVersion(event.getVersion());
                 localPlant.setLastSyncTime(LocalDateTime.now());
                 mdmPlantRepository.update(localPlant);
@@ -436,7 +457,7 @@ public class MdmSyncAppService {
      */
     public void handleVehicleNodeEvent(MdmVehicleNodeEvent event) {
         log.info("处理MDM车载节点事件: entityId={}, version={}", event.getEntityId(), event.getVersion());
-        VehicleNode localVehicleNode = mdmVehicleNodeRepository.selectByExternalRefId(event.getEntityId());
+        VehicleNode localVehicleNode = mdmVehicleNodeRepository.selectByCode(event.getCode());
         if (localVehicleNode == null) {
             VehicleNode newVehicleNode = VehicleNode.builder()
                     .code(event.getCode())
@@ -467,6 +488,7 @@ public class MdmSyncAppService {
                 localVehicleNode.setOtaSupport(event.getOtaSupport());
                 localVehicleNode.setCore(event.getCore());
                 localVehicleNode.setSort(event.getSort());
+                localVehicleNode.setExternalRefId(event.getEntityId());
                 localVehicleNode.setExternalVersion(event.getVersion());
                 localVehicleNode.setLastSyncTime(LocalDateTime.now());
                 mdmVehicleNodeRepository.updateById(localVehicleNode);

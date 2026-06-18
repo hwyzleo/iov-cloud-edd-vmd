@@ -5,6 +5,56 @@ mybatis-plus:
 # 注意：topic名称必须与MDM需求文档US-064保持一致
 mdm:
   sync:
+    brand:
+      kafka:
+        enabled: ${MDM_BRAND_KAFKA_ENABLED:true}
+        created-topic: ${MDM_BRAND_KAFKA_CREATED_TOPIC:mdm.product.brand.created}
+        updated-topic: ${MDM_BRAND_KAFKA_UPDATED_TOPIC:mdm.product.brand.updated}
+        deactivated-topic: ${MDM_BRAND_KAFKA_DEACTIVATED_TOPIC:mdm.product.brand.deactivated}
+    car-line:
+      kafka:
+        enabled: ${MDM_CAR_LINE_KAFKA_ENABLED:true}
+        created-topic: ${MDM_CAR_LINE_KAFKA_CREATED_TOPIC:mdm.product.carLine.created}
+        updated-topic: ${MDM_CAR_LINE_KAFKA_UPDATED_TOPIC:mdm.product.carLine.updated}
+        deactivated-topic: ${MDM_CAR_LINE_KAFKA_DEACTIVATED_TOPIC:mdm.product.carLine.deactivated}
+    platform:
+      kafka:
+        enabled: ${MDM_PLATFORM_KAFKA_ENABLED:true}
+        created-topic: ${MDM_PLATFORM_KAFKA_CREATED_TOPIC:mdm.product.platform.created}
+        updated-topic: ${MDM_PLATFORM_KAFKA_UPDATED_TOPIC:mdm.product.platform.updated}
+        deactivated-topic: ${MDM_PLATFORM_KAFKA_DEACTIVATED_TOPIC:mdm.product.platform.deactivated}
+    plant:
+      kafka:
+        enabled: ${MDM_PLANT_KAFKA_ENABLED:true}
+        topic: ${MDM_PLANT_KAFKA_TOPIC:mdm.org.plant.event}
+    model:
+      kafka:
+        enabled: ${MDM_MODEL_KAFKA_ENABLED:true}
+        created-topic: ${MDM_MODEL_KAFKA_CREATED_TOPIC:mdm.product.model.created}
+        updated-topic: ${MDM_MODEL_KAFKA_UPDATED_TOPIC:mdm.product.model.updated}
+        deactivated-topic: ${MDM_MODEL_KAFKA_DEACTIVATED_TOPIC:mdm.product.model.deactivated}
+    variant:
+      kafka:
+        enabled: ${MDM_VARIANT_KAFKA_ENABLED:true}
+        created-topic: ${MDM_VARIANT_KAFKA_CREATED_TOPIC:mdm.product.variant.created}
+        updated-topic: ${MDM_VARIANT_KAFKA_UPDATED_TOPIC:mdm.product.variant.updated}
+        deactivated-topic: ${MDM_VARIANT_KAFKA_DEACTIVATED_TOPIC:mdm.product.variant.deactivated}
+    configuration:
+      kafka:
+        enabled: ${MDM_CONFIGURATION_KAFKA_ENABLED:true}
+        created-topic: ${MDM_CONFIGURATION_KAFKA_CREATED_TOPIC:mdm.product.configuration.created}
+        updated-topic: ${MDM_CONFIGURATION_KAFKA_UPDATED_TOPIC:mdm.product.configuration.updated}
+        deactivated-topic: ${MDM_CONFIGURATION_KAFKA_DEACTIVATED_TOPIC:mdm.product.configuration.deactivated}
+    option-family:
+      kafka:
+        enabled: ${MDM_OPTION_FAMILY_KAFKA_ENABLED:true}
+        created-topic: ${MDM_OPTION_FAMILY_KAFKA_CREATED_TOPIC:mdm.product.optionFamily.created}
+        updated-topic: ${MDM_OPTION_FAMILY_KAFKA_UPDATED_TOPIC:mdm.product.optionFamily.updated}
+        deactivated-topic: ${MDM_OPTION_FAMILY_KAFKA_DEACTIVATED_TOPIC:mdm.product.optionFamily.deactivated}
+    vehicle-node:
+      kafka:
+        enabled: ${MDM_VEHICLE_NODE_KAFKA_ENABLED:true}
+        topic: ${MDM_VEHICLE_NODE_KAFKA_TOPIC:mdm.eead.vehicleNode.event}
     part:
       kafka:
         enabled: ${MDM_PART_KAFKA_ENABLED:true}

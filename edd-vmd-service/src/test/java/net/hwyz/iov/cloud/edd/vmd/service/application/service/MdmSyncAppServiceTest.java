@@ -132,14 +132,14 @@ class MdmSyncAppServiceTest {
         // Given
         MdmBrandEvent event = new MdmBrandEvent("CREATED", "mdm-brand-001", 1L, "BRAND001", "新品牌", LocalDateTime.now());
 
-        when(mdmBrandRepository.selectByExternalRefId("mdm-brand-001")).thenReturn(null);
+        when(mdmBrandRepository.selectByCode("BRAND001")).thenReturn(null);
         when(mdmBrandRepository.insert(any(Brand.class))).thenReturn(1);
 
         // When
         mdmSyncAppService.handleBrandEvent(event);
 
         // Then
-        verify(mdmBrandRepository).selectByExternalRefId("mdm-brand-001");
+        verify(mdmBrandRepository).selectByCode("BRAND001");
         verify(mdmBrandRepository).insert(any(Brand.class));
     }
 
@@ -158,14 +158,14 @@ class MdmSyncAppServiceTest {
                 .externalVersion(1L)
                 .build();
 
-        when(mdmBrandRepository.selectByExternalRefId("mdm-brand-002")).thenReturn(localBrand);
+        when(mdmBrandRepository.selectByCode("BRAND002")).thenReturn(localBrand);
         when(mdmBrandRepository.updateById(any(Brand.class))).thenReturn(1);
 
         // When
         mdmSyncAppService.handleBrandEvent(event);
 
         // Then
-        verify(mdmBrandRepository).selectByExternalRefId("mdm-brand-002");
+        verify(mdmBrandRepository).selectByCode("BRAND002");
         verify(mdmBrandRepository).updateById(any(Brand.class));
     }
 
@@ -184,13 +184,13 @@ class MdmSyncAppServiceTest {
                 .externalVersion(2L)
                 .build();
 
-        when(mdmBrandRepository.selectByExternalRefId("mdm-brand-003")).thenReturn(localBrand);
+        when(mdmBrandRepository.selectByCode("BRAND003")).thenReturn(localBrand);
 
         // When
         mdmSyncAppService.handleBrandEvent(event);
 
         // Then
-        verify(mdmBrandRepository).selectByExternalRefId("mdm-brand-003");
+        verify(mdmBrandRepository).selectByCode("BRAND003");
         verify(mdmBrandRepository, never()).updateById(any(Brand.class));
     }
 
@@ -200,14 +200,14 @@ class MdmSyncAppServiceTest {
         // Given
         MdmCarLineEvent event = new MdmCarLineEvent("CREATED", "mdm-carline-001", 1L, "CARLINE001", "新车系", "BRAND001", LocalDateTime.now());
 
-        when(mdmCarLineRepository.selectByExternalRefId("mdm-carline-001")).thenReturn(null);
+        when(mdmCarLineRepository.selectByCode("CARLINE001")).thenReturn(null);
         when(mdmCarLineRepository.insert(any(CarLine.class))).thenReturn(1);
 
         // When
         mdmSyncAppService.handleSeriesEvent(event);
 
         // Then
-        verify(mdmCarLineRepository).selectByExternalRefId("mdm-carline-001");
+        verify(mdmCarLineRepository).selectByCode("CARLINE001");
         verify(mdmCarLineRepository).insert(any(CarLine.class));
     }
 
@@ -227,14 +227,14 @@ class MdmSyncAppServiceTest {
                 .externalVersion(1L)
                 .build();
 
-        when(mdmCarLineRepository.selectByExternalRefId("mdm-carline-002")).thenReturn(localCarLine);
+        when(mdmCarLineRepository.selectByCode("CARLINE002")).thenReturn(localCarLine);
         when(mdmCarLineRepository.updateById(any(CarLine.class))).thenReturn(1);
 
         // When
         mdmSyncAppService.handleSeriesEvent(event);
 
         // Then
-        verify(mdmCarLineRepository).selectByExternalRefId("mdm-carline-002");
+        verify(mdmCarLineRepository).selectByCode("CARLINE002");
         verify(mdmCarLineRepository).updateById(any(CarLine.class));
     }
 
@@ -254,13 +254,13 @@ class MdmSyncAppServiceTest {
                 .externalVersion(2L)
                 .build();
 
-        when(mdmCarLineRepository.selectByExternalRefId("mdm-carline-003")).thenReturn(localCarLine);
+        when(mdmCarLineRepository.selectByCode("CARLINE003")).thenReturn(localCarLine);
 
         // When
         mdmSyncAppService.handleSeriesEvent(event);
 
         // Then
-        verify(mdmCarLineRepository).selectByExternalRefId("mdm-carline-003");
+        verify(mdmCarLineRepository).selectByCode("CARLINE003");
         verify(mdmCarLineRepository, never()).updateById(any(CarLine.class));
     }
 
@@ -270,14 +270,14 @@ class MdmSyncAppServiceTest {
         // Given
         MdmPlatformEvent event = new MdmPlatformEvent("CREATED", "mdm-platform-001", 1L, "PLATFORM001", "新平台", LocalDateTime.now());
 
-        when(mdmPlatformRepository.selectByExternalRefId("mdm-platform-001")).thenReturn(null);
+        when(mdmPlatformRepository.selectByCode("PLATFORM001")).thenReturn(null);
         when(mdmPlatformRepository.insert(any(Platform.class))).thenReturn(1);
 
         // When
         mdmSyncAppService.handlePlatformEvent(event);
 
         // Then
-        verify(mdmPlatformRepository).selectByExternalRefId("mdm-platform-001");
+        verify(mdmPlatformRepository).selectByCode("PLATFORM001");
         verify(mdmPlatformRepository).insert(any(Platform.class));
     }
 
@@ -296,14 +296,14 @@ class MdmSyncAppServiceTest {
                 .externalVersion(1L)
                 .build();
 
-        when(mdmPlatformRepository.selectByExternalRefId("mdm-platform-002")).thenReturn(localPlatform);
+        when(mdmPlatformRepository.selectByCode("PLATFORM002")).thenReturn(localPlatform);
         when(mdmPlatformRepository.updateById(any(Platform.class))).thenReturn(1);
 
         // When
         mdmSyncAppService.handlePlatformEvent(event);
 
         // Then
-        verify(mdmPlatformRepository).selectByExternalRefId("mdm-platform-002");
+        verify(mdmPlatformRepository).selectByCode("PLATFORM002");
         verify(mdmPlatformRepository).updateById(any(Platform.class));
     }
 
@@ -322,13 +322,13 @@ class MdmSyncAppServiceTest {
                 .externalVersion(2L)
                 .build();
 
-        when(mdmPlatformRepository.selectByExternalRefId("mdm-platform-003")).thenReturn(localPlatform);
+        when(mdmPlatformRepository.selectByCode("PLATFORM003")).thenReturn(localPlatform);
 
         // When
         mdmSyncAppService.handlePlatformEvent(event);
 
         // Then
-        verify(mdmPlatformRepository).selectByExternalRefId("mdm-platform-003");
+        verify(mdmPlatformRepository).selectByCode("PLATFORM003");
         verify(mdmPlatformRepository, never()).updateById(any(Platform.class));
     }
 
@@ -413,14 +413,14 @@ class MdmSyncAppServiceTest {
         // Given
         MdmModelEvent event = new MdmModelEvent("CREATED", "mdm-model-001", 1L, "MODEL001", "新车型", "PLATFORM001", "CARLINE001", LocalDateTime.now());
 
-        when(mdmModelRepository.selectByExternalRefId("mdm-model-001")).thenReturn(null);
+        when(mdmModelRepository.selectByCode("MODEL001")).thenReturn(null);
         when(mdmModelRepository.insert(any(Model.class))).thenReturn(1);
 
         // When
         mdmSyncAppService.handleModelEvent(event);
 
         // Then
-        verify(mdmModelRepository).selectByExternalRefId("mdm-model-001");
+        verify(mdmModelRepository).selectByCode("MODEL001");
         verify(mdmModelRepository).insert(any(Model.class));
     }
 
@@ -441,14 +441,14 @@ class MdmSyncAppServiceTest {
                 .externalVersion(1L)
                 .build();
 
-        when(mdmModelRepository.selectByExternalRefId("mdm-model-002")).thenReturn(localModel);
+        when(mdmModelRepository.selectByCode("MODEL002")).thenReturn(localModel);
         when(mdmModelRepository.updateById(any(Model.class))).thenReturn(1);
 
         // When
         mdmSyncAppService.handleModelEvent(event);
 
         // Then
-        verify(mdmModelRepository).selectByExternalRefId("mdm-model-002");
+        verify(mdmModelRepository).selectByCode("MODEL002");
         verify(mdmModelRepository).updateById(any(Model.class));
     }
 
@@ -469,13 +469,13 @@ class MdmSyncAppServiceTest {
                 .externalVersion(2L)
                 .build();
 
-        when(mdmModelRepository.selectByExternalRefId("mdm-model-003")).thenReturn(localModel);
+        when(mdmModelRepository.selectByCode("MODEL003")).thenReturn(localModel);
 
         // When
         mdmSyncAppService.handleModelEvent(event);
 
         // Then
-        verify(mdmModelRepository).selectByExternalRefId("mdm-model-003");
+        verify(mdmModelRepository).selectByCode("MODEL003");
         verify(mdmModelRepository, never()).updateById(any(Model.class));
     }
 
@@ -486,14 +486,14 @@ class MdmSyncAppServiceTest {
         MdmOptionFamilyEvent event = new MdmOptionFamilyEvent("CREATED", "mdm-of-001", 1L, "OF001",
                 "选装族1", "Option Family 1", "EXTERIOR", LocalDateTime.now());
 
-        when(mdmOptionFamilyRepository.selectByExternalRefId("mdm-of-001")).thenReturn(null);
+        when(mdmOptionFamilyRepository.selectByCode("OF001")).thenReturn(null);
         when(mdmOptionFamilyRepository.insert(any(OptionFamily.class))).thenReturn(1);
 
         // When
         mdmSyncAppService.handleOptionFamilyEvent(event);
 
         // Then
-        verify(mdmOptionFamilyRepository).selectByExternalRefId("mdm-of-001");
+        verify(mdmOptionFamilyRepository).selectByCode("OF001");
         verify(mdmOptionFamilyRepository).insert(any(OptionFamily.class));
     }
 
@@ -515,14 +515,14 @@ class MdmSyncAppServiceTest {
                 .externalVersion(1L)
                 .build();
 
-        when(mdmOptionFamilyRepository.selectByExternalRefId("mdm-of-002")).thenReturn(localOptionFamily);
+        when(mdmOptionFamilyRepository.selectByCode("OF002")).thenReturn(localOptionFamily);
         when(mdmOptionFamilyRepository.updateById(any(OptionFamily.class))).thenReturn(1);
 
         // When
         mdmSyncAppService.handleOptionFamilyEvent(event);
 
         // Then
-        verify(mdmOptionFamilyRepository).selectByExternalRefId("mdm-of-002");
+        verify(mdmOptionFamilyRepository).selectByCode("OF002");
         verify(mdmOptionFamilyRepository).updateById(any(OptionFamily.class));
     }
 
@@ -544,13 +544,13 @@ class MdmSyncAppServiceTest {
                 .externalVersion(2L)
                 .build();
 
-        when(mdmOptionFamilyRepository.selectByExternalRefId("mdm-of-003")).thenReturn(localOptionFamily);
+        when(mdmOptionFamilyRepository.selectByCode("OF003")).thenReturn(localOptionFamily);
 
         // When
         mdmSyncAppService.handleOptionFamilyEvent(event);
 
         // Then
-        verify(mdmOptionFamilyRepository).selectByExternalRefId("mdm-of-003");
+        verify(mdmOptionFamilyRepository).selectByCode("OF003");
         verify(mdmOptionFamilyRepository, never()).updateById(any(OptionFamily.class));
     }
 
@@ -561,14 +561,14 @@ class MdmSyncAppServiceTest {
         MdmOptionCodeEvent event = new MdmOptionCodeEvent("CREATED", "mdm-oc-001", 1L, "OC001",
                 "OF001", "选装值1", "Option Code 1", LocalDateTime.now());
 
-        when(mdmOptionFamilyRepository.selectOptionCodeByExternalRefId("mdm-oc-001")).thenReturn(null);
+        when(mdmOptionFamilyRepository.selectOptionCodeByCode("OC001")).thenReturn(null);
         when(mdmOptionFamilyRepository.insertOptionCode(any(OptionCode.class))).thenReturn(1);
 
         // When
         mdmSyncAppService.handleOptionCodeEvent(event);
 
         // Then
-        verify(mdmOptionFamilyRepository).selectOptionCodeByExternalRefId("mdm-oc-001");
+        verify(mdmOptionFamilyRepository).selectOptionCodeByCode("OC001");
         verify(mdmOptionFamilyRepository).insertOptionCode(any(OptionCode.class));
     }
 
@@ -590,14 +590,14 @@ class MdmSyncAppServiceTest {
                 .externalVersion(1L)
                 .build();
 
-        when(mdmOptionFamilyRepository.selectOptionCodeByExternalRefId("mdm-oc-002")).thenReturn(localOptionCode);
+        when(mdmOptionFamilyRepository.selectOptionCodeByCode("OC002")).thenReturn(localOptionCode);
         when(mdmOptionFamilyRepository.updateOptionCodeById(any(OptionCode.class))).thenReturn(1);
 
         // When
         mdmSyncAppService.handleOptionCodeEvent(event);
 
         // Then
-        verify(mdmOptionFamilyRepository).selectOptionCodeByExternalRefId("mdm-oc-002");
+        verify(mdmOptionFamilyRepository).selectOptionCodeByCode("OC002");
         verify(mdmOptionFamilyRepository).updateOptionCodeById(any(OptionCode.class));
     }
 
@@ -619,13 +619,13 @@ class MdmSyncAppServiceTest {
                 .externalVersion(2L)
                 .build();
 
-        when(mdmOptionFamilyRepository.selectOptionCodeByExternalRefId("mdm-oc-003")).thenReturn(localOptionCode);
+        when(mdmOptionFamilyRepository.selectOptionCodeByCode("OC003")).thenReturn(localOptionCode);
 
         // When
         mdmSyncAppService.handleOptionCodeEvent(event);
 
         // Then
-        verify(mdmOptionFamilyRepository).selectOptionCodeByExternalRefId("mdm-oc-003");
+        verify(mdmOptionFamilyRepository).selectOptionCodeByCode("OC003");
         verify(mdmOptionFamilyRepository, never()).updateOptionCodeById(any(OptionCode.class));
     }
 
