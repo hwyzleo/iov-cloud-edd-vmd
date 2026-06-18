@@ -21,7 +21,7 @@ public interface MdmVehicleNodeMapper extends BaseDao<MdmVehicleNodePo, Long> {
      * @param code 车载节点代码
      * @return 车载节点信息
      */
-    @Select("SELECT * FROM tb_mdm_vehicle_node WHERE code = #{code} AND row_valid = 1 LIMIT 1")
+    @Select("SELECT id, code, name, name_local, device_category, func_domain, node_type, ota_support, core, sort, source, external_ref_id, external_version, last_sync_time, create_by, create_time, modify_by, modify_time, row_version, row_valid FROM tb_mdm_vehicle_node WHERE code = #{code} AND row_valid = 1 LIMIT 1")
     MdmVehicleNodePo selectPoByCode(@Param("code") String code);
 
     /**
@@ -30,7 +30,7 @@ public interface MdmVehicleNodeMapper extends BaseDao<MdmVehicleNodePo, Long> {
      * @param externalRefId MDM外部引用ID
      * @return 车载节点信息
      */
-    @Select("SELECT * FROM tb_mdm_vehicle_node WHERE external_ref_id = #{externalRefId} AND row_valid = 1")
+    @Select("SELECT id, code, name, name_local, device_category, func_domain, node_type, ota_support, core, sort, source, external_ref_id, external_version, last_sync_time, create_by, create_time, modify_by, modify_time, row_version, row_valid FROM tb_mdm_vehicle_node WHERE external_ref_id = #{externalRefId} AND row_valid = 1")
     MdmVehicleNodePo selectPoByExternalRefId(@Param("externalRefId") String externalRefId);
 
     /**
