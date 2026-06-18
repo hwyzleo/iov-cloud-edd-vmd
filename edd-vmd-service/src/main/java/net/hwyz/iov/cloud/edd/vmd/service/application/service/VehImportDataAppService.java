@@ -183,8 +183,10 @@ public class VehImportDataAppService {
             // Step 6: Trigger event（触发事件）- 调用解析器
             result = triggerParser(batchNum, type, version, dataJson);
 
-            // 解析成功：设置 handle=true
-            vehImportData.setHandle(true);
+            // 只有当没有失败记录时才标记为已处理
+            if (result.getFailureCount() == 0) {
+                vehImportData.setHandle(true);
+            }
             if (result.getDescription() != null) {
                 vehImportData.setDescription(truncateDescription(result.getDescription()));
             }
