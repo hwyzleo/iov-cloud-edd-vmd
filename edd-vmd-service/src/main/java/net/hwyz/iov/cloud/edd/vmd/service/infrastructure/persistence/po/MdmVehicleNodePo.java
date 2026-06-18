@@ -51,22 +51,16 @@ public class MdmVehicleNodePo extends BasePo {
     private String name;
 
     /**
-     * 车载节点英文名称
+     * 车载节点本地化名称
      */
-    @TableField("name_en")
-    private String nameEn;
+    @TableField("name_local")
+    private String nameLocal;
 
     /**
-     * 设备类型
+     * 设备分类
      */
-    @TableField("type")
-    private String type;
-
-    /**
-     * 设备项（节点类型）
-     */
-    @TableField("device_item")
-    private String deviceItem;
+    @TableField("device_category")
+    private String deviceCategory;
 
     /**
      * 功能域
@@ -85,72 +79,6 @@ public class MdmVehicleNodePo extends BasePo {
      */
     @TableField("ota_support")
     private String otaSupport;
-
-    /**
-     * 分区类型
-     */
-    @TableField("partition_type")
-    private String partitionType;
-
-    /**
-     * 解闭锁安全件
-     */
-    @TableField("lock_unlock_security_component")
-    private Integer lockUnlockSecurityComponent;
-
-    /**
-     * 链路配置源
-     */
-    @TableField("link_config_source")
-    private String linkConfigSource;
-
-    /**
-     * 链路生效目标
-     */
-    @TableField("link_flash_target")
-    private String linkFlashTarget;
-
-    /**
-     * 通信协议
-     */
-    @TableField("comm_protocol")
-    private String commProtocol;
-
-    /**
-     * 刷写协议
-     */
-    @TableField("flash_protocol")
-    private String flashProtocol;
-
-    /**
-     * CAN/CANFD总线发送标识
-     */
-    @TableField("can_tx_id")
-    private String canTxId;
-
-    /**
-     * CAN/CANFD总线接收标识
-     */
-    @TableField("can_rx_id")
-    private String canRxId;
-
-    /**
-     * 以太网的业务IP
-     */
-    @TableField("ethernet_ip")
-    private String ethernetIp;
-
-    /**
-     * DoIP协议网关标识
-     */
-    @TableField("doip_gateway_id")
-    private String doipGatewayId;
-
-    /**
-     * DoIP协议设备标识
-     */
-    @TableField("doip_entity_id")
-    private String doipEntityId;
 
     /**
      * 是否核心设备

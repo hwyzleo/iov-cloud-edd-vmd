@@ -198,9 +198,8 @@ class VehicleNodeIntegrationTest {
                 .id(1L)
                 .code("VN001")
                 .name("测试车载节点")
-                .nameEn("Test Vehicle Node")
-                .type("ECU")
-                .deviceItem("TBOX")
+                .nameLocal("Test Vehicle Node")
+                .deviceCategory("TBOX")
                 .funcDomain("ADAS")
                 .nodeType("CONTROLLER")
                 .otaSupport("OTA")
@@ -253,7 +252,7 @@ class VehicleNodeIntegrationTest {
         assertEquals(1L, po.getId());
         assertEquals("VN001", po.getCode());
         assertEquals("测试车载节点", po.getName());
-        assertEquals("TBOX", po.getDeviceItem());
+        assertEquals("TBOX", po.getDeviceCategory());
         assertEquals("ADAS", po.getFuncDomain());
         assertEquals("MDM", po.getSource());
         assertEquals("ext-001", po.getExternalRefId());
