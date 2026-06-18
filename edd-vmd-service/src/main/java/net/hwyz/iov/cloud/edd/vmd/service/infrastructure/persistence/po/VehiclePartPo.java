@@ -53,10 +53,16 @@ public class VehiclePartPo extends BasePo {
     private String vehicleNodeCode;
 
     /**
-     * 设备项（安装位置快照）
+     * 设备项（节点类型快照，来自 vehicle_node.device_item）
      */
     @TableField("device_item")
     private String deviceItem;
+
+    /**
+     * 安装位置（来自 TOL 导入数据）
+     */
+    @TableField("position")
+    private String position;
 
     /**
      * 绑定时间

@@ -1,5 +1,6 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.vid.impl;
 
+import cn.hutool.core.util.ObjUtil;
 import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
@@ -7,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ImportResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartInfoAppService;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleNodeAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehiclePartAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParserRegistry;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.VehicleImportDataParser;
@@ -14,6 +16,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.common.exception.PartBindingConflictEx
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.VehicleNotExistException;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartInfo;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleBasicInfo;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleNode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehiclePart;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.PartInstanceState;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
@@ -38,6 +41,7 @@ public class VehicleTolDataParserV1_0 extends BaseProcessor implements VehicleIm
 
     private final ImportDataParserRegistry parserRegistry;
     private final VehBasicInfoRepository vehBasicInfoRepository;
+    private final VehicleNodeAppService vehicleNodeAppService;
     private final PartInfoAppService partInfoAppService;
     private final VehiclePartAppService vehiclePartAppService;
 
@@ -121,6 +125,15 @@ public class VehicleTolDataParserV1_0 extends BaseProcessor implements VehicleIm
                         throw new VehicleNotExistException(vin);
                     }
 
+                    // 校验 device_code 是否存在于 vehicle_node 表
+                    VehicleNode vehicleNode = vehicleNodeAppService.getVehicleNodeByCode(deviceCode);
+                    if (ObjUtil.isNull(vehicleNode)) {
+                        throw new IllegalArgumentException(
+                                String.format("车载节点[%s]不存在", deviceCode));
+                    }
+                    // 从 vehicle_node 获取 device_item（节点类型）
+                    String deviceItem = vehicleNode.getDeviceItem();
+
                     // 创建零件实例
                     PartInfo partInfo = PartInfo.builder()
                             .partCode(partNo)
@@ -144,7 +157,8 @@ public class VehicleTolDataParserV1_0 extends BaseProcessor implements VehicleIm
                             .vin(vin)
                             .partId(partInfo.getId())
                             .vehicleNodeCode(deviceCode)
-                            .deviceItem(installPosition)
+                            .deviceItem(deviceItem)
+                            .position(installPosition)
                             .bindOrg("TOL")
                             .build();
                     vehiclePartAppService.bindVehiclePart(vehiclePart);

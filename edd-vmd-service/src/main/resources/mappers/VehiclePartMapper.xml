@@ -9,6 +9,7 @@
         <result column="part_id" property="partId" />
         <result column="vehicle_node_code" property="vehicleNodeCode" />
         <result column="device_item" property="deviceItem" />
+        <result column="position" property="position" />
         <result column="bind_time" property="bindTime" />
         <result column="bind_type" property="bindType" />
         <result column="bind_by" property="bindBy" />
@@ -30,18 +31,18 @@
 
     <!-- 通用查询结果列 -->
     <sql id="baseColumnList">
-        id, vin, part_id, vehicle_node_code, device_item, bind_time, bind_type, bind_by, bind_org, unbind_time, unbind_reason, unbind_by, unbind_org, bind_state, replace_of_binding_id,
+        id, vin, part_id, vehicle_node_code, device_item, position, bind_time, bind_type, bind_by, bind_org, unbind_time, unbind_reason, unbind_by, unbind_org, bind_state, replace_of_binding_id,
         description, create_time, create_by, modify_time, modify_by, row_version, row_valid
     </sql>
 
     <!-- 插入 -->
     <insert id="insertPo" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO tb_vehicle_part (
-            id, vin, part_id, vehicle_node_code, device_item, bind_time, bind_type, bind_by, bind_org, unbind_time, unbind_reason, unbind_by, unbind_org, bind_state, replace_of_binding_id,
+            id, vin, part_id, vehicle_node_code, device_item, position, bind_time, bind_type, bind_by, bind_org, unbind_time, unbind_reason, unbind_by, unbind_org, bind_state, replace_of_binding_id,
             description, create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
         VALUES (
-            #{id}, #{vin}, #{partId}, #{vehicleNodeCode}, #{deviceItem}, #{bindTime}, #{bindType}, #{bindBy}, #{bindOrg}, #{unbindTime}, #{unbindReason}, #{unbindBy}, #{unbindOrg}, #{bindState}, #{replaceOfBindingId},
+            #{id}, #{vin}, #{partId}, #{vehicleNodeCode}, #{deviceItem}, #{position}, #{bindTime}, #{bindType}, #{bindBy}, #{bindOrg}, #{unbindTime}, #{unbindReason}, #{unbindBy}, #{unbindOrg}, #{bindState}, #{replaceOfBindingId},
             #{description}, now(), #{createBy}, now(), #{modifyBy}, 1, 1
         )
     </insert>
@@ -49,13 +50,13 @@
     <!-- 批量插入 -->
     <insert id="batchInsertPo" useGeneratedKeys="true" keyProperty="id" parameterType="java.util.List">
         INSERT INTO tb_vehicle_part (
-            id, vin, part_id, vehicle_node_code, device_item, bind_time, bind_type, bind_by, bind_org, unbind_time, unbind_reason, unbind_by, unbind_org, bind_state, replace_of_binding_id,
+            id, vin, part_id, vehicle_node_code, device_item, position, bind_time, bind_type, bind_by, bind_org, unbind_time, unbind_reason, unbind_by, unbind_org, bind_state, replace_of_binding_id,
             description, create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
         VALUES
         <foreach collection="list" item="item" index="index" separator=",">
         (
-            #{item.id}, #{item.vin}, #{item.partId}, #{item.vehicleNodeCode}, #{item.deviceItem}, #{item.bindTime}, #{item.bindType}, #{item.bindBy}, #{item.bindOrg}, #{item.unbindTime}, #{item.unbindReason}, #{item.unbindBy}, #{item.unbindOrg}, #{item.bindState}, #{item.replaceOfBindingId},
+            #{item.id}, #{item.vin}, #{item.partId}, #{item.vehicleNodeCode}, #{item.deviceItem}, #{item.position}, #{item.bindTime}, #{item.bindType}, #{item.bindBy}, #{item.bindOrg}, #{item.unbindTime}, #{item.unbindReason}, #{item.unbindBy}, #{item.unbindOrg}, #{item.bindState}, #{item.replaceOfBindingId},
             #{item.description}, now(), #{item.createBy}, now(), #{item.modifyBy}, 1, 1
         )
         </foreach>

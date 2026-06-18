@@ -3,11 +3,13 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.vid.impl;
 import cn.hutool.json.JSONObject;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ImportResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartInfoAppService;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleNodeAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehiclePartAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParserRegistry;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.PartBindingConflictException;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartInfo;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleBasicInfo;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleNode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehiclePart;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,6 +39,9 @@ class TolEcuListParserV1_0Test {
     private VehBasicInfoRepository vehBasicInfoRepository;
 
     @Mock
+    private VehicleNodeAppService vehicleNodeAppService;
+
+    @Mock
     private PartInfoAppService partInfoAppService;
 
     @Mock
@@ -47,7 +52,7 @@ class TolEcuListParserV1_0Test {
     @BeforeEach
     void setUp() {
         parser = new VehicleTolDataParserV1_0(
-                parserRegistry, vehBasicInfoRepository, partInfoAppService, vehiclePartAppService);
+                parserRegistry, vehBasicInfoRepository, vehicleNodeAppService, partInfoAppService, vehiclePartAppService);
     }
 
     @Test
@@ -75,6 +80,8 @@ class TolEcuListParserV1_0Test {
 
         VehicleBasicInfo vehicleBasicInfo = VehicleBasicInfo.builder().vin(vin).build();
         when(vehBasicInfoRepository.selectByVin(vin)).thenReturn(vehicleBasicInfo);
+        VehicleNode vehicleNode = VehicleNode.builder().code(deviceCode).deviceItem("IBCM_TYPE").build();
+        when(vehicleNodeAppService.getVehicleNodeByCode(deviceCode)).thenReturn(vehicleNode);
         // 模拟 upsertPartInfo 设置 ID
         doAnswer(invocation -> {
             PartInfo partInfo = invocation.getArgument(0);
@@ -119,6 +126,37 @@ class TolEcuListParserV1_0Test {
         assertNotNull(result.getDescription());
         assertTrue(result.getDescription().contains("VIN[" + vin + "]不存在"));
 
+        verify(vehicleNodeAppService, never()).getVehicleNodeByCode(any());
+        verify(partInfoAppService, never()).upsertPartInfo(any());
+        verify(vehiclePartAppService, never()).bindVehiclePart(any());
+    }
+
+    @Test
+    @DisplayName("车载节点不存在时应计入failureCount")
+    void testVehicleNodeNotExistShouldIncrementFailureCount() {
+        // Given
+        String batchNum = "BATCH_003";
+        String vin = "TEST_VIN_003";
+        String partNo = "17300011AA";
+        String sn = "SN000000001";
+        String deviceCode = "INVALID_CODE";
+        JSONObject dataJson = buildDataJson(vin, partNo, sn, deviceCode);
+
+        VehicleBasicInfo vehicleBasicInfo = VehicleBasicInfo.builder().vin(vin).build();
+        when(vehBasicInfoRepository.selectByVin(vin)).thenReturn(vehicleBasicInfo);
+        when(vehicleNodeAppService.getVehicleNodeByCode(deviceCode)).thenReturn(null);
+
+        // When
+        ImportResult result = parser.parse(batchNum, dataJson);
+
+        // Then
+        assertEquals(1, result.getTotalCount());
+        assertEquals(0, result.getSuccessCount());
+        assertEquals(1, result.getFailureCount());
+        assertEquals(0, result.getInvalidCount());
+        assertNotNull(result.getDescription());
+        assertTrue(result.getDescription().contains("车载节点[" + deviceCode + "]不存在"));
+
         verify(partInfoAppService, never()).upsertPartInfo(any());
         verify(vehiclePartAppService, never()).bindVehiclePart(any());
     }
@@ -127,8 +165,8 @@ class TolEcuListParserV1_0Test {
     @DisplayName("零件跨VIN冲突时应计入failureCount")
     void testPartBindingConflictShouldIncrementFailureCount() {
         // Given
-        String batchNum = "BATCH_003";
-        String vin = "TEST_VIN_003";
+        String batchNum = "BATCH_004";
+        String vin = "TEST_VIN_004";
         String partNo = "17300011AA";
         String sn = "SN000000001";
         String deviceCode = "IBCM";
@@ -136,6 +174,8 @@ class TolEcuListParserV1_0Test {
 
         VehicleBasicInfo vehicleBasicInfo = VehicleBasicInfo.builder().vin(vin).build();
         when(vehBasicInfoRepository.selectByVin(vin)).thenReturn(vehicleBasicInfo);
+        VehicleNode vehicleNode = VehicleNode.builder().code(deviceCode).deviceItem("IBCM_TYPE").build();
+        when(vehicleNodeAppService.getVehicleNodeByCode(deviceCode)).thenReturn(vehicleNode);
         when(partInfoAppService.upsertPartInfo(any(PartInfo.class)))
                 .thenThrow(new PartBindingConflictException("零件已绑定其他VIN"));
 
@@ -198,6 +238,12 @@ class TolEcuListParserV1_0Test {
 
         VehicleBasicInfo vehicleBasicInfo = VehicleBasicInfo.builder().vin(vin).build();
         when(vehBasicInfoRepository.selectByVin(vin)).thenReturn(vehicleBasicInfo);
+        VehicleNode vehicleNode = VehicleNode.builder().code("IBCM").deviceItem("IBCM_TYPE").build();
+        when(vehicleNodeAppService.getVehicleNodeByCode("IBCM")).thenReturn(vehicleNode);
+        VehicleNode vehicleNode2 = VehicleNode.builder().code("AVAS").deviceItem("AVAS_TYPE").build();
+        when(vehicleNodeAppService.getVehicleNodeByCode("AVAS")).thenReturn(vehicleNode2);
+        VehicleNode vehicleNode3 = VehicleNode.builder().code("WCM_L").deviceItem("WCM_TYPE").build();
+        when(vehicleNodeAppService.getVehicleNodeByCode("WCM_L")).thenReturn(vehicleNode3);
         // 模拟 upsertPartInfo 设置 ID
         doAnswer(invocation -> {
             PartInfo partInfo = invocation.getArgument(0);
@@ -226,6 +272,8 @@ class TolEcuListParserV1_0Test {
 
         VehicleBasicInfo vehicleBasicInfo1 = VehicleBasicInfo.builder().vin(vin1).build();
         when(vehBasicInfoRepository.selectByVin(vin1)).thenReturn(vehicleBasicInfo1);
+        VehicleNode vehicleNode = VehicleNode.builder().code("IBCM").deviceItem("IBCM_TYPE").build();
+        when(vehicleNodeAppService.getVehicleNodeByCode("IBCM")).thenReturn(vehicleNode);
         // 模拟 upsertPartInfo 设置 ID
         doAnswer(invocation -> {
             PartInfo partInfo = invocation.getArgument(0);
