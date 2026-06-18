@@ -6,7 +6,6 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartInfoAppService
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehiclePartAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParserRegistry;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.PartBindingConflictException;
-import net.hwyz.iov.cloud.edd.vmd.service.common.exception.VehicleNotExistException;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartInfo;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleBasicInfo;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehiclePart;
@@ -23,7 +22,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 /**
- * TolEcuListParserV1_0 单元测试
+ * VehicleTolDataParserV1_0 单元测试
  *
  * @author hwyz_leo
  * @since 2026-06-17
@@ -43,11 +42,11 @@ class TolEcuListParserV1_0Test {
     @Mock
     private VehiclePartAppService vehiclePartAppService;
 
-    private TolEcuListParserV1_0 parser;
+    private VehicleTolDataParserV1_0 parser;
 
     @BeforeEach
     void setUp() {
-        parser = new TolEcuListParserV1_0(
+        parser = new VehicleTolDataParserV1_0(
                 parserRegistry, vehBasicInfoRepository, partInfoAppService, vehiclePartAppService);
     }
 
@@ -64,15 +63,15 @@ class TolEcuListParserV1_0Test {
     }
 
     @Test
-    @DisplayName("正常ECU绑定应成功")
-    void testSuccessfulEcuBinding() {
+    @DisplayName("正常零件绑定应成功")
+    void testSuccessfulPartBinding() {
         // Given
         String batchNum = "BATCH_001";
         String vin = "TEST_VIN_001";
-        String ecuSn = "ECU_SN_001";
-        String partCode = "PART_001";
-        String vehicleNodeCode = "TBOX_5G";
-        JSONObject dataJson = buildDataJson(vin, ecuSn, partCode, vehicleNodeCode);
+        String partNo = "17300011AA";
+        String sn = "SN000000001";
+        String deviceCode = "IBCM";
+        JSONObject dataJson = buildDataJson(vin, partNo, sn, deviceCode);
 
         VehicleBasicInfo vehicleBasicInfo = VehicleBasicInfo.builder().vin(vin).build();
         when(vehBasicInfoRepository.selectByVin(vin)).thenReturn(vehicleBasicInfo);
@@ -97,10 +96,10 @@ class TolEcuListParserV1_0Test {
         // Given
         String batchNum = "BATCH_002";
         String vin = "NOT_EXIST_VIN";
-        String ecuSn = "ECU_SN_002";
-        String partCode = "PART_002";
-        String vehicleNodeCode = "TBOX_5G";
-        JSONObject dataJson = buildDataJson(vin, ecuSn, partCode, vehicleNodeCode);
+        String partNo = "17300011AA";
+        String sn = "SN000000001";
+        String deviceCode = "IBCM";
+        JSONObject dataJson = buildDataJson(vin, partNo, sn, deviceCode);
 
         when(vehBasicInfoRepository.selectByVin(vin)).thenReturn(null);
 
@@ -120,20 +119,20 @@ class TolEcuListParserV1_0Test {
     }
 
     @Test
-    @DisplayName("ECU跨VIN冲突时应计入failureCount")
-    void testEcuBindingConflictShouldIncrementFailureCount() {
+    @DisplayName("零件跨VIN冲突时应计入failureCount")
+    void testPartBindingConflictShouldIncrementFailureCount() {
         // Given
         String batchNum = "BATCH_003";
         String vin = "TEST_VIN_003";
-        String ecuSn = "ECU_SN_003";
-        String partCode = "PART_003";
-        String vehicleNodeCode = "TBOX_5G";
-        JSONObject dataJson = buildDataJson(vin, ecuSn, partCode, vehicleNodeCode);
+        String partNo = "17300011AA";
+        String sn = "SN000000001";
+        String deviceCode = "IBCM";
+        JSONObject dataJson = buildDataJson(vin, partNo, sn, deviceCode);
 
         VehicleBasicInfo vehicleBasicInfo = VehicleBasicInfo.builder().vin(vin).build();
         when(vehBasicInfoRepository.selectByVin(vin)).thenReturn(vehicleBasicInfo);
         when(partInfoAppService.upsertPartInfo(any(PartInfo.class)))
-                .thenThrow(new PartBindingConflictException("ECU已绑定其他VIN"));
+                .thenThrow(new PartBindingConflictException("零件已绑定其他VIN"));
 
         // When
         ImportResult result = parser.parse(batchNum, dataJson);
@@ -144,7 +143,7 @@ class TolEcuListParserV1_0Test {
         assertEquals(1, result.getFailureCount());
         assertEquals(0, result.getInvalidCount());
         assertNotNull(result.getDescription());
-        assertTrue(result.getDescription().contains("ECU[" + ecuSn + "]已绑定其他VIN"));
+        assertTrue(result.getDescription().contains("零件[" + partNo + "]已绑定其他VIN"));
     }
 
     @Test
@@ -152,7 +151,8 @@ class TolEcuListParserV1_0Test {
     void testBlankRequiredFieldsShouldIncrementInvalidCount() {
         // Given
         String batchNum = "BATCH_004";
-        JSONObject dataJson = buildDataJson("", "ECU_SN_004", "PART_004", "TBOX_5G");
+        String vin = "TEST_VIN_004";
+        JSONObject dataJson = buildDataJson(vin, "", "SN000000001", "IBCM");
 
         // When
         ImportResult result = parser.parse(batchNum, dataJson);
@@ -184,14 +184,35 @@ class TolEcuListParserV1_0Test {
     }
 
     @Test
-    @DisplayName("多条记录混合场景应正确计数")
-    void testMixedScenarioWithMultipleRecords() {
+    @DisplayName("单个ITEM多个PARTS应正确计数")
+    void testSingleItemWithMultipleParts() {
         // Given
         String batchNum = "BATCH_006";
+        String vin = "TEST_VIN_006";
+        JSONObject dataJson = buildDataJsonWithMultipleParts(vin);
+
+        VehicleBasicInfo vehicleBasicInfo = VehicleBasicInfo.builder().vin(vin).build();
+        when(vehBasicInfoRepository.selectByVin(vin)).thenReturn(vehicleBasicInfo);
+        when(partInfoAppService.upsertPartInfo(any(PartInfo.class))).thenReturn(1);
+
+        // When
+        ImportResult result = parser.parse(batchNum, dataJson);
+
+        // Then
+        assertEquals(3, result.getTotalCount());
+        assertEquals(3, result.getSuccessCount());
+        assertEquals(0, result.getFailureCount());
+        assertEquals(0, result.getInvalidCount());
+    }
+
+    @Test
+    @DisplayName("多ITEM混合场景应正确计数")
+    void testMixedScenarioWithMultipleItems() {
+        // Given
+        String batchNum = "BATCH_007";
         String vin1 = "VIN_001";
         String vin2 = "VIN_002";
-        String vin3 = "";
-        JSONObject dataJson = buildDataJsonWithMultipleRecords(vin1, vin2, vin3);
+        JSONObject dataJson = buildDataJsonWithMultipleItems(vin1, vin2);
 
         VehicleBasicInfo vehicleBasicInfo1 = VehicleBasicInfo.builder().vin(vin1).build();
         when(vehBasicInfoRepository.selectByVin(vin1)).thenReturn(vehicleBasicInfo1);
@@ -203,13 +224,13 @@ class TolEcuListParserV1_0Test {
         ImportResult result = parser.parse(batchNum, dataJson);
 
         // Then
-        assertEquals(3, result.getTotalCount());
+        assertEquals(2, result.getTotalCount());
         assertEquals(1, result.getSuccessCount());
         assertEquals(1, result.getFailureCount());
-        assertEquals(1, result.getInvalidCount());
+        assertEquals(0, result.getInvalidCount());
     }
 
-    private JSONObject buildDataJson(String vin, String ecuSn, String partCode, String vehicleNodeCode) {
+    private JSONObject buildDataJson(String vin, String partNo, String sn, String deviceCode) {
         JSONObject data = new JSONObject();
         JSONObject request = new JSONObject();
         JSONObject dataObj = new JSONObject();
@@ -217,10 +238,20 @@ class TolEcuListParserV1_0Test {
 
         JSONObject item = new JSONObject();
         item.set("VIN", vin);
-        item.set("ECU_SN", ecuSn);
-        item.set("PART_CODE", partCode);
-        item.set("VEHICLE_NODE_CODE", vehicleNodeCode);
-        item.set("POSITION", "POS_001");
+        cn.hutool.json.JSONArray parts = new cn.hutool.json.JSONArray();
+
+        JSONObject part = new JSONObject();
+        part.set("VIN", vin);
+        part.set("PART_NO", partNo);
+        part.set("SN", sn);
+        part.set("DEVICE_CODE", deviceCode);
+        part.set("INSTALL_POSITION", "VEHICLE");
+        part.set("SUPPLIER_CODE", "S2002");
+        part.set("HARDWARE_VERSION", "00");
+        part.set("HARDWARE_NO", "17300013AA");
+        parts.add(part);
+
+        item.set("PARTS", parts);
         items.add(item);
 
         dataObj.set("ITEMS", items);
@@ -241,38 +272,85 @@ class TolEcuListParserV1_0Test {
         return data;
     }
 
-    private JSONObject buildDataJsonWithMultipleRecords(String vin1, String vin2, String vin3) {
+    private JSONObject buildDataJsonWithMultipleParts(String vin) {
         JSONObject data = new JSONObject();
         JSONObject request = new JSONObject();
         JSONObject dataObj = new JSONObject();
         cn.hutool.json.JSONArray items = new cn.hutool.json.JSONArray();
 
-        // Valid record 1
+        JSONObject item = new JSONObject();
+        item.set("VIN", vin);
+        cn.hutool.json.JSONArray parts = new cn.hutool.json.JSONArray();
+
+        // Part 1 - IBCM
+        JSONObject part1 = new JSONObject();
+        part1.set("VIN", vin);
+        part1.set("PART_NO", "17300011AA");
+        part1.set("SN", "SN000000001");
+        part1.set("DEVICE_CODE", "IBCM");
+        part1.set("INSTALL_POSITION", "VEHICLE");
+        parts.add(part1);
+
+        // Part 2 - AVAS
+        JSONObject part2 = new JSONObject();
+        part2.set("VIN", vin);
+        part2.set("PART_NO", "17200033AA");
+        part2.set("SN", "SN000000002");
+        part2.set("DEVICE_CODE", "AVAS");
+        part2.set("INSTALL_POSITION", "VEHICLE");
+        parts.add(part2);
+
+        // Part 3 - WCM_L
+        JSONObject part3 = new JSONObject();
+        part3.set("VIN", vin);
+        part3.set("PART_NO", "17000687AA");
+        part3.set("SN", "SN000000003");
+        part3.set("DEVICE_CODE", "WCM_L");
+        part3.set("INSTALL_POSITION", "VEHICLE");
+        parts.add(part3);
+
+        item.set("PARTS", parts);
+        items.add(item);
+
+        dataObj.set("ITEMS", items);
+        request.set("DATA", dataObj);
+        data.set("REQUEST", request);
+        return data;
+    }
+
+    private JSONObject buildDataJsonWithMultipleItems(String vin1, String vin2) {
+        JSONObject data = new JSONObject();
+        JSONObject request = new JSONObject();
+        JSONObject dataObj = new JSONObject();
+        cn.hutool.json.JSONArray items = new cn.hutool.json.JSONArray();
+
+        // Item 1 - valid
         JSONObject item1 = new JSONObject();
         item1.set("VIN", vin1);
-        item1.set("ECU_SN", "ECU_SN_001");
-        item1.set("PART_CODE", "PART_001");
-        item1.set("VEHICLE_NODE_CODE", "TBOX_5G");
-        item1.set("POSITION", "POS_001");
+        cn.hutool.json.JSONArray parts1 = new cn.hutool.json.JSONArray();
+        JSONObject part1 = new JSONObject();
+        part1.set("VIN", vin1);
+        part1.set("PART_NO", "17300011AA");
+        part1.set("SN", "SN000000001");
+        part1.set("DEVICE_CODE", "IBCM");
+        part1.set("INSTALL_POSITION", "VEHICLE");
+        parts1.add(part1);
+        item1.set("PARTS", parts1);
         items.add(item1);
 
-        // VIN not exist
+        // Item 2 - VIN not exist
         JSONObject item2 = new JSONObject();
         item2.set("VIN", vin2);
-        item2.set("ECU_SN", "ECU_SN_002");
-        item2.set("PART_CODE", "PART_002");
-        item2.set("VEHICLE_NODE_CODE", "TBOX_5G");
-        item2.set("POSITION", "POS_002");
+        cn.hutool.json.JSONArray parts2 = new cn.hutool.json.JSONArray();
+        JSONObject part2 = new JSONObject();
+        part2.set("VIN", vin2);
+        part2.set("PART_NO", "17200033AA");
+        part2.set("SN", "SN000000002");
+        part2.set("DEVICE_CODE", "AVAS");
+        part2.set("INSTALL_POSITION", "VEHICLE");
+        parts2.add(part2);
+        item2.set("PARTS", parts2);
         items.add(item2);
-
-        // Invalid - empty VIN
-        JSONObject item3 = new JSONObject();
-        item3.set("VIN", vin3);
-        item3.set("ECU_SN", "ECU_SN_003");
-        item3.set("PART_CODE", "PART_003");
-        item3.set("VEHICLE_NODE_CODE", "TBOX_5G");
-        item3.set("POSITION", "POS_003");
-        items.add(item3);
 
         dataObj.set("ITEMS", items);
         request.set("DATA", dataObj);

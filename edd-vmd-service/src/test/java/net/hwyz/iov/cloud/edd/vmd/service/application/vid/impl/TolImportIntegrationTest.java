@@ -37,7 +37,7 @@ class TolImportIntegrationTest {
         // Given
         String batchNum = "TOL_BATCH_001";
         String vin = "TEST_VIN_001";
-        String dataJson = buildTolDataJson(vin, "ECU_SN_001", "PART_001", "TBOX_5G");
+        String dataJson = buildTolDataJson(vin, "17300011AA", "SN000000001", "IBCM");
 
         VehImportData vehImportData = VehImportData.builder()
                 .batchNum(batchNum)
@@ -79,7 +79,7 @@ class TolImportIntegrationTest {
         assertTrue(result.getDescription().contains("已处理"));
     }
 
-    private String buildTolDataJson(String vin, String ecuSn, String partCode, String vehicleNodeCode) {
+    private String buildTolDataJson(String vin, String partNo, String sn, String deviceCode) {
         JSONObject data = new JSONObject();
         JSONObject request = new JSONObject();
         JSONObject dataObj = new JSONObject();
@@ -87,10 +87,20 @@ class TolImportIntegrationTest {
 
         JSONObject item = new JSONObject();
         item.set("VIN", vin);
-        item.set("ECU_SN", ecuSn);
-        item.set("PART_CODE", partCode);
-        item.set("VEHICLE_NODE_CODE", vehicleNodeCode);
-        item.set("POSITION", "POS_001");
+        cn.hutool.json.JSONArray parts = new cn.hutool.json.JSONArray();
+
+        JSONObject part = new JSONObject();
+        part.set("VIN", vin);
+        part.set("PART_NO", partNo);
+        part.set("SN", sn);
+        part.set("DEVICE_CODE", deviceCode);
+        part.set("INSTALL_POSITION", "VEHICLE");
+        part.set("SUPPLIER_CODE", "S2002");
+        part.set("HARDWARE_VERSION", "00");
+        part.set("HARDWARE_NO", "17300013AA");
+        parts.add(part);
+
+        item.set("PARTS", parts);
         items.add(item);
 
         dataObj.set("ITEMS", items);
