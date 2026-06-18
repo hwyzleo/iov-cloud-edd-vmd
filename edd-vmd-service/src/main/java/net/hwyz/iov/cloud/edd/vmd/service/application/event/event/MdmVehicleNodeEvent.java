@@ -1,5 +1,6 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.event.event;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -17,18 +18,26 @@ import java.time.LocalDateTime;
 public class MdmVehicleNodeEvent extends MdmEvent {
 
     /**
+     * 车载节点代码（兼容MDM侧nodeCode字段名）
+     */
+    @JsonAlias("nodeCode")
+    private String code;
+
+    /**
      * 车载节点名称
      */
     private String name;
 
     /**
-     * 车载节点英文名称
+     * 车载节点英文名称（兼容MDM侧nameLocal字段名）
      */
+    @JsonAlias("nameLocal")
     private String nameEn;
 
     /**
-     * 设备类型
+     * 设备类型（兼容MDM侧deviceCategory字段名）
      */
+    @JsonAlias("deviceCategory")
     private String type;
 
     /**
@@ -37,8 +46,9 @@ public class MdmVehicleNodeEvent extends MdmEvent {
     private String deviceItem;
 
     /**
-     * 功能域
+     * 功能域（兼容MDM侧functionalDomain字段名）
      */
+    @JsonAlias("functionalDomain")
     private String funcDomain;
 
     /**
@@ -47,13 +57,15 @@ public class MdmVehicleNodeEvent extends MdmEvent {
     private String nodeType;
 
     /**
-     * OTA支持类型
+     * OTA支持类型（兼容MDM侧otaSupportType字段名）
      */
+    @JsonAlias("otaSupportType")
     private String otaSupport;
 
     /**
-     * 是否核心设备
+     * 是否核心设备（兼容MDM侧isCoreNode字段名）
      */
+    @JsonAlias("isCoreNode")
     private Boolean core;
 
     /**
@@ -66,6 +78,7 @@ public class MdmVehicleNodeEvent extends MdmEvent {
                                 String funcDomain, String nodeType, String otaSupport,
                                 Boolean core, Integer sort, LocalDateTime occurredAt) {
         super(eventType, entityId, version, code, occurredAt);
+        this.code = code;
         this.name = name;
         this.nameEn = nameEn;
         this.type = type;
