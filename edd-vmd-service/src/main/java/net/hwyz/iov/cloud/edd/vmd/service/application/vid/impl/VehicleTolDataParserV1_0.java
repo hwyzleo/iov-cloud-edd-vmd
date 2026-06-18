@@ -18,6 +18,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartInfo;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleBasicInfo;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleNode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehiclePart;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.InboundSourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.PartInstanceState;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
 import net.hwyz.iov.cloud.framework.common.util.StrUtil;
@@ -72,6 +73,12 @@ public class VehicleTolDataParserV1_0 extends BaseProcessor implements VehicleIm
                     .failureCount(0)
                     .invalidCount(0)
                     .build();
+        }
+
+        // 从 HEAD.ACCOUNT 获取来源系统，用于 bind_org
+        String sourceSystem = getSupplier(dataJson);
+        if (StrUtil.isBlank(sourceSystem)) {
+            sourceSystem = InboundSourceType.OTHER.getValue();
         }
 
         int totalParts = 0;
@@ -159,7 +166,8 @@ public class VehicleTolDataParserV1_0 extends BaseProcessor implements VehicleIm
                             .vehicleNodeCode(deviceCode)
                             .deviceItem(deviceItem)
                             .position(installPosition)
-                            .bindOrg("TOL")
+                            .bindType("INITIAL")
+                            .bindOrg(sourceSystem)
                             .build();
                     vehiclePartAppService.bindVehiclePart(vehiclePart);
 
