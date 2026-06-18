@@ -1,5 +1,6 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.event.event;
 
+import com.fasterxml.jackson.annotation.JsonAlias;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -25,8 +26,9 @@ public abstract class MdmEvent {
     private String eventType;
 
     /**
-     * MDM侧实体主键ID
+     * MDM侧实体主键ID（兼容MDM侧id字段名）
      */
+    @JsonAlias("id")
     private String entityId;
 
     /**

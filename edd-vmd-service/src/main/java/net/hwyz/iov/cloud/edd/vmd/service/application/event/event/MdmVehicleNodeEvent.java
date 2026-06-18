@@ -35,14 +35,14 @@ public class MdmVehicleNodeEvent extends MdmEvent {
     private String nameEn;
 
     /**
-     * 设备类型（兼容MDM侧deviceCategory字段名）
+     * 设备类型（对应MDM侧nodeType字段）
      */
-    @JsonAlias("deviceCategory")
     private String type;
 
     /**
-     * 设备项
+     * 设备项（兼容MDM侧deviceCategory字段名）
      */
+    @JsonAlias("deviceCategory")
     private String deviceItem;
 
     /**
