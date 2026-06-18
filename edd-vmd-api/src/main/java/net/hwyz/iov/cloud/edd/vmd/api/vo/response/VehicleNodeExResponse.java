@@ -32,19 +32,14 @@ public class VehicleNodeExResponse {
     private String name;
 
     /**
-     * 车载节点英文名称
+     * 车载节点本地化名称
      */
-    private String nameEn;
+    private String nameLocal;
 
     /**
-     * 设备类型
+     * 设备分类
      */
-    private String type;
-
-    /**
-     * 设备项
-     */
-    private String deviceItem;
+    private String deviceCategory;
 
     /**
      * 功能域
@@ -52,54 +47,14 @@ public class VehicleNodeExResponse {
     private String funcDomain;
 
     /**
+     * 节点类型
+     */
+    private String nodeType;
+
+    /**
      * OTA支持类型
      */
     private String otaSupport;
-
-    /**
-     * 分区类型
-     */
-    private String partitionType;
-
-    /**
-     * 解闭锁安全件
-     */
-    private Integer lockUnlockSecurityComponent;
-
-    /**
-     * 链路配置源
-     */
-    private String linkConfigSource;
-
-    /**
-     * 链路生效目标
-     */
-    private String linkFlashTarget;
-
-    /**
-     * CAN/CANFD总线发送标识
-     */
-    private String canTxId;
-
-    /**
-     * CAN/CANFD总线接收标识
-     */
-    private String canRxId;
-
-    /**
-     * 以太网的业务IP
-     */
-    private String ethernetIp;
-
-    /**
-     * DoIP协议网关标识
-     */
-    private String doipGatewayId;
-
-    /**
-     * DoIP协议设备标识
-     */
-    private String doipEntityId;
 
     /**
      * 是否核心设备
