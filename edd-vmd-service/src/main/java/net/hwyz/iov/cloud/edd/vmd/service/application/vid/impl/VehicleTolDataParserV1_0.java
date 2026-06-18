@@ -75,11 +75,9 @@ public class VehicleTolDataParserV1_0 extends BaseProcessor implements VehicleIm
                     .build();
         }
 
-        // 从 HEAD.ACCOUNT 获取来源系统，用于 bind_org
-        String sourceSystem = getSupplier(dataJson);
-        if (StrUtil.isBlank(sourceSystem)) {
-            sourceSystem = InboundSourceType.OTHER.getValue();
-        }
+        // TOL 导入默认来源为 MANUAL（后台手动导入）
+        // HEAD.ACCOUNT 是数据生成方（如 MES），不是导入触发方
+        String sourceSystem = InboundSourceType.MANUAL.getValue();
 
         int totalParts = 0;
         int successCount = 0;
