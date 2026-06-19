@@ -11,30 +11,27 @@
         <result column="source" property="source" />
         <result column="batch_num" property="batchNum" />
         <result column="snapshot_time" property="snapshotTime" />
-        <result column="description" property="description" />
         <result column="create_time" property="createTime" />
         <result column="create_by" property="createBy" />
         <result column="modify_time" property="modifyTime" />
         <result column="modify_by" property="modifyBy" />
-        <result column="row_version" property="rowVersion" />
-        <result column="row_valid" property="rowValid" />
     </resultMap>
 
     <!-- 通用查询结果列 -->
     <sql id="baseColumnList">
         id, vin, option_family_code, option_code, source, batch_num, snapshot_time,
-        description, create_time, create_by, modify_time, modify_by, row_version, row_valid
+        create_time, create_by, modify_time, modify_by
     </sql>
 
     <!-- 插入 -->
     <insert id="insertPo" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO tb_vehicle_option (
             id, vin, option_family_code, option_code, source, batch_num, snapshot_time,
-            description, create_time, create_by, modify_time, modify_by, row_version, row_valid
+            create_time, create_by, modify_time, modify_by
         )
         VALUES (
             #{id}, #{vin}, #{optionFamilyCode}, #{optionCode}, #{source}, #{batchNum}, #{snapshotTime},
-            #{description}, now(), #{createBy}, now(), #{modifyBy}, 1, 1
+            now(), #{createBy}, now(), #{modifyBy}
         )
     </insert>
 
@@ -42,13 +39,13 @@
     <insert id="batchInsertPo" useGeneratedKeys="true" keyProperty="id" parameterType="java.util.List">
         INSERT INTO tb_vehicle_option (
             id, vin, option_family_code, option_code, source, batch_num, snapshot_time,
-            description, create_time, create_by, modify_time, modify_by, row_version, row_valid
+            create_time, create_by, modify_time, modify_by
         )
         VALUES
         <foreach collection="list" item="item" index="index" separator=",">
         (
             #{item.id}, #{item.vin}, #{item.optionFamilyCode}, #{item.optionCode}, #{item.source}, #{item.batchNum}, #{item.snapshotTime},
-            #{item.description}, now(), #{item.createBy}, now(), #{item.modifyBy}, 1, 1
+            now(), #{item.createBy}, now(), #{item.modifyBy}
         )
         </foreach>
     </insert>
@@ -74,23 +71,16 @@
         <if test="snapshotTime != null">
             t.snapshot_time = #{snapshotTime},
         </if>
-        <if test="description != null and description != ''">
-            t.description = #{description},
-        </if>
         <if test="modifyBy != null">
             t.modify_by = #{modifyBy},
         </if>
-        t.row_version = t.row_version + 1,
         t.modify_time = now()
         WHERE id = #{id}
     </update>
 
     <!-- 逻辑删除 -->
     <update id="logicalDeletePo" parameterType="Long">
-        UPDATE tb_vehicle_option t SET
-        t.row_version = t.row_version + 1,
-        t.modify_time = now(),
-        t.row_valid = 0
+        DELETE FROM tb_vehicle_option t
         WHERE t.id = #{value}
     </update>
 
@@ -114,14 +104,13 @@
         SELECT <include refid="baseColumnList"/>
         FROM tb_vehicle_option t
         WHERE t.id = #{value}
-        AND t.row_valid = 1
     </select>
 
     <!-- 根据数据对象获取对应数据列表 -->
     <select id="selectPoByExample" parameterType="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehicleOptionPo" resultMap="baseResultMap">
         SELECT <include refid="baseColumnList"/>
         FROM tb_vehicle_option t
-        WHERE t.row_valid = 1
+        WHERE 1=1
         <if test="id != null">
             AND t.id = #{id}
         </if>
@@ -143,9 +132,6 @@
         <if test="snapshotTime != null">
             AND t.snapshot_time = #{snapshotTime}
         </if>
-        <if test="description != null and description != ''">
-            AND t.description = #{description}
-        </if>
         <if test="createTime != null">
             AND t.create_time = #{createTime}
         </if>
@@ -158,9 +144,6 @@
         <if test="modifyBy != null and modifyBy != ''">
             AND t.modify_by = #{modifyBy}
         </if>
-        <if test="rowVersion != null">
-            AND t.row_version = #{rowVersion}
-        </if>
         ORDER BY t.id DESC
     </select>
 
@@ -168,7 +151,7 @@
     <select id="selectPoByMap" parameterType="java.util.Map" resultMap="baseResultMap">
         SELECT <include refid="baseColumnList"/>
         FROM tb_vehicle_option t
-        WHERE t.row_valid = 1
+        WHERE 1=1
         <!-- 添加自定义条件 -->
         <if test="vin != null and vin != ''">
             AND t.vin = #{vin}
@@ -198,7 +181,7 @@
     <select id="countPoByMap" parameterType="java.util.Map" resultType="int">
         SELECT COUNT(*)
         FROM tb_vehicle_option t
-        WHERE t.row_valid = 1
+        WHERE 1=1
         <!-- 添加自定义条件 -->
         <if test="vin != null and vin != ''">
             AND t.vin = #{vin}
