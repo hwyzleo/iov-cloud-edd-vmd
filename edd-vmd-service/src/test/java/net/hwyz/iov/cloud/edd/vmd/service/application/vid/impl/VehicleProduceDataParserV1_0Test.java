@@ -6,7 +6,9 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.event.publish.VehiclePubli
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleSecurityPresetAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParserRegistry;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleBasicInfo;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleOption;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehicleOptionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -14,8 +16,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.*;
 
 /**
@@ -41,12 +46,15 @@ class VehicleProduceDataParserV1_0Test {
     @Mock
     private VehicleSecurityPresetAppService vehicleSecurityPresetAppService;
 
+    @Mock
+    private VehicleOptionRepository vehicleOptionRepository;
+
     private VehicleProduceDataParserV1_0 parser;
 
     @BeforeEach
     void setUp() {
         parser = new VehicleProduceDataParserV1_0(
-                vehiclePublish, vehBasicInfoRepository, parserRegistry, vehicleSecurityPresetAppService);
+                vehiclePublish, vehBasicInfoRepository, parserRegistry, vehicleSecurityPresetAppService, vehicleOptionRepository);
     }
 
     @Test
@@ -165,6 +173,88 @@ class VehicleProduceDataParserV1_0Test {
         assertEquals(1, result.getInvalidCount());
 
         verify(vehicleSecurityPresetAppService).preset(vin1, batchNum);
+    }
+
+    @Test
+    @DisplayName("成功导入后应保存车辆选项值快照")
+    void shouldPersistVehicleOptionsDuringProduce() {
+        // Given
+        String batchNum = "BATCH_006";
+        String vin = "TEST_VIN_006";
+        JSONObject dataJson = buildDataJsonWithOptions(vin);
+
+        when(vehBasicInfoRepository.selectByVin(vin)).thenReturn(null);
+        when(vehBasicInfoRepository.insert(any(VehicleBasicInfo.class))).thenReturn(1);
+
+        // When
+        ImportResult result = parser.parse(batchNum, dataJson);
+
+        // Then
+        assertEquals(1, result.getTotalCount());
+        assertEquals(1, result.getSuccessCount());
+
+        verify(vehicleOptionRepository).batchUpsert(argThat(optList ->
+                optList.size() == 2 &&
+                "COLOR".equals(optList.get(0).getOptionFamilyCode()) &&
+                "RED".equals(optList.get(0).getOptionCode()) &&
+                "PRODUCE".equals(optList.get(0).getSource()) &&
+                "INTERIOR".equals(optList.get(1).getOptionFamilyCode()) &&
+                "LEATHER".equals(optList.get(1).getOptionCode())
+        ));
+    }
+
+    @Test
+    @DisplayName("无OPTIONS数组时不应调用batchUpsert")
+    void shouldNotCallBatchUpsertWhenNoOptions() {
+        // Given
+        String batchNum = "BATCH_007";
+        String vin = "TEST_VIN_007";
+        JSONObject dataJson = buildDataJson(vin);
+
+        when(vehBasicInfoRepository.selectByVin(vin)).thenReturn(null);
+        when(vehBasicInfoRepository.insert(any(VehicleBasicInfo.class))).thenReturn(1);
+
+        // When
+        ImportResult result = parser.parse(batchNum, dataJson);
+
+        // Then
+        assertEquals(1, result.getSuccessCount());
+        verify(vehicleOptionRepository, never()).batchUpsert(any());
+    }
+
+    private JSONObject buildDataJsonWithOptions(String vin) {
+        JSONObject data = new JSONObject();
+        JSONObject request = new JSONObject();
+        JSONObject dataObj = new JSONObject();
+        cn.hutool.json.JSONArray items = new cn.hutool.json.JSONArray();
+
+        JSONObject item = new JSONObject();
+        item.set("VIN", vin);
+        item.set("PLANT", "P001");
+        item.set("BRAND", "B001");
+        item.set("PLATFORM", "PL001");
+        item.set("CAR_LINE", "CL001");
+        item.set("MODEL", "M001");
+        item.set("VARIANT", "V001");
+        item.set("CONFIGURATION", "C001");
+
+        cn.hutool.json.JSONArray options = new cn.hutool.json.JSONArray();
+        JSONObject option1 = new JSONObject();
+        option1.set("OPTION_FAMILY_CODE", "COLOR");
+        option1.set("OPTION_CODE", "RED");
+        options.add(option1);
+        JSONObject option2 = new JSONObject();
+        option2.set("OPTION_FAMILY_CODE", "INTERIOR");
+        option2.set("OPTION_CODE", "LEATHER");
+        options.add(option2);
+        item.set("OPTIONS", options);
+
+        items.add(item);
+
+        dataObj.set("ITEMS", items);
+        request.set("DATA", dataObj);
+        data.set("REQUEST", request);
+        return data;
     }
 
     private JSONObject buildDataJson(String vin) {

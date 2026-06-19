@@ -12,12 +12,17 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleSecurityPre
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.VehicleImportDataParser;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParserRegistry;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleBasicInfo;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleOption;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehicleOptionRepository;
 import net.hwyz.iov.cloud.framework.common.util.StrUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import jakarta.annotation.PostConstruct;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 整车主档后台导入解析器 (US-040)
@@ -36,6 +41,7 @@ public class VehicleProduceDataParserV1_0 extends BaseProcessor implements Vehic
     private final VehBasicInfoRepository vehBasicInfoRepository;
     private final ImportDataParserRegistry parserRegistry;
     private final VehicleSecurityPresetAppService vehicleSecurityPresetAppService;
+    private final VehicleOptionRepository vehicleOptionRepository;
 
     @PostConstruct
     public void init() {
@@ -91,6 +97,12 @@ public class VehicleProduceDataParserV1_0 extends BaseProcessor implements Vehic
                     log.info("车辆[{}]执行update操作, id={}", vin, vehicleBasicInfo.getId());
                     vehBasicInfoRepository.update(vehicleBasicInfo);
                 }
+                // 提取并保存选项值快照
+                List<VehicleOption> options = extractVehicleOptions(vin, itemJson, batchNum);
+                if (!options.isEmpty()) {
+                    vehicleOptionRepository.batchUpsert(options);
+                    log.debug("保存车辆选项值快照: vin={}, count={}", vin, options.size());
+                }
                 vehiclePublish.produce(vin);
                 // 预置安全常量
                 try {
@@ -114,5 +126,37 @@ public class VehicleProduceDataParserV1_0 extends BaseProcessor implements Vehic
                 .failureCount(failureCount)
                 .invalidCount(invalidCount)
                 .build();
+    }
+
+    /**
+     * 从导入数据中提取选项值快照
+     *
+     * @param vin       车辆识别码
+     * @param dataJson  导入数据 JSON
+     * @param batchNum  批次号
+     * @return 选项值快照列表
+     */
+    private List<VehicleOption> extractVehicleOptions(String vin, JSONObject dataJson, String batchNum) {
+        List<VehicleOption> options = new ArrayList<>();
+        JSONArray optionArray = dataJson.getJSONArray("OPTIONS");
+        if (optionArray != null) {
+            LocalDateTime now = LocalDateTime.now();
+            for (int i = 0; i < optionArray.size(); i++) {
+                JSONObject optionObj = optionArray.getJSONObject(i);
+                String familyCode = optionObj.getStr("OPTION_FAMILY_CODE");
+                String code = optionObj.getStr("OPTION_CODE");
+                if (StrUtil.isNotBlank(familyCode) && StrUtil.isNotBlank(code)) {
+                    options.add(VehicleOption.builder()
+                            .vin(vin)
+                            .optionFamilyCode(familyCode)
+                            .optionCode(code)
+                            .source("PRODUCE")
+                            .batchNum(batchNum)
+                            .snapshotTime(now)
+                            .build());
+                }
+            }
+        }
+        return options;
     }
 }
