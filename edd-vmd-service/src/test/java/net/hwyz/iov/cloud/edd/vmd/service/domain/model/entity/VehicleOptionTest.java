@@ -28,16 +28,25 @@ class VehicleOptionTest {
 
     @Test
     void shouldImplementDomainObject() {
+        LocalDateTime now = LocalDateTime.now();
         VehicleOption option = VehicleOption.builder()
+            .id(1L)
             .vin("WVWZZZ3CZWE123456")
             .optionFamilyCode("COLOR")
             .optionCode("RED")
+            .source("PRODUCE")
+            .batchNum("BATCH001")
+            .snapshotTime(now)
             .build();
 
         VehicleOption copy = option.copy();
         assertNotSame(option, copy);
+        assertEquals(option.getId(), copy.getId());
         assertEquals(option.getVin(), copy.getVin());
         assertEquals(option.getOptionFamilyCode(), copy.getOptionFamilyCode());
         assertEquals(option.getOptionCode(), copy.getOptionCode());
+        assertEquals(option.getSource(), copy.getSource());
+        assertEquals(option.getBatchNum(), copy.getBatchNum());
+        assertEquals(option.getSnapshotTime(), copy.getSnapshotTime());
     }
 }
