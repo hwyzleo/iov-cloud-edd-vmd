@@ -15,6 +15,5 @@ CREATE TABLE IF NOT EXISTS `tb_vehicle_option` (
     `modify_time` DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
     PRIMARY KEY (`id`),
     UNIQUE KEY `uk_vin_option_family` (`vin`, `option_family_code`),
-    KEY `idx_vin` (`vin`),
     KEY `idx_batch_num` (`batch_num`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='单车选项值快照表';
