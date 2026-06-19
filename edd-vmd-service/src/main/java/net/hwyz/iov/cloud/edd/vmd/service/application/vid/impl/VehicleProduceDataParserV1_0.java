@@ -98,10 +98,14 @@ public class VehicleProduceDataParserV1_0 extends BaseProcessor implements Vehic
                     vehBasicInfoRepository.update(vehicleBasicInfo);
                 }
                 // 提取并保存选项值快照
-                List<VehicleOption> options = extractVehicleOptions(vin, itemJson, batchNum);
-                if (!options.isEmpty()) {
-                    vehicleOptionRepository.batchUpsert(options);
-                    log.debug("保存车辆选项值快照: vin={}, count={}", vin, options.size());
+                try {
+                    List<VehicleOption> options = extractVehicleOptions(vin, itemJson, batchNum);
+                    if (!options.isEmpty()) {
+                        vehicleOptionRepository.batchUpsert(options);
+                        log.debug("保存车辆选项值快照: vin={}, count={}", vin, options.size());
+                    }
+                } catch (Exception e) {
+                    log.warn("车辆[{}]选项值快照保存失败: {}", vin, e.getMessage());
                 }
                 vehiclePublish.produce(vin);
                 // 预置安全常量

@@ -222,6 +222,33 @@ class VehicleProduceDataParserV1_0Test {
         verify(vehicleOptionRepository, never()).batchUpsert(any());
     }
 
+    @Test
+    @DisplayName("选项值快照保存失败不应影响successCount")
+    void testOptionPersistenceFailureDoesNotAffectSuccessCount() {
+        // Given
+        String batchNum = "BATCH_008";
+        String vin = "TEST_VIN_008";
+        JSONObject dataJson = buildDataJsonWithOptions(vin);
+
+        when(vehBasicInfoRepository.selectByVin(vin)).thenReturn(null);
+        when(vehBasicInfoRepository.insert(any(VehicleBasicInfo.class))).thenReturn(1);
+        doThrow(new RuntimeException("DB batch upsert error"))
+                .when(vehicleOptionRepository).batchUpsert(any());
+
+        // When
+        ImportResult result = parser.parse(batchNum, dataJson);
+
+        // Then
+        assertEquals(1, result.getTotalCount());
+        assertEquals(1, result.getSuccessCount());
+        assertEquals(0, result.getFailureCount());
+        assertEquals(0, result.getInvalidCount());
+
+        verify(vehicleOptionRepository).batchUpsert(any());
+        verify(vehiclePublish).produce(vin);
+        verify(vehicleSecurityPresetAppService).preset(vin, batchNum);
+    }
+
     private JSONObject buildDataJsonWithOptions(String vin) {
         JSONObject data = new JSONObject();
         JSONObject request = new JSONObject();
