@@ -249,6 +249,86 @@ class VehicleProduceDataParserV1_0Test {
         verify(vehicleSecurityPresetAppService).preset(vin, batchNum);
     }
 
+    @Test
+    @DisplayName("空OPTIONS数组时不应调用batchUpsert")
+    void shouldNotCallBatchUpsertWhenEmptyOptions() {
+        // Given
+        String batchNum = "BATCH_009";
+        String vin = "TEST_VIN_009";
+        JSONObject dataJson = buildDataJsonWithEmptyOptions(vin);
+
+        when(vehBasicInfoRepository.selectByVin(vin)).thenReturn(null);
+        when(vehBasicInfoRepository.insert(any(VehicleBasicInfo.class))).thenReturn(1);
+
+        // When
+        ImportResult result = parser.parse(batchNum, dataJson);
+
+        // Then
+        assertEquals(1, result.getSuccessCount());
+        verify(vehicleOptionRepository, never()).batchUpsert(any());
+    }
+
+    @Test
+    @DisplayName("OPTIONS缺少OPTION_FAMILY_CODE时应跳过该选项")
+    void shouldSkipOptionWhenFamilyCodeMissing() {
+        // Given
+        String batchNum = "BATCH_010";
+        String vin = "TEST_VIN_010";
+        JSONObject dataJson = buildDataJsonWithMissingFamilyCode(vin);
+
+        when(vehBasicInfoRepository.selectByVin(vin)).thenReturn(null);
+        when(vehBasicInfoRepository.insert(any(VehicleBasicInfo.class))).thenReturn(1);
+
+        // When
+        ImportResult result = parser.parse(batchNum, dataJson);
+
+        // Then
+        assertEquals(1, result.getSuccessCount());
+        verify(vehicleOptionRepository, never()).batchUpsert(any());
+    }
+
+    @Test
+    @DisplayName("OPTIONS缺少OPTION_CODE时应跳过该选项")
+    void shouldSkipOptionWhenCodeMissing() {
+        // Given
+        String batchNum = "BATCH_011";
+        String vin = "TEST_VIN_011";
+        JSONObject dataJson = buildDataJsonWithMissingCode(vin);
+
+        when(vehBasicInfoRepository.selectByVin(vin)).thenReturn(null);
+        when(vehBasicInfoRepository.insert(any(VehicleBasicInfo.class))).thenReturn(1);
+
+        // When
+        ImportResult result = parser.parse(batchNum, dataJson);
+
+        // Then
+        assertEquals(1, result.getSuccessCount());
+        verify(vehicleOptionRepository, never()).batchUpsert(any());
+    }
+
+    @Test
+    @DisplayName("OPTIONS混合有效和无效选项时应只保存有效选项")
+    void shouldOnlyPersistValidOptions() {
+        // Given
+        String batchNum = "BATCH_012";
+        String vin = "TEST_VIN_012";
+        JSONObject dataJson = buildDataJsonWithMixedOptions(vin);
+
+        when(vehBasicInfoRepository.selectByVin(vin)).thenReturn(null);
+        when(vehBasicInfoRepository.insert(any(VehicleBasicInfo.class))).thenReturn(1);
+
+        // When
+        ImportResult result = parser.parse(batchNum, dataJson);
+
+        // Then
+        assertEquals(1, result.getSuccessCount());
+        verify(vehicleOptionRepository).batchUpsert(argThat(optList ->
+                optList.size() == 1 &&
+                "COLOR".equals(optList.get(0).getOptionFamilyCode()) &&
+                "RED".equals(optList.get(0).getOptionCode())
+        ));
+    }
+
     private JSONObject buildDataJsonWithOptions(String vin) {
         JSONObject data = new JSONObject();
         JSONObject request = new JSONObject();
@@ -299,6 +379,133 @@ class VehicleProduceDataParserV1_0Test {
         item.set("MODEL", "M001");
         item.set("VARIANT", "V001");
         item.set("CONFIGURATION", "C001");
+        items.add(item);
+
+        dataObj.set("ITEMS", items);
+        request.set("DATA", dataObj);
+        data.set("REQUEST", request);
+        return data;
+    }
+
+    private JSONObject buildDataJsonWithEmptyOptions(String vin) {
+        JSONObject data = new JSONObject();
+        JSONObject request = new JSONObject();
+        JSONObject dataObj = new JSONObject();
+        cn.hutool.json.JSONArray items = new cn.hutool.json.JSONArray();
+
+        JSONObject item = new JSONObject();
+        item.set("VIN", vin);
+        item.set("PLANT", "P001");
+        item.set("BRAND", "B001");
+        item.set("PLATFORM", "PL001");
+        item.set("CAR_LINE", "CL001");
+        item.set("MODEL", "M001");
+        item.set("VARIANT", "V001");
+        item.set("CONFIGURATION", "C001");
+
+        cn.hutool.json.JSONArray options = new cn.hutool.json.JSONArray();
+        item.set("OPTIONS", options);
+
+        items.add(item);
+
+        dataObj.set("ITEMS", items);
+        request.set("DATA", dataObj);
+        data.set("REQUEST", request);
+        return data;
+    }
+
+    private JSONObject buildDataJsonWithMissingFamilyCode(String vin) {
+        JSONObject data = new JSONObject();
+        JSONObject request = new JSONObject();
+        JSONObject dataObj = new JSONObject();
+        cn.hutool.json.JSONArray items = new cn.hutool.json.JSONArray();
+
+        JSONObject item = new JSONObject();
+        item.set("VIN", vin);
+        item.set("PLANT", "P001");
+        item.set("BRAND", "B001");
+        item.set("PLATFORM", "PL001");
+        item.set("CAR_LINE", "CL001");
+        item.set("MODEL", "M001");
+        item.set("VARIANT", "V001");
+        item.set("CONFIGURATION", "C001");
+
+        cn.hutool.json.JSONArray options = new cn.hutool.json.JSONArray();
+        JSONObject option1 = new JSONObject();
+        option1.set("OPTION_CODE", "RED");
+        options.add(option1);
+        item.set("OPTIONS", options);
+
+        items.add(item);
+
+        dataObj.set("ITEMS", items);
+        request.set("DATA", dataObj);
+        data.set("REQUEST", request);
+        return data;
+    }
+
+    private JSONObject buildDataJsonWithMissingCode(String vin) {
+        JSONObject data = new JSONObject();
+        JSONObject request = new JSONObject();
+        JSONObject dataObj = new JSONObject();
+        cn.hutool.json.JSONArray items = new cn.hutool.json.JSONArray();
+
+        JSONObject item = new JSONObject();
+        item.set("VIN", vin);
+        item.set("PLANT", "P001");
+        item.set("BRAND", "B001");
+        item.set("PLATFORM", "PL001");
+        item.set("CAR_LINE", "CL001");
+        item.set("MODEL", "M001");
+        item.set("VARIANT", "V001");
+        item.set("CONFIGURATION", "C001");
+
+        cn.hutool.json.JSONArray options = new cn.hutool.json.JSONArray();
+        JSONObject option1 = new JSONObject();
+        option1.set("OPTION_FAMILY_CODE", "COLOR");
+        options.add(option1);
+        item.set("OPTIONS", options);
+
+        items.add(item);
+
+        dataObj.set("ITEMS", items);
+        request.set("DATA", dataObj);
+        data.set("REQUEST", request);
+        return data;
+    }
+
+    private JSONObject buildDataJsonWithMixedOptions(String vin) {
+        JSONObject data = new JSONObject();
+        JSONObject request = new JSONObject();
+        JSONObject dataObj = new JSONObject();
+        cn.hutool.json.JSONArray items = new cn.hutool.json.JSONArray();
+
+        JSONObject item = new JSONObject();
+        item.set("VIN", vin);
+        item.set("PLANT", "P001");
+        item.set("BRAND", "B001");
+        item.set("PLATFORM", "PL001");
+        item.set("CAR_LINE", "CL001");
+        item.set("MODEL", "M001");
+        item.set("VARIANT", "V001");
+        item.set("CONFIGURATION", "C001");
+
+        cn.hutool.json.JSONArray options = new cn.hutool.json.JSONArray();
+        // Valid option
+        JSONObject option1 = new JSONObject();
+        option1.set("OPTION_FAMILY_CODE", "COLOR");
+        option1.set("OPTION_CODE", "RED");
+        options.add(option1);
+        // Invalid option - missing family code
+        JSONObject option2 = new JSONObject();
+        option2.set("OPTION_CODE", "BLACK");
+        options.add(option2);
+        // Invalid option - missing code
+        JSONObject option3 = new JSONObject();
+        option3.set("OPTION_FAMILY_CODE", "INTERIOR");
+        options.add(option3);
+        item.set("OPTIONS", options);
+
         items.add(item);
 
         dataObj.set("ITEMS", items);
