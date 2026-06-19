@@ -269,7 +269,7 @@ class VehicleProduceDataParserV1_0Test {
     }
 
     @Test
-    @DisplayName("OPTIONS缺少OPTION_FAMILY_CODE时应跳过该选项")
+    @DisplayName("OPTIONS缺少OPTION_FAMILY时应跳过该选项")
     void shouldSkipOptionWhenFamilyCodeMissing() {
         // Given
         String batchNum = "BATCH_010";
@@ -347,11 +347,11 @@ class VehicleProduceDataParserV1_0Test {
 
         cn.hutool.json.JSONArray options = new cn.hutool.json.JSONArray();
         JSONObject option1 = new JSONObject();
-        option1.set("OPTION_FAMILY_CODE", "COLOR");
+        option1.set("OPTION_FAMILY", "COLOR");
         option1.set("OPTION_CODE", "RED");
         options.add(option1);
         JSONObject option2 = new JSONObject();
-        option2.set("OPTION_FAMILY_CODE", "INTERIOR");
+        option2.set("OPTION_FAMILY", "INTERIOR");
         option2.set("OPTION_CODE", "LEATHER");
         options.add(option2);
         item.set("OPTIONS", options);
@@ -462,7 +462,7 @@ class VehicleProduceDataParserV1_0Test {
 
         cn.hutool.json.JSONArray options = new cn.hutool.json.JSONArray();
         JSONObject option1 = new JSONObject();
-        option1.set("OPTION_FAMILY_CODE", "COLOR");
+        option1.set("OPTION_FAMILY", "COLOR");
         options.add(option1);
         item.set("OPTIONS", options);
 
@@ -493,7 +493,7 @@ class VehicleProduceDataParserV1_0Test {
         cn.hutool.json.JSONArray options = new cn.hutool.json.JSONArray();
         // Valid option
         JSONObject option1 = new JSONObject();
-        option1.set("OPTION_FAMILY_CODE", "COLOR");
+        option1.set("OPTION_FAMILY", "COLOR");
         option1.set("OPTION_CODE", "RED");
         options.add(option1);
         // Invalid option - missing family code
@@ -502,7 +502,7 @@ class VehicleProduceDataParserV1_0Test {
         options.add(option2);
         // Invalid option - missing code
         JSONObject option3 = new JSONObject();
-        option3.set("OPTION_FAMILY_CODE", "INTERIOR");
+        option3.set("OPTION_FAMILY", "INTERIOR");
         options.add(option3);
         item.set("OPTIONS", options);
 

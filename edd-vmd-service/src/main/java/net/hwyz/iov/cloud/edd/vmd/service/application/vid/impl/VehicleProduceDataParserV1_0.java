@@ -147,7 +147,7 @@ public class VehicleProduceDataParserV1_0 extends BaseProcessor implements Vehic
             LocalDateTime now = LocalDateTime.now();
             for (int i = 0; i < optionArray.size(); i++) {
                 JSONObject optionObj = optionArray.getJSONObject(i);
-                String familyCode = optionObj.getStr("OPTION_FAMILY_CODE");
+                String familyCode = optionObj.getStr("OPTION_FAMILY");
                 String code = optionObj.getStr("OPTION_CODE");
                 if (StrUtil.isNotBlank(familyCode) && StrUtil.isNotBlank(code)) {
                     options.add(VehicleOption.builder()
