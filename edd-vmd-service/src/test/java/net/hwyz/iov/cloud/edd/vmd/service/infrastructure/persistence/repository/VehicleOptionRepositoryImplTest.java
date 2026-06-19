@@ -34,8 +34,8 @@ class VehicleOptionRepositoryImplTest {
     private VehicleOptionRepositoryImpl repository;
 
     @Test
-    @DisplayName("应成功批量插入或更新选项值快照")
-    void shouldBatchUpsertVehicleOptions() {
+    @DisplayName("应成功批量插入选项值快照")
+    void shouldBatchInsertVehicleOptions() {
         List<VehicleOption> options = Arrays.asList(
             VehicleOption.builder()
                 .vin("WVWZZZ3CZWE123456")
@@ -55,12 +55,32 @@ class VehicleOptionRepositoryImplTest {
                 .build()
         );
 
-        when(mapper.selectPoByMap(any())).thenReturn(Collections.emptyList());
-        when(mapper.insertPo(any(VehicleOptionPo.class))).thenReturn(1);
+        when(mapper.insertOrUpdate(any(VehicleOptionPo.class))).thenReturn(1);
 
         repository.batchUpsert(options);
 
-        verify(mapper, times(2)).insertPo(any(VehicleOptionPo.class));
+        verify(mapper, times(2)).insertOrUpdate(any(VehicleOptionPo.class));
+    }
+
+    @Test
+    @DisplayName("应成功批量更新选项值快照")
+    void shouldBatchUpdateVehicleOptions() {
+        List<VehicleOption> options = Arrays.asList(
+            VehicleOption.builder()
+                .vin("WVWZZZ3CZWE123456")
+                .optionFamilyCode("COLOR")
+                .optionCode("WHITE")
+                .source("PRODUCE")
+                .batchNum("BATCH002")
+                .snapshotTime(LocalDateTime.now())
+                .build()
+        );
+
+        when(mapper.insertOrUpdate(any(VehicleOptionPo.class))).thenReturn(2);
+
+        repository.batchUpsert(options);
+
+        verify(mapper, times(1)).insertOrUpdate(any(VehicleOptionPo.class));
     }
 
     @Test

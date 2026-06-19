@@ -8,6 +8,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter.V
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehicleOptionMapper;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehicleOptionPo;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.HashMap;
 import java.util.List;
@@ -26,19 +27,11 @@ public class VehicleOptionRepositoryImpl implements VehicleOptionRepository {
     private final VehicleOptionMapper mapper;
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void batchUpsert(List<VehicleOption> options) {
         for (VehicleOption option : options) {
             VehicleOptionPo po = VehicleOptionConverter.INSTANCE.fromDomain(option);
-            Map<String, Object> map = new HashMap<>();
-            map.put("vin", option.getVin());
-            map.put("option_family_code", option.getOptionFamilyCode());
-            List<VehicleOptionPo> existing = mapper.selectPoByMap(map);
-            if (existing != null && !existing.isEmpty()) {
-                po.setId(existing.get(0).getId());
-                mapper.updatePo(po);
-            } else {
-                mapper.insertPo(po);
-            }
+            mapper.insertOrUpdate(po);
             log.debug("Upsert vehicle option: vin={}, family={}, code={}",
                 option.getVin(), option.getOptionFamilyCode(), option.getOptionCode());
         }
