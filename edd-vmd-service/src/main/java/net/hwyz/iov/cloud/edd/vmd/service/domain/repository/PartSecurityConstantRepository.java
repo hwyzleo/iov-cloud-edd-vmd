@@ -36,11 +36,11 @@ public interface PartSecurityConstantRepository {
     int update(PartSecurityConstant entity);
 
     /**
-     * 根据零件编码和序列号统计数量
+     * 根据零件编码和序列号删除
      *
      * @param partCode 零件编码
      * @param sn 零件序列号
-     * @return 数量
+     * @return 影响行数
      */
-    long countByPartCodeAndSn(String partCode, String sn);
+    int deleteByPartCodeAndSn(String partCode, String sn);
 }

@@ -5,6 +5,7 @@ import net.hwyz.iov.cloud.framework.mysql.dao.BaseDao;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.Update;
 
 /**
  * 零件安全常量表 DAO
@@ -26,12 +27,12 @@ public interface PartSecurityConstantMapper extends BaseDao<PartSecurityConstant
     PartSecurityConstantPo selectPoByPartCodeAndSn(@Param("partCode") String partCode, @Param("sn") String sn);
 
     /**
-     * 根据零件编码和序列号统计数量
+     * 根据零件编码和序列号逻辑删除
      *
      * @param partCode 零件编码
      * @param sn 零件序列号
-     * @return 数量
+     * @return 影响行数
      */
-    @Select("SELECT COUNT(*) FROM tb_part_security_constant WHERE part_code = #{partCode} AND sn = #{sn} AND deleted = 0")
-    long countPoByPartCodeAndSn(@Param("partCode") String partCode, @Param("sn") String sn);
+    @Update("UPDATE tb_part_security_constant SET deleted = 1 WHERE part_code = #{partCode} AND sn = #{sn} AND deleted = 0")
+    int deletePoByPartCodeAndSn(@Param("partCode") String partCode, @Param("sn") String sn);
 }

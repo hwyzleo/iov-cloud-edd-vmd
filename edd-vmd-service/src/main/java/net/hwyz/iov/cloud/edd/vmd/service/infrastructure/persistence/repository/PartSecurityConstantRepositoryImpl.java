@@ -43,7 +43,7 @@ public class PartSecurityConstantRepositoryImpl implements PartSecurityConstantR
     }
 
     @Override
-    public long countByPartCodeAndSn(String partCode, String sn) {
-        return partSecurityConstantMapper.countPoByPartCodeAndSn(partCode, sn);
+    public int deleteByPartCodeAndSn(String partCode, String sn) {
+        return partSecurityConstantMapper.deletePoByPartCodeAndSn(partCode, sn);
     }
 }
