@@ -14,7 +14,5 @@ class VehSecurityConstantPoTest {
                 .build();
 
         assertEquals("test_key_ref", po.getKmsKeyRef());
-        assertNull(po.getCipherBlob()); // Should not exist
-        assertNull(po.getKeyHandle()); // Should not exist
     }
 }

@@ -22,7 +22,5 @@ class VehSecurityConstantTest {
 
         assertEquals("TEST_VIN_123", constant.getVin());
         assertEquals("test_key_ref", constant.getKmsKeyRef());
-        assertNull(constant.getCipherBlob()); // Should not exist
-        assertNull(constant.getKeyHandle()); // Should not exist
     }
 }
