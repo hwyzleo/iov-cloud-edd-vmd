@@ -31,7 +31,7 @@ public class PartSecurityConstantRepositoryImpl implements PartSecurityConstantR
     @Override
     public int insert(PartSecurityConstant entity) {
         PartSecurityConstantPo po = PartSecurityConstantConverter.INSTANCE.fromDomain(entity);
-        int rows = partSecurityConstantMapper.insert(po);
+        int rows = partSecurityConstantMapper.insertPo(po);
         entity.setId(po.getId());
         return rows;
     }
@@ -39,7 +39,7 @@ public class PartSecurityConstantRepositoryImpl implements PartSecurityConstantR
     @Override
     public int update(PartSecurityConstant entity) {
         PartSecurityConstantPo po = PartSecurityConstantConverter.INSTANCE.fromDomain(entity);
-        return partSecurityConstantMapper.updateById(po);
+        return partSecurityConstantMapper.updatePo(po);
     }
 
     @Override
