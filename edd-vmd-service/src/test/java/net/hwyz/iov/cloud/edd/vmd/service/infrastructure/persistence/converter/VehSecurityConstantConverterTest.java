@@ -26,8 +26,7 @@ class VehSecurityConstantConverterTest {
                 .vin("HWYZTEST000000001")
                 .batchNum("BATCH001")
                 .presetState("PENDING")
-                .keyHandle("key-handle-1")
-                .cipherBlob("cipher-blob-1")
+                .kmsKeyRef("kms-key-ref-1")
                 .failReason(null)
                 .genTime(LocalDateTime.now())
                 .lastAttemptTime(LocalDateTime.now())
@@ -41,8 +40,7 @@ class VehSecurityConstantConverterTest {
         assertEquals(po.getVin(), domain.getVin());
         assertEquals(po.getBatchNum(), domain.getBatchNum());
         assertEquals(SecurityConstantState.PENDING, domain.getPresetState());
-        assertEquals(po.getKeyHandle(), domain.getKeyHandle());
-        assertEquals(po.getCipherBlob(), domain.getCipherBlob());
+        assertEquals(po.getKmsKeyRef(), domain.getKmsKeyRef());
         assertEquals(po.getFailReason(), domain.getFailReason());
         assertEquals(po.getGenTime(), domain.getGenTime());
         assertEquals(po.getLastAttemptTime(), domain.getLastAttemptTime());
@@ -70,8 +68,7 @@ class VehSecurityConstantConverterTest {
                 .vin("HWYZTEST000000001")
                 .batchNum("BATCH001")
                 .presetState(SecurityConstantState.PRESET)
-                .keyHandle("key-handle-1")
-                .cipherBlob("cipher-blob-1")
+                .kmsKeyRef("kms-key-ref-1")
                 .failReason(null)
                 .genTime(LocalDateTime.now())
                 .lastAttemptTime(LocalDateTime.now())
@@ -85,8 +82,7 @@ class VehSecurityConstantConverterTest {
         assertEquals(domain.getVin(), po.getVin());
         assertEquals(domain.getBatchNum(), po.getBatchNum());
         assertEquals("PRESET", po.getPresetState());
-        assertEquals(domain.getKeyHandle(), po.getKeyHandle());
-        assertEquals(domain.getCipherBlob(), po.getCipherBlob());
+        assertEquals(domain.getKmsKeyRef(), po.getKmsKeyRef());
         assertEquals(domain.getFailReason(), po.getFailReason());
         assertEquals(domain.getGenTime(), po.getGenTime());
         assertEquals(domain.getLastAttemptTime(), po.getLastAttemptTime());

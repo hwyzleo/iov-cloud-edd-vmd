@@ -34,7 +34,7 @@ public class VehicleSecurityPresetAppService {
     /**
      * 安全常量类型
      */
-    private static final String SECURITY_CONSTANT_TYPE = "SECURITY_KEY";
+    private static final String SECURITY_CONSTANT_TYPE = "ROOT";
 
     /**
      * 预置per-VIN安全常量
@@ -74,25 +74,17 @@ public class VehicleSecurityPresetAppService {
         }
 
         try {
-            // 调用KMS/HSM生成安全常量
             // TODO: 集成KMS/HSM客户端
-            // KmsHsmResult result = kmsHsmClient.generatePerVinConstant(vin);
+            String kmsKeyRef = "mock_kms_key_ref_" + vin;
 
-            // 模拟成功
-            String keyHandle = "mock_key_handle_" + vin;
-            String cipherBlob = "mock_cipher_blob_" + vin;
-
-            // 更新为预置成功
             securityConstant.setPresetState(SecurityConstantState.PRESET);
-            securityConstant.setKeyHandle(keyHandle);
-            securityConstant.setCipherBlob(cipherBlob);
+            securityConstant.setKmsKeyRef(kmsKeyRef);
             securityConstant.setGenTime(LocalDateTime.now());
             securityConstant.setLastAttemptTime(LocalDateTime.now());
             vehSecurityConstantRepository.update(securityConstant);
 
             log.info("车辆[{}]安全常量预置成功", vin);
         } catch (Exception e) {
-            // 记录失败
             handlePresetFailure(securityConstant, vin, batchNum, e.getMessage());
         }
     }

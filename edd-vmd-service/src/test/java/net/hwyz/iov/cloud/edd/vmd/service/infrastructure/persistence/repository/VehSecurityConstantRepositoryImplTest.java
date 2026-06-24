@@ -58,8 +58,7 @@ class VehSecurityConstantRepositoryImplTest {
 
         VehSecurityConstant inserted = vehSecurityConstantRepository.selectByVin(vin);
         inserted.setPresetState(SecurityConstantState.PRESET);
-        inserted.setKeyHandle("test_key_handle");
-        inserted.setCipherBlob("test_cipher_blob");
+        inserted.setKmsKeyRef("test_kms_key_ref");
 
         // When
         int rows = vehSecurityConstantRepository.update(inserted);
@@ -69,8 +68,7 @@ class VehSecurityConstantRepositoryImplTest {
         assertEquals(1, rows);
         assertNotNull(result);
         assertEquals(SecurityConstantState.PRESET, result.getPresetState());
-        assertEquals("test_key_handle", result.getKeyHandle());
-        assertEquals("test_cipher_blob", result.getCipherBlob());
+        assertEquals("test_kms_key_ref", result.getKmsKeyRef());
     }
 
     @Test

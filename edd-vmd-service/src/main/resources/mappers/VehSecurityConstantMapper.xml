@@ -8,8 +8,7 @@
         <result column="vin" property="vin" />
         <result column="batch_num" property="batchNum" />
         <result column="preset_state" property="presetState" />
-        <result column="key_handle" property="keyHandle" />
-        <result column="cipher_blob" property="cipherBlob" />
+        <result column="kms_key_ref" property="kmsKeyRef" />
         <result column="fail_reason" property="failReason" />
         <result column="gen_time" property="genTime" />
         <result column="last_attempt_time" property="lastAttemptTime" />
@@ -24,7 +23,7 @@
 
     <!-- 通用查询结果列 -->
     <sql id="baseColumnList">
-        id, vin, batch_num, preset_state, key_handle, cipher_blob,
+        id, vin, batch_num, preset_state, kms_key_ref,
         fail_reason, gen_time, last_attempt_time, constant_type,
         create_time, create_by, modify_time, modify_by, row_version, row_valid
     </sql>
@@ -32,12 +31,12 @@
     <!-- 插入 -->
     <insert id="insertPo" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO tb_veh_security_constant (
-            id, vin, batch_num, preset_state, key_handle, cipher_blob,
+            id, vin, batch_num, preset_state, kms_key_ref,
             fail_reason, gen_time, last_attempt_time, constant_type,
             create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
         VALUES (
-            #{id}, #{vin}, #{batchNum}, #{presetState}, #{keyHandle}, #{cipherBlob},
+            #{id}, #{vin}, #{batchNum}, #{presetState}, #{kmsKeyRef},
             #{failReason}, #{genTime}, #{lastAttemptTime}, #{constantType},
             now(), #{createBy}, now(), #{modifyBy}, 1, 1
         )
@@ -55,11 +54,8 @@
         <if test="presetState != null and presetState != ''">
             t.preset_state = #{presetState},
         </if>
-        <if test="keyHandle != null">
-            t.key_handle = #{keyHandle},
-        </if>
-        <if test="cipherBlob != null">
-            t.cipher_blob = #{cipherBlob},
+        <if test="kmsKeyRef != null">
+            t.kms_key_ref = #{kmsKeyRef},
         </if>
         <if test="failReason != null">
             t.fail_reason = #{failReason},
@@ -130,11 +126,8 @@
         <if test="presetState != null and presetState != ''">
             AND t.preset_state = #{presetState}
         </if>
-        <if test="keyHandle != null and keyHandle != ''">
-            AND t.key_handle = #{keyHandle}
-        </if>
-        <if test="cipherBlob != null and cipherBlob != ''">
-            AND t.cipher_blob = #{cipherBlob}
+        <if test="kmsKeyRef != null and kmsKeyRef != ''">
+            AND t.kms_key_ref = #{kmsKeyRef}
         </if>
         <if test="failReason != null and failReason != ''">
             AND t.fail_reason = #{failReason}
