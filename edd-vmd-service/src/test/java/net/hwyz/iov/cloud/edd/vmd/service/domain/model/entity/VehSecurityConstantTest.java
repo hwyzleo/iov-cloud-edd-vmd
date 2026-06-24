@@ -16,7 +16,7 @@ class VehSecurityConstantTest {
                 .batchNum("BATCH_001")
                 .presetState(SecurityConstantState.PENDING)
                 .kmsKeyRef("test_key_ref")
-                .constantType("ROOT")
+                .constantType("SECURITY_KEY")
                 .createTime(LocalDateTime.now())
                 .build();
 

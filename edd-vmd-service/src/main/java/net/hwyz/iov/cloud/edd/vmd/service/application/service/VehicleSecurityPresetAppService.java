@@ -34,7 +34,7 @@ public class VehicleSecurityPresetAppService {
     /**
      * 安全常量类型
      */
-    private static final String SECURITY_CONSTANT_TYPE = "ROOT";
+    private static final String SECURITY_CONSTANT_TYPE = "SECURITY_KEY";
 
     /**
      * 预置per-VIN安全常量

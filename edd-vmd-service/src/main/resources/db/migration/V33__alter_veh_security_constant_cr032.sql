@@ -7,6 +7,3 @@ ALTER TABLE tb_veh_security_constant DROP COLUMN IF EXISTS cipher_blob;
 
 -- 将 key_handle 重命名为 kms_key_ref
 ALTER TABLE tb_veh_security_constant CHANGE COLUMN key_handle kms_key_ref VARCHAR(255) COMMENT 'KMS密钥引用（keyId/alias，仅为指针）';
-
--- 更新注释
-ALTER TABLE tb_veh_security_constant MODIFY COLUMN kms_key_ref VARCHAR(255) COMMENT 'KMS密钥引用（keyId/alias，仅为指针）';

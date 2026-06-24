@@ -83,7 +83,7 @@ class VehicleSecurityPresetAppServiceTest {
                 .vin(vin)
                 .batchNum(batchNum)
                 .presetState(SecurityConstantState.PRESET)
-                .constantType("ROOT")
+                .constantType("SECURITY_KEY")
                 .createTime(LocalDateTime.now())
                 .build();
 
@@ -110,7 +110,7 @@ class VehicleSecurityPresetAppServiceTest {
                 .vin(vin)
                 .batchNum("OLD_BATCH")
                 .presetState(SecurityConstantState.FAILED)
-                .constantType("ROOT")
+                .constantType("SECURITY_KEY")
                 .createTime(LocalDateTime.now())
                 .build();
 
@@ -148,7 +148,7 @@ class VehicleSecurityPresetAppServiceTest {
         verify(vehSecurityConstantRepository).insert(argThat(entity -> {
             assertEquals(vin, entity.getVin());
             assertEquals(batchNum, entity.getBatchNum());
-            assertEquals("ROOT", entity.getConstantType());
+            assertEquals("SECURITY_KEY", entity.getConstantType());
             assertNotNull(entity.getCreateTime());
             return true;
         }));
