@@ -4,25 +4,25 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-class PartTypeSchemaTest {
+class VehicleNodeSchemaTest {
 
     @Test
-    void shouldCreatePartTypeSchemaWithSecurityFields() {
-        PartTypeSchema schema = PartTypeSchema.builder()
-                .partType("TBOX")
+    void shouldCreateVehicleNodeSchemaWithSecurityFields() {
+        VehicleNodeSchema schema = VehicleNodeSchema.builder()
+                .vehicleNodeCode("TBOX")
                 .hsmUid("hsm_uid_field")
                 .needsSecurityConstantPreset(true)
                 .build();
 
-        assertEquals("TBOX", schema.getPartType());
+        assertEquals("TBOX", schema.getVehicleNodeCode());
         assertEquals("hsm_uid_field", schema.getHsmUid());
         assertTrue(schema.isNeedsSecurityConstantPreset());
     }
 
     @Test
-    void shouldReturnFalseForNonSecurityPartType() {
-        PartTypeSchema schema = PartTypeSchema.builder()
-                .partType("ECU")
+    void shouldReturnFalseForNonSecurityVehicleNodeCode() {
+        VehicleNodeSchema schema = VehicleNodeSchema.builder()
+                .vehicleNodeCode("ECU")
                 .needsSecurityConstantPreset(false)
                 .build();
 

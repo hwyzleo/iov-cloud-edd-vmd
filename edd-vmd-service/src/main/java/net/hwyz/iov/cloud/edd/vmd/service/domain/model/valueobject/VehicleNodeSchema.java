@@ -6,9 +6,9 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 /**
- * 零件类型模式值对象
+ * 车辆节点模式值对象
  * <p>
- * 描述零件类型的配置模式，包括是否需要安全常量预置等属性
+ * 描述车辆节点的配置模式，包括是否需要安全常量预置等属性
  *
  * @author hwyz_leo
  * @since 2026-06-24
@@ -17,12 +17,12 @@ import lombok.NoArgsConstructor;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class PartTypeSchema {
+public class VehicleNodeSchema {
 
     /**
-     * 零件类型编码
+     * 车辆节点编码
      */
-    private String partType;
+    private String vehicleNodeCode;
 
     /**
      * HSM唯一标识字段名

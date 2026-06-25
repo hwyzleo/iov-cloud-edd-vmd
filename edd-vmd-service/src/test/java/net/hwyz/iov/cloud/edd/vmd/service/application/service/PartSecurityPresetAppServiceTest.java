@@ -55,7 +55,7 @@ class PartSecurityPresetAppServiceTest {
         // Then
         verify(partSecurityConstantRepository, never()).insert(any());
         verify(partSecurityConstantRepository, never()).update(any());
-        verify(kmsHsmClient, never()).generatePerDeviceConstant(any(), any(), any());
+        verify(kmsHsmClient, never()).generatePerDeviceConstant(any(), any(), any(), any());
     }
 
     @Test
@@ -69,14 +69,14 @@ class PartSecurityPresetAppServiceTest {
                 .provider("TestKMS")
                 .algorithm("AES")
                 .build();
-        when(kmsHsmClient.generatePerDeviceConstant(TEST_PART_CODE, TEST_SN, "ROOT")).thenReturn(kmsResult);
+        when(kmsHsmClient.generatePerDeviceConstant(TEST_PART_CODE, TEST_SN, "ROOT", TEST_CHIP_UID)).thenReturn(kmsResult);
 
         // When
         service.preset(TEST_PART_CODE, TEST_SN, TEST_CHIP_UID, TEST_BATCH_NUM);
 
         // Then
         verify(partSecurityConstantRepository).insert(any(PartSecurityConstant.class));
-        verify(kmsHsmClient).generatePerDeviceConstant(TEST_PART_CODE, TEST_SN, "ROOT");
+        verify(kmsHsmClient).generatePerDeviceConstant(TEST_PART_CODE, TEST_SN, "ROOT", TEST_CHIP_UID);
         verify(partSecurityConstantRepository).update(argThat(constant ->
                 constant.getPartCode().equals(TEST_PART_CODE) &&
                 constant.getSn().equals(TEST_SN) &&

@@ -39,7 +39,7 @@ public class MptPartImportDataController extends BaseController {
 
     private final PartImportDataAppService partImportDataAppService;
 
-    @RequiresPermissions("completeVehicle:vehicle:importData:list")
+    @RequiresPermissions("vmd:vehicle:importData:list")
     @GetMapping(value = "/list")
     public ApiResponse<PageResult<PartImportDataResponse>> list(PartImportDataRequest partImportData) {
         log.info("管理后台用户[{}]分页查询零件导入数据", SecurityContextHolder.getUserName());
@@ -56,13 +56,13 @@ public class MptPartImportDataController extends BaseController {
     }
 
     @Log(title = "零件导入数据管理", businessType = BusinessType.EXPORT)
-    @RequiresPermissions("completeVehicle:vehicle:importData:export")
+    @RequiresPermissions("vmd:vehicle:importData:export")
     @PostMapping("/export")
     public void export(HttpServletResponse response, PartImportDataRequest partImportData) {
         log.info("管理后台用户[{}]导出零件导入数据", SecurityContextHolder.getUserName());
     }
 
-    @RequiresPermissions("completeVehicle:vehicle:importData:query")
+    @RequiresPermissions("vmd:vehicle:importData:query")
     @GetMapping(value = "/{partImportDataId}")
     public ApiResponse<PartImportDataResponse> getInfo(@PathVariable Long partImportDataId) {
         log.info("管理后台用户[{}]根据零件导入数据ID[{}]获取零件导入数据", SecurityContextHolder.getUserName(), partImportDataId);
@@ -70,7 +70,7 @@ public class MptPartImportDataController extends BaseController {
     }
 
     @Log(title = "零件导入数据管理", businessType = BusinessType.INSERT)
-    @RequiresPermissions("completeVehicle:vehicle:importData:add")
+    @RequiresPermissions("vmd:vehicle:importData:add")
     @PostMapping
     public ApiResponse<ImportResultResponse> add(@Validated @RequestBody PartImportDataRequest partImportData) {
         log.info("管理后台用户[{}]新增零件导入数据[{}]", SecurityContextHolder.getUserName(), partImportData.getBatchNum());
@@ -97,7 +97,7 @@ public class MptPartImportDataController extends BaseController {
     }
 
     @Log(title = "零件导入数据管理", businessType = BusinessType.UPDATE)
-    @RequiresPermissions("completeVehicle:vehicle:importData:edit")
+    @RequiresPermissions("vmd:vehicle:importData:edit")
     @PutMapping
     public ApiResponse<ImportResultResponse> edit(@Validated @RequestBody PartImportDataRequest partImportData) {
         log.info("管理后台用户[{}]修改保存零件导入数据[{}]", SecurityContextHolder.getUserName(), partImportData.getBatchNum());
@@ -124,7 +124,7 @@ public class MptPartImportDataController extends BaseController {
     }
 
     @Log(title = "零件导入数据管理", businessType = BusinessType.DELETE)
-    @RequiresPermissions("completeVehicle:vehicle:importData:remove")
+    @RequiresPermissions("vmd:vehicle:importData:remove")
     @DeleteMapping("/{partImportDataIds}")
     public ApiResponse<Void> remove(@PathVariable Long[] partImportDataIds) {
         log.info("管理后台用户[{}]删除零件导入数据[{}]", SecurityContextHolder.getUserName(), partImportDataIds);

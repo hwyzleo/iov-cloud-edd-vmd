@@ -58,7 +58,8 @@ public class PartSecurityPresetAppService {
         }
 
         try {
-            KmsHsmResult result = kmsHsmClient.generatePerDeviceConstant(partCode, sn, SECURITY_CONSTANT_TYPE);
+            // chipUid 作为 KDF 派生绑定锚，确保常量与特定安全芯片绑定
+            KmsHsmResult result = kmsHsmClient.generatePerDeviceConstant(partCode, sn, SECURITY_CONSTANT_TYPE, chipUid);
 
             securityConstant.setPresetState(SecurityConstantState.PRESET);
             securityConstant.setKmsKeyRef(result.getKmsKeyRef());

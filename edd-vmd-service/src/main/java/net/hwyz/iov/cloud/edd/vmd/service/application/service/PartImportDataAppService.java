@@ -16,6 +16,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartImportData;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmPartRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartImportDataRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.InboundSourceType;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.VehicleNodeSchemaRegistry;
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.StrUtil;
 import org.springframework.stereotype.Service;
@@ -41,6 +42,8 @@ public class PartImportDataAppService {
     private final MdmPartRepository mdmPartRepository;
     private final PartInboundAppService partInboundAppService;
     private final DownstreamProcessorRegistry downstreamProcessorRegistry;
+    private final VehicleNodeSchemaRegistry vehicleNodeSchemaRegistry;
+    private final PartSecurityPresetAppService partSecurityPresetAppService;
 
     /**
      * 查询零件导入数据信息
@@ -149,19 +152,12 @@ public class PartImportDataAppService {
         
         ImportResult result;
         
-        // PRODUCE 类型由 US-040 独立处理
-        if ("PRODUCE".equals(partCode)) {
-            log.info("PRODUCE 类型由 US-040 处理, batchNum={}", batchNum);
-            JSONObject dataJson = JSONUtil.parseObj(partImportData.getData());
-            result = handleProduceImport(batchNum, dataJson);
-        } else {
-            // 第一段：通用导入阶段
-            result = handleGeneralImport(batchNum, partCode, version, partImportData);
-            
-            // 第二段：下游联动定制化阶段
-            if (result.getFailureCount() == 0) {
-                result = handleDownstreamLinkage(batchNum, partCode, partImportData, result);
-            }
+        // 第一段：通用导入阶段
+        result = handleGeneralImport(batchNum, partCode, version, partImportData);
+        
+        // 第二段：下游联动定制化阶段
+        if (result.getFailureCount() == 0) {
+            result = handleDownstreamLinkage(batchNum, partCode, partImportData, result);
         }
         
         // 标记为已处理
@@ -298,6 +294,9 @@ public class PartImportDataAppService {
 
     /**
      * 处理下游联动定制化阶段
+     * <p>
+     * 两段式设计：与 vehicle_node_code 驱动的 TSP/OTA/IDK 下游联动并列，
+     * 作为另一条同步条件分流（命中安全芯片白名单时触发安全常量预置）
      *
      * @param batchNum 批次号
      * @param partCode 零件编码
@@ -316,6 +315,115 @@ public class PartImportDataAppService {
             return generalResult;
         }
         
+        // 获取vehicleNodeCode（从MDM Part获取，用于安全常量预置白名单匹配）
+        Part mdmPart = mdmPartRepository.selectByCode(partCode);
+        String vehicleNodeCode = (mdmPart != null) ? mdmPart.getVehicleNodeCode() : null;
+        
+        ImportResult result = generalResult;
+        
+        // 条件分流1：安全常量预置（命中安全芯片白名单时触发）
+        result = handleSecurityConstantPreset(batchNum, partCode, vehicleNodeCode, data, result);
+        
+        // 条件分流2：vehicleNodeCode 驱动的下游联动
+        result = handleVehicleNodeDownstream(batchNum, partCode, dataJson, data, result);
+        
+        return result;
+    }
+    
+    /**
+     * 处理安全常量预置条件分流
+     * <p>
+     * 按 vehicleNodeCode 是否命中 VehicleNodeSchema「需安全常量预置」白名单（如 TBOX）分流
+     *
+     * @param batchNum 批次号
+     * @param partCode 零件编码
+     * @param vehicleNodeCode 车辆节点编码
+     * @param data DATA部分JSON
+     * @param generalResult 通用导入结果
+     * @return 处理后的导入结果
+     */
+    private ImportResult handleSecurityConstantPreset(String batchNum, String partCode, String vehicleNodeCode, 
+                                                      JSONObject data, ImportResult generalResult) {
+        // 检查车辆节点是否需要安全常量预置
+        if (StrUtil.isBlank(vehicleNodeCode) || !vehicleNodeSchemaRegistry.needsSecurityConstantPreset(vehicleNodeCode)) {
+            log.debug("零件编码[{}]节点[{}]不需要安全常量预置，跳过", partCode, vehicleNodeCode);
+            return generalResult;
+        }
+        
+        log.info("零件编码[{}]节点[{}]命中安全常量白名单，开始预置, batchNum={}", partCode, vehicleNodeCode, batchNum);
+        
+        // 获取ITEMS数组，逐条处理安全常量预置
+        JSONArray items = data.getJSONArray("ITEMS");
+        if (items == null || items.isEmpty()) {
+            log.warn("批次号[{}]没有有效的ITEMS记录，跳过安全常量预置", batchNum);
+            return generalResult;
+        }
+        
+        int presetFailureCount = 0;
+        List<String> presetErrors = new ArrayList<>();
+        
+        for (Object item : items) {
+            JSONObject itemJson = JSONUtil.parseObj(item);
+            String sn = itemJson.getStr("SN");
+            
+            if (StrUtil.isBlank(sn)) {
+                continue;
+            }
+            
+            // 提取chipUid（HSM UID字段名由VehicleNodeSchema定义）
+            String hsmUidField = vehicleNodeSchemaRegistry.getHsmUidField(vehicleNodeCode);
+            String chipUid = (hsmUidField != null) ? itemJson.getStr(hsmUidField) : null;
+            
+            if (StrUtil.isBlank(chipUid)) {
+                log.warn("零件[{}:{}]缺少安全芯片标识(hsmUidField={})，跳过安全常量预置", partCode, sn, hsmUidField);
+                continue;
+            }
+            
+            try {
+                partSecurityPresetAppService.preset(partCode, sn, chipUid, batchNum);
+                log.debug("零件[{}:{}]安全常量预置成功", partCode, sn);
+            } catch (Exception e) {
+                presetFailureCount++;
+                presetErrors.add("安全常量预置失败[" + partCode + ":" + sn + "]: " + e.getMessage());
+                log.warn("零件[{}:{}]安全常量预置异常", partCode, sn, e);
+            }
+        }
+        
+        // 合并预置失败结果
+        if (presetFailureCount > 0) {
+            String errorMsg = String.join("; ", presetErrors);
+            String description = generalResult.getDescription();
+            if (description != null) {
+                description = description + "; " + errorMsg;
+            } else {
+                description = errorMsg;
+            }
+            
+            return ImportResult.builder()
+                    .totalCount(generalResult.getTotalCount())
+                    .successCount(generalResult.getSuccessCount())
+                    .failureCount(generalResult.getFailureCount() + presetFailureCount)
+                    .invalidCount(generalResult.getInvalidCount())
+                    .description(description)
+                    .build();
+        }
+        
+        log.info("零件编码[{}]安全常量预置完成, batchNum={}", partCode, batchNum);
+        return generalResult;
+    }
+    
+    /**
+     * 处理vehicleNodeCode驱动的下游联动
+     *
+     * @param batchNum 批次号
+     * @param partCode 零件编码
+     * @param dataJson 完整数据JSON
+     * @param data DATA部分JSON
+     * @param generalResult 通用导入结果
+     * @return 处理后的导入结果
+     */
+    private ImportResult handleVehicleNodeDownstream(String batchNum, String partCode, JSONObject dataJson,
+                                                     JSONObject data, ImportResult generalResult) {
         String vehicleNodeCode = data.getStr("vehicleNodeCode");
         
         // 检查vehicleNodeCode是否非空
@@ -357,19 +465,6 @@ public class PartImportDataAppService {
         }
         
         return generalResult;
-    }
-
-    /**
-     * 处理整车主档批量导入 (US-040)
-     * 
-     * @param batchNum 批次号
-     * @param dataJson 数据JSON
-     * @return 导入结果
-     */
-    public ImportResult handleProduceImport(String batchNum, JSONObject dataJson) {
-        log.info("US-040: 处理整车主档导入, batchNum={}", batchNum);
-        // TODO: 实现整车主档批量导入逻辑
-        return ImportResult.builder().build();
     }
 
     private PartImportDataDto toDto(PartImportData entity) {
