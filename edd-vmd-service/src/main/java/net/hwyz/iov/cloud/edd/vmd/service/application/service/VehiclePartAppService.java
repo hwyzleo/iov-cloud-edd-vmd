@@ -5,8 +5,10 @@ import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.VehiclePartAssembler;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.VehiclePartDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.VehiclePartQuery;
+import net.hwyz.iov.cloud.edd.vmd.service.application.event.publish.VehiclePartBindingPublisher;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartInfo;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehiclePart;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.BindingChangeType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartInfoRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehiclePartRepository;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
@@ -30,6 +32,7 @@ public class VehiclePartAppService {
 
     private final VehiclePartRepository vehiclePartRepository;
     private final PartInfoRepository partInfoRepository;
+    private final VehiclePartBindingPublisher vehiclePartBindingPublisher;
 
     /**
      * 查询绑定关系信息
@@ -45,6 +48,8 @@ public class VehiclePartAppService {
         map.put("bindState", query.getBindState());
         map.put("beginTime", query.getBeginTime());
         map.put("endTime", query.getEndTime());
+        map.put("beginId", query.getBeginId());
+        map.put("pageSize", query.getPageSize());
         List<VehiclePart> vehiclePartList = vehiclePartRepository.selectByMap(map);
         List<VehiclePartDto> dtoList = PageUtil.convert(vehiclePartList, VehiclePartAssembler.INSTANCE::fromDomain);
         fillPartInfo(dtoList);
@@ -154,6 +159,8 @@ public class VehiclePartAppService {
         vehiclePart.setBindState(1); // 1-绑定中
         vehiclePart.setBindTime(Instant.now());
         vehiclePartRepository.insert(vehiclePart);
+        // 发布绑定变更事件
+        vehiclePartBindingPublisher.publishBindingChanged(vehiclePart, BindingChangeType.BIND);
     }
 
     /**
@@ -165,6 +172,34 @@ public class VehiclePartAppService {
         vehiclePart.setBindState(0); // 0-已解绑
         vehiclePart.setUnbindTime(Instant.now());
         vehiclePartRepository.update(vehiclePart);
+        // 发布绑定变更事件
+        vehiclePartBindingPublisher.publishBindingChanged(vehiclePart, BindingChangeType.UNBIND);
+    }
+
+    /**
+     * 替换车辆零件（新建 active 绑定，并标记原绑定为 inactive）
+     *
+     * @param newVehiclePart 新绑定关系
+     * @param oldBindingId   被替换的绑定ID
+     */
+    public void replaceVehiclePart(VehiclePart newVehiclePart, Long oldBindingId) {
+        // 1. 将原绑定设置为 inactive
+        VehiclePart oldVehiclePart = vehiclePartRepository.selectById(oldBindingId);
+        if (oldVehiclePart != null) {
+            oldVehiclePart.setBindState(0); // 0-已解绑
+            oldVehiclePart.setUnbindTime(Instant.now());
+            oldVehiclePart.setUnbindReason("REPLACE");
+            vehiclePartRepository.update(oldVehiclePart);
+        }
+
+        // 2. 创建新绑定
+        newVehiclePart.setBindState(1); // 1-绑定中
+        newVehiclePart.setBindTime(Instant.now());
+        newVehiclePart.setReplaceOfBindingId(oldBindingId);
+        vehiclePartRepository.insert(newVehiclePart);
+
+        // 3. 发布绑定变更事件（REPLACE）
+        vehiclePartBindingPublisher.publishBindingChanged(newVehiclePart, BindingChangeType.REPLACE);
     }
 
     /**

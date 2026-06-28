@@ -20,5 +20,7 @@ public class VehiclePartQuery {
     private Integer bindState;
     private Date beginTime;
     private Date endTime;
+    private Long beginId;
+    private Integer pageSize;
 
 }

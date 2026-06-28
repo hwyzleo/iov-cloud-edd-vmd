@@ -206,7 +206,13 @@
         <if test="bindState != null">
             AND t.bind_state = #{bindState}
         </if>
+        <if test="beginId != null">
+            AND t.id &lt; #{beginId}
+        </if>
         ORDER BY t.id DESC
+        <if test="pageSize != null">
+            LIMIT #{pageSize}
+        </if>
     </select>
 
     <!-- 根据车架号和零件实例ID查询活跃绑定 -->
