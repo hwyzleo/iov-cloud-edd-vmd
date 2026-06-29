@@ -1,5 +1,7 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.event.publish;
 
+import cn.hutool.json.JSONObject;
+import cn.hutool.json.JSONUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.VehiclePartBindingChangedEvent;
@@ -9,6 +11,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehiclePart;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.BindingChangeType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmVehicleNodeRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartInfoRepository;
+import net.hwyz.iov.cloud.framework.common.util.StrUtil;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
@@ -49,6 +52,19 @@ public class VehiclePartBindingPublisher {
         VehicleNode vehicleNode = vehicleNodeRepository.selectByCode(vehiclePart.getVehicleNodeCode());
         String deviceCategory = vehicleNode != null ? vehicleNode.getDeviceCategory() : null;
 
+        // 提取 iccid1/iccid2（仅 deviceCategory=TBOX 时从 part_info.extra 取值）
+        String iccid1 = null;
+        String iccid2 = null;
+        if ("TBOX".equals(deviceCategory) && partInfo != null && StrUtil.isNotBlank(partInfo.getExtra())) {
+            try {
+                JSONObject extraJson = JSONUtil.parseObj(partInfo.getExtra());
+                iccid1 = extraJson.getStr("iccid1");
+                iccid2 = extraJson.getStr("iccid2");
+            } catch (Exception e) {
+                log.warn("解析零件[{}]extra字段失败: {}", partInfo.getPartCode(), e.getMessage());
+            }
+        }
+
         // 确定事件发生时间
         Instant occurredAt = changeType == BindingChangeType.BIND ?
                 vehiclePart.getBindTime() : vehiclePart.getUnbindTime();
@@ -63,8 +79,8 @@ public class VehiclePartBindingPublisher {
                 sn,
                 deviceCategory,
                 vehiclePart.getVehicleNodeCode(),
-                null,
-                null,
+                iccid1,
+                iccid2,
                 changeType,
                 vehiclePart.getReplaceOfBindingId(),
                 occurredAt,
