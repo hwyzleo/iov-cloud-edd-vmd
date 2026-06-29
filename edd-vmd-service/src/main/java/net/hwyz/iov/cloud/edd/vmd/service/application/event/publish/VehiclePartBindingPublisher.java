@@ -63,6 +63,8 @@ public class VehiclePartBindingPublisher {
                 sn,
                 deviceCategory,
                 vehiclePart.getVehicleNodeCode(),
+                null,
+                null,
                 changeType,
                 vehiclePart.getReplaceOfBindingId(),
                 occurredAt,

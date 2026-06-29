@@ -47,6 +47,16 @@ public class VehiclePartBindingChangedEvent extends BaseEvent {
     private final String vehicleNodeCode;
 
     /**
+     * ICCID1（仅 deviceCategory=TBOX 时取自 part_info.extra，单卡 / 非 TBOX 为空）
+     */
+    private final String iccid1;
+
+    /**
+     * ICCID2（仅 deviceCategory=TBOX 时取自 part_info.extra，单卡 / 非 TBOX 为空）
+     */
+    private final String iccid2;
+
+    /**
      * 变更类型：BIND / UNBIND / REPLACE
      */
     private final BindingChangeType changeType;
@@ -68,6 +78,7 @@ public class VehiclePartBindingChangedEvent extends BaseEvent {
 
     public VehiclePartBindingChangedEvent(String vin, Long bindingId, String partCode, String sn,
                                           String deviceCategory, String vehicleNodeCode,
+                                          String iccid1, String iccid2,
                                           BindingChangeType changeType, Long replaceOfBindingId,
                                           Instant occurredAt, Long seq) {
         super(vin);
@@ -77,6 +88,8 @@ public class VehiclePartBindingChangedEvent extends BaseEvent {
         this.sn = sn;
         this.deviceCategory = deviceCategory;
         this.vehicleNodeCode = vehicleNodeCode;
+        this.iccid1 = iccid1;
+        this.iccid2 = iccid2;
         this.changeType = changeType;
         this.replaceOfBindingId = replaceOfBindingId;
         this.occurredAt = occurredAt;
