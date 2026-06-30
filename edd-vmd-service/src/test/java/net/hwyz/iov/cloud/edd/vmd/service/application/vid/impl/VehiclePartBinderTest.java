@@ -124,6 +124,99 @@ class VehiclePartBinderTest {
     }
 
     @Test
+    void testCompensateBinding_skipIfAlreadyBound() {
+        JSONArray parts = new JSONArray();
+        JSONObject part = new JSONObject();
+        part.set("DEVICE_CODE", "TBOX001");
+        part.set("VIN", VIN);
+        part.set("PART_NO", "PN001");
+        part.set("PART_SN", "SN001");
+        part.set("SUPPLIER_CODE", "SUP001");
+        part.set("CONFIG_WORD", "CW01");
+        part.set("HARDWARE_VERSION", "HW1.0");
+        part.set("SOFTWARE_VERSION", "SW1.0");
+        part.set("HARDWARE_PN", "HPN001");
+        part.set("SOFTWARE_PN", "SPN001");
+        part.set("ICCID1", "IC001");
+        part.set("ICCID2", "IC002");
+        parts.add(part);
+
+        VehicleNode device = VehicleNode.builder().code("TBOX001").deviceCategory("TBOX").build();
+        when(vehicleNodeAppService.getVehicleNodeByCode("TBOX001")).thenReturn(device);
+
+        VehiclePart existingBinding = VehiclePart.builder().vin(VIN).vehicleNodeCode("TBOX001").bindState(1).build();
+        when(vehiclePartAppService.findByVinAndPosition(VIN, "TBOX001")).thenReturn(existingBinding);
+
+        List<VehicleEolPartBoundEvent.PartMeta> result = binder.bindParts(parts, VIN, BATCH_NUM);
+
+        assertEquals(1, result.size());
+        verify(partInfoAppService, never()).upsertPartInfo(any());
+        verify(vehiclePartAppService, never()).bindVehiclePart(any());
+        verify(partInfoAppService).updateExtraFields(eq("PN001"), eq("SN001"), anyMap());
+    }
+
+    @Test
+    void testCompensateBinding_bindIfNotBound() {
+        JSONArray parts = new JSONArray();
+        JSONObject part = new JSONObject();
+        part.set("DEVICE_CODE", "TBOX001");
+        part.set("VIN", VIN);
+        part.set("PART_NO", "PN001");
+        part.set("PART_SN", "SN001");
+        part.set("SUPPLIER_CODE", "SUP001");
+        parts.add(part);
+
+        VehicleNode device = VehicleNode.builder().code("TBOX001").deviceCategory("TBOX").build();
+        when(vehicleNodeAppService.getVehicleNodeByCode("TBOX001")).thenReturn(device);
+
+        when(vehiclePartAppService.findByVinAndPosition(VIN, "TBOX001")).thenReturn(null);
+
+        List<VehicleEolPartBoundEvent.PartMeta> result = binder.bindParts(parts, VIN, BATCH_NUM);
+
+        assertEquals(1, result.size());
+        verify(partInfoAppService).upsertPartInfo(any(PartInfo.class));
+        verify(vehiclePartAppService).bindVehiclePart(any(VehiclePart.class));
+    }
+
+    @Test
+    void testBackfillPartDetails() {
+        JSONArray parts = new JSONArray();
+        JSONObject part = new JSONObject();
+        part.set("DEVICE_CODE", "TBOX001");
+        part.set("VIN", VIN);
+        part.set("PART_NO", "PN001");
+        part.set("PART_SN", "SN001");
+        part.set("SUPPLIER_CODE", "SUP001");
+        part.set("CONFIG_WORD", "CW01");
+        part.set("HARDWARE_VERSION", "HW1.0");
+        part.set("SOFTWARE_VERSION", "SW1.0");
+        part.set("HARDWARE_PN", "HPN001");
+        part.set("SOFTWARE_PN", "SPN001");
+        part.set("ICCID1", "IC001");
+        part.set("ICCID2", "IC002");
+        parts.add(part);
+
+        VehicleNode device = VehicleNode.builder().code("TBOX001").deviceCategory("TBOX").build();
+        when(vehicleNodeAppService.getVehicleNodeByCode("TBOX001")).thenReturn(device);
+
+        VehiclePart existingBinding = VehiclePart.builder().vin(VIN).vehicleNodeCode("TBOX001").bindState(1).build();
+        when(vehiclePartAppService.findByVinAndPosition(VIN, "TBOX001")).thenReturn(existingBinding);
+
+        List<VehicleEolPartBoundEvent.PartMeta> result = binder.bindParts(parts, VIN, BATCH_NUM);
+
+        assertEquals(1, result.size());
+        verify(partInfoAppService).updateExtraFields(eq("PN001"), eq("SN001"), argThat(extra ->
+                "CW01".equals(extra.get("configWord")) &&
+                "HW1.0".equals(extra.get("hardwareVersion")) &&
+                "SW1.0".equals(extra.get("softwareVersion")) &&
+                "HPN001".equals(extra.get("hardwarePn")) &&
+                "SPN001".equals(extra.get("softwarePn")) &&
+                "IC001".equals(extra.get("iccid1")) &&
+                "IC002".equals(extra.get("iccid2"))
+        ));
+    }
+
+    @Test
     void bindParts_bindException_continuesWithNextPart() {
         JSONArray parts = new JSONArray();
         JSONObject part1 = new JSONObject();

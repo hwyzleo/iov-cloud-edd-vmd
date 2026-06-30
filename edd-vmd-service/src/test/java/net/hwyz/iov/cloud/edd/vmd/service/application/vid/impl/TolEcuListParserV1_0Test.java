@@ -2,6 +2,7 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.vid.impl;
 
 import cn.hutool.json.JSONObject;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ImportResult;
+import net.hwyz.iov.cloud.edd.vmd.service.application.event.publish.VehiclePublish;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartInfoAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleNodeAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehiclePartAppService;
@@ -47,12 +48,15 @@ class TolEcuListParserV1_0Test {
     @Mock
     private VehiclePartAppService vehiclePartAppService;
 
+    @Mock
+    private VehiclePublish vehiclePublish;
+
     private VehicleTolDataParserV1_0 parser;
 
     @BeforeEach
     void setUp() {
         parser = new VehicleTolDataParserV1_0(
-                parserRegistry, vehBasicInfoRepository, vehicleNodeAppService, partInfoAppService, vehiclePartAppService);
+                parserRegistry, vehBasicInfoRepository, vehicleNodeAppService, partInfoAppService, vehiclePartAppService, vehiclePublish);
     }
 
     @Test

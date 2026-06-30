@@ -78,7 +78,7 @@ class VehicleProduceDataParserV1_0Test {
         assertEquals(0, result.getInvalidCount());
 
         verify(vehBasicInfoRepository).insert(any(VehicleBasicInfo.class));
-        verify(vehiclePublish).produce(vin);
+        verify(vehiclePublish).produce(vin, batchNum);
         verify(vehicleSecurityPresetAppService).preset(vin, batchNum);
     }
 
@@ -245,7 +245,7 @@ class VehicleProduceDataParserV1_0Test {
         assertEquals(0, result.getInvalidCount());
 
         verify(vehicleOptionRepository).batchUpsert(any());
-        verify(vehiclePublish).produce(vin);
+        verify(vehiclePublish).produce(vin, batchNum);
         verify(vehicleSecurityPresetAppService).preset(vin, batchNum);
     }
 

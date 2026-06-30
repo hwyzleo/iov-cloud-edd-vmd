@@ -75,9 +75,16 @@ public class VehicleInfoExtractor extends BaseProcessor {
     );
 
     /**
+     * 残档车辆默认值（EOL 兜底）
+     * 用于填充 NOT NULL 字段，避免数据库约束冲突
+     */
+    private static final String STUB_DEFAULT = "UNKNOWN";
+
+    /**
      * 创建残档车辆（EOL 兜底）
      * <p>
      * 缺七项生产配置与选项值快照，需后续 PRODUCE 重导补全。
+     * 为满足数据库 NOT NULL 约束，设置默认值为 UNKNOWN。
      *
      * @param itemJson 车辆 JSON 数据
      * @param batchNum 批次号
@@ -85,7 +92,17 @@ public class VehicleInfoExtractor extends BaseProcessor {
      * @return 残档车辆基础信息
      */
     public VehicleBasicInfo createStubVehicle(JSONObject itemJson, String batchNum, String vin) {
-        VehicleBasicInfo basicInfo = VehicleBasicInfo.builder().vin(vin).build();
+        VehicleBasicInfo basicInfo = VehicleBasicInfo.builder()
+                .vin(vin)
+                .plantCode(STUB_DEFAULT)
+                .brandCode(STUB_DEFAULT)
+                .platformCode(STUB_DEFAULT)
+                .carLineCode(STUB_DEFAULT)
+                .modelCode(STUB_DEFAULT)
+                .variantCode(STUB_DEFAULT)
+                .configurationCode(STUB_DEFAULT)
+                .build();
+        // 尝试从 JSON 中提取基础版本信息
         handleVehicleInfo(itemJson, basicInfo, "VEHICLE_BASE_VERSION", "vehicleBaseVersion", "车辆基线版本", batchNum, vin);
         return basicInfo;
     }

@@ -108,6 +108,7 @@ public class VehicleTolDataParserV1_0 extends BaseProcessor implements VehicleIm
             totalParts += parts.size();
 
             // 遍历该车的 PARTS（每个 PART 对应一个 ECU/零件）
+            boolean vinSuccess = false;
             for (Object part : parts) {
                 JSONObject partJson = JSONUtil.parseObj(part);
                 String partNo = partJson.getStr("PART_NO");
@@ -172,10 +173,8 @@ public class VehicleTolDataParserV1_0 extends BaseProcessor implements VehicleIm
                             .build();
                     vehiclePartAppService.bindVehiclePart(vehiclePart);
 
-                    // 发布总装上线事件
-                    vehiclePublish.tol(vin, Instant.now());
-
                     successCount++;
+                    vinSuccess = true;
                     log.debug("TOL导入数据批次号[{}]车辆[{}]零件[{}]绑定成功", batchNum, vin, partNo);
                 } catch (VehicleNotExistException e) {
                     failureCount++;
@@ -193,6 +192,10 @@ public class VehicleTolDataParserV1_0 extends BaseProcessor implements VehicleIm
                     appendDescription(descriptionBuilder, errorMsg);
                     log.warn("TOL导入数据批次号[{}]: {}", batchNum, errorMsg, e);
                 }
+            }
+            // 该车所有零件处理完成后，发布一次总装上线事件
+            if (vinSuccess) {
+                vehiclePublish.tol(vin, Instant.now());
             }
         }
 
