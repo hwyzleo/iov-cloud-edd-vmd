@@ -113,6 +113,22 @@ public class VehicleLifecycleAppService {
     }
 
     /**
+     * 记录总装上线节点
+     *
+     * @param vin     车架号
+     * @param tolTime 总装上线时间
+     */
+    public void recordTolNode(String vin, Date tolTime) {
+        VehicleLifecycleNode node = VehicleLifecycleNode.builder()
+                .vin(vin)
+                .node(VehicleLifecycleNodeEnum.TOL)
+                .reachTime(tolTime == null ? null : tolTime.toInstant())
+                .build();
+        node.init();
+        vehicleLifecycleNodeRepository.save(node);
+    }
+
+    /**
      * 记录车辆合格证节点
      *
      * @param vin             车架号
