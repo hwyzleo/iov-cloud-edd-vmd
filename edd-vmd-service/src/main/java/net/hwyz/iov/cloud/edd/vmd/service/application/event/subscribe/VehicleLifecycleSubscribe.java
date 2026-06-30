@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.VehicleEolEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.VehicleProduceEvent;
+import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.VehicleTolEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleLifecycleAppService;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
@@ -40,6 +41,16 @@ public class VehicleLifecycleSubscribe {
     @EventListener
     public void onVehicleEolEvent(VehicleEolEvent event) {
         vehicleLifecycleAppService.recordEolNode(event.getVin(), Date.from(event.getEolTime()));
+    }
+
+    /**
+     * 订阅车辆总装上线事件
+     *
+     * @param event 车辆总装上线事件
+     */
+    @EventListener
+    public void onVehicleTolEvent(VehicleTolEvent event) {
+        vehicleLifecycleAppService.recordTolNode(event.getVin(), Date.from(event.getTolTime()));
     }
 
 }
