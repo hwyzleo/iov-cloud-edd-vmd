@@ -7,6 +7,7 @@ import cn.hutool.json.JSONUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ImportResult;
+import net.hwyz.iov.cloud.edd.vmd.service.application.event.publish.VehiclePublish;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartInfoAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleNodeAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehiclePartAppService;
@@ -24,6 +25,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoReposito
 import net.hwyz.iov.cloud.framework.common.util.StrUtil;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import jakarta.annotation.PostConstruct;
 
 /**
@@ -45,6 +47,7 @@ public class VehicleTolDataParserV1_0 extends BaseProcessor implements VehicleIm
     private final VehicleNodeAppService vehicleNodeAppService;
     private final PartInfoAppService partInfoAppService;
     private final VehiclePartAppService vehiclePartAppService;
+    private final VehiclePublish vehiclePublish;
 
     @PostConstruct
     public void init() {
@@ -168,6 +171,9 @@ public class VehicleTolDataParserV1_0 extends BaseProcessor implements VehicleIm
                             .bindOrg(sourceSystem)
                             .build();
                     vehiclePartAppService.bindVehiclePart(vehiclePart);
+
+                    // 发布总装上线事件
+                    vehiclePublish.tol(vin, Instant.now());
 
                     successCount++;
                     log.debug("TOL导入数据批次号[{}]车辆[{}]零件[{}]绑定成功", batchNum, vin, partNo);
