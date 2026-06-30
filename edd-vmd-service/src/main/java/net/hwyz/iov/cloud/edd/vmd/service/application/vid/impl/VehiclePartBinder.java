@@ -18,7 +18,9 @@ import net.hwyz.iov.cloud.framework.common.util.StrUtil;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 车辆零件绑定组件
@@ -83,6 +85,17 @@ public class VehiclePartBinder {
                     configWord, hardwareVersion, softwareVersion, hardwarePn, softwarePn,
                     iccid1, iccid2));
             try {
+                // 补偿绑定语义：TOL 已绑跳过、漏绑补绑
+                VehiclePart existingBinding = vehiclePartAppService.findByVinAndPosition(vin, deviceCode);
+                if (existingBinding != null && existingBinding.getBindState() == 1) {
+                    // TOL 已绑，跳过
+                    log.debug("车辆[{}]位置[{}]已绑定零件[{}]，跳过", vin, deviceCode, pn);
+                    // 回填零件细节（软件版本/配置字）入 part_info.extra
+                    Map<String, String> extraFields = buildExtraFields(configWord, hardwareVersion, softwareVersion, hardwarePn, softwarePn, iccid1, iccid2);
+                    partInfoAppService.updateExtraFields(pn, sn, extraFields);
+                    continue;
+                }
+
                 // 步骤1: 先按 (partCode, sn) upsert part_info（幂等）
                 PartInfo partInfo = PartInfo.builder()
                         .partCode(pn)
@@ -99,6 +112,12 @@ public class VehiclePartBinder {
                         .build();
                 partInfoAppService.upsertPartInfo(partInfo);
 
+                // 回填零件细节（软件版本、配置字/变体编码等）入 part_info.extra
+                Map<String, String> extraFields = buildExtraFields(configWord, hardwareVersion, softwareVersion, hardwarePn, softwarePn, iccid1, iccid2);
+                if (!extraFields.isEmpty()) {
+                    partInfoAppService.updateExtraFields(pn, sn, extraFields);
+                }
+
                 // 步骤2: VIN + 安装位置就绪时 upsert vehicle_part 绑定
                 VehiclePart vehiclePart = VehiclePart.builder()
                         .vin(vin)
@@ -113,5 +132,30 @@ public class VehiclePartBinder {
             }
         }
         return partMetaList;
+    }
+
+    /**
+     * 构建额外字段 Map
+     *
+     * @param configWord 配置字
+     * @param hardwareVersion 硬件版本
+     * @param softwareVersion 软件版本
+     * @param hardwarePn 硬件零件号
+     * @param softwarePn 软件零件号
+     * @param iccid1 ICCID1
+     * @param iccid2 ICCID2
+     * @return 额外字段 Map
+     */
+    private Map<String, String> buildExtraFields(String configWord, String hardwareVersion, String softwareVersion,
+                                                  String hardwarePn, String softwarePn, String iccid1, String iccid2) {
+        Map<String, String> extraFields = new HashMap<>();
+        if (configWord != null) extraFields.put("configWord", configWord);
+        if (hardwareVersion != null) extraFields.put("hardwareVersion", hardwareVersion);
+        if (softwareVersion != null) extraFields.put("softwareVersion", softwareVersion);
+        if (hardwarePn != null) extraFields.put("hardwarePn", hardwarePn);
+        if (softwarePn != null) extraFields.put("softwarePn", softwarePn);
+        if (iccid1 != null) extraFields.put("iccid1", iccid1);
+        if (iccid2 != null) extraFields.put("iccid2", iccid2);
+        return extraFields;
     }
 }
