@@ -151,4 +151,28 @@ public class PartInfoAppService {
         }
     }
 
+    /**
+     * 回填零件细节（软件版本、配置字/变体编码等）入 part_info.extra
+     *
+     * @param partCode 零件编码
+     * @param sn 零件序列号
+     * @param extraFields 额外字段
+     * @return 结果
+     */
+    public int updateExtraFields(String partCode, String sn, Map<String, String> extraFields) {
+        PartInfo existing = partInfoRepository.selectByPartCodeAndSn(partCode, sn);
+        if (existing == null) {
+            log.warn("零件[{}]序列号[{}]不存在，无法更新额外字段", partCode, sn);
+            return 0;
+        }
+        // 合并现有 extra 字段
+        Map<String, Object> extraMap = new HashMap<>();
+        if (existing.getExtra() != null && !existing.getExtra().isEmpty()) {
+            extraMap.putAll(cn.hutool.json.JSONUtil.parseObj(existing.getExtra()));
+        }
+        extraMap.putAll(extraFields);
+        existing.setExtra(cn.hutool.json.JSONUtil.toJsonStr(extraMap));
+        return partInfoRepository.update(existing);
+    }
+
 }

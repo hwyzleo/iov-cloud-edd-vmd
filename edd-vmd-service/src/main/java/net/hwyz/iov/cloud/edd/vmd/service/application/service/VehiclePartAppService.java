@@ -97,6 +97,17 @@ public class VehiclePartAppService {
     }
 
     /**
+     * 根据车架号和安装位置查询活跃绑定（补偿绑定语义）
+     *
+     * @param vin 车架号
+     * @param installPosition 安装位置（车载节点代码）
+     * @return 绑定关系实体，不存在返回 null
+     */
+    public VehiclePart findByVinAndPosition(String vin, String installPosition) {
+        return vehiclePartRepository.selectActiveByVinAndVehicleNodeCode(vin, installPosition);
+    }
+
+    /**
      * 根据零件实例ID获取活跃绑定
      *
      * @param partId 零件实例ID
