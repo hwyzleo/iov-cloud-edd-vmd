@@ -107,7 +107,7 @@ public class VehicleProduceDataParserV1_0 extends BaseProcessor implements Vehic
                 } catch (Exception e) {
                     log.warn("车辆[{}]选项值快照保存失败: {}", vin, e.getMessage());
                 }
-                vehiclePublish.produce(vin);
+                vehiclePublish.produce(vin, batchNum);
                 // 预置安全常量
                 try {
                     vehicleSecurityPresetAppService.preset(vin, batchNum);

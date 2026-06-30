@@ -27,11 +27,12 @@ public class VehiclePublish {
     /**
      * 车辆生产
      *
-     * @param vin 车架号
+     * @param vin     车架号
+     * @param batchNum 批次号
      */
-    public void produce(String vin) {
-        log.info("发布车辆[{}]生产事件", vin);
-        ctx.publishEvent(new VehicleProduceEvent(vin));
+    public void produce(String vin, String batchNum) {
+        log.info("发布车辆[{}]生产事件, batchNum={}", vin, batchNum);
+        ctx.publishEvent(new VehicleProduceEvent(vin, batchNum));
     }
 
     /**

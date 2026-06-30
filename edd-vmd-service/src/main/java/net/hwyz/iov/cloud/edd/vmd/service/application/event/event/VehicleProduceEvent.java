@@ -15,9 +15,15 @@ public class VehicleProduceEvent extends BaseEvent {
      */
     private final String vin;
 
-    public VehicleProduceEvent(String vin) {
+    /**
+     * 批次号
+     */
+    private final String batchNum;
+
+    public VehicleProduceEvent(String vin, String batchNum) {
         super(vin);
         this.vin = vin;
+        this.batchNum = batchNum;
     }
 
 }

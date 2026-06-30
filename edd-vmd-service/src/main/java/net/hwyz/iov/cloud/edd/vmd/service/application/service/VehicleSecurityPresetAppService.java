@@ -46,6 +46,13 @@ public class VehicleSecurityPresetAppService {
     public void preset(String vin, String batchNum) {
         log.info("开始预置车辆[{}]安全常量, batchNum={}", vin, batchNum);
 
+        // EOL 补发的 VehicleProduceEvent 不触发安全预置
+        // 仅真实 PRODUCE 批次触发
+        if (batchNum != null && batchNum.startsWith("EOL-")) {
+            log.debug("EOL 补发的 PRODUCE 事件，不触发安全预置: {}", vin);
+            return;
+        }
+
         // 查询是否已存在记录
         VehSecurityConstant existing = vehSecurityConstantRepository.selectByVin(vin);
 

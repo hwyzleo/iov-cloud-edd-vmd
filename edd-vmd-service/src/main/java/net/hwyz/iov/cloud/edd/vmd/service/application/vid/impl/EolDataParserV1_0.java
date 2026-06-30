@@ -106,7 +106,8 @@ public class EolDataParserV1_0 extends BaseProcessor implements VehicleImportDat
 
                 // 3. 发布车辆事件
                 if (isNewVehicle) {
-                    vehiclePublish.produce(vin);
+                    // EOL 补发的 PRODUCE 事件，标记为 EOL- 前缀
+                    vehiclePublish.produce(vin, "EOL-" + batchNum);
                 }
                 if (firstEol) {
                     vehiclePublish.eol(vin, eolDate);
