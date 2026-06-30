@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.VehicleEolEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.VehicleEolPartBoundEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.VehicleProduceEvent;
+import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.VehicleTolEvent;
 import org.springframework.context.ApplicationContext;
 import org.springframework.stereotype.Component;
 
@@ -42,6 +43,16 @@ public class VehiclePublish {
     public void eol(String vin, Instant eolTime) {
         log.info("发布车辆[{}]下线事件", vin);
         ctx.publishEvent(new VehicleEolEvent(vin, eolTime));
+    }
+
+    /**
+     * 发布车辆总装上线事件
+     *
+     * @param vin 车架号
+     * @param tolTime 总装上线时间
+     */
+    public void tol(String vin, Instant tolTime) {
+        ctx.publishEvent(new VehicleTolEvent(vin, tolTime));
     }
 
     /**
