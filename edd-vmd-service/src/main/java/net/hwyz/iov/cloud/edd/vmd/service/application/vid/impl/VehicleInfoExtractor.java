@@ -75,6 +75,22 @@ public class VehicleInfoExtractor extends BaseProcessor {
     );
 
     /**
+     * 创建残档车辆（EOL 兜底）
+     * <p>
+     * 缺七项生产配置与选项值快照，需后续 PRODUCE 重导补全。
+     *
+     * @param itemJson 车辆 JSON 数据
+     * @param batchNum 批次号
+     * @param vin      车架号
+     * @return 残档车辆基础信息
+     */
+    public VehicleBasicInfo createStubVehicle(JSONObject itemJson, String batchNum, String vin) {
+        VehicleBasicInfo basicInfo = VehicleBasicInfo.builder().vin(vin).build();
+        handleVehicleInfo(itemJson, basicInfo, "VEHICLE_BASE_VERSION", "vehicleBaseVersion", "车辆基线版本", batchNum, vin);
+        return basicInfo;
+    }
+
+    /**
      * 提取车辆基础信息
      *
      * @param itemJson 车辆 JSON 数据

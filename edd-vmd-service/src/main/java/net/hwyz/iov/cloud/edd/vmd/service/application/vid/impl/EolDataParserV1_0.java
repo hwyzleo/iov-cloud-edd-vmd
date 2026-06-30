@@ -11,6 +11,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ImportResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.VehicleEolPartBoundEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.publish.VehiclePublish;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleLifecycleAppService;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleSecurityPresetAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.VehicleImportDataParser;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParserRegistry;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleBasicInfo;
@@ -45,6 +46,7 @@ public class EolDataParserV1_0 extends BaseProcessor implements VehicleImportDat
     private final VehicleInfoPersister vehicleInfoPersister;
     private final VehiclePartBinder vehiclePartBinder;
     private final VehicleLifecycleAppService vehicleLifecycleAppService;
+    private final VehicleSecurityPresetAppService vehicleSecurityPresetAppService;
     private final ImportDataParserRegistry parserRegistry;
 
     @PostConstruct
@@ -83,7 +85,14 @@ public class EolDataParserV1_0 extends BaseProcessor implements VehicleImportDat
                 Map<String, VehicleDetail> existingDetailMap = vehBasicInfoRepository.selectDetailByVin(vin).stream()
                         .collect(Collectors.toMap(VehicleDetail::getType, v -> v));
 
-                VehicleBasicInfo basicInfo = vehicleInfoExtractor.extractBasicInfo(itemJson, existingInfo, batchNum, vin);
+                VehicleBasicInfo basicInfo;
+                // VIN 不存在时 EOL 仍自动建车兜底（输出 WARN、残档）
+                if (existingInfo == null) {
+                    log.warn("车辆[{}]不存在，EOL 自动建车兜底（残档，缺七项生产配置与选项值快照）", vin);
+                    basicInfo = vehicleInfoExtractor.createStubVehicle(itemJson, batchNum, vin);
+                } else {
+                    basicInfo = vehicleInfoExtractor.extractBasicInfo(itemJson, existingInfo, batchNum, vin);
+                }
                 List<VehicleDetail> details = vehicleInfoExtractor.extractDetails(itemJson, existingDetailMap, batchNum, vin);
                 Instant eolDate = vehicleInfoExtractor.extractEolDate(itemJson);
 
