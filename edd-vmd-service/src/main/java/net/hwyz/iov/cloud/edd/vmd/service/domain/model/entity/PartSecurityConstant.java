@@ -30,6 +30,7 @@ public class PartSecurityConstant extends BaseDo<Long> {
     private String kmsKeyRef;
     private String keySpec;
     private String algorithm;
+    private String kcv;
     private SecurityConstantState presetState;
     private LocalDateTime genTime;
     private LocalDateTime lastAttemptTime;

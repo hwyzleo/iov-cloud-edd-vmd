@@ -18,6 +18,7 @@ class PartSecurityConstantTest {
                 .presetState(SecurityConstantState.PENDING)
                 .constantType("ROOT")
                 .kmsKeyRef("test_key_ref")
+                .kcv("01020304")
                 .batchNum("BATCH_001")
                 .createTime(LocalDateTime.now())
                 .build();
@@ -28,6 +29,7 @@ class PartSecurityConstantTest {
         assertEquals(SecurityConstantState.PENDING, constant.getPresetState());
         assertEquals("ROOT", constant.getConstantType());
         assertEquals("test_key_ref", constant.getKmsKeyRef());
+        assertEquals("01020304", constant.getKcv());
         assertEquals("BATCH_001", constant.getBatchNum());
     }
 }

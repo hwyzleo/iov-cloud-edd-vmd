@@ -3,19 +3,27 @@ package net.hwyz.iov.cloud.edd.vmd.service.integration;
 import net.hwyz.iov.cloud.edd.vmd.service.BaseTest;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartSecurityConstant;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SecurityConstantState;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.VehicleNodeSchemaRegistry;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartSecurityConstantRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartSecurityPresetAppService;
+import net.hwyz.iov.cloud.framework.security.crypto.KeyProvisioningTemplate;
+import net.hwyz.iov.cloud.framework.security.crypto.model.BizType;
+import net.hwyz.iov.cloud.framework.security.crypto.model.ProvisioningResult;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
 
 /**
  * 零件安全常量预置 - 真实数据库集成测试
  * <p>
- * 继承 BaseTest 连接 dev 库，使用 MockKmsHsmClient，@Rollback 自动回滚。
+ * 继承 BaseTest 连接 dev 库，使用框架 KeyProvisioningTemplate，@Rollback 自动回滚。
  * 验证 tb_part_security_constant 表的实际读写行为。
  *
  * @author hwyz_leo
@@ -28,6 +36,25 @@ class PartSecurityConstantDbIntegrationTest extends BaseTest {
     @Autowired
     private PartSecurityConstantRepository partSecurityConstantRepository;
 
+    @MockBean
+    private KeyProvisioningTemplate keyProvisioningTemplate;
+
+    @MockBean
+    private VehicleNodeSchemaRegistry vehicleNodeSchemaRegistry;
+
+    @BeforeEach
+    void setUp() {
+        ProvisioningResult mockResult = new ProvisioningResult();
+        mockResult.setKmsKeyRef("dev-root-master:sn:MOCK");
+        mockResult.setKeySpec("256-bit");
+        mockResult.setProvider("Vault-Transit");
+        mockResult.setAlgorithm("HMAC-SHA256");
+        mockResult.setKcv(new byte[]{1, 2, 3, 4});
+        mockResult.setWrappedMaterial(null);
+        when(keyProvisioningTemplate.deriveByUid(any(), any())).thenReturn(mockResult);
+        when(vehicleNodeSchemaRegistry.getBizType(any())).thenReturn(BizType.TBOX_DEVICE_ROOT);
+    }
+
     @Test
     @DisplayName("预置安全常量应成功写入tb_part_security_constant表")
     @Transactional
@@ -37,8 +64,8 @@ class PartSecurityConstantDbIntegrationTest extends BaseTest {
         String chipUid = "HSM_DB_TEST_001";
         String batchNum = "BATCH_DB_TEST_001";
 
-        // 执行预置（使用 MockKmsHsmClient）
-        partSecurityPresetAppService.preset(partCode, sn, chipUid, batchNum);
+        // 执行预置（使用框架 KeyProvisioningTemplate）
+        partSecurityPresetAppService.preset(partCode, sn, chipUid, batchNum, "TBOX_5G");
 
         // 从数据库查询验证
         PartSecurityConstant saved = partSecurityConstantRepository.selectByPartCodeAndSn(partCode, sn);
@@ -64,13 +91,13 @@ class PartSecurityConstantDbIntegrationTest extends BaseTest {
         String batchNum = "BATCH_DB_TEST_002";
 
         // 第一次预置
-        partSecurityPresetAppService.preset(partCode, sn, chipUid, batchNum);
+        partSecurityPresetAppService.preset(partCode, sn, chipUid, batchNum, "TBOX_5G");
         PartSecurityConstant first = partSecurityConstantRepository.selectByPartCodeAndSn(partCode, sn);
         assertNotNull(first);
         assertEquals(SecurityConstantState.PRESET, first.getPresetState());
 
         // 第二次预置（应跳过）
-        partSecurityPresetAppService.preset(partCode, sn, "DIFFERENT_CHIP", "BATCH_NEW");
+        partSecurityPresetAppService.preset(partCode, sn, "DIFFERENT_CHIP", "BATCH_NEW", "TBOX_5G");
         PartSecurityConstant second = partSecurityConstantRepository.selectByPartCodeAndSn(partCode, sn);
 
         // chipUid 不应被更新
@@ -87,7 +114,7 @@ class PartSecurityConstantDbIntegrationTest extends BaseTest {
         String chipUid = "HSM_DB_TEST_003";
         String batchNum = "BATCH_DB_TEST_003";
 
-        partSecurityPresetAppService.preset(partCode, sn, chipUid, batchNum);
+        partSecurityPresetAppService.preset(partCode, sn, chipUid, batchNum, "TBOX_5G");
 
         PartSecurityConstant saved = partSecurityConstantRepository.selectByPartCodeAndSn(partCode, sn);
 

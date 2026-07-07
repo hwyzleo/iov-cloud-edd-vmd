@@ -5,10 +5,12 @@ import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartImportData;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartSecurityConstant;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SecurityConstantState;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.VehicleNodeSchemaRegistry;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartImportDataRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartSecurityConstantRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.client.KmsHsmClient;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.client.dto.KmsHsmResult;
+import net.hwyz.iov.cloud.framework.security.crypto.KeyProvisioningTemplate;
+import net.hwyz.iov.cloud.framework.security.crypto.model.BizType;
+import net.hwyz.iov.cloud.framework.security.crypto.model.ProvisioningResult;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,20 +23,26 @@ public class PartSecurityPresetAppService {
 
     private final PartSecurityConstantRepository partSecurityConstantRepository;
     private final PartImportDataRepository partImportDataRepository;
-    private final KmsHsmClient kmsHsmClient;
+    private final KeyProvisioningTemplate keyProvisioningTemplate;
+    private final VehicleNodeSchemaRegistry vehicleNodeSchemaRegistry;
 
     private static final int DESCRIPTION_MAX_LENGTH = 500;
     private static final String SECURITY_CONSTANT_TYPE = "ROOT";
 
     @Transactional(rollbackFor = Exception.class)
-    public void preset(String partCode, String sn, String chipUid, String batchNum) {
-        log.info("开始预置零件[{}:{}]安全常量, chipUid={}, batchNum={}", partCode, sn, chipUid, batchNum);
+    public void preset(String partCode, String sn, String chipUid, String batchNum, String vehicleNodeCode) {
+        log.info("开始预置零件[{}:{}]安全常量, chipUid={}, batchNum={}, vehicleNodeCode={}", partCode, sn, chipUid, batchNum, vehicleNodeCode);
 
         PartSecurityConstant existing = partSecurityConstantRepository.selectByPartCodeAndSn(partCode, sn);
 
         if (existing != null && existing.getPresetState() == SecurityConstantState.PRESET) {
             log.info("零件[{}:{}]安全常量已预置，跳过", partCode, sn);
             return;
+        }
+
+        BizType bizType = vehicleNodeSchemaRegistry.getBizType(vehicleNodeCode);
+        if (bizType == null) {
+            throw new IllegalArgumentException("不支持的车辆节点类型: " + vehicleNodeCode);
         }
 
         PartSecurityConstant securityConstant;
@@ -58,14 +66,14 @@ public class PartSecurityPresetAppService {
         }
 
         try {
-            // chipUid 作为 KDF 派生绑定锚，确保常量与特定安全芯片绑定
-            KmsHsmResult result = kmsHsmClient.generatePerDeviceConstant(partCode, sn, SECURITY_CONSTANT_TYPE, chipUid);
+            ProvisioningResult result = keyProvisioningTemplate.deriveByUid(chipUid, bizType);
 
             securityConstant.setPresetState(SecurityConstantState.PRESET);
             securityConstant.setKmsKeyRef(result.getKmsKeyRef());
             securityConstant.setKeySpec(result.getKeySpec());
             securityConstant.setKmsProvider(result.getProvider());
             securityConstant.setAlgorithm(result.getAlgorithm());
+            securityConstant.setKcv(bytesToHex(result.getKcv()));
             securityConstant.setGenTime(LocalDateTime.now());
             securityConstant.setLastAttemptTime(LocalDateTime.now());
             partSecurityConstantRepository.update(securityConstant);
@@ -112,5 +120,16 @@ public class PartSecurityPresetAppService {
             return description;
         }
         return description.substring(0, DESCRIPTION_MAX_LENGTH - 3) + "...";
+    }
+
+    private String bytesToHex(byte[] bytes) {
+        if (bytes == null) {
+            return null;
+        }
+        StringBuilder sb = new StringBuilder();
+        for (byte b : bytes) {
+            sb.append(String.format("%02x", b));
+        }
+        return sb.toString();
     }
 }

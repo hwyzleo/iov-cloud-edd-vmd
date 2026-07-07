@@ -16,11 +16,13 @@ class VehSecurityConstantTest {
                 .batchNum("BATCH_001")
                 .presetState(SecurityConstantState.PENDING)
                 .kmsKeyRef("test_key_ref")
+                .kcv("01020304")
                 .constantType("SECURITY_KEY")
                 .createTime(LocalDateTime.now())
                 .build();
 
         assertEquals("TEST_VIN_123", constant.getVin());
         assertEquals("test_key_ref", constant.getKmsKeyRef());
+        assertEquals("01020304", constant.getKcv());
     }
 }

@@ -251,7 +251,7 @@ class PartImportDataAppServiceTest {
         assertEquals(0, result.getFailureCount());
 
         // 验证安全常量预置服务被调用
-        verify(partSecurityPresetAppService).preset(eq("TBOX_001"), eq("SN001"), eq("HSM_UID_001"), eq(batchNum));
+        verify(partSecurityPresetAppService).preset(eq("TBOX_001"), eq("SN001"), eq("HSM_UID_001"), eq(batchNum), eq("TBOX_5G"));
         
         // 验证下游处理器也被调用（与安全常量预置并列）
         verify(mockProcessor).process(eq(batchNum), eq("TBOX_001"), eq("TBOX_5G"), any(JSONObject.class));
@@ -301,7 +301,7 @@ class PartImportDataAppServiceTest {
         assertEquals(0, result.getFailureCount());
 
         // 验证安全常量预置服务未被调用
-        verify(partSecurityPresetAppService, never()).preset(anyString(), anyString(), anyString(), anyString());
+        verify(partSecurityPresetAppService, never()).preset(anyString(), anyString(), anyString(), anyString(), anyString());
         
         // 验证下游处理器被调用
         verify(mockProcessor).process(eq(batchNum), eq("SIM_001"), eq("TSP"), any(JSONObject.class));
@@ -344,7 +344,7 @@ class PartImportDataAppServiceTest {
 
         // 模拟安全常量预置抛出异常
         doThrow(new RuntimeException("KMS/HSM服务不可用")).when(partSecurityPresetAppService)
-                .preset(eq("TBOX_001"), eq("SN001"), eq("HSM_UID_001"), eq(batchNum));
+                .preset(eq("TBOX_001"), eq("SN001"), eq("HSM_UID_001"), eq(batchNum), eq("TBOX_5G"));
 
         // 执行测试
         ImportResult result = partImportDataAppService.parsePartImportData(batchNum);

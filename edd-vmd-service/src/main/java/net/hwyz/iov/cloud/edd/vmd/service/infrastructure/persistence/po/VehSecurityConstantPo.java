@@ -51,10 +51,34 @@ public class VehSecurityConstantPo extends BasePo {
     private String presetState;
 
     /**
+     * KMS/HSM 提供方标识
+     */
+    @TableField("kms_provider")
+    private String kmsProvider;
+
+    /**
      * KMS密钥引用（keyId/alias，仅为指针）
      */
     @TableField("kms_key_ref")
     private String kmsKeyRef;
+
+    /**
+     * 密钥规格
+     */
+    @TableField("key_spec")
+    private String keySpec;
+
+    /**
+     * 算法标识
+     */
+    @TableField("algorithm")
+    private String algorithm;
+
+    /**
+     * KCV密钥校验值（可公开、不可逆、非密钥，hex编码）
+     */
+    @TableField("kcv")
+    private String kcv;
 
     /**
      * 失败原因（按列长截断）

@@ -15,4 +15,14 @@ class VehSecurityConstantPoTest {
 
         assertEquals("test_key_ref", po.getKmsKeyRef());
     }
+
+    @Test
+    void shouldCreatePoWithKcvColumn() {
+        VehSecurityConstantPo po = VehSecurityConstantPo.builder()
+                .vin("TEST_VIN_123")
+                .kcv("01020304")
+                .build();
+
+        assertEquals("01020304", po.getKcv());
+    }
 }

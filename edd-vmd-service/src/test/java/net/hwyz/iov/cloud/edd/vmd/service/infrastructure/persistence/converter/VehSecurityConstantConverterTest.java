@@ -27,6 +27,7 @@ class VehSecurityConstantConverterTest {
                 .batchNum("BATCH001")
                 .presetState("PENDING")
                 .kmsKeyRef("kms-key-ref-1")
+                .kcv("01020304")
                 .failReason(null)
                 .genTime(LocalDateTime.now())
                 .lastAttemptTime(LocalDateTime.now())
@@ -41,6 +42,7 @@ class VehSecurityConstantConverterTest {
         assertEquals(po.getBatchNum(), domain.getBatchNum());
         assertEquals(SecurityConstantState.PENDING, domain.getPresetState());
         assertEquals(po.getKmsKeyRef(), domain.getKmsKeyRef());
+        assertEquals(po.getKcv(), domain.getKcv());
         assertEquals(po.getFailReason(), domain.getFailReason());
         assertEquals(po.getGenTime(), domain.getGenTime());
         assertEquals(po.getLastAttemptTime(), domain.getLastAttemptTime());
@@ -69,6 +71,7 @@ class VehSecurityConstantConverterTest {
                 .batchNum("BATCH001")
                 .presetState(SecurityConstantState.PRESET)
                 .kmsKeyRef("kms-key-ref-1")
+                .kcv("01020304")
                 .failReason(null)
                 .genTime(LocalDateTime.now())
                 .lastAttemptTime(LocalDateTime.now())
@@ -83,6 +86,7 @@ class VehSecurityConstantConverterTest {
         assertEquals(domain.getBatchNum(), po.getBatchNum());
         assertEquals("PRESET", po.getPresetState());
         assertEquals(domain.getKmsKeyRef(), po.getKmsKeyRef());
+        assertEquals(domain.getKcv(), po.getKcv());
         assertEquals(domain.getFailReason(), po.getFailReason());
         assertEquals(domain.getGenTime(), po.getGenTime());
         assertEquals(domain.getLastAttemptTime(), po.getLastAttemptTime());

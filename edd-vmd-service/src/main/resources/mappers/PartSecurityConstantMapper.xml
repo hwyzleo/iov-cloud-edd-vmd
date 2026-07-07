@@ -13,6 +13,7 @@
         <result column="kms_key_ref" property="kmsKeyRef" />
         <result column="key_spec" property="keySpec" />
         <result column="algorithm" property="algorithm" />
+        <result column="kcv" property="kcv" />
         <result column="preset_state" property="presetState" />
         <result column="gen_time" property="genTime" />
         <result column="last_attempt_time" property="lastAttemptTime" />
@@ -26,7 +27,7 @@
     <!-- 通用查询结果列 -->
     <sql id="baseColumnList">
         id, part_code, sn, chip_uid, constant_type,
-        kms_provider, kms_key_ref, key_spec, algorithm,
+        kms_provider, kms_key_ref, key_spec, algorithm, kcv,
         preset_state, gen_time, last_attempt_time, fail_reason, batch_num,
         create_time, update_time, deleted
     </sql>
@@ -35,12 +36,12 @@
     <insert id="insertPo" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO tb_part_security_constant (
             id, part_code, sn, chip_uid, constant_type,
-            kms_provider, kms_key_ref, key_spec, algorithm,
+            kms_provider, kms_key_ref, key_spec, algorithm, kcv,
             preset_state, gen_time, last_attempt_time, fail_reason, batch_num
         )
         VALUES (
             #{id}, #{partCode}, #{sn}, #{chipUid}, #{constantType},
-            #{kmsProvider}, #{kmsKeyRef}, #{keySpec}, #{algorithm},
+            #{kmsProvider}, #{kmsKeyRef}, #{keySpec}, #{algorithm}, #{kcv},
             #{presetState}, #{genTime}, #{lastAttemptTime}, #{failReason}, #{batchNum}
         )
     </insert>
@@ -71,6 +72,9 @@
         </if>
         <if test="algorithm != null">
             t.algorithm = #{algorithm},
+        </if>
+        <if test="kcv != null">
+            t.kcv = #{kcv},
         </if>
         <if test="presetState != null and presetState != ''">
             t.preset_state = #{presetState},

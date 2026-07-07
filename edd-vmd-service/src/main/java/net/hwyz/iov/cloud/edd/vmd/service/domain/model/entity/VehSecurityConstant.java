@@ -25,7 +25,11 @@ public class VehSecurityConstant extends BaseDo<Long> {
     private String vin;
     private String batchNum;
     private SecurityConstantState presetState;
+    private String kmsProvider;
     private String kmsKeyRef;
+    private String keySpec;
+    private String algorithm;
+    private String kcv;
     private String failReason;
     private LocalDateTime genTime;
     private LocalDateTime lastAttemptTime;

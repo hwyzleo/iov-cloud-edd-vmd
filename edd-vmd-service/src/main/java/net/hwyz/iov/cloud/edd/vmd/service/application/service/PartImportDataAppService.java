@@ -380,7 +380,7 @@ public class PartImportDataAppService {
             }
             
             try {
-                partSecurityPresetAppService.preset(partCode, sn, chipUid, batchNum);
+                partSecurityPresetAppService.preset(partCode, sn, chipUid, batchNum, vehicleNodeCode);
                 log.debug("零件[{}:{}]安全常量预置成功", partCode, sn);
             } catch (Exception e) {
                 presetFailureCount++;

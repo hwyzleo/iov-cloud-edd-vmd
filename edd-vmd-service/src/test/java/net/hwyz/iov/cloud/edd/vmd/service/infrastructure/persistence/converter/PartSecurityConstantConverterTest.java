@@ -31,6 +31,7 @@ class PartSecurityConstantConverterTest {
                 .kmsKeyRef("test_key_ref")
                 .keySpec("AES-256")
                 .algorithm("AES")
+                .kcv("01020304")
                 .presetState("PRESET")
                 .genTime(LocalDateTime.now())
                 .lastAttemptTime(LocalDateTime.now())
@@ -50,6 +51,7 @@ class PartSecurityConstantConverterTest {
         assertEquals(po.getKmsKeyRef(), domain.getKmsKeyRef());
         assertEquals(po.getKeySpec(), domain.getKeySpec());
         assertEquals(po.getAlgorithm(), domain.getAlgorithm());
+        assertEquals(po.getKcv(), domain.getKcv());
         assertEquals(SecurityConstantState.PRESET, domain.getPresetState());
         assertEquals(po.getGenTime(), domain.getGenTime());
         assertEquals(po.getLastAttemptTime(), domain.getLastAttemptTime());
@@ -84,6 +86,7 @@ class PartSecurityConstantConverterTest {
                 .kmsKeyRef("test_key_ref")
                 .keySpec("AES-256")
                 .algorithm("AES")
+                .kcv("01020304")
                 .presetState(SecurityConstantState.PRESET)
                 .genTime(LocalDateTime.now())
                 .lastAttemptTime(LocalDateTime.now())
@@ -103,6 +106,7 @@ class PartSecurityConstantConverterTest {
         assertEquals(domain.getKmsKeyRef(), po.getKmsKeyRef());
         assertEquals(domain.getKeySpec(), po.getKeySpec());
         assertEquals(domain.getAlgorithm(), po.getAlgorithm());
+        assertEquals(domain.getKcv(), po.getKcv());
         assertEquals("PRESET", po.getPresetState());
         assertEquals(domain.getGenTime(), po.getGenTime());
         assertEquals(domain.getLastAttemptTime(), po.getLastAttemptTime());

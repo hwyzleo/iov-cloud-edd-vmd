@@ -81,6 +81,12 @@ public class PartSecurityConstantPo extends BasePo {
     private String algorithm;
 
     /**
+     * KCV密钥校验值（可公开、不可逆、非密钥，hex编码）
+     */
+    @TableField("kcv")
+    private String kcv;
+
+    /**
      * 预置状态
      */
     @TableField("preset_state")

@@ -15,8 +15,9 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SecurityConst
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmPartRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartImportDataRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartSecurityConstantRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.client.KmsHsmClient;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.client.dto.KmsHsmResult;
+import net.hwyz.iov.cloud.framework.security.crypto.KeyProvisioningTemplate;
+import net.hwyz.iov.cloud.framework.security.crypto.model.BizType;
+import net.hwyz.iov.cloud.framework.security.crypto.model.ProvisioningResult;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -46,9 +47,20 @@ class PartImportSecurityConstantIntegrationTest {
     private VehicleNodeSchemaRegistry vehicleNodeSchemaRegistry;
     private PartSecurityPresetAppService partSecurityPresetAppService;
     private PartSecurityConstantRepository partSecurityConstantRepository;
-    private KmsHsmClient kmsHsmClient;
+    private KeyProvisioningTemplate keyProvisioningTemplate;
 
     private PartImportDataAppService partImportDataAppService;
+
+    private ProvisioningResult mockProvisioningResult(String keyRef) {
+        ProvisioningResult result = new ProvisioningResult();
+        result.setKmsKeyRef(keyRef);
+        result.setKeySpec("256-bit");
+        result.setProvider("Vault-Transit");
+        result.setAlgorithm("HMAC-SHA256");
+        result.setKcv(new byte[]{1, 2, 3, 4});
+        result.setWrappedMaterial(null);
+        return result;
+    }
 
     @BeforeEach
     void setUp() {
@@ -57,14 +69,14 @@ class PartImportSecurityConstantIntegrationTest {
         partInboundAppService = mock(PartInboundAppService.class);
         downstreamProcessorRegistry = mock(DownstreamProcessorRegistry.class);
         partSecurityConstantRepository = mock(PartSecurityConstantRepository.class);
-        kmsHsmClient = mock(KmsHsmClient.class);
+        keyProvisioningTemplate = mock(KeyProvisioningTemplate.class);
 
         // 使用真实的 VehicleNodeSchemaRegistry，验证内置类型白名单逻辑
         vehicleNodeSchemaRegistry = new VehicleNodeSchemaRegistry();
 
         // 使用真实的 PartSecurityPresetAppService，仅 mock 外部依赖
         partSecurityPresetAppService = new PartSecurityPresetAppService(
-                partSecurityConstantRepository, partImportDataRepository, kmsHsmClient);
+                partSecurityConstantRepository, partImportDataRepository, keyProvisioningTemplate, vehicleNodeSchemaRegistry);
 
         partImportDataAppService = new PartImportDataAppService(
                 partImportDataRepository, mdmPartRepository, partInboundAppService,
@@ -103,13 +115,8 @@ class PartImportSecurityConstantIntegrationTest {
         when(downstreamProcessorRegistry.getProcessor("TBOX_5G")).thenReturn(mockProcessor);
         when(partSecurityConstantRepository.selectByPartCodeAndSn("TBOX_5G_001", "SN_TBOX_001")).thenReturn(null);
         when(partSecurityConstantRepository.insert(any())).thenReturn(1);
-        when(kmsHsmClient.generatePerDeviceConstant("TBOX_5G_001", "SN_TBOX_001", "ROOT", "HSM_UID_001"))
-                .thenReturn(KmsHsmResult.builder()
-                        .kmsKeyRef("key-ref-001")
-                        .keySpec("AES-256")
-                        .provider("OpenBao")
-                        .algorithm("AES")
-                        .build());
+        when(keyProvisioningTemplate.deriveByUid("HSM_UID_001", BizType.TBOX_DEVICE_ROOT))
+                .thenReturn(mockProvisioningResult("dev-root-master:sn:HSM_UID_001"));
 
         ImportResult result = partImportDataAppService.parsePartImportData(batchNum);
 
@@ -130,12 +137,12 @@ class PartImportSecurityConstantIntegrationTest {
         // 验证安全常量状态更新为已预置
         verify(partSecurityConstantRepository).update(argThat(entity ->
                 entity.getPresetState() == SecurityConstantState.PRESET &&
-                entity.getKmsKeyRef().equals("key-ref-001") &&
-                entity.getKmsProvider().equals("OpenBao")
+                entity.getKmsKeyRef().equals("dev-root-master:sn:HSM_UID_001") &&
+                entity.getKmsProvider().equals("Vault-Transit")
         ));
 
-        // 验证 KMS/HSM 客户端被调用
-        verify(kmsHsmClient).generatePerDeviceConstant("TBOX_5G_001", "SN_TBOX_001", "ROOT", "HSM_UID_001");
+        // 验证 KeyProvisioningTemplate 被调用
+        verify(keyProvisioningTemplate).deriveByUid("HSM_UID_001", BizType.TBOX_DEVICE_ROOT);
 
         // 验证下游处理器也被调用（与安全常量预置并列）
         verify(mockProcessor).process(eq(batchNum), eq("TBOX_5G_001"), eq("TBOX_5G"), any(JSONObject.class));
@@ -167,16 +174,15 @@ class PartImportSecurityConstantIntegrationTest {
                         .totalCount(1).successCount(1).failureCount(0).build());
         when(partSecurityConstantRepository.selectByPartCodeAndSn("BTM_001", "SN_BTM_001")).thenReturn(null);
         when(partSecurityConstantRepository.insert(any())).thenReturn(1);
-        when(kmsHsmClient.generatePerDeviceConstant("BTM_001", "SN_BTM_001", "ROOT", "HSM_UID_BTM_001"))
-                .thenReturn(KmsHsmResult.builder()
-                        .kmsKeyRef("key-ref-btm").keySpec("AES-256").provider("OpenBao").algorithm("AES").build());
+        when(keyProvisioningTemplate.deriveByUid("HSM_UID_BTM_001", BizType.TBOX_DEVICE_ROOT))
+                .thenReturn(mockProvisioningResult("dev-root-master:sn:HSM_UID_BTM_001"));
 
         ImportResult result = partImportDataAppService.parsePartImportData(batchNum);
 
         assertNotNull(result);
         assertEquals(0, result.getFailureCount());
         verify(partSecurityConstantRepository).insert(any());
-        verify(kmsHsmClient).generatePerDeviceConstant("BTM_001", "SN_BTM_001", "ROOT", "HSM_UID_BTM_001");
+        verify(keyProvisioningTemplate).deriveByUid("HSM_UID_BTM_001", BizType.TBOX_DEVICE_ROOT);
     }
 
     @Test
@@ -215,7 +221,7 @@ class PartImportSecurityConstantIntegrationTest {
 
         // 验证安全常量预置服务未被调用
         verify(partSecurityConstantRepository, never()).insert(any());
-        verify(kmsHsmClient, never()).generatePerDeviceConstant(any(), any(), any(), any());
+        verify(keyProvisioningTemplate, never()).deriveByUid(any(), any());
 
         // 验证下游处理器仍被调用
         verify(mockProcessor).process(eq(batchNum), eq("SIM_001"), eq("TSP"), any(JSONObject.class));
@@ -251,7 +257,7 @@ class PartImportSecurityConstantIntegrationTest {
         assertNotNull(result);
         assertEquals(0, result.getFailureCount());
         verify(partSecurityConstantRepository, never()).insert(any());
-        verify(kmsHsmClient, never()).generatePerDeviceConstant(any(), any(), any(), any());
+        verify(keyProvisioningTemplate, never()).deriveByUid(any(), any());
     }
 
     @Test
@@ -280,7 +286,7 @@ class PartImportSecurityConstantIntegrationTest {
                         .totalCount(1).successCount(1).failureCount(0).build());
         when(partSecurityConstantRepository.selectByPartCodeAndSn("TBOX_5G_002", "SN_FAIL_001")).thenReturn(null);
         when(partSecurityConstantRepository.insert(any())).thenReturn(1);
-        when(kmsHsmClient.generatePerDeviceConstant("TBOX_5G_002", "SN_FAIL_001", "ROOT", "HSM_UID_FAIL_001"))
+        when(keyProvisioningTemplate.deriveByUid("HSM_UID_FAIL_001", BizType.TBOX_DEVICE_ROOT))
                 .thenThrow(new RuntimeException("KMS/HSM服务不可用"));
 
         ImportResult result = partImportDataAppService.parsePartImportData(batchNum);
@@ -343,7 +349,7 @@ class PartImportSecurityConstantIntegrationTest {
         // 验证跳过了插入和KMS调用
         verify(partSecurityConstantRepository, never()).insert(any());
         verify(partSecurityConstantRepository, never()).update(any());
-        verify(kmsHsmClient, never()).generatePerDeviceConstant(any(), any(), any(), any());
+        verify(keyProvisioningTemplate, never()).deriveByUid(any(), any());
     }
 
     @Test
@@ -402,16 +408,15 @@ class PartImportSecurityConstantIntegrationTest {
                         .totalCount(1).successCount(1).failureCount(0).build());
         when(partSecurityConstantRepository.selectByPartCodeAndSn("CCP_001", "SN_CCP_001")).thenReturn(null);
         when(partSecurityConstantRepository.insert(any())).thenReturn(1);
-        when(kmsHsmClient.generatePerDeviceConstant("CCP_001", "SN_CCP_001", "ROOT", "HSM_UID_CCP_001"))
-                .thenReturn(KmsHsmResult.builder()
-                        .kmsKeyRef("key-ref-ccp").keySpec("AES-256").provider("OpenBao").algorithm("AES").build());
+        when(keyProvisioningTemplate.deriveByUid("HSM_UID_CCP_001", BizType.TBOX_DEVICE_ROOT))
+                .thenReturn(mockProvisioningResult("dev-root-master:sn:HSM_UID_CCP_001"));
 
         ImportResult result = partImportDataAppService.parsePartImportData(batchNum);
 
         assertNotNull(result);
         assertEquals(0, result.getFailureCount());
         verify(partSecurityConstantRepository).insert(any());
-        verify(kmsHsmClient).generatePerDeviceConstant("CCP_001", "SN_CCP_001", "ROOT", "HSM_UID_CCP_001");
+        verify(keyProvisioningTemplate).deriveByUid("HSM_UID_CCP_001", BizType.TBOX_DEVICE_ROOT);
     }
 
     @Test
@@ -440,15 +445,14 @@ class PartImportSecurityConstantIntegrationTest {
                         .totalCount(1).successCount(1).failureCount(0).build());
         when(partSecurityConstantRepository.selectByPartCodeAndSn("IDCM_001", "SN_IDCM_001")).thenReturn(null);
         when(partSecurityConstantRepository.insert(any())).thenReturn(1);
-        when(kmsHsmClient.generatePerDeviceConstant("IDCM_001", "SN_IDCM_001", "ROOT", "HSM_UID_IDCM_001"))
-                .thenReturn(KmsHsmResult.builder()
-                        .kmsKeyRef("key-ref-idcm").keySpec("AES-256").provider("OpenBao").algorithm("AES").build());
+        when(keyProvisioningTemplate.deriveByUid("HSM_UID_IDCM_001", BizType.TBOX_DEVICE_ROOT))
+                .thenReturn(mockProvisioningResult("dev-root-master:sn:HSM_UID_IDCM_001"));
 
         ImportResult result = partImportDataAppService.parsePartImportData(batchNum);
 
         assertNotNull(result);
         assertEquals(0, result.getFailureCount());
         verify(partSecurityConstantRepository).insert(any());
-        verify(kmsHsmClient).generatePerDeviceConstant("IDCM_001", "SN_IDCM_001", "ROOT", "HSM_UID_IDCM_001");
+        verify(keyProvisioningTemplate).deriveByUid("HSM_UID_IDCM_001", BizType.TBOX_DEVICE_ROOT);
     }
 }

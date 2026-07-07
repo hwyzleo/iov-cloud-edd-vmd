@@ -8,7 +8,11 @@
         <result column="vin" property="vin" />
         <result column="batch_num" property="batchNum" />
         <result column="preset_state" property="presetState" />
+        <result column="kms_provider" property="kmsProvider" />
         <result column="kms_key_ref" property="kmsKeyRef" />
+        <result column="key_spec" property="keySpec" />
+        <result column="algorithm" property="algorithm" />
+        <result column="kcv" property="kcv" />
         <result column="fail_reason" property="failReason" />
         <result column="gen_time" property="genTime" />
         <result column="last_attempt_time" property="lastAttemptTime" />
@@ -23,21 +27,21 @@
 
     <!-- 通用查询结果列 -->
     <sql id="baseColumnList">
-        id, vin, batch_num, preset_state, kms_key_ref,
-        fail_reason, gen_time, last_attempt_time, constant_type,
+        id, vin, batch_num, preset_state, kms_provider, kms_key_ref,
+        key_spec, algorithm, kcv, fail_reason, gen_time, last_attempt_time, constant_type,
         create_time, create_by, modify_time, modify_by, row_version, row_valid
     </sql>
 
     <!-- 插入 -->
     <insert id="insertPo" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO tb_veh_security_constant (
-            id, vin, batch_num, preset_state, kms_key_ref,
-            fail_reason, gen_time, last_attempt_time, constant_type,
+            id, vin, batch_num, preset_state, kms_provider, kms_key_ref,
+            key_spec, algorithm, kcv, fail_reason, gen_time, last_attempt_time, constant_type,
             create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
         VALUES (
-            #{id}, #{vin}, #{batchNum}, #{presetState}, #{kmsKeyRef},
-            #{failReason}, #{genTime}, #{lastAttemptTime}, #{constantType},
+            #{id}, #{vin}, #{batchNum}, #{presetState}, #{kmsProvider}, #{kmsKeyRef},
+            #{keySpec}, #{algorithm}, #{kcv}, #{failReason}, #{genTime}, #{lastAttemptTime}, #{constantType},
             now(), #{createBy}, now(), #{modifyBy}, 1, 1
         )
     </insert>
@@ -54,8 +58,20 @@
         <if test="presetState != null and presetState != ''">
             t.preset_state = #{presetState},
         </if>
+        <if test="kmsProvider != null">
+            t.kms_provider = #{kmsProvider},
+        </if>
         <if test="kmsKeyRef != null">
             t.kms_key_ref = #{kmsKeyRef},
+        </if>
+        <if test="keySpec != null">
+            t.key_spec = #{keySpec},
+        </if>
+        <if test="algorithm != null">
+            t.algorithm = #{algorithm},
+        </if>
+        <if test="kcv != null">
+            t.kcv = #{kcv},
         </if>
         <if test="failReason != null">
             t.fail_reason = #{failReason},

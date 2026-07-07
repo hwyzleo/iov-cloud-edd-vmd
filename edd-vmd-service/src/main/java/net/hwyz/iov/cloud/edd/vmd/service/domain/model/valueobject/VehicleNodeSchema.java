@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import net.hwyz.iov.cloud.framework.security.crypto.model.BizType;
 
 /**
  * 车辆节点模式值对象
@@ -33,6 +34,11 @@ public class VehicleNodeSchema {
      * 是否需要安全常量预置
      */
     private boolean needsSecurityConstantPreset;
+
+    /**
+     * 业务类型枚举，用于派生设备根
+     */
+    private BizType bizType;
 
     /**
      * 描述

@@ -1,6 +1,7 @@
 package net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject;
 
 import lombok.extern.slf4j.Slf4j;
+import net.hwyz.iov.cloud.framework.security.crypto.model.BizType;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -83,6 +84,20 @@ public class VehicleNodeSchemaRegistry {
     }
 
     /**
+     * 获取车辆节点的业务类型枚举
+     *
+     * @param vehicleNodeCode 车辆节点编码
+     * @return 业务类型枚举，如果不存在返回null
+     */
+    public BizType getBizType(String vehicleNodeCode) {
+        if (vehicleNodeCode == null) {
+            return null;
+        }
+        VehicleNodeSchema schema = registry.get(vehicleNodeCode);
+        return schema != null ? schema.getBizType() : null;
+    }
+
+    /**
      * 注册内置车辆节点模式
      */
     private void registerBuiltinSchemas() {
@@ -91,6 +106,7 @@ public class VehicleNodeSchemaRegistry {
                 .vehicleNodeCode("TBOX_5G")
                 .hsmUid("HSM")
                 .needsSecurityConstantPreset(true)
+                .bizType(BizType.TBOX_DEVICE_ROOT)
                 .description("车联终端，带安全芯片，需要预置ROOT安全常量")
                 .build());
 
@@ -98,6 +114,7 @@ public class VehicleNodeSchemaRegistry {
                 .vehicleNodeCode("TBOX")
                 .hsmUid("HSM")
                 .needsSecurityConstantPreset(true)
+                .bizType(BizType.TBOX_DEVICE_ROOT)
                 .description("车联终端，带安全芯片，需要预置ROOT安全常量")
                 .build());
 
@@ -106,6 +123,7 @@ public class VehicleNodeSchemaRegistry {
                 .vehicleNodeCode("BTM")
                 .hsmUid("HSM")
                 .needsSecurityConstantPreset(true)
+                .bizType(BizType.TBOX_DEVICE_ROOT)
                 .description("蓝牙模块，带安全芯片，需要预置ROOT安全常量")
                 .build());
 
@@ -114,6 +132,7 @@ public class VehicleNodeSchemaRegistry {
                 .vehicleNodeCode("CCP")
                 .hsmUid("HSM")
                 .needsSecurityConstantPreset(true)
+                .bizType(BizType.TBOX_DEVICE_ROOT)
                 .description("中央计算平台，带安全芯片，需要预置ROOT安全常量")
                 .build());
 
@@ -122,6 +141,7 @@ public class VehicleNodeSchemaRegistry {
                 .vehicleNodeCode("IDCM")
                 .hsmUid("HSM")
                 .needsSecurityConstantPreset(true)
+                .bizType(BizType.TBOX_DEVICE_ROOT)
                 .description("智驾模块，带安全芯片，需要预置ROOT安全常量")
                 .build());
 
