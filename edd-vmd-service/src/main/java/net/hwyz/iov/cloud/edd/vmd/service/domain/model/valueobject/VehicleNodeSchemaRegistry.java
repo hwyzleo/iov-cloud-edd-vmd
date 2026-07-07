@@ -123,7 +123,7 @@ public class VehicleNodeSchemaRegistry {
                 .vehicleNodeCode("BTM")
                 .hsmUid("HSM")
                 .needsSecurityConstantPreset(true)
-                .bizType(BizType.TBOX_DEVICE_ROOT)
+                .bizType(BizType.PEPS_DEVICE_ROOT)
                 .description("蓝牙模块，带安全芯片，需要预置ROOT安全常量")
                 .build());
 
@@ -132,7 +132,7 @@ public class VehicleNodeSchemaRegistry {
                 .vehicleNodeCode("CCP")
                 .hsmUid("HSM")
                 .needsSecurityConstantPreset(true)
-                .bizType(BizType.TBOX_DEVICE_ROOT)
+                .bizType(BizType.CGW_DEVICE_ROOT)
                 .description("中央计算平台，带安全芯片，需要预置ROOT安全常量")
                 .build());
 
@@ -141,7 +141,7 @@ public class VehicleNodeSchemaRegistry {
                 .vehicleNodeCode("IDCM")
                 .hsmUid("HSM")
                 .needsSecurityConstantPreset(true)
-                .bizType(BizType.TBOX_DEVICE_ROOT)
+                .bizType(BizType.CPT_DCU_DEVICE_ROOT)
                 .description("智驾模块，带安全芯片，需要预置ROOT安全常量")
                 .build());
 
