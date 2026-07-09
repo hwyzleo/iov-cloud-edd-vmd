@@ -29,6 +29,12 @@ public class VehSecurityConstantRepositoryImpl implements VehSecurityConstantRep
     }
 
     @Override
+    public VehSecurityConstant selectByVinAndConstantType(String vin, String constantType) {
+        VehSecurityConstantPo po = vehSecurityConstantMapper.selectPoByVinAndConstantType(vin, constantType);
+        return po != null ? VehSecurityConstantConverter.INSTANCE.toDomain(po) : null;
+    }
+
+    @Override
     public int insert(VehSecurityConstant vehSecurityConstant) {
         VehSecurityConstantPo po = VehSecurityConstantConverter.INSTANCE.fromDomain(vehSecurityConstant);
         int rows = vehSecurityConstantMapper.insertPo(po);

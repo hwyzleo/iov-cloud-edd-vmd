@@ -11,12 +11,21 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehSecurityConstan
 public interface VehSecurityConstantRepository {
 
     /**
-     * 根据车架号查询
+     * 根据车架号查询（默认查 ROOT 类型，向后兼容）
      *
      * @param vin 车架号
      * @return 车辆安全常量
      */
     VehSecurityConstant selectByVin(String vin);
+
+    /**
+     * 根据车架号和常量类型查询
+     *
+     * @param vin          车架号
+     * @param constantType 常量类型（ROOT / IMMO）
+     * @return 车辆安全常量
+     */
+    VehSecurityConstant selectByVinAndConstantType(String vin, String constantType);
 
     /**
      * 插入记录

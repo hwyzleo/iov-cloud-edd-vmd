@@ -1,0 +1,148 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.ProvFacilityDeviceMapper">
+
+    <resultMap id="baseResultMap" type="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.ProvFacilityDevicePo">
+        <id column="id" property="id" />
+        <result column="facility_uid" property="facilityUid" />
+        <result column="facility_type" property="facilityType" />
+        <result column="preset_state" property="presetState" />
+        <result column="kms_provider" property="kmsProvider" />
+        <result column="kms_key_ref" property="kmsKeyRef" />
+        <result column="key_spec" property="keySpec" />
+        <result column="algorithm" property="algorithm" />
+        <result column="kcv" property="kcv" />
+        <result column="fail_reason" property="failReason" />
+        <result column="gen_time" property="genTime" />
+        <result column="last_attempt_time" property="lastAttemptTime" />
+        <result column="create_time" property="createTime" />
+        <result column="create_by" property="createBy" />
+        <result column="modify_time" property="modifyTime" />
+        <result column="modify_by" property="modifyBy" />
+        <result column="row_version" property="rowVersion" />
+        <result column="row_valid" property="rowValid" />
+    </resultMap>
+
+    <sql id="baseColumnList">
+        id, facility_uid, facility_type, preset_state, kms_provider, kms_key_ref,
+        key_spec, algorithm, kcv, fail_reason, gen_time, last_attempt_time,
+        create_time, create_by, modify_time, modify_by, row_version, row_valid
+    </sql>
+
+    <insert id="insertPo" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO tb_prov_facility_device (
+            id, facility_uid, facility_type, preset_state, kms_provider, kms_key_ref,
+            key_spec, algorithm, kcv, fail_reason, gen_time, last_attempt_time,
+            create_time, create_by, modify_time, modify_by, row_version, row_valid
+        )
+        VALUES (
+            #{id}, #{facilityUid}, #{facilityType}, #{presetState}, #{kmsProvider}, #{kmsKeyRef},
+            #{keySpec}, #{algorithm}, #{kcv}, #{failReason}, #{genTime}, #{lastAttemptTime},
+            now(), #{createBy}, now(), #{modifyBy}, 1, 1
+        )
+    </insert>
+
+    <update id="updatePo" parameterType="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.ProvFacilityDevicePo">
+        UPDATE tb_prov_facility_device t SET
+        <if test="facilityUid != null and facilityUid != ''">
+            t.facility_uid = #{facilityUid},
+        </if>
+        <if test="facilityType != null and facilityType != ''">
+            t.facility_type = #{facilityType},
+        </if>
+        <if test="presetState != null and presetState != ''">
+            t.preset_state = #{presetState},
+        </if>
+        <if test="kmsProvider != null">
+            t.kms_provider = #{kmsProvider},
+        </if>
+        <if test="kmsKeyRef != null">
+            t.kms_key_ref = #{kmsKeyRef},
+        </if>
+        <if test="keySpec != null">
+            t.key_spec = #{keySpec},
+        </if>
+        <if test="algorithm != null">
+            t.algorithm = #{algorithm},
+        </if>
+        <if test="kcv != null">
+            t.kcv = #{kcv},
+        </if>
+        <if test="failReason != null">
+            t.fail_reason = #{failReason},
+        </if>
+        <if test="genTime != null">
+            t.gen_time = #{genTime},
+        </if>
+        <if test="lastAttemptTime != null">
+            t.last_attempt_time = #{lastAttemptTime},
+        </if>
+        <if test="modifyBy != null">
+            t.modify_by = #{modifyBy},
+        </if>
+        t.row_version = t.row_version + 1,
+        t.modify_time = now()
+        WHERE id = #{id}
+    </update>
+
+    <update id="logicalDeletePo" parameterType="Long">
+        UPDATE tb_prov_facility_device t SET
+        t.row_version = t.row_version + 1,
+        t.modify_time = now(),
+        t.row_valid = 0
+        WHERE t.id = #{value}
+    </update>
+
+    <delete id="physicalDeletePo" parameterType="Long">
+        DELETE FROM tb_prov_facility_device t
+        WHERE t.id = #{value}
+    </delete>
+
+    <delete id="batchPhysicalDeletePo" parameterType="Long">
+        DELETE FROM tb_prov_facility_device t
+        WHERE t.id IN
+        <foreach collection="array" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+    <select id="selectPoById" parameterType="Long" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList"/>
+        FROM tb_prov_facility_device t
+        WHERE t.id = #{value}
+        AND t.row_valid = 1
+    </select>
+
+    <select id="selectPoByExample" parameterType="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.ProvFacilityDevicePo" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList"/>
+        FROM tb_prov_facility_device t
+        WHERE t.row_valid = 1
+        <if test="id != null">
+            AND t.id = #{id}
+        </if>
+        <if test="facilityUid != null and facilityUid != ''">
+            AND t.facility_uid = #{facilityUid}
+        </if>
+        <if test="facilityType != null and facilityType != ''">
+            AND t.facility_type = #{facilityType}
+        </if>
+        <if test="presetState != null and presetState != ''">
+            AND t.preset_state = #{presetState}
+        </if>
+        ORDER BY t.id DESC
+    </select>
+
+    <select id="selectPoByMap" parameterType="java.util.Map" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList"/>
+        FROM tb_prov_facility_device t
+        WHERE t.row_valid = 1
+        ORDER BY t.id DESC
+    </select>
+
+    <select id="countPoByMap" parameterType="java.util.Map" resultType="int">
+        SELECT COUNT(*)
+        FROM tb_prov_facility_device t
+        WHERE t.row_valid = 1
+    </select>
+
+</mapper>

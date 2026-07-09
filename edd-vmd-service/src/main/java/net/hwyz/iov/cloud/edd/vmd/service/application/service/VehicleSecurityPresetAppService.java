@@ -8,15 +8,21 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SecurityConst
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehSecurityConstantRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehImportDataRepository;
 import net.hwyz.iov.cloud.framework.security.crypto.KeyProvisioningTemplate;
+import net.hwyz.iov.cloud.framework.security.crypto.exception.CryptoDependencyUnavailableException;
 import net.hwyz.iov.cloud.framework.security.crypto.model.BizType;
 import net.hwyz.iov.cloud.framework.security.crypto.model.ProvisioningResult;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 /**
- * 车辆车云通信根预置应用服务
+ * 车辆安全常量预置应用服务
+ * <p>
+ * 在 PRODUCE 建档同一编排内派生车云通信根（ROOT→V2C_COMM_ROOT）
+ * 与防盗根（IMMO→IMMO_GROUP_KEY），密钥明文不出 KMS。
  *
  * @author hwyz_leo
  * @since 2026-06-17
@@ -30,50 +36,61 @@ public class VehicleSecurityPresetAppService {
     private final VehImportDataRepository vehImportDataRepository;
     private final KeyProvisioningTemplate keyProvisioningTemplate;
 
-    /**
-     * description 字段最大长度（与数据库列定义一致）
-     */
     private static final int DESCRIPTION_MAX_LENGTH = 500;
 
-    /**
-     * 安全常量类型
-     */
-    private static final String SECURITY_CONSTANT_TYPE = "ROOT";
+    private static final String CONSTANT_TYPE_ROOT = "ROOT";
+    private static final String CONSTANT_TYPE_IMMO = "IMMO";
+
+    private static final Map<String, BizType> CONSTANT_TYPE_BIZ_TYPE_MAP = new LinkedHashMap<>();
+
+    static {
+        CONSTANT_TYPE_BIZ_TYPE_MAP.put(CONSTANT_TYPE_ROOT, BizType.V2C_COMM_ROOT);
+        CONSTANT_TYPE_BIZ_TYPE_MAP.put(CONSTANT_TYPE_IMMO, BizType.IMMO_GROUP_KEY);
+    }
 
     /**
-     * 预置车云通信根
+     * 预置车云通信根与防盗根
+     * <p>
+     * 在 PRODUCE 建档成功后同步触发，遍历 ROOT / IMMO 两种常量类型，
+     * 各自独立派生、幂等、失败不阻断另一类型、不回滚建档。
      *
-     * @param vin 车架号
+     * @param vin      车架号
      * @param batchNum 批次号
      */
     @Transactional(rollbackFor = Exception.class)
     public void preset(String vin, String batchNum) {
-        log.info("开始预置车辆[{}]车云通信根, batchNum={}", vin, batchNum);
+        log.info("开始预置车辆[{}]安全常量, batchNum={}", vin, batchNum);
 
-        // EOL 补发的 VehicleProduceEvent 不触发安全预置
-        // 仅真实 PRODUCE 批次触发
         if (batchNum != null && batchNum.startsWith("EOL-")) {
             log.debug("EOL 补发的 PRODUCE 事件，不触发安全预置: {}", vin);
             return;
         }
 
-        // 查询是否已存在记录
-        VehSecurityConstant existing = vehSecurityConstantRepository.selectByVin(vin);
+        for (Map.Entry<String, BizType> entry : CONSTANT_TYPE_BIZ_TYPE_MAP.entrySet()) {
+            presetSingleType(vin, batchNum, entry.getKey(), entry.getValue());
+        }
+    }
 
-        // 幂等检查：如果已存在且状态为PRESET，跳过
+    /**
+     * 预置单个常量类型
+     */
+    private void presetSingleType(String vin, String batchNum, String constantType, BizType bizType) {
+        String typeLabel = CONSTANT_TYPE_ROOT.equals(constantType) ? "车云通信根" : "防盗根";
+
+        VehSecurityConstant existing = vehSecurityConstantRepository.selectByVinAndConstantType(vin, constantType);
+
         if (existing != null && existing.getPresetState() == SecurityConstantState.PRESET) {
-            log.info("车辆[{}]车云通信根已预置，跳过", vin);
+            log.info("车辆[{}]{}已预置，跳过", vin, typeLabel);
             return;
         }
 
-        // 创建或更新记录
         VehSecurityConstant securityConstant;
         if (existing == null) {
             securityConstant = VehSecurityConstant.builder()
                     .vin(vin)
                     .batchNum(batchNum)
                     .presetState(SecurityConstantState.PENDING)
-                    .constantType(SECURITY_CONSTANT_TYPE)
+                    .constantType(constantType)
                     .createTime(LocalDateTime.now())
                     .build();
             securityConstant.init();
@@ -85,7 +102,7 @@ public class VehicleSecurityPresetAppService {
         }
 
         try {
-            ProvisioningResult result = keyProvisioningTemplate.deriveByVin(vin, BizType.V2C_COMM_ROOT);
+            ProvisioningResult result = keyProvisioningTemplate.deriveByVin(vin, bizType);
 
             securityConstant.setPresetState(SecurityConstantState.PRESET);
             securityConstant.setKmsKeyRef(result.getKmsKeyRef());
@@ -97,34 +114,36 @@ public class VehicleSecurityPresetAppService {
             securityConstant.setLastAttemptTime(LocalDateTime.now());
             vehSecurityConstantRepository.update(securityConstant);
 
-            log.info("车辆[{}]车云通信根预置成功", vin);
+            log.info("车辆[{}]{}预置成功", vin, typeLabel);
+        } catch (CryptoDependencyUnavailableException e) {
+            handlePresetFailure(securityConstant, vin, batchNum, constantType, typeLabel,
+                    "KMS/HSM服务不可用: " + e.getMessage());
         } catch (Exception e) {
-            handlePresetFailure(securityConstant, vin, batchNum, e.getMessage());
+            handlePresetFailure(securityConstant, vin, batchNum, constantType, typeLabel, e.getMessage());
         }
     }
 
     /**
      * 处理预置失败
      */
-    private void handlePresetFailure(VehSecurityConstant securityConstant, String vin, String batchNum, String errorMessage) {
-        log.warn("车辆[{}]车云通信根预置失败: {}", vin, errorMessage);
+    private void handlePresetFailure(VehSecurityConstant securityConstant, String vin, String batchNum,
+                                     String constantType, String typeLabel, String errorMessage) {
+        log.warn("车辆[{}]{}预置失败: {}", vin, typeLabel, errorMessage);
 
-        // 更新状态为FAILED
         try {
             securityConstant.setPresetState(SecurityConstantState.FAILED);
             securityConstant.setFailReason(truncateDescription(errorMessage));
             securityConstant.setLastAttemptTime(LocalDateTime.now());
             vehSecurityConstantRepository.update(securityConstant);
         } catch (Exception e) {
-            log.error("更新车云通信根失败状态异常", e);
+            log.error("更新{}失败状态异常", typeLabel, e);
         }
 
-        // 写回veh_import_data.description
         try {
             VehImportData vehImportData = vehImportDataRepository.selectByBatchNum(batchNum);
             if (vehImportData != null) {
                 String description = vehImportData.getDescription();
-                String newDescription = "车云通信根预置失败: " + errorMessage;
+                String newDescription = typeLabel + "预置失败: " + errorMessage;
                 if (description != null) {
                     newDescription = description + "; " + newDescription;
                 }
@@ -136,12 +155,6 @@ public class VehicleSecurityPresetAppService {
         }
     }
 
-    /**
-     * 截断 description 到列长限制
-     *
-     * @param description 原始描述
-     * @return 截断后的描述
-     */
     private String truncateDescription(String description) {
         if (description == null) {
             return null;
