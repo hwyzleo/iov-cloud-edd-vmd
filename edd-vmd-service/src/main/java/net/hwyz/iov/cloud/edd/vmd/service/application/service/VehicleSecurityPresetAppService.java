@@ -21,8 +21,9 @@ import java.util.Map;
 /**
  * 车辆安全常量预置应用服务
  * <p>
- * 在 PRODUCE 建档同一编排内派生车云通信根（ROOT→V2C_COMM_ROOT）
- * 与防盗根（IMMO→IMMO_GROUP_KEY），密钥明文不出 KMS。
+ * 在 PRODUCE 建档同一编排内派生车云通信根（ROOT->V2C_COMM_ROOT）、
+ * 防盗根（IMMO->IMMO_GROUP_KEY）与 OTA 根（OTA->OTA_VEHICLE_ROOT），
+ * 密钥明文不出 KMS。
  *
  * @author hwyz_leo
  * @since 2026-06-17
@@ -40,19 +41,21 @@ public class VehicleSecurityPresetAppService {
 
     private static final String CONSTANT_TYPE_ROOT = "ROOT";
     private static final String CONSTANT_TYPE_IMMO = "IMMO";
+    private static final String CONSTANT_TYPE_OTA = "OTA";
 
     private static final Map<String, BizType> CONSTANT_TYPE_BIZ_TYPE_MAP = new LinkedHashMap<>();
 
     static {
         CONSTANT_TYPE_BIZ_TYPE_MAP.put(CONSTANT_TYPE_ROOT, BizType.V2C_COMM_ROOT);
         CONSTANT_TYPE_BIZ_TYPE_MAP.put(CONSTANT_TYPE_IMMO, BizType.IMMO_GROUP_KEY);
+        CONSTANT_TYPE_BIZ_TYPE_MAP.put(CONSTANT_TYPE_OTA, BizType.OTA_VEHICLE_ROOT);
     }
 
     /**
-     * 预置车云通信根与防盗根
+     * 预置车云通信根、防盗根与 OTA 根
      * <p>
-     * 在 PRODUCE 建档成功后同步触发，遍历 ROOT / IMMO 两种常量类型，
-     * 各自独立派生、幂等、失败不阻断另一类型、不回滚建档。
+     * 在 PRODUCE 建档成功后同步触发，遍历 ROOT / IMMO / OTA 三种常量类型，
+     * 各自独立派生、幂等、失败不阻断其他类型、不回滚建档。
      *
      * @param vin      车架号
      * @param batchNum 批次号
@@ -75,7 +78,14 @@ public class VehicleSecurityPresetAppService {
      * 预置单个常量类型
      */
     private void presetSingleType(String vin, String batchNum, String constantType, BizType bizType) {
-        String typeLabel = CONSTANT_TYPE_ROOT.equals(constantType) ? "车云通信根" : "防盗根";
+        String typeLabel;
+        if (CONSTANT_TYPE_ROOT.equals(constantType)) {
+            typeLabel = "车云通信根";
+        } else if (CONSTANT_TYPE_IMMO.equals(constantType)) {
+            typeLabel = "防盗根";
+        } else {
+            typeLabel = "OTA根";
+        }
 
         VehSecurityConstant existing = vehSecurityConstantRepository.selectByVinAndConstantType(vin, constantType);
 

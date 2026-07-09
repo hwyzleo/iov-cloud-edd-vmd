@@ -28,6 +28,7 @@ public enum VmdErrorCode implements ErrorCode {
     KMS_HSM_UNAVAILABLE("202022", "KMS/HSM服务不可用"),
     IMMO_ROOT_NOT_PRESET("202023", "该车辆防盗根未就绪"),
     PROV_FACILITY_NOT_REGISTERED("202024", "安全灌注机未注册或未就绪"),
+    OTA_ROOT_NOT_PRESET("202025", "该车辆OTA根未就绪"),
     PART_NOT_FOUND_IN_MDM("202026", "零件编码在MDM主数据中不存在"),
     PART_NOT_ACTIVE_IN_MDM("202027", "零件在MDM主数据中非ACTIVE状态"),
     PART_IMPORT_DATA_EXCEPTION("202028", "零件导入数据异常");

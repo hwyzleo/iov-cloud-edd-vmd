@@ -28,6 +28,7 @@ import static org.mockito.Mockito.*;
  * <p>
  * VMD-DSN-CR-028: 车辆安全常量预置应用服务测试
  * VMD-DSN-CR-037: 扩展为 ROOT + IMMO 双类型派生
+ * VMD-DSN-CR-038: 扩展为 ROOT + IMMO + OTA 三类型派生
  *
  * @author hwyz_leo
  * @since 2026-06-17
@@ -64,30 +65,34 @@ class VehicleSecurityPresetAppServiceTest {
     }
 
     @Test
-    @DisplayName("应成功预置新车辆车云通信根和防盗根")
+    @DisplayName("应成功预置新车辆车云通信根、防盗根和OTA根")
     void testPresetSuccessForNewVehicle() {
         String vin = "TEST_VIN_001";
         String batchNum = "BATCH_001";
 
         when(vehSecurityConstantRepository.selectByVinAndConstantType(eq(vin), eq("ROOT"))).thenReturn(null);
         when(vehSecurityConstantRepository.selectByVinAndConstantType(eq(vin), eq("IMMO"))).thenReturn(null);
+        when(vehSecurityConstantRepository.selectByVinAndConstantType(eq(vin), eq("OTA"))).thenReturn(null);
         when(vehSecurityConstantRepository.insert(any(VehSecurityConstant.class))).thenReturn(1);
         when(vehSecurityConstantRepository.update(any(VehSecurityConstant.class))).thenReturn(1);
         when(keyProvisioningTemplate.deriveByVin(vin, BizType.V2C_COMM_ROOT)).thenReturn(mockResult());
         when(keyProvisioningTemplate.deriveByVin(vin, BizType.IMMO_GROUP_KEY)).thenReturn(mockResult());
+        when(keyProvisioningTemplate.deriveByVin(vin, BizType.OTA_VEHICLE_ROOT)).thenReturn(mockResult());
 
         vehicleSecurityPresetAppService.preset(vin, batchNum);
 
         verify(vehSecurityConstantRepository).selectByVinAndConstantType(vin, "ROOT");
         verify(vehSecurityConstantRepository).selectByVinAndConstantType(vin, "IMMO");
-        verify(vehSecurityConstantRepository, times(2)).insert(any(VehSecurityConstant.class));
-        verify(vehSecurityConstantRepository, times(2)).update(any(VehSecurityConstant.class));
+        verify(vehSecurityConstantRepository).selectByVinAndConstantType(vin, "OTA");
+        verify(vehSecurityConstantRepository, times(3)).insert(any(VehSecurityConstant.class));
+        verify(vehSecurityConstantRepository, times(3)).update(any(VehSecurityConstant.class));
         verify(keyProvisioningTemplate).deriveByVin(vin, BizType.V2C_COMM_ROOT);
         verify(keyProvisioningTemplate).deriveByVin(vin, BizType.IMMO_GROUP_KEY);
+        verify(keyProvisioningTemplate).deriveByVin(vin, BizType.OTA_VEHICLE_ROOT);
     }
 
     @Test
-    @DisplayName("应跳过已预置的车云通信根和防盗根（幂等检查）")
+    @DisplayName("应跳过已预置的车云通信根、防盗根和OTA根（幂等检查）")
     void testPresetSkipAlreadyPresetVehicle() {
         String vin = "TEST_VIN_002";
         String batchNum = "BATCH_002";
@@ -100,9 +105,14 @@ class VehicleSecurityPresetAppServiceTest {
                 .id(2L).vin(vin).batchNum(batchNum)
                 .presetState(SecurityConstantState.PRESET).constantType("IMMO")
                 .createTime(LocalDateTime.now()).build();
+        VehSecurityConstant existingOta = VehSecurityConstant.builder()
+                .id(3L).vin(vin).batchNum(batchNum)
+                .presetState(SecurityConstantState.PRESET).constantType("OTA")
+                .createTime(LocalDateTime.now()).build();
 
         when(vehSecurityConstantRepository.selectByVinAndConstantType(vin, "ROOT")).thenReturn(existingRoot);
         when(vehSecurityConstantRepository.selectByVinAndConstantType(vin, "IMMO")).thenReturn(existingImmo);
+        when(vehSecurityConstantRepository.selectByVinAndConstantType(vin, "OTA")).thenReturn(existingOta);
 
         vehicleSecurityPresetAppService.preset(vin, batchNum);
 
@@ -124,15 +134,17 @@ class VehicleSecurityPresetAppServiceTest {
 
         when(vehSecurityConstantRepository.selectByVinAndConstantType(vin, "ROOT")).thenReturn(existingRoot);
         when(vehSecurityConstantRepository.selectByVinAndConstantType(vin, "IMMO")).thenReturn(null);
+        when(vehSecurityConstantRepository.selectByVinAndConstantType(vin, "OTA")).thenReturn(null);
         when(vehSecurityConstantRepository.insert(any(VehSecurityConstant.class))).thenReturn(1);
         when(vehSecurityConstantRepository.update(any(VehSecurityConstant.class))).thenReturn(1);
         when(keyProvisioningTemplate.deriveByVin(vin, BizType.V2C_COMM_ROOT)).thenReturn(mockResult());
         when(keyProvisioningTemplate.deriveByVin(vin, BizType.IMMO_GROUP_KEY)).thenReturn(mockResult());
+        when(keyProvisioningTemplate.deriveByVin(vin, BizType.OTA_VEHICLE_ROOT)).thenReturn(mockResult());
 
         vehicleSecurityPresetAppService.preset(vin, batchNum);
 
-        verify(vehSecurityConstantRepository, times(1)).insert(any());
-        verify(vehSecurityConstantRepository, times(2)).update(any(VehSecurityConstant.class));
+        verify(vehSecurityConstantRepository, times(2)).insert(any());
+        verify(vehSecurityConstantRepository, times(3)).update(any(VehSecurityConstant.class));
     }
 
     @Test
@@ -148,10 +160,12 @@ class VehicleSecurityPresetAppServiceTest {
 
         vehicleSecurityPresetAppService.preset(vin, batchNum);
 
-        verify(vehSecurityConstantRepository, times(2)).insert(argThat(entity -> {
+        verify(vehSecurityConstantRepository, times(3)).insert(argThat(entity -> {
             assertNotNull(entity.getVin());
             assertNotNull(entity.getCreateTime());
-            assertTrue(entity.getConstantType().equals("ROOT") || entity.getConstantType().equals("IMMO"));
+            assertTrue(entity.getConstantType().equals("ROOT")
+                    || entity.getConstantType().equals("IMMO")
+                    || entity.getConstantType().equals("OTA"));
             return true;
         }));
     }
@@ -177,7 +191,7 @@ class VehicleSecurityPresetAppServiceTest {
         assertDoesNotThrow(() -> vehicleSecurityPresetAppService.preset(vin, batchNum));
 
         ArgumentCaptor<VehSecurityConstant> updateCaptor = ArgumentCaptor.forClass(VehSecurityConstant.class);
-        verify(vehSecurityConstantRepository, times(2)).update(updateCaptor.capture());
+        verify(vehSecurityConstantRepository, times(3)).update(updateCaptor.capture());
 
         for (VehSecurityConstant failureUpdate : updateCaptor.getAllValues()) {
             assertEquals(SecurityConstantState.FAILED, failureUpdate.getPresetState());
