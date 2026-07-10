@@ -5,6 +5,13 @@ crypto:
   provisioning:
     enabled: true
 
+# 车辆-零件绑定变更事件 Kafka 生产者配置
+vmd:
+  binding:
+    kafka:
+      enabled: ${VMD_BINDING_KAFKA_ENABLED:true}
+      topic: ${VMD_BINDING_KAFKA_TOPIC:vmd-vehicle-binding-changed}
+
 # MDM同步配置
 # 注意：topic名称必须与MDM需求文档US-064保持一致
 mdm:
