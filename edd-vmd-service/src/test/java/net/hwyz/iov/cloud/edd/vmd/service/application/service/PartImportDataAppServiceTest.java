@@ -8,6 +8,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.vid.DownstreamProcessorReg
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Part;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartImportData;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmPartRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmVehicleNodeRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartImportDataRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.VehicleNodeSchemaRegistry;
 import org.junit.jupiter.api.BeforeEach;
@@ -40,6 +41,9 @@ class PartImportDataAppServiceTest {
     private MdmPartRepository mdmPartRepository;
 
     @Mock
+    private MdmVehicleNodeRepository mdmVehicleNodeRepository;
+
+    @Mock
     private PartInboundAppService partInboundAppService;
 
     @Mock
@@ -56,7 +60,7 @@ class PartImportDataAppServiceTest {
     @BeforeEach
     void setUp() {
         partImportDataAppService = new PartImportDataAppService(
-                partImportDataRepository, mdmPartRepository, partInboundAppService, 
+                partImportDataRepository, mdmPartRepository, mdmVehicleNodeRepository, partInboundAppService, 
                 downstreamProcessorRegistry, vehicleNodeSchemaRegistry, partSecurityPresetAppService);
     }
 

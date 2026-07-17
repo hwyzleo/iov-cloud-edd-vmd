@@ -9,6 +9,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleBasicInfo;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleOption;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehicleOptionRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VmdOutboxRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -49,12 +50,15 @@ class VehicleProduceDataParserV1_0Test {
     @Mock
     private VehicleOptionRepository vehicleOptionRepository;
 
+    @Mock
+    private VmdOutboxRepository vmdOutboxRepository;
+
     private VehicleProduceDataParserV1_0 parser;
 
     @BeforeEach
     void setUp() {
         parser = new VehicleProduceDataParserV1_0(
-                vehiclePublish, vehBasicInfoRepository, parserRegistry, vehicleSecurityPresetAppService, vehicleOptionRepository);
+                vehiclePublish, vehBasicInfoRepository, parserRegistry, vehicleSecurityPresetAppService, vehicleOptionRepository, vmdOutboxRepository);
     }
 
     @Test

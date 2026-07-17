@@ -13,6 +13,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartSecurityConsta
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.VehicleNodeSchemaRegistry;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SecurityConstantState;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmPartRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmVehicleNodeRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartImportDataRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartSecurityConstantRepository;
 import net.hwyz.iov.cloud.framework.security.crypto.KeyProvisioningTemplate;
@@ -42,6 +43,7 @@ class PartImportSecurityConstantIntegrationTest {
 
     private PartImportDataRepository partImportDataRepository;
     private MdmPartRepository mdmPartRepository;
+    private MdmVehicleNodeRepository mdmVehicleNodeRepository;
     private PartInboundAppService partInboundAppService;
     private DownstreamProcessorRegistry downstreamProcessorRegistry;
     private VehicleNodeSchemaRegistry vehicleNodeSchemaRegistry;
@@ -66,6 +68,7 @@ class PartImportSecurityConstantIntegrationTest {
     void setUp() {
         partImportDataRepository = mock(PartImportDataRepository.class);
         mdmPartRepository = mock(MdmPartRepository.class);
+        mdmVehicleNodeRepository = mock(MdmVehicleNodeRepository.class);
         partInboundAppService = mock(PartInboundAppService.class);
         downstreamProcessorRegistry = mock(DownstreamProcessorRegistry.class);
         partSecurityConstantRepository = mock(PartSecurityConstantRepository.class);
@@ -79,7 +82,7 @@ class PartImportSecurityConstantIntegrationTest {
                 partSecurityConstantRepository, partImportDataRepository, keyProvisioningTemplate, vehicleNodeSchemaRegistry);
 
         partImportDataAppService = new PartImportDataAppService(
-                partImportDataRepository, mdmPartRepository, partInboundAppService,
+                partImportDataRepository, mdmPartRepository, mdmVehicleNodeRepository, partInboundAppService,
                 downstreamProcessorRegistry, vehicleNodeSchemaRegistry, partSecurityPresetAppService);
     }
 
