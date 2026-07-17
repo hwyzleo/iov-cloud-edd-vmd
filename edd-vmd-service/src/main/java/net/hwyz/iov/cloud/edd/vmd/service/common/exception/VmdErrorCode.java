@@ -31,7 +31,9 @@ public enum VmdErrorCode implements ErrorCode {
     OTA_ROOT_NOT_PRESET("202025", "该车辆OTA根未就绪"),
     PART_NOT_FOUND_IN_MDM("202026", "零件编码在MDM主数据中不存在"),
     PART_NOT_ACTIVE_IN_MDM("202027", "零件在MDM主数据中非ACTIVE状态"),
-    PART_IMPORT_DATA_EXCEPTION("202028", "零件导入数据异常");
+    PART_IMPORT_DATA_EXCEPTION("202028", "零件导入数据异常"),
+    VEHICLE_IMPORT_EVENT_REPLAY_NOT_ALLOWED("202029", "该车辆导入记录不允许补发消息"),
+    VEHICLE_IMPORT_EVENT_REPLAY_IN_PROGRESS("202030", "该车辆导入记录正在补发消息，请勿重复操作");
 
     private final String code;
     private final String message;

@@ -27,4 +27,18 @@ public class VehImportDataResponse {
     private Boolean handle;
     private String description;
     private LocalDateTime createTime;
+
+    /**
+     * 是否允许补发事件
+     * <p>
+     * VMD-DSN-CR-039: 车辆导入成功事件人工补发
+     */
+    private Boolean eventReplayable;
+
+    /**
+     * 不允许补发的原因
+     * <p>
+     * VMD-DSN-CR-039: 车辆导入成功事件人工补发
+     */
+    private String eventReplayReason;
 }

@@ -3,15 +3,19 @@ package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.controller.mpt;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.ReplayVehicleImportEventRequest;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.VehImportDataRequest;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.ImportResultResponse;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.ReplayEventResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.VehImportDataResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.MptVehImportDataAssembler;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.VehImportDataCmd;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ImportResult;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ReplayEventResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.VehImportDataDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.VehImportDataQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehImportDataAppService;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehImportEventReplayAppService;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
 import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
 import net.hwyz.iov.cloud.framework.common.bean.ApiResponse;
@@ -41,6 +45,7 @@ import java.util.List;
 public class MptVehImportDataController extends BaseController {
 
     private final VehImportDataAppService vehImportDataAppService;
+    private final VehImportEventReplayAppService vehImportEventReplayAppService;
 
     @RequiresPermissions("completeVehicle:vehicle:importData:list")
     @GetMapping(value = "/list")
@@ -132,5 +137,40 @@ public class MptVehImportDataController extends BaseController {
     public ApiResponse<Void> remove(@PathVariable Long[] vehImportDataIds) {
         log.info("管理后台用户[{}]删除车辆导入数据[{}]", SecurityContextHolder.getUserName(), vehImportDataIds);
         return vehImportDataAppService.deleteVehImportDataByIds(vehImportDataIds) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
+    }
+
+    /**
+     * 补发车辆导入成功事件
+     * <p>
+     * VMD-DSN-CR-039: 车辆导入成功事件人工补发
+     *
+     * @param vehImportDataId 车辆导入数据ID
+     * @param request 补发请求
+     * @return 补发结果
+     */
+    @Log(title = "车辆导入事件补发", businessType = BusinessType.OTHER)
+    @RequiresPermissions("completeVehicle:vehicle:importData:replay")
+    @PostMapping("/{vehImportDataId}/replayEvent")
+    public ApiResponse<ReplayEventResponse> replayEvent(@PathVariable Long vehImportDataId,
+                                                         @RequestBody(required = false) ReplayVehicleImportEventRequest request) {
+        log.info("管理后台用户[{}]补发车辆导入数据[id={}]事件", SecurityContextHolder.getUserName(), vehImportDataId);
+        if (request == null) {
+            request = new ReplayVehicleImportEventRequest();
+        }
+        ReplayEventResult result = vehImportEventReplayAppService.replay(
+                vehImportDataId,
+                request.getRequestId(),
+                SecurityUtils.getUserId().toString(),
+                SecurityContextHolder.getUserName(),
+                request.getReason()
+        );
+        ReplayEventResponse response = ReplayEventResponse.builder()
+                .replayId(result.getReplayId())
+                .totalCount(result.getTotalCount())
+                .queuedCount(result.getQueuedCount())
+                .failureCount(result.getFailureCount())
+                .failures(result.getFailures())
+                .build();
+        return ApiResponse.ok(response);
     }
 }

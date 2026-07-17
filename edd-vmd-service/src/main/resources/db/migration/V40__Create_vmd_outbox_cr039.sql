@@ -1,0 +1,31 @@
+-- VMD-DSN-CR-039: 新建通用 Outbox 表
+-- 支持可靠消息发布，由 Outbox Relay 扫描并发布到 Kafka
+CREATE TABLE `tb_vmd_outbox` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键ID',
+  `event_id` varchar(64) NOT NULL COMMENT '事件唯一ID（幂等键）',
+  `event_type` varchar(128) NOT NULL COMMENT '事件类型（如 VehicleProduceEvent）',
+  `aggregate_type` varchar(64) NOT NULL COMMENT '聚合类型（如 VEHICLE）',
+  `aggregate_id` varchar(64) NOT NULL COMMENT '聚合ID（如 VIN）',
+  `aggregate_version` bigint DEFAULT NULL COMMENT '聚合版本号',
+  `topic` varchar(256) NOT NULL COMMENT 'Kafka Topic',
+  `message_key` varchar(256) DEFAULT NULL COMMENT 'Kafka Message Key',
+  `payload` text NOT NULL COMMENT '事件payload（JSON）',
+  `publish_state` varchar(32) NOT NULL DEFAULT 'PENDING' COMMENT '发布状态：PENDING/PUBLISHED/FAILED_RETRYABLE/DEAD',
+  `retry_count` int NOT NULL DEFAULT 0 COMMENT '重试次数',
+  `next_retry_time` datetime DEFAULT NULL COMMENT '下次重试时间',
+  `published_at` datetime DEFAULT NULL COMMENT '发布时间',
+  `last_error` text DEFAULT NULL COMMENT '最后一次错误信息',
+  `source_type` varchar(64) DEFAULT NULL COMMENT '来源类型（如 IMPORT_EVENT_REPLAY）',
+  `source_ref_id` varchar(64) DEFAULT NULL COMMENT '来源引用ID（如 replayId）',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `create_by` varchar(64) DEFAULT NULL COMMENT '创建人',
+  `modify_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
+  `modify_by` varchar(64) DEFAULT NULL COMMENT '修改人',
+  `row_version` int NOT NULL DEFAULT 0 COMMENT '乐观锁版本号',
+  `row_valid` tinyint(1) NOT NULL DEFAULT 1 COMMENT '逻辑删除标志：0-已删除，1-有效',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_event_id` (`event_id`),
+  KEY `idx_publish_state` (`publish_state`),
+  KEY `idx_source` (`source_type`, `source_ref_id`),
+  KEY `idx_aggregate` (`aggregate_type`, `aggregate_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci COMMENT='通用 Outbox 表';

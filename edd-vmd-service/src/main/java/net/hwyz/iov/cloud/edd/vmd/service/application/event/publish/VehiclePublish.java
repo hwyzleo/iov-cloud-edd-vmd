@@ -2,6 +2,7 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.event.publish;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.EventReplayMetadata;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.VehicleEolEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.VehicleEolPartBoundEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.VehicleProduceEvent;
@@ -33,6 +34,20 @@ public class VehiclePublish {
     public void produce(String vin, String batchNum) {
         log.info("发布车辆[{}]生产事件, batchNum={}", vin, batchNum);
         ctx.publishEvent(new VehicleProduceEvent(vin, batchNum));
+    }
+
+    /**
+     * 车辆生产（补发）
+     * <p>
+     * VMD-DSN-CR-039: 车辆导入成功事件人工补发
+     *
+     * @param vin           车架号
+     * @param batchNum      批次号
+     * @param replayMetadata 补发元数据
+     */
+    public void produce(String vin, String batchNum, EventReplayMetadata replayMetadata) {
+        log.info("补发车辆[{}]生产事件, batchNum={}, replayId={}", vin, batchNum, replayMetadata.getReplayId());
+        ctx.publishEvent(new VehicleProduceEvent(vin, batchNum, replayMetadata));
     }
 
     /**

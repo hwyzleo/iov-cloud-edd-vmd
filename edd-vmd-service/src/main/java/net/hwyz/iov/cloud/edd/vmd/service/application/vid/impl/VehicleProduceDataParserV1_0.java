@@ -7,14 +7,17 @@ import cn.hutool.json.JSONUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ImportResult;
+import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.VehicleProduceEventEnvelope;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.publish.VehiclePublish;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleSecurityPresetAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.VehicleImportDataParser;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParserRegistry;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleBasicInfo;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleOption;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VmdOutbox;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehicleOptionRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VmdOutboxRepository;
 import net.hwyz.iov.cloud.framework.common.util.StrUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -23,12 +26,15 @@ import jakarta.annotation.PostConstruct;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /**
  * 整车主档后台导入解析器 (US-040)
  * 处理 type=PRODUCE 的整车主档批量导入
  * <p>
  * VMD-DSN-CR-027: 车辆数据导入域独立化，解析器注册到独立命名空间
+ * <p>
+ * VMD-DSN-CR-039: 正常生产流程也写入 Outbox，供下游（OTA 等）消费
  *
  * @since CR-025
  */
@@ -42,6 +48,22 @@ public class VehicleProduceDataParserV1_0 extends BaseProcessor implements Vehic
     private final ImportDataParserRegistry parserRegistry;
     private final VehicleSecurityPresetAppService vehicleSecurityPresetAppService;
     private final VehicleOptionRepository vehicleOptionRepository;
+    private final VmdOutboxRepository vmdOutboxRepository;
+
+    /**
+     * Kafka Topic
+     */
+    private static final String KAFKA_TOPIC = "vmd.vehicle.produce.event";
+
+    /**
+     * 事件类型
+     */
+    private static final String EVENT_TYPE = "VehicleProduceEvent";
+
+    /**
+     * 聚合类型
+     */
+    private static final String AGGREGATE_TYPE = "VEHICLE";
 
     @PostConstruct
     public void init() {
@@ -107,7 +129,18 @@ public class VehicleProduceDataParserV1_0 extends BaseProcessor implements Vehic
                 } catch (Exception e) {
                     log.warn("车辆[{}]选项值快照保存失败: {}", vin, e.getMessage());
                 }
+
+                // 发布 Spring 进程内事件（触发生命周期节点记录、安全常量预置等）
                 vehiclePublish.produce(vin, batchNum);
+
+                // 写入 Outbox，供 Relay 发布到 Kafka（下游 OTA 等消费）
+                try {
+                    publishToOutbox(vin, vehicleBasicInfo, batchNum);
+                } catch (Exception e) {
+                    log.warn("车辆[{}]写入Outbox失败: {}", vin, e.getMessage());
+                    // Outbox 写入失败不计入 failureCount，因为它是异步投递步骤
+                }
+
                 // 预置安全常量
                 try {
                     vehicleSecurityPresetAppService.preset(vin, batchNum);
@@ -130,6 +163,66 @@ public class VehicleProduceDataParserV1_0 extends BaseProcessor implements Vehic
                 .failureCount(failureCount)
                 .invalidCount(invalidCount)
                 .build();
+    }
+
+    /**
+     * 发布车辆生产事件到 Outbox
+     * <p>
+     * 构造 VehicleProduceEventEnvelope 并写入 vmd_outbox，
+     * 由 Outbox Relay 发布到 Kafka。
+     *
+     * @param vin            车架号
+     * @param vehicleBasicInfo 车辆基础信息
+     * @param batchNum       批次号
+     */
+    private void publishToOutbox(String vin, VehicleBasicInfo vehicleBasicInfo, String batchNum) {
+        // 构造事件payload
+        VehicleProduceEventEnvelope.VehicleProducePayload payload = VehicleProduceEventEnvelope.VehicleProducePayload.builder()
+                .vin(vin)
+                .produceTime(LocalDateTime.now())
+                .plantCode(vehicleBasicInfo.getPlantCode())
+                .brandCode(vehicleBasicInfo.getBrandCode())
+                .platformCode(vehicleBasicInfo.getPlatformCode())
+                .carLineCode(vehicleBasicInfo.getCarLineCode())
+                .modelCode(vehicleBasicInfo.getModelCode())
+                .variantCode(vehicleBasicInfo.getVariantCode())
+                .configurationCode(vehicleBasicInfo.getConfigurationCode())
+                .orderNum(vehicleBasicInfo.getOrderNum())
+                .build();
+
+        // 构造事件信封
+        VehicleProduceEventEnvelope envelope = VehicleProduceEventEnvelope.builder()
+                .eventId(UUID.randomUUID().toString())
+                .eventType(EVENT_TYPE)
+                .aggregateType(AGGREGATE_TYPE)
+                .aggregateId(vin)
+                .version(System.currentTimeMillis())
+                .occurredAt(LocalDateTime.now())
+                .producer("vmd-import")
+                .payload(payload)
+                .replay(false)
+                .batchNum(batchNum)
+                .build();
+
+        // 写入Outbox
+        VmdOutbox outbox = VmdOutbox.builder()
+                .eventId(envelope.getEventId())
+                .eventType(EVENT_TYPE)
+                .aggregateType(AGGREGATE_TYPE)
+                .aggregateId(vin)
+                .aggregateVersion(envelope.getVersion())
+                .topic(KAFKA_TOPIC)
+                .messageKey(vin)
+                .payload(JSONUtil.toJsonStr(envelope))
+                .publishState("PENDING")
+                .retryCount(0)
+                .sourceType("IMPORT")
+                .sourceRefId(batchNum)
+                .createTime(LocalDateTime.now())
+                .build();
+        vmdOutboxRepository.insert(outbox);
+
+        log.debug("车辆[{}]生产事件写入Outbox成功", vin);
     }
 
     /**

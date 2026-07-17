@@ -20,10 +20,23 @@ public class VehicleProduceEvent extends BaseEvent {
      */
     private final String batchNum;
 
+    /**
+     * 事件补发元数据（可选，仅补发时携带）
+     */
+    private final EventReplayMetadata replayMetadata;
+
     public VehicleProduceEvent(String vin, String batchNum) {
         super(vin);
         this.vin = vin;
         this.batchNum = batchNum;
+        this.replayMetadata = null;
+    }
+
+    public VehicleProduceEvent(String vin, String batchNum, EventReplayMetadata replayMetadata) {
+        super(vin);
+        this.vin = vin;
+        this.batchNum = batchNum;
+        this.replayMetadata = replayMetadata;
     }
 
 }

@@ -292,6 +292,10 @@ public class VehImportDataAppService {
         if (entity == null) {
             return null;
         }
+        // 计算是否允许补发事件
+        Boolean eventReplayable = isEventReplayable(entity);
+        String eventReplayReason = getEventReplayReason(entity, eventReplayable);
+
         return VehImportDataDto.builder()
                 .id(entity.getId())
                 .batchNum(entity.getBatchNum())
@@ -301,6 +305,61 @@ public class VehImportDataAppService {
                 .handle(entity.getHandle())
                 .description(entity.getDescription())
                 .createTime(entity.getCreateTime())
+                .eventReplayable(eventReplayable)
+                .eventReplayReason(eventReplayReason)
                 .build();
+    }
+
+    /**
+     * 判断是否允许补发事件
+     * <p>
+     * 仅 type=PRODUCE、处理成功、原始数据存在时允许补发
+     *
+     * @param entity 车辆导入数据实体
+     * @return 是否允许补发
+     */
+    private Boolean isEventReplayable(VehImportData entity) {
+        if (entity == null) {
+            return false;
+        }
+        // 仅支持PRODUCE类型
+        if (!"PRODUCE".equals(entity.getType())) {
+            return false;
+        }
+        // 必须处理成功
+        if (!Boolean.TRUE.equals(entity.getHandle())) {
+            return false;
+        }
+        // 原始数据必须存在
+        if (entity.getData() == null || entity.getData().isEmpty()) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * 获取不允许补发的原因
+     *
+     * @param entity 车辆导入数据实体
+     * @param eventReplayable 是否允许补发
+     * @return 不允许补发的原因（允许补发时返回null）
+     */
+    private String getEventReplayReason(VehImportData entity, Boolean eventReplayable) {
+        if (Boolean.TRUE.equals(eventReplayable)) {
+            return null;
+        }
+        if (entity == null) {
+            return "记录不存在";
+        }
+        if (!"PRODUCE".equals(entity.getType())) {
+            return "仅支持PRODUCE类型";
+        }
+        if (!Boolean.TRUE.equals(entity.getHandle())) {
+            return "导入记录未处理成功";
+        }
+        if (entity.getData() == null || entity.getData().isEmpty()) {
+            return "原始数据不存在";
+        }
+        return "不允许补发";
     }
 }
