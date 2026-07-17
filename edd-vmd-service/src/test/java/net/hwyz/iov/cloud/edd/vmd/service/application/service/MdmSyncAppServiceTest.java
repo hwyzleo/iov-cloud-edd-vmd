@@ -6,7 +6,7 @@ import net.hwyz.iov.cloud.edd.mdm.api.service.ConfigurationService;
 import net.hwyz.iov.cloud.edd.mdm.api.service.ModelService;
 import net.hwyz.iov.cloud.edd.mdm.api.service.OptionCodeService;
 import net.hwyz.iov.cloud.edd.mdm.api.service.OptionFamilyService;
-import net.hwyz.iov.cloud.edd.mdm.api.service.PartService;
+import net.hwyz.iov.cloud.edd.mdm.api.service.MdmPartService;
 import net.hwyz.iov.cloud.edd.mdm.api.service.PlantService;
 import net.hwyz.iov.cloud.edd.mdm.api.service.PlatformService;
 import net.hwyz.iov.cloud.edd.mdm.api.service.VariantService;
@@ -123,7 +123,7 @@ class MdmSyncAppServiceTest {
     private VehicleNodeService vehicleNodeService;
 
     @Mock
-    private PartService partService;
+    private MdmPartService mdmPartService;
 
     @InjectMocks
     private MdmSyncAppService mdmSyncAppService;
@@ -713,7 +713,7 @@ class MdmSyncAppServiceTest {
 
         // Then
         verify(mdmPartRepository).countBySource(SourceType.MDM);
-        verify(partService, never()).snapshot(anyBoolean(), anyInt(), anyInt());
+        verify(mdmPartService, never()).snapshot(anyBoolean(), anyInt(), anyInt());
     }
 
     @Test
