@@ -57,4 +57,9 @@ public class VehicleOptionRepositoryImpl implements VehicleOptionRepository {
         }
         return null;
     }
+
+    @Override
+    public int physicalDeleteByVin(String vin) {
+        return mapper.physicalDeleteByVin(vin);
+    }
 }

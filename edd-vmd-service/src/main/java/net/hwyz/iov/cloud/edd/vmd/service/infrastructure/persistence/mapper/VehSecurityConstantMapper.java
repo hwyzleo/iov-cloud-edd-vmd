@@ -42,4 +42,12 @@ public interface VehSecurityConstantMapper extends BaseDao<VehSecurityConstantPo
      */
     @Select("SELECT COUNT(*) FROM tb_veh_security_constant WHERE vin = #{vin} AND row_valid = 1")
     long countPoByVin(@Param("vin") String vin);
+
+    /**
+     * 根据车架号物理删除车辆安全常量
+     *
+     * @param vin 车架号
+     * @return 影响行数
+     */
+    int physicalDeleteByVin(String vin);
 }

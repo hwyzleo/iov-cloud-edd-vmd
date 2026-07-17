@@ -94,4 +94,20 @@ public interface VehBasicInfoRepository {
      */
     int batchInsertDetail(List<VehicleDetail> detailList);
 
+    /**
+     * 根据车架号物理删除车辆详细信息
+     *
+     * @param vin 车架号
+     * @return 影响行数
+     */
+    int physicalDeleteDetailByVin(String vin);
+
+    /**
+     * 根据车架号物理删除车辆预设车主
+     *
+     * @param vin 车架号
+     * @return 影响行数
+     */
+    int physicalDeletePresetOwnerByVin(String vin);
+
 }

@@ -28,4 +28,12 @@ public interface VehicleOptionMapper extends BaseDao<VehicleOptionPo, Long> {
             "ON DUPLICATE KEY UPDATE option_code = VALUES(option_code), source = VALUES(source), batch_num = VALUES(batch_num), snapshot_time = VALUES(snapshot_time)")
     int insertOrUpdate(VehicleOptionPo po);
 
+    /**
+     * 根据车架号物理删除单车选项值快照
+     *
+     * @param vin 车架号
+     * @return 影响行数
+     */
+    int physicalDeleteByVin(String vin);
+
 }

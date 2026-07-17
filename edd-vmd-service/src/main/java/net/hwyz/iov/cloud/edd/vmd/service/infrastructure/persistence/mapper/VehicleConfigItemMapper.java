@@ -15,4 +15,12 @@ import org.apache.ibatis.annotations.Mapper;
 @Mapper
 public interface VehicleConfigItemMapper extends BaseDao<VehicleConfigItemPo, Long> {
 
+    /**
+     * 根据车架号物理删除车辆配置项
+     *
+     * @param vin 车架号
+     * @return 影响行数
+     */
+    int physicalDeleteByVin(String vin);
+
 }

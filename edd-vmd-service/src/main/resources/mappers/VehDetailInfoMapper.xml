@@ -158,4 +158,10 @@
         WHERE t.row_valid = 1
         <!-- 添加自定义条件 -->
     </select>
+
+    <!-- 根据车架号物理删除 -->
+    <delete id="physicalDeleteByVin" parameterType="String">
+        DELETE FROM tb_veh_detail_info t
+        WHERE t.vin = #{vin}
+    </delete>
 </mapper>

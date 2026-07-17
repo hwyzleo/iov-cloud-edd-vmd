@@ -71,4 +71,9 @@ public class VehiclePartRepositoryImpl implements VehiclePartRepository {
         return vehiclePartMapper.batchPhysicalDeletePo(ids);
     }
 
+    @Override
+    public int physicalDeleteByVin(String vin) {
+        return vehiclePartMapper.physicalDeleteByVin(vin);
+    }
+
 }

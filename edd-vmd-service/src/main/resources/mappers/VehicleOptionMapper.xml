@@ -196,4 +196,10 @@
             AND t.source = #{source}
         </if>
     </select>
+
+    <!-- 根据车架号物理删除 -->
+    <delete id="physicalDeleteByVin" parameterType="String">
+        DELETE FROM tb_vehicle_option t
+        WHERE t.vin = #{vin}
+    </delete>
 </mapper>

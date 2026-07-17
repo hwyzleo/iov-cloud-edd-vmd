@@ -50,4 +50,12 @@ public interface VehSecurityConstantRepository {
      * @return 数量
      */
     long countByVin(String vin);
+
+    /**
+     * 根据车架号物理删除车辆安全常量
+     *
+     * @param vin 车架号
+     * @return 影响行数
+     */
+    int physicalDeleteByVin(String vin);
 }

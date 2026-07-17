@@ -25,4 +25,12 @@ public interface VehDetailInfoMapper extends BaseDao<VehDetailInfoPo, Long> {
      */
     List<VehDetailInfoPo> selectPoByVin(String vin);
 
+    /**
+     * 根据车架号物理删除车辆详细信息
+     *
+     * @param vin 车架号
+     * @return 影响行数
+     */
+    int physicalDeleteByVin(String vin);
+
 }

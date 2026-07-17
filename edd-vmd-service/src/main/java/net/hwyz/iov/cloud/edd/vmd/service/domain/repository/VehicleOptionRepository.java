@@ -37,4 +37,12 @@ public interface VehicleOptionRepository {
      * @return 选项值快照
      */
     VehicleOption findByVinAndOptionFamilyCode(String vin, String optionFamilyCode);
+
+    /**
+     * 根据车架号物理删除单车选项值快照
+     *
+     * @param vin 车架号
+     * @return 影响行数
+     */
+    int physicalDeleteByVin(String vin);
 }

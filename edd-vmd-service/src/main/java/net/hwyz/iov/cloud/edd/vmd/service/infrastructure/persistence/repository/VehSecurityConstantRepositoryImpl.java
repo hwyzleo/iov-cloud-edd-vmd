@@ -52,4 +52,9 @@ public class VehSecurityConstantRepositoryImpl implements VehSecurityConstantRep
     public long countByVin(String vin) {
         return vehSecurityConstantMapper.countPoByVin(vin);
     }
+
+    @Override
+    public int physicalDeleteByVin(String vin) {
+        return vehSecurityConstantMapper.physicalDeleteByVin(vin);
+    }
 }

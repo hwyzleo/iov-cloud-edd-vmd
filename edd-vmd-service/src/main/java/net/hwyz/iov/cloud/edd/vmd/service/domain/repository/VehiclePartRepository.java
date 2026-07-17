@@ -86,4 +86,12 @@ public interface VehiclePartRepository {
      */
     int batchPhysicalDelete(Long[] ids);
 
+    /**
+     * 根据车架号物理删除绑定关系
+     *
+     * @param vin 车架号
+     * @return 影响行数
+     */
+    int physicalDeleteByVin(String vin);
+
 }

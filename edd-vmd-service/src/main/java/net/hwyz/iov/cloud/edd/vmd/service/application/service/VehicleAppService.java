@@ -12,6 +12,10 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleDetail;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehicleRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.VehicleHasBindOrderException;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehicleConfigRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehicleOptionRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehiclePartRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehSecurityConstantRepository;
 import net.hwyz.iov.cloud.framework.common.util.ParamHelper;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Service;
@@ -33,6 +37,10 @@ public class VehicleAppService {
     private final VehBasicInfoRepository vehBasicInfoRepository;
     private final VehicleRepository vehicleRepository;
     private final VehicleLifecycleAppService vehicleLifecycleAppService;
+    private final VehiclePartRepository vehiclePartRepository;
+    private final VehicleConfigRepository vehicleConfigRepository;
+    private final VehicleOptionRepository vehicleOptionRepository;
+    private final VehSecurityConstantRepository vehSecurityConstantRepository;
 
     /**
      * 查询车辆信息
@@ -138,7 +146,16 @@ public class VehicleAppService {
         for (Long id : ids) {
             VehicleBasicInfo vehicleBasicInfo = getVehicleById(id);
             if (ObjUtil.isNotNull(vehicleBasicInfo)) {
-                vehicleLifecycleAppService.deleteVehicleLifecycleByVin(vehicleBasicInfo.getVin());
+                String vin = vehicleBasicInfo.getVin();
+                log.info("删除车辆[{}]关联数据", vin);
+                vehiclePartRepository.physicalDeleteByVin(vin);
+                vehicleConfigRepository.physicalDeleteByVin(vin);
+                vehicleConfigRepository.physicalDeleteConfigItemByVin(vin);
+                vehicleOptionRepository.physicalDeleteByVin(vin);
+                vehSecurityConstantRepository.physicalDeleteByVin(vin);
+                vehBasicInfoRepository.physicalDeleteDetailByVin(vin);
+                vehBasicInfoRepository.physicalDeletePresetOwnerByVin(vin);
+                vehicleLifecycleAppService.deleteVehicleLifecycleByVin(vin);
             }
         }
         return vehBasicInfoRepository.batchPhysicalDelete(ids);

@@ -86,4 +86,14 @@ public class VehBasicInfoRepositoryImpl implements VehBasicInfoRepository {
         return vehDetailInfoMapper.batchInsertPo(VehicleInfoConverter.INSTANCE.fromDetailDomainList(detailList));
     }
 
+    @Override
+    public int physicalDeleteDetailByVin(String vin) {
+        return vehDetailInfoMapper.physicalDeleteByVin(vin);
+    }
+
+    @Override
+    public int physicalDeletePresetOwnerByVin(String vin) {
+        return vehPresetOwnerMapper.physicalDeleteByVin(vin);
+    }
+
 }

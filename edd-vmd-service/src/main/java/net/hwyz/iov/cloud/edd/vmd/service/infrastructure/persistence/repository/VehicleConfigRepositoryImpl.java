@@ -81,4 +81,14 @@ public class VehicleConfigRepositoryImpl implements VehicleConfigRepository {
         return vehicleConfigItemMapper.batchPhysicalDeletePo(ids);
     }
 
+    @Override
+    public int physicalDeleteByVin(String vin) {
+        return vehicleConfigMapper.physicalDeleteByVin(vin);
+    }
+
+    @Override
+    public int physicalDeleteConfigItemByVin(String vin) {
+        return vehicleConfigItemMapper.physicalDeleteByVin(vin);
+    }
+
 }
