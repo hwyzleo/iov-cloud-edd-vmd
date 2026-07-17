@@ -21,6 +21,9 @@ public class PartImportDataResponse {
     private Long id;
     private String batchNum;
     private String partCode;
+    private String partName;
+    private String vehicleNodeCode;
+    private String vehicleNodeName;
     private String version;
     private String data;
     private Boolean handle;

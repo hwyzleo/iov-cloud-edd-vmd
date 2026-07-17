@@ -13,7 +13,9 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.vid.DownstreamProcessor;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.DownstreamProcessorRegistry;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Part;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartImportData;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleNode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmPartRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmVehicleNodeRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartImportDataRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.InboundSourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.VehicleNodeSchemaRegistry;
@@ -40,6 +42,7 @@ public class PartImportDataAppService {
 
     private final PartImportDataRepository partImportDataRepository;
     private final MdmPartRepository mdmPartRepository;
+    private final MdmVehicleNodeRepository mdmVehicleNodeRepository;
     private final PartInboundAppService partInboundAppService;
     private final DownstreamProcessorRegistry downstreamProcessorRegistry;
     private final VehicleNodeSchemaRegistry vehicleNodeSchemaRegistry;
@@ -471,10 +474,33 @@ public class PartImportDataAppService {
         if (entity == null) {
             return null;
         }
+        
+        // 关联查询零件信息
+        String partName = null;
+        String vehicleNodeCode = null;
+        String vehicleNodeName = null;
+        
+        Part part = mdmPartRepository.selectByCode(entity.getPartCode());
+        if (part != null) {
+            partName = part.getName();
+            vehicleNodeCode = part.getVehicleNodeCode();
+            
+            // 关联查询车载节点名称
+            if (StrUtil.isNotBlank(vehicleNodeCode)) {
+                VehicleNode vehicleNode = mdmVehicleNodeRepository.selectByCode(vehicleNodeCode);
+                if (vehicleNode != null) {
+                    vehicleNodeName = vehicleNode.getName();
+                }
+            }
+        }
+        
         return PartImportDataDto.builder()
                 .id(entity.getId())
                 .batchNum(entity.getBatchNum())
                 .partCode(entity.getPartCode())
+                .partName(partName)
+                .vehicleNodeCode(vehicleNodeCode)
+                .vehicleNodeName(vehicleNodeName)
                 .version(entity.getVersion())
                 .data(entity.getData())
                 .handle(entity.getHandle())

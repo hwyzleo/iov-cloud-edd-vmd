@@ -2,17 +2,7 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.edd.mdm.api.service.BrandService;
-import net.hwyz.iov.cloud.edd.mdm.api.service.CarLineService;
-import net.hwyz.iov.cloud.edd.mdm.api.service.ConfigurationService;
-import net.hwyz.iov.cloud.edd.mdm.api.service.ModelService;
-import net.hwyz.iov.cloud.edd.mdm.api.service.OptionCodeService;
-import net.hwyz.iov.cloud.edd.mdm.api.service.OptionFamilyService;
-import net.hwyz.iov.cloud.edd.mdm.api.service.PartService;
-import net.hwyz.iov.cloud.edd.mdm.api.service.PlantService;
-import net.hwyz.iov.cloud.edd.mdm.api.service.PlatformService;
-import net.hwyz.iov.cloud.edd.mdm.api.service.VariantService;
-import net.hwyz.iov.cloud.edd.mdm.api.service.VehicleNodeService;
+import net.hwyz.iov.cloud.edd.mdm.api.service.*;
 import net.hwyz.iov.cloud.edd.mdm.api.vo.response.BrandPageResponse;
 import net.hwyz.iov.cloud.edd.mdm.api.vo.response.BrandResponse;
 import net.hwyz.iov.cloud.edd.mdm.api.vo.response.CarLinePageResponse;
@@ -108,7 +98,7 @@ public class MdmSyncAppService {
     private final OptionFamilyService optionFamilyService;
     private final OptionCodeService optionCodeService;
     private final VehicleNodeService vehicleNodeService;
-    private final PartService partService;
+    private final MdmPartService mdmPartService;
 
     /**
      * 处理 MDM 品牌事件
@@ -1142,7 +1132,7 @@ public class MdmSyncAppService {
             int skipCount = 0;
 
             while (hasMore) {
-                PartPageResponse pageResponse = partService.snapshot(false, page, pageSize);
+                PartPageResponse pageResponse = mdmPartService.snapshot(false, page, pageSize);
                 if (pageResponse == null || pageResponse.getRows() == null || pageResponse.getRows().isEmpty()) {
                     hasMore = false;
                     break;
@@ -1216,7 +1206,7 @@ public class MdmSyncAppService {
             int skipCount = 0;
 
             while (hasMore) {
-                PartPageResponse pageResponse = partService.snapshot(false, page, pageSize);
+                PartPageResponse pageResponse = mdmPartService.snapshot(false, page, pageSize);
                 if (pageResponse == null || pageResponse.getRows() == null || pageResponse.getRows().isEmpty()) {
                     hasMore = false;
                     break;
