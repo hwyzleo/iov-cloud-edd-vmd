@@ -211,8 +211,12 @@ public class PartInboundAppService {
             sn = record.getExtraFields() != null ? record.getExtraFields().get("iccid") : null;
         }
 
-        // 标准化extra字段
+        // 标准化extra字段，并提取映射到专用列的字段
         String extra = null;
+        String hardwarePn = null;
+        String hardwareVer = null;
+        String softwarePn = null;
+        String softwareVer = null;
         if (record.getExtraFields() != null && !record.getExtraFields().isEmpty()) {
             Map<String, String> filtered = new HashMap<>();
             record.getExtraFields().forEach((k, v) -> {
@@ -220,6 +224,11 @@ public class PartInboundAppService {
                     filtered.put(k, v);
                 }
             });
+            // 提取映射到PartInfo专用列的字段
+            hardwarePn = filtered.remove("hardware_part_no");
+            hardwareVer = filtered.remove("hardware_version");
+            softwarePn = filtered.remove("software_part_no");
+            softwareVer = filtered.remove("software_version");
             extra = filtered.isEmpty() ? null : JSONUtil.toJsonStr(filtered);
         }
 
@@ -229,6 +238,10 @@ public class PartInboundAppService {
                 .vehicleNodeCode(record.getVehicleNodeCode())
                 .supplierCode(record.getSupplierCode())
                 .batchNum(record.getBatchNum())
+                .hardwarePn(hardwarePn)
+                .hardwareVer(hardwareVer)
+                .softwarePn(softwarePn)
+                .softwareVer(softwareVer)
                 .extra(extra)
                 .instanceState(PartInstanceState.IN_STOCK.value)
                 .source(source)

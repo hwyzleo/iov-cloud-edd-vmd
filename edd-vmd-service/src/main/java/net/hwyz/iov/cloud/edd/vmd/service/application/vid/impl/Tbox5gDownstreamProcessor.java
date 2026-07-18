@@ -49,31 +49,37 @@ public class Tbox5gDownstreamProcessor extends BaseProcessor implements Downstre
 
         for (Object item : items) {
             JSONObject itemJson = JSONUtil.parseObj(item);
-            String pn = itemJson.getStr("NO");
+            String assemblyPartNo = itemJson.getStr("ASSEMBLY_PART_NO");
+            String hardwarePartNo = itemJson.getStr("HARDWARE_PART_NO");
+            String hardwareVersion = itemJson.getStr("HARDWARE_VERSION");
             String sn = itemJson.getStr("SN");
             String iccid1 = itemJson.getStr("ICCID1");
             String iccid2 = itemJson.getStr("ICCID2");
             String imei = itemJson.getStr("IMEI");
             String hsm = itemJson.getStr("HSM");
 
-            if (StrUtil.isBlank(pn) || StrUtil.isBlank(sn) || StrUtil.isAllBlank(iccid1, iccid2)) {
+            if (StrUtil.isBlank(assemblyPartNo) || StrUtil.isBlank(sn) || StrUtil.isAllBlank(iccid1, iccid2)) {
                 invalidCount++;
                 continue;
             }
 
-            Map<String, String> extraFields = new HashMap<>(4);
+            Map<String, String> extraFields = new HashMap<>(6);
             extraFields.put("imei", imei);
             extraFields.put("iccid1", iccid1);
             extraFields.put("iccid2", iccid2);
             extraFields.put("hsm", hsm);
+            extraFields.put("hardware_part_no", hardwarePartNo);
+            extraFields.put("hardware_version", hardwareVersion);
 
-            PartInboundAppService.PartInboundRecord record = buildInboundRecord(pn, sn, "TBOX", "TBOX", "TBOX",
+            PartInboundAppService.PartInboundRecord record = buildInboundRecord(assemblyPartNo, sn, "TBOX", "TBOX", "TBOX",
                     supplier, batchNum, extraFields);
             records.add(record);
 
             tboxList.add(TboxVo.builder()
                     .sn(sn)
-                    .no(pn)
+                    .no(assemblyPartNo)
+                    .hardwareNo(hardwarePartNo)
+                    .hardwareVer(hardwareVersion)
                     .hsm(hsm)
                     .imei(imei)
                     .iccid1(iccid1)

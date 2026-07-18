@@ -185,27 +185,20 @@ public class PartImportDataAppService {
      * @return 导入结果
      */
     private ImportResult handleGeneralImport(String batchNum, String partCode, String version, PartImportData partImportData) {
-        // 根据 partCode 查询 MDM Part 投影，获取基本信息
-        Part mdmPart = mdmPartRepository.selectByCode(partCode);
-        if (ObjUtil.isNull(mdmPart)) {
-            log.error("零件编码[{}]在MDM主数据中不存在", partCode);
-            return ImportResult.builder().failureCount(1).description("零件编码[" + partCode + "]在MDM主数据中不存在").build();
-        }
-        
-        log.info("通用导入处理零件编码[{}], batchNum={}", partCode, batchNum);
+        log.info("通用导入处理, batchNum={}, partCode={}", batchNum, partCode);
         
         // 解析导入数据JSON
         JSONObject dataJson = JSONUtil.parseObj(partImportData.getData());
         
-        // 构建通用入站记录
-        List<PartInboundAppService.PartInboundRecord> records = buildGeneralInboundRecords(batchNum, partCode, dataJson);
+        // 构建通用入站记录（partCode从ITEM数据中提取）
+        List<PartInboundAppService.PartInboundRecord> records = buildGeneralInboundRecords(batchNum, dataJson);
         
         if (records.isEmpty()) {
             log.warn("批次号[{}]没有有效的入站记录", batchNum);
             return ImportResult.builder().totalCount(0).successCount(0).failureCount(1).description("没有有效的入站记录").build();
         }
         
-        // 调用统一的入站处理
+        // 调用统一的入站处理（validateRecord会校验partCode在MDM中存在且ACTIVE）
         PartInboundAppService.PartInboundResult inboundResult = partInboundAppService.processInbound(
                 records, InboundSourceType.MANUAL, null);
         
@@ -221,13 +214,14 @@ public class PartImportDataAppService {
     
     /**
      * 构建通用入站记录
+     * <p>
+     * partCode从ITEM数据中提取：优先使用ASSEMBLY_PART_NO，没有则使用HARDWARE_PART_NO
      *
      * @param batchNum 批次号
-     * @param partCode 零件编码
      * @param dataJson 数据JSON
      * @return 入站记录列表
      */
-    private List<PartInboundAppService.PartInboundRecord> buildGeneralInboundRecords(String batchNum, String partCode, JSONObject dataJson) {
+    private List<PartInboundAppService.PartInboundRecord> buildGeneralInboundRecords(String batchNum, JSONObject dataJson) {
         List<PartInboundAppService.PartInboundRecord> records = new ArrayList<>();
         
         // 获取供应商信息（从HEAD部分）
@@ -249,9 +243,9 @@ public class PartImportDataAppService {
             return records;
         }
         
-        // 通用字段列表（映射到PartInfo表列）
+        // 通用字段列表（映射到PartInfo表列或用于partCode提取）
         java.util.Set<String> commonFields = java.util.Set.of(
-                "SN", "vehicleNodeCode", "deviceItem");
+                "SN", "vehicleNodeCode", "deviceItem", "ASSEMBLY_PART_NO");
         
         for (Object item : items) {
             JSONObject itemJson = JSONUtil.parseObj(item);
@@ -261,10 +255,27 @@ public class PartImportDataAppService {
             String vehicleNodeCode = itemJson.getStr("vehicleNodeCode");
             String deviceItem = itemJson.getStr("deviceItem");
             
+            // 提取partCode：优先ASSEMBLY_PART_NO，没有则使用HARDWARE_PART_NO
+            String assemblyPartNo = itemJson.getStr("ASSEMBLY_PART_NO");
+            String hardwarePartNo = itemJson.getStr("HARDWARE_PART_NO");
+            String partCode = StrUtil.isNotBlank(assemblyPartNo) ? assemblyPartNo : hardwarePartNo;
+            
             // 校验必填字段
             if (StrUtil.isBlank(sn)) {
                 log.warn("批次号[{}]存在空SN的记录，跳过", batchNum);
                 continue;
+            }
+            if (StrUtil.isBlank(partCode)) {
+                log.warn("批次号[{}]存在空零件编码(ASSEMBLY_PART_NO和HARDWARE_PART_NO均为空)的记录，跳过", batchNum);
+                continue;
+            }
+            
+            // 如果ITEM中没有vehicleNodeCode，从MDM Part查询
+            if (StrUtil.isBlank(vehicleNodeCode)) {
+                Part mdmPart = mdmPartRepository.selectByCode(partCode);
+                if (mdmPart != null) {
+                    vehicleNodeCode = mdmPart.getVehicleNodeCode();
+                }
             }
             
             // 提取非通用字段到extraFields
