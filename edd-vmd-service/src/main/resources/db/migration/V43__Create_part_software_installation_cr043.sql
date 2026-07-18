@@ -1,0 +1,37 @@
+-- CR-043: 创建软件实装时态表
+-- 用于存储零件软件安装记录，支持软件清单管理和历史追溯
+
+CREATE TABLE IF NOT EXISTS `tb_part_software_installation` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `part_id` bigint NOT NULL COMMENT '实例锚（关联tb_part_info.id）',
+  `binding_id` bigint DEFAULT NULL COMMENT '绑定ID（关联tb_vehicle_part.id，可空；游离件刷写允许无VIN）',
+  `vin_snapshot` varchar(20) DEFAULT NULL COMMENT '观测时VIN快照（换件后历史追溯用，非绑定权威）',
+  `software_target_code` varchar(64) NOT NULL COMMENT '逻辑升级目标（如TBOX_BOOT/TBOX_APP/CALIBRATION/Software Cluster）',
+  `software_part_no` varchar(64) DEFAULT NULL COMMENT '软件零件号（引用MDM软件零件主数据）',
+  `software_version` varchar(64) NOT NULL COMMENT '实际安装版本',
+  `artifact_hash` varchar(128) DEFAULT NULL COMMENT '实装制品摘要（可空，OTA对账/防错刷）',
+  `slot` varchar(16) DEFAULT NULL COMMENT 'A/B分区/逻辑槽位（可空）',
+  `install_state` varchar(16) NOT NULL DEFAULT 'ACTIVE' COMMENT '当前清单取ACTIVE',
+  `change_type` varchar(16) NOT NULL COMMENT '变更类型（INITIAL/UPGRADE/ROLLBACK/REFLASH/REPAIR）',
+  `effective_from` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '版本有效开始时间',
+  `effective_to` timestamp NULL DEFAULT NULL COMMENT '版本有效结束时间（当前记录为NULL）',
+  `source` varchar(32) NOT NULL COMMENT '来源（EOL/VEHICLE_REPORT/OTA/AFTER_SALES/MANUAL）',
+  `source_event_id` varchar(64) DEFAULT NULL COMMENT '来源事件幂等键',
+  `reported_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '源端观测时间',
+  `inventory_version` bigint NOT NULL DEFAULT 1 COMMENT '物理实例软件清单单调版本（乱序保护）',
+  `software_type` varchar(32) DEFAULT NULL COMMENT '软件类型（CR-043）',
+  `flash_result` varchar(32) DEFAULT NULL COMMENT '刷写结果（CR-043）',
+  `description` varchar(255) DEFAULT NULL COMMENT '备注',
+  `create_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `create_by` varchar(64) DEFAULT NULL COMMENT '创建者',
+  `modify_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '修改时间',
+  `modify_by` varchar(64) DEFAULT NULL COMMENT '修改者',
+  `row_version` int DEFAULT '1' COMMENT '记录版本',
+  `row_valid` tinyint DEFAULT '1' COMMENT '记录是否有效',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_part_target_slot_active` (`part_id`, `software_target_code`, `slot`, `install_state`, `effective_to`),
+  UNIQUE KEY `uk_source_event` (`source`, `source_event_id`, `software_target_code`, `slot`),
+  KEY `idx_part_id` (`part_id`),
+  KEY `idx_binding_id` (`binding_id`),
+  KEY `idx_vin_snapshot` (`vin_snapshot`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='软件实装时态表';

@@ -1,8 +1,10 @@
 package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler;
 
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.VehicleLifecycleRequest;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.VehicleLifecycleNodeResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.VehicleLifecycleResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.VehicleLifecycleDto;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleLifecycleNode;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.VehicleLifecycleCmd;
@@ -50,5 +52,21 @@ public interface MptVehicleLifecycleAssembler {
      * @return 生命周期 VO 列表
      */
     List<VehicleLifecycleResponse> fromDtoList(List<VehicleLifecycleDto> vehicleLifecycleDtoList);
+
+    /**
+     * 生命周期节点实体转时间线响应
+     *
+     * @param node 生命周期节点实体
+     * @return 时间线响应
+     */
+    VehicleLifecycleNodeResponse toTimelineResponse(VehicleLifecycleNode node);
+
+    /**
+     * 生命周期节点实体列表转时间线响应列表
+     *
+     * @param nodes 生命周期节点实体列表
+     * @return 时间线响应列表
+     */
+    List<VehicleLifecycleNodeResponse> toTimelineResponseList(List<VehicleLifecycleNode> nodes);
 
 }

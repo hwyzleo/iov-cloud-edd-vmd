@@ -1,5 +1,6 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.vid.impl;
 
+import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.json.JSONObject;
@@ -109,6 +110,9 @@ public class VehicleInfoExtractor extends BaseProcessor {
 
     /**
      * 提取车辆基础信息
+     * <p>
+     * EOL数据中可能不包含完整的七项生产配置（MANUFACTURER/BRAND/PLATFORM/SERIES/MODEL/BASE_MODEL/BUILD_CONFIG），
+     * 这些字段通常在PRODUCE数据中提供。EOL场景下仅提取存在的字段，缺失的字段不打印WARN日志。
      *
      * @param itemJson 车辆 JSON 数据
      * @param existing 已有的车辆基础信息（可能为 null）
@@ -122,13 +126,25 @@ public class VehicleInfoExtractor extends BaseProcessor {
             basicInfo = VehicleBasicInfo.builder().vin(vin).build();
         }
         for (FieldMapping mapping : BASIC_INFO_MAPPINGS) {
-            handleVehicleInfo(itemJson, basicInfo, mapping.jsonKey, mapping.propertyName, mapping.desc, batchNum, vin);
+            String keyValue = itemJson.getStr(mapping.jsonKey);
+            if (StrUtil.isNotBlank(keyValue)) {
+                Object fieldValue = cn.hutool.core.bean.BeanUtil.getFieldValue(basicInfo, mapping.propertyName);
+                if (ObjUtil.isNull(fieldValue) || StrUtil.isBlank(fieldValue.toString())) {
+                    cn.hutool.core.bean.BeanUtil.setFieldValue(basicInfo, mapping.propertyName, keyValue.trim().toUpperCase());
+                } else if (!keyValue.trim().equalsIgnoreCase(fieldValue.toString())) {
+                    log.warn("车辆导入数据批次号[{}]车辆[{}]{}[{}]与原数据[{}]不一致", batchNum, vin, mapping.desc, keyValue.trim(), fieldValue);
+                }
+            }
+            // EOL场景下不打印字段为空的WARN日志，因为这些字段可能在PRODUCE数据中提供
         }
         return basicInfo;
     }
 
     /**
      * 提取车辆详情
+     * <p>
+     * EOL数据中可能不包含完整的详情字段（如生产订单、物料编码、配置信息等），
+     * 这些字段通常在PRODUCE数据中提供。EOL场景下仅提取存在的字段，缺失的字段不打印WARN日志。
      *
      * @param itemJson        车辆 JSON 数据
      * @param vehicleDetailMap 已有的详情 Map（key 为 type）
@@ -139,7 +155,20 @@ public class VehicleInfoExtractor extends BaseProcessor {
     public List<VehicleDetail> extractDetails(JSONObject itemJson, Map<String, VehicleDetail> vehicleDetailMap,
                                               String batchNum, String vin) {
         for (FieldMapping mapping : DETAIL_MAPPINGS) {
-            handleVehicleDetail(itemJson, vehicleDetailMap, mapping.jsonKey, mapping.desc, batchNum, vin);
+            String keyValue = itemJson.getStr(mapping.jsonKey);
+            if (StrUtil.isNotBlank(keyValue)) {
+                VehicleDetail vehicleDetail = vehicleDetailMap.get(mapping.jsonKey);
+                if (vehicleDetail == null) {
+                    vehicleDetailMap.put(mapping.jsonKey, VehicleDetail.builder()
+                            .vin(vin)
+                            .type(mapping.jsonKey)
+                            .val(keyValue)
+                            .build());
+                } else if (!keyValue.trim().equalsIgnoreCase(vehicleDetail.getVal())) {
+                    log.warn("车辆导入数据批次号[{}]车辆[{}]{}[{}]与原数据[{}]不一致", batchNum, vin, mapping.desc, keyValue.trim(), vehicleDetail.getVal());
+                }
+            }
+            // EOL场景下不打印字段为空的WARN日志，因为这些字段可能在PRODUCE数据中提供
         }
         return vehicleDetailMap.values().stream().collect(Collectors.toList());
     }

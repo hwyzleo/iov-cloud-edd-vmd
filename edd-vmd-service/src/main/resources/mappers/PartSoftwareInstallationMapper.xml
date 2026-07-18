@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.PartSoftwareInstallationMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="baseResultMap" type="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.PartSoftwareInstallationPo">
+        <id column="id" property="id" />
+        <result column="part_id" property="partId" />
+        <result column="binding_id" property="bindingId" />
+        <result column="vin_snapshot" property="vinSnapshot" />
+        <result column="software_target_code" property="softwareTargetCode" />
+        <result column="software_part_no" property="softwarePartNo" />
+        <result column="software_version" property="softwareVersion" />
+        <result column="artifact_hash" property="artifactHash" />
+        <result column="slot" property="slot" />
+        <result column="install_state" property="installState" />
+        <result column="change_type" property="changeType" />
+        <result column="effective_from" property="effectiveFrom" />
+        <result column="effective_to" property="effectiveTo" />
+        <result column="source" property="source" />
+        <result column="source_event_id" property="sourceEventId" />
+        <result column="reported_at" property="reportedAt" />
+        <result column="inventory_version" property="inventoryVersion" />
+        <result column="software_type" property="softwareType" />
+        <result column="flash_result" property="flashResult" />
+        <result column="description" property="description" />
+        <result column="create_time" property="createTime" />
+        <result column="create_by" property="createBy" />
+        <result column="modify_time" property="modifyTime" />
+        <result column="modify_by" property="modifyBy" />
+        <result column="row_version" property="rowVersion" />
+        <result column="row_valid" property="rowValid" />
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="baseColumnList">
+        id, part_id, binding_id, vin_snapshot, software_target_code, software_part_no, software_version,
+        artifact_hash, slot, install_state, change_type, effective_from, effective_to, source, source_event_id,
+        reported_at, inventory_version, software_type, flash_result, description,
+        create_time, create_by, modify_time, modify_by, row_version, row_valid
+    </sql>
+
+    <!-- 停用当前活跃记录 -->
+    <update id="deactivateByPartIdAndTargetCode">
+        UPDATE tb_part_software_installation
+        SET install_state = 'INACTIVE',
+            effective_to = NOW(),
+            modify_time = NOW(),
+            row_version = row_version + 1
+        WHERE part_id = #{partId}
+          AND software_target_code = #{softwareTargetCode}
+          AND install_state = 'ACTIVE'
+          AND row_valid = 1
+    </update>
+
+</mapper>

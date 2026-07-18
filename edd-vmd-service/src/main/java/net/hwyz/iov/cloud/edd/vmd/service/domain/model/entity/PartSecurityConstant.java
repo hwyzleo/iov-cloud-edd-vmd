@@ -36,6 +36,9 @@ public class PartSecurityConstant extends BaseDo<Long> {
     private LocalDateTime lastAttemptTime;
     private String failReason;
     private String batchNum;
+    private Boolean provisionConfirmed;
+    private LocalDateTime confirmTime;
+    private String confirmSource;
     private LocalDateTime createTime;
 
     /**

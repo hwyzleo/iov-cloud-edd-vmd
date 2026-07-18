@@ -85,4 +85,12 @@ public class VehicleBasicInfo implements DomainObj<VehicleBasicInfo> {
      */
     private String vehicleBaseVersion;
 
+    /**
+     * 电检放行状态（CR-043）
+     * PASS: 放行
+     * NG: 不合格
+     * REWORK: 返修
+     */
+    private String eolResult;
+
 }

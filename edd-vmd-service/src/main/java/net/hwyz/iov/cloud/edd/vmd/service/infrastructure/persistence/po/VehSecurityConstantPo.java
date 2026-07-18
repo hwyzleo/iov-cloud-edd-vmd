@@ -103,4 +103,24 @@ public class VehSecurityConstantPo extends BasePo {
      */
     @TableField("constant_type")
     private String constantType;
+
+    /**
+     * 灌注确认状态（CR-043）
+     * true: 已确认
+     * false: 未确认
+     */
+    @TableField("provision_confirmed")
+    private Boolean provisionConfirmed;
+
+    /**
+     * 灌注确认时间（CR-043）
+     */
+    @TableField("confirm_time")
+    private LocalDateTime confirmTime;
+
+    /**
+     * 灌注确认来源（CR-043）
+     */
+    @TableField("confirm_source")
+    private String confirmSource;
 }

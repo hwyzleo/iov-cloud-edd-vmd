@@ -36,6 +36,8 @@ public enum VehicleLifecycleNodeEnum {
     TOL,
     /** 车辆下线 **/
     EOL,
+    /** 下电（CR-043） **/
+    POWER_DOWN,
     /** 打印合格证 **/
     CERTIFICATE,
     /** 入前置库 **/

@@ -145,6 +145,22 @@ public class VehicleLifecycleAppService {
     }
 
     /**
+     * 记录车辆下电节点（CR-043）
+     *
+     * @param vin           车架号
+     * @param powerDownTime 下电时间
+     */
+    public void recordPowerDownNode(String vin, Instant powerDownTime) {
+        VehicleLifecycleNode node = VehicleLifecycleNode.builder()
+                .vin(vin)
+                .node(VehicleLifecycleNodeEnum.POWER_DOWN)
+                .reachTime(powerDownTime)
+                .build();
+        node.init();
+        vehicleLifecycleNodeRepository.save(node);
+    }
+
+    /**
      * 记录车辆激活节点
      *
      * @param vin 车架号
@@ -181,6 +197,23 @@ public class VehicleLifecycleAppService {
                 .build();
         node.init();
         vehicleLifecycleNodeRepository.save(node);
+    }
+
+    /**
+     * 根据车架号查询车辆生命周期时间线（按 reachTime 升序，空值末尾）
+     *
+     * @param vin 车架号
+     * @return 车辆生命周期节点列表
+     */
+    public List<VehicleLifecycleNode> getVehicleTimelineByVin(String vin) {
+        List<VehicleLifecycleNode> nodes = vehicleLifecycleNodeRepository.selectByVin(vin);
+        nodes.sort((a, b) -> {
+            if (a.getReachTime() == null && b.getReachTime() == null) return 0;
+            if (a.getReachTime() == null) return 1;
+            if (b.getReachTime() == null) return -1;
+            return a.getReachTime().compareTo(b.getReachTime());
+        });
+        return nodes;
     }
 
     /**

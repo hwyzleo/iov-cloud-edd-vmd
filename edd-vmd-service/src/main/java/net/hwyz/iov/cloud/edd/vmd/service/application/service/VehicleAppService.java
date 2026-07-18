@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.VehicleAssembler;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.VehicleDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.VehicleQuery;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.VehicleNotExistException;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.aggregate.Vehicle;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleBasicInfo;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleDetail;
@@ -41,6 +42,18 @@ public class VehicleAppService {
     private final VehicleConfigRepository vehicleConfigRepository;
     private final VehicleOptionRepository vehicleOptionRepository;
     private final VehSecurityConstantRepository vehSecurityConstantRepository;
+
+    /**
+     * 检查车架号是否存在，不存在则抛出异常
+     *
+     * @param vin 车架号
+     */
+    public void checkVinExists(String vin) {
+        VehicleBasicInfo vehicleBasicInfo = vehBasicInfoRepository.selectByVin(vin);
+        if (ObjUtil.isNull(vehicleBasicInfo)) {
+            throw new VehicleNotExistException(vin);
+        }
+    }
 
     /**
      * 查询车辆信息

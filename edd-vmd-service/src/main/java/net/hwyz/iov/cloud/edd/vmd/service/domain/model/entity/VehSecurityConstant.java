@@ -34,6 +34,9 @@ public class VehSecurityConstant extends BaseDo<Long> {
     private LocalDateTime genTime;
     private LocalDateTime lastAttemptTime;
     private String constantType;
+    private Boolean provisionConfirmed;
+    private LocalDateTime confirmTime;
+    private String confirmSource;
     private LocalDateTime createTime;
 
     /**

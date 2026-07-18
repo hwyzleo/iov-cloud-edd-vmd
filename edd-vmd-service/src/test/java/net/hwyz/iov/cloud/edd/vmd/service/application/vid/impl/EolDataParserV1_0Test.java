@@ -4,7 +4,11 @@ import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ImportResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.publish.VehiclePublish;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.EolResultGateService;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.SecurityProvisionConfirmService;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.SoftwareInventoryAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleLifecycleAppService;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehiclePartAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleSecurityPresetAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParserRegistry;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleBasicInfo;
@@ -52,6 +56,14 @@ class EolDataParserV1_0Test {
     private VehicleSecurityPresetAppService vehicleSecurityPresetAppService;
     @Mock
     private ImportDataParserRegistry parserRegistry;
+    @Mock
+    private EolResultGateService eolResultGateService;
+    @Mock
+    private SoftwareInventoryAppService softwareInventoryAppService;
+    @Mock
+    private SecurityProvisionConfirmService securityProvisionConfirmService;
+    @Mock
+    private VehiclePartAppService vehiclePartAppService;
 
     private EolDataParserV1_0 parser;
 
@@ -63,7 +75,8 @@ class EolDataParserV1_0Test {
         parser = new EolDataParserV1_0(
                 vehiclePublish, vehBasicInfoRepository, vehicleInfoExtractor,
                 vehicleInfoPersister, vehiclePartBinder, vehicleLifecycleAppService,
-                vehicleSecurityPresetAppService, parserRegistry);
+                vehicleSecurityPresetAppService, parserRegistry, eolResultGateService,
+                softwareInventoryAppService, securityProvisionConfirmService, vehiclePartAppService);
     }
 
     @Test
@@ -161,7 +174,85 @@ class EolDataParserV1_0Test {
 
         JSONObject item = new JSONObject();
         item.set("VIN", vin);
-        item.set("PARTS", new JSONArray());
+        item.set("EOL_RESULT", "PASS");
+        item.set("EOL_TIME", 1767261000000L);
+        item.set("POWER_DOWN_TIME", 1767261600000L);
+        item.set("PLANT", "HWYZ");
+        item.set("LINE_CODE", "FA1");
+        item.set("STATION_CODE", "EOL-ELE-01");
+        item.set("SHIFT", "A");
+        item.set("OPERATOR", "OP10086");
+        item.set("TRANSPORT_MODE", "TRANSPORT");
+        item.set("ODOMETER_KM", 3);
+        item.set("SOC", 40);
+        item.set("HV_STATUS", "POWER_OFF");
+        
+        // CERTIFICATE
+        JSONObject certificate = new JSONObject();
+        certificate.set("CERT_NO", "WHC20260101000001");
+        certificate.set("CERT_DATE", 1767312000000L);
+        certificate.set("MANUFACTURE_DATE", 1767225600000L);
+        item.set("CERTIFICATE", certificate);
+        
+        // OTA_BASELINE
+        JSONObject otaBaseline = new JSONObject();
+        otaBaseline.set("VEHICLE_VERSION", "HSRE26_2026.1.0");
+        otaBaseline.set("PACKAGE_ID", "BL_HSRE26_20260101");
+        otaBaseline.set("EE_ARCH", "CENTRAL_ZONE");
+        item.set("OTA_BASELINE", otaBaseline);
+        
+        // ECU_BASELINE
+        JSONArray ecuBaseline = new JSONArray();
+        JSONObject ecu1 = new JSONObject();
+        ecu1.set("VEHICLE_NODE", "TBOX_5G");
+        ecu1.set("DEVICE_ITEM", "TBOX");
+        ecu1.set("SN", "00000005AA00000001");
+        ecu1.set("ASSEMBLY_PART_NO", "00000001AA");
+        ecu1.set("HARDWARE_PART_NO", "00000005AA");
+        ecu1.set("HARDWARE_VERSION", "00");
+        JSONArray sw1 = new JSONArray();
+        JSONObject swItem1 = new JSONObject();
+        swItem1.set("SOFTWARE_TYPE", "APP");
+        swItem1.set("SOFTWARE_PART_NO", "00000009AA");
+        swItem1.set("SOFTWARE_VERSION", "V1.0.0");
+        swItem1.set("FLASH_RESULT", "OK");
+        sw1.add(swItem1);
+        ecu1.set("SOFTWARE", sw1);
+        JSONObject security1 = new JSONObject();
+        security1.set("CERT_INJECTED", true);
+        security1.set("V2C_COMM_ROOT", "PROVISIONED");
+        security1.set("TBOX_DEVICE_ROOT", "PROVISIONED");
+        ecu1.set("SECURITY", security1);
+        ecuBaseline.add(ecu1);
+        item.set("ECU_BASELINE", ecuBaseline);
+        
+        // INSPECTION_ITEMS
+        JSONArray inspectionItems = new JSONArray();
+        JSONObject inspection1 = new JSONObject();
+        inspection1.set("ITEM_CODE", "HV_INSULATION");
+        inspection1.set("NAME", "高压绝缘");
+        inspection1.set("RESULT", "PASS");
+        inspection1.set("VALUE", "50");
+        inspection1.set("UNIT", "MΩ");
+        inspectionItems.add(inspection1);
+        item.set("INSPECTION_ITEMS", inspectionItems);
+        
+        // DIAGNOSTIC
+        JSONObject diagnostic = new JSONObject();
+        diagnostic.set("DTC_CLEARED", true);
+        diagnostic.set("RESIDUAL_DTC", new JSONArray());
+        item.set("DIAGNOSTIC", diagnostic);
+        
+        // POWERTRAIN
+        JSONObject powertrain = new JSONObject();
+        powertrain.set("POWER_BATTERY_PACK_NO", "PB0000000001");
+        powertrain.set("POWER_BATTERY_SOH", 100);
+        powertrain.set("FRONT_DRIVE_MOTOR_NO", "FM0000000001");
+        powertrain.set("REAR_DRIVE_MOTOR_NO", "RM0000000001");
+        powertrain.set("GENERATOR_NO", "GEN0000000001");
+        powertrain.set("ENGINE_NO", "ENG0000000001");
+        item.set("POWERTRAIN", powertrain);
+        
         items.add(item);
 
         dataObj.set("ITEMS", items);

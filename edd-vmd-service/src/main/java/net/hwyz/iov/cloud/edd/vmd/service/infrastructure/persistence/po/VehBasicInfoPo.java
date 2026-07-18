@@ -106,4 +106,13 @@ public class VehBasicInfoPo extends BasePo {
      */
     @TableField("vehicle_base_version")
     private String vehicleBaseVersion;
+
+    /**
+     * 电检放行状态（CR-043）
+     * PASS: 放行
+     * NG: 不合格
+     * REWORK: 返修
+     */
+    @TableField("eol_result")
+    private String eolResult;
 }
