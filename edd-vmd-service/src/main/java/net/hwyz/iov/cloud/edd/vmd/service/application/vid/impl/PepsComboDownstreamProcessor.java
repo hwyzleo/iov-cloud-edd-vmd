@@ -49,7 +49,10 @@ public class PepsComboDownstreamProcessor extends BaseProcessor implements Downs
 
         for (Object item : items) {
             JSONObject itemJson = JSONUtil.parseObj(item);
-            String pn = itemJson.getStr("NO");
+            String pn = itemJson.getStr("ASSEMBLY_PART_NO");
+            if (StrUtil.isBlank(pn)) {
+                pn = itemJson.getStr("NO");
+            }
             String sn = itemJson.getStr("SN");
             String hsm = itemJson.getStr("HSM");
             String mac = itemJson.getStr("MAC");

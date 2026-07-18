@@ -443,7 +443,12 @@ public class PartImportDataAppService {
      */
     private ImportResult handleVehicleNodeDownstream(String batchNum, String partCode, JSONObject dataJson,
                                                      JSONObject data, ImportResult generalResult) {
-        String vehicleNodeCode = data.getStr("vehicleNodeCode");
+        // 从MDM Part查询vehicleNodeCode
+        String vehicleNodeCode = null;
+        Part mdmPart = mdmPartRepository.selectByCode(partCode);
+        if (mdmPart != null) {
+            vehicleNodeCode = mdmPart.getVehicleNodeCode();
+        }
         
         // 检查vehicleNodeCode是否非空
         if (StrUtil.isBlank(vehicleNodeCode)) {
