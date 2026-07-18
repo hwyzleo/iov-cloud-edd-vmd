@@ -13,6 +13,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.vid.VehicleImportDataParse
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParserRegistry;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehImportData;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehImportDataRepository;
+import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.StrUtil;
 import org.springframework.stereotype.Service;
@@ -54,7 +55,7 @@ public class VehImportDataAppService {
                 .handle(query.getHandle())
                 .build();
         List<VehImportData> list = vehImportDataRepository.selectList(vehImportData);
-        return list.stream().map(this::toDto).collect(java.util.stream.Collectors.toList());
+        return PageUtil.convert(list, this::toDto);
     }
 
     /**

@@ -7,8 +7,10 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartImportDataReposi
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter.PartImportDataConverter;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.PartImportDataMapper;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.PartImportDataPo;
+import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
@@ -57,7 +59,7 @@ public class PartImportDataRepositoryImpl implements PartImportDataRepository {
     }
 
     @Override
-    public List<PartImportData> selectList(PartImportData partImportData) {
+    public List<PartImportData> selectList(PartImportData partImportData, LocalDateTime beginTime, LocalDateTime endTime) {
         Map<String, Object> map = new HashMap<>();
         if (partImportData.getBatchNum() != null) {
             map.put("batchNum", partImportData.getBatchNum());
@@ -68,10 +70,14 @@ public class PartImportDataRepositoryImpl implements PartImportDataRepository {
         if (partImportData.getHandle() != null) {
             map.put("handle", partImportData.getHandle());
         }
+        if (beginTime != null) {
+            map.put("beginTime", beginTime);
+        }
+        if (endTime != null) {
+            map.put("endTime", endTime);
+        }
         List<PartImportDataPo> poList = partImportDataMapper.selectPoByMap(map);
-        return poList.stream()
-                .map(PartImportDataConverter.INSTANCE::toEntity)
-                .collect(Collectors.toList());
+        return PageUtil.convert(poList, PartImportDataConverter.INSTANCE::toEntity);
     }
 
     @Override

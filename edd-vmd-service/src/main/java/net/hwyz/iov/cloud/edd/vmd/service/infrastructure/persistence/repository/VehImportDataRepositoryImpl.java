@@ -7,6 +7,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehImportDataReposit
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter.VehImportDataConverter;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehImportDataMapper;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehImportDataPo;
+import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Repository;
 
 import java.util.HashMap;
@@ -69,9 +70,7 @@ public class VehImportDataRepositoryImpl implements VehImportDataRepository {
             map.put("handle", vehImportData.getHandle());
         }
         List<VehImportDataPo> poList = vehImportDataMapper.selectPoByMap(map);
-        return poList.stream()
-                .map(VehImportDataConverter.INSTANCE::toEntity)
-                .collect(Collectors.toList());
+        return PageUtil.convert(poList, VehImportDataConverter.INSTANCE::toEntity);
     }
 
     @Override

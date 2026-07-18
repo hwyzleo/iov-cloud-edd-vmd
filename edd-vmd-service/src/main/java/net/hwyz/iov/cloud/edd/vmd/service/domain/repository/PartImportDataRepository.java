@@ -2,6 +2,7 @@ package net.hwyz.iov.cloud.edd.vmd.service.domain.repository;
 
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartImportData;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -21,7 +22,7 @@ public interface PartImportDataRepository {
 
     int deleteByIds(Long[] ids);
 
-    List<PartImportData> selectList(PartImportData partImportData);
+    List<PartImportData> selectList(PartImportData partImportData, LocalDateTime beginTime, LocalDateTime endTime);
 
     boolean checkBatchNumUnique(Long id, String batchNum);
 }

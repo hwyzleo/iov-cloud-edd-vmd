@@ -162,7 +162,21 @@
         SELECT <include refid="baseColumnList"/>
         FROM tb_part_import_data t
         WHERE t.row_valid = 1
-        <!-- 添加自定义条件 -->
+        <if test="batchNum != null and batchNum != ''">
+            AND t.batch_num LIKE CONCAT('%', #{batchNum}, '%')
+        </if>
+        <if test="partCode != null and partCode != ''">
+            AND t.part_code LIKE CONCAT('%', #{partCode}, '%')
+        </if>
+        <if test="handle != null">
+            AND t.handle = #{handle}
+        </if>
+        <if test="beginTime != null">
+            AND t.create_time &gt;= #{beginTime}
+        </if>
+        <if test="endTime != null">
+            AND t.create_time &lt;= #{endTime}
+        </if>
         ORDER BY t.id DESC
     </select>
 
@@ -171,7 +185,21 @@
         SELECT COUNT(*)
         FROM tb_part_import_data t
         WHERE t.row_valid = 1
-        <!-- 添加自定义条件 -->
+        <if test="batchNum != null and batchNum != ''">
+            AND t.batch_num LIKE CONCAT('%', #{batchNum}, '%')
+        </if>
+        <if test="partCode != null and partCode != ''">
+            AND t.part_code LIKE CONCAT('%', #{partCode}, '%')
+        </if>
+        <if test="handle != null">
+            AND t.handle = #{handle}
+        </if>
+        <if test="beginTime != null">
+            AND t.create_time &gt;= #{beginTime}
+        </if>
+        <if test="endTime != null">
+            AND t.create_time &lt;= #{endTime}
+        </if>
     </select>
 
 </mapper>

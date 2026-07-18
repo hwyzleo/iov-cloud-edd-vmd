@@ -19,6 +19,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmVehicleNodeReposi
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartImportDataRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.InboundSourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.VehicleNodeSchemaRegistry;
+import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.StrUtil;
 import org.springframework.stereotype.Service;
@@ -60,8 +61,12 @@ public class PartImportDataAppService {
                 .partCode(query.getPartCode())
                 .handle(query.getHandle())
                 .build();
-        List<PartImportData> list = partImportDataRepository.selectList(partImportData);
-        return list.stream().map(this::toDto).collect(java.util.stream.Collectors.toList());
+        LocalDateTime beginTime = query.getBeginTime() != null ?
+                query.getBeginTime().toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime() : null;
+        LocalDateTime endTime = query.getEndTime() != null ?
+                query.getEndTime().toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime() : null;
+        List<PartImportData> list = partImportDataRepository.selectList(partImportData, beginTime, endTime);
+        return PageUtil.convert(list, this::toDto);
     }
 
     /**
