@@ -15,12 +15,14 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParserRegist
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.VehicleImportDataParser;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.PartBindingConflictException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.VehicleNotExistException;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Part;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartInfo;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleBasicInfo;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleNode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehiclePart;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.InboundSourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.PartInstanceState;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmPartRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
 import net.hwyz.iov.cloud.framework.common.util.StrUtil;
 import org.springframework.stereotype.Component;
@@ -48,6 +50,7 @@ public class VehicleTolDataParserV1_0 extends BaseProcessor implements VehicleIm
     private final PartInfoAppService partInfoAppService;
     private final VehiclePartAppService vehiclePartAppService;
     private final VehiclePublish vehiclePublish;
+    private final MdmPartRepository mdmPartRepository;
 
     @PostConstruct
     public void init() {
@@ -111,19 +114,23 @@ public class VehicleTolDataParserV1_0 extends BaseProcessor implements VehicleIm
             boolean vinSuccess = false;
             for (Object part : parts) {
                 JSONObject partJson = JSONUtil.parseObj(part);
-                String partNo = partJson.getStr("PART_NO");
+                String assemblyPartNo = partJson.getStr("ASSEMBLY_PART_NO");
+                String hardwarePartNo = partJson.getStr("HARDWARE_PART_NO");
                 String sn = partJson.getStr("SN");
-                String deviceCode = partJson.getStr("DEVICE_CODE");
+                String vehicleNodeParam = partJson.getStr("VEHICLE_NODE");
+                String deviceItemParam = partJson.getStr("DEVICE_ITEM");
                 String installPosition = partJson.getStr("INSTALL_POSITION");
                 String supplierCode = partJson.getStr("SUPPLIER_CODE");
                 String hardwareVersion = partJson.getStr("HARDWARE_VERSION");
-                String hardwareNo = partJson.getStr("HARDWARE_NO");
+
+                // 提取partCode：优先ASSEMBLY_PART_NO，没有则使用HARDWARE_PART_NO
+                String partCode = StrUtil.isNotBlank(assemblyPartNo) ? assemblyPartNo : hardwarePartNo;
 
                 // 校验必填字段
-                if (StrUtil.isBlank(partNo) || StrUtil.isBlank(sn) || StrUtil.isBlank(deviceCode)) {
+                if (StrUtil.isBlank(partCode) || StrUtil.isBlank(sn)) {
                     invalidCount++;
-                    log.warn("TOL导入数据批次号[{}]车辆[{}]存在无效零件记录: PART_NO={}, SN={}, DEVICE_CODE={}",
-                            batchNum, vin, partNo, sn, deviceCode);
+                    log.warn("TOL导入数据批次号[{}]车辆[{}]存在无效零件记录: partCode={}, SN={}",
+                            batchNum, vin, partCode, sn);
                     continue;
                 }
 
@@ -134,23 +141,37 @@ public class VehicleTolDataParserV1_0 extends BaseProcessor implements VehicleIm
                         throw new VehicleNotExistException(vin);
                     }
 
+                    // 确定 vehicleNodeCode：优先使用 VEHICLE_NODE 参数，否则从 MDM 零件主数据反查
+                    String deviceCode;
+                    if (StrUtil.isNotBlank(vehicleNodeParam)) {
+                        deviceCode = vehicleNodeParam;
+                    } else {
+                        Part mdmPart = mdmPartRepository.selectByCode(partCode);
+                        if (mdmPart == null || StrUtil.isBlank(mdmPart.getVehicleNodeCode())) {
+                            throw new IllegalArgumentException(
+                                    String.format("零件[%s]在MDM中不存在或未配置车载节点", partCode));
+                        }
+                        deviceCode = mdmPart.getVehicleNodeCode();
+                    }
+
                     // 校验 device_code 是否存在于 vehicle_node 表
                     VehicleNode vehicleNode = vehicleNodeAppService.getVehicleNodeByCode(deviceCode);
                     if (ObjUtil.isNull(vehicleNode)) {
                         throw new IllegalArgumentException(
                                 String.format("车载节点[%s]不存在", deviceCode));
                     }
-                    // 从 vehicle_node 获取 device_category（节点类型）
-                    String deviceItem = vehicleNode.getDeviceCategory();
+
+                    // 确定 deviceItem：优先使用 DEVICE_ITEM 参数，否则从 vehicle_node 获取 device_category
+                    String deviceItem = StrUtil.isNotBlank(deviceItemParam) ? deviceItemParam : vehicleNode.getDeviceCategory();
 
                     // 创建零件实例
                     PartInfo partInfo = PartInfo.builder()
-                            .partCode(partNo)
+                            .partCode(partCode)
                             .sn(sn)
                             .vehicleNodeCode(deviceCode)
                             .supplierCode(supplierCode)
                             .hardwareVer(hardwareVersion)
-                            .hardwarePn(hardwareNo)
+                            .hardwarePn(hardwarePartNo)
                             .instanceState(PartInstanceState.IN_USE.value)
                             .build();
                     partInfoAppService.upsertPartInfo(partInfo);
@@ -158,7 +179,7 @@ public class VehicleTolDataParserV1_0 extends BaseProcessor implements VehicleIm
                     // 校验零件实例 ID 是否有效
                     if (partInfo.getId() == null) {
                         throw new IllegalStateException(
-                                String.format("零件实例[%s/%s]创建/更新失败，未获取到ID", partNo, sn));
+                                String.format("零件实例[%s/%s]创建/更新失败，未获取到ID", partCode, sn));
                     }
 
                     // 绑定零件↔VIN
@@ -175,7 +196,7 @@ public class VehicleTolDataParserV1_0 extends BaseProcessor implements VehicleIm
 
                     successCount++;
                     vinSuccess = true;
-                    log.debug("TOL导入数据批次号[{}]车辆[{}]零件[{}]绑定成功", batchNum, vin, partNo);
+                    log.debug("TOL导入数据批次号[{}]车辆[{}]零件[{}]绑定成功", batchNum, vin, partCode);
                 } catch (VehicleNotExistException e) {
                     failureCount++;
                     String errorMsg = String.format("VIN[%s]不存在", vin);
@@ -183,12 +204,12 @@ public class VehicleTolDataParserV1_0 extends BaseProcessor implements VehicleIm
                     log.warn("TOL导入数据批次号[{}]: {}", batchNum, errorMsg);
                 } catch (PartBindingConflictException e) {
                     failureCount++;
-                    String errorMsg = String.format("零件[%s]已绑定其他VIN", partNo);
+                    String errorMsg = String.format("零件[%s]已绑定其他VIN", partCode);
                     appendDescription(descriptionBuilder, errorMsg);
                     log.warn("TOL导入数据批次号[{}]: {}", batchNum, errorMsg);
                 } catch (Exception e) {
                     failureCount++;
-                    String errorMsg = String.format("VIN[%s]零件[%s]处理失败: %s", vin, partNo, e.getMessage());
+                    String errorMsg = String.format("VIN[%s]零件[%s]处理失败: %s", vin, partCode, e.getMessage());
                     appendDescription(descriptionBuilder, errorMsg);
                     log.warn("TOL导入数据批次号[{}]: {}", batchNum, errorMsg, e);
                 }
