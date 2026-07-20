@@ -225,6 +225,16 @@
         LIMIT 1
     </select>
 
+    <!-- 根据序列号查询 -->
+    <select id="selectPoBySn" parameterType="String" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList"/>
+        FROM tb_part_info t
+        WHERE t.row_valid = 1
+        AND t.sn = #{sn}
+        ORDER BY t.id DESC
+        LIMIT 1
+    </select>
+
     <!-- 根据Map对象统计记录数 -->
     <select id="countPoByMap" parameterType="java.util.Map" resultType="int">
         SELECT COUNT(*)

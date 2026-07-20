@@ -38,7 +38,20 @@ public enum VmdErrorCode implements ErrorCode {
     PART_NOT_ACTIVE_IN_MDM("806027", "零件在MDM主数据中非ACTIVE状态"),
     PART_IMPORT_DATA_EXCEPTION("806028", "零件导入数据异常"),
     VEHICLE_IMPORT_EVENT_REPLAY_NOT_ALLOWED("806029", "该车辆导入记录不允许补发消息"),
-    VEHICLE_IMPORT_EVENT_REPLAY_IN_PROGRESS("806030", "该车辆导入记录正在补发消息，请勿重复操作");
+    VEHICLE_IMPORT_EVENT_REPLAY_IN_PROGRESS("806030", "该车辆导入记录正在补发消息，请勿重复操作"),
+    CERTIFICATE_VIN_NOT_EXIST("806040", "VIN不存在或状态不允许申请证书"),
+    CERTIFICATE_DEVICE_NOT_BOUND("806041", "设备与车辆未建立active绑定"),
+    CERTIFICATE_DEVICE_CATEGORY_MISMATCH("806042", "设备类别不匹配"),
+    CERTIFICATE_CSR_INVALID("806043", "CSR格式或签名无效"),
+    CERTIFICATE_CSR_SUBJECT_MISMATCH("806044", "CSR Subject与device_sn不一致"),
+    CERTIFICATE_CSR_CONTAINS_VIN("806045", "CSR不应包含VIN"),
+    CERTIFICATE_PROFILE_NOT_ALLOWED("806046", "证书Profile不允许"),
+    CERTIFICATE_PKI_UNAVAILABLE("806047", "PKI服务不可用"),
+    CERTIFICATE_ISSUANCE_UNKNOWN("806048", "签发结果未知，待对账"),
+    CERTIFICATE_PKI_REJECTED("806049", "PKI明确拒签"),
+    CERTIFICATE_INSTALL_CONFIRM_MISMATCH("806050", "证书安装确认对象不匹配"),
+    CERTIFICATE_STATUS_NOT_ALLOWED("806051", "证书状态不允许此操作"),
+    CERTIFICATE_REQUEST_NOT_EXIST("806052", "证书申请不存在");
 
     private final String code;
     private final String message;

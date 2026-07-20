@@ -42,6 +42,11 @@ public class PartInfoRepositoryImpl implements PartInfoRepository {
     }
 
     @Override
+    public PartInfo selectBySn(String sn) {
+        return PartInfoConverter.INSTANCE.toDomain(partInfoMapper.selectPoBySn(sn));
+    }
+
+    @Override
     public int insert(PartInfo partInfo) {
         PartInfoPo po = PartInfoConverter.INSTANCE.fromDomain(partInfo);
         int result = partInfoMapper.insertPo(po);

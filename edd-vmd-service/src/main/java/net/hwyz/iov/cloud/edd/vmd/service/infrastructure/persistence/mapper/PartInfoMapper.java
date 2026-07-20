@@ -24,4 +24,12 @@ public interface PartInfoMapper extends BaseDao<PartInfoPo, Long> {
      */
     PartInfoPo selectPoByPartCodeAndSn(String partCode, String sn);
 
+    /**
+     * 根据序列号查询
+     *
+     * @param sn 序列号
+     * @return 零件实例信息
+     */
+    PartInfoPo selectPoBySn(String sn);
+
 }

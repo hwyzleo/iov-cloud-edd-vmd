@@ -38,6 +38,14 @@ public interface PartInfoRepository {
     PartInfo selectByPartCodeAndSn(String partCode, String sn);
 
     /**
+     * 根据序列号查询零件实例
+     *
+     * @param sn 序列号
+     * @return 零件实例
+     */
+    PartInfo selectBySn(String sn);
+
+    /**
      * 新增零件实例
      *
      * @param partInfo 零件实例

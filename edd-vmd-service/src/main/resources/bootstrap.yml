@@ -26,3 +26,4 @@ spring:
           - kafka.yaml
           - redis.yaml
           - kms.yaml
+          - pki.yaml
