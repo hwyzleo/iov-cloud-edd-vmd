@@ -15,14 +15,6 @@
     <version>0.0.1-SNAPSHOT</version>
 
     <properties>
-        <account.version>0.0.1-SNAPSHOT</account.version>
-        <sec.version>0.0.1-SNAPSHOT</sec.version>
-        <tbox.version>0.0.1-SNAPSHOT</tbox.version>
-        <ccp.version>0.0.1-SNAPSHOT</ccp.version>
-        <idk.version>0.0.1-SNAPSHOT</idk.version>
-        <idcm.version>0.0.1-SNAPSHOT</idcm.version>
-        <pota.version>0.0.1-SNAPSHOT</pota.version>
-        <wms.version>0.0.1-SNAPSHOT</wms.version>
     </properties>
 
     <dependencies>
@@ -34,16 +26,6 @@
             <groupId>net.hwyz.iov.cloud.edd</groupId>
             <artifactId>edd-mdm-api</artifactId>
         </dependency>
-<!--        <dependency>-->
-<!--            <groupId>net.hwyz.iov.cloud.tsp</groupId>-->
-<!--            <artifactId>account-api</artifactId>-->
-<!--            <version>${account.version}</version>-->
-<!--        </dependency>-->
-<!--        <dependency>-->
-<!--            <groupId>net.hwyz.iov.cloud.tsp</groupId>-->
-<!--            <artifactId>sec-api</artifactId>-->
-<!--            <version>${sec.version}</version>-->
-<!--        </dependency>-->
         <dependency>
             <groupId>net.hwyz.iov.cloud.iov</groupId>
             <artifactId>iov-tsp-api</artifactId>
@@ -56,11 +38,6 @@
             <groupId>net.hwyz.iov.cloud.iov</groupId>
             <artifactId>iov-ota-api</artifactId>
         </dependency>
-<!--        <dependency>-->
-<!--            <groupId>net.hwyz.iov.cloud.otd</groupId>-->
-<!--            <artifactId>wms-api</artifactId>-->
-<!--            <version>${wms.version}</version>-->
-<!--        </dependency>-->
 
         <!-- 框架: MySQL -->
         <dependency>
@@ -78,6 +55,16 @@
         <dependency>
             <groupId>net.hwyz.iov.cloud.framework</groupId>
             <artifactId>framework-kafka-starter</artifactId>
+        </dependency>
+
+        <!-- Proto契约: VMD软件实装清单上报 -->
+        <dependency>
+            <groupId>net.hwyz.iov.cloud.proto</groupId>
+            <artifactId>proto-vmd</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java-util</artifactId>
         </dependency>
     </dependencies>
 

@@ -67,4 +67,20 @@ public class PartSoftwareInstallationRepositoryImpl implements PartSoftwareInsta
     public int deactivateByPartIdAndTargetCode(Long partId, String softwareTargetCode) {
         return partSoftwareInstallationMapper.deactivateByPartIdAndTargetCode(partId, softwareTargetCode);
     }
+
+    @Override
+    public PartSoftwareInstallation selectBySourceAndSourceEventId(String source, String sourceEventId,
+                                                                    String softwareTargetCode, String slot) {
+        LambdaQueryWrapper<PartSoftwareInstallationPo> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(PartSoftwareInstallationPo::getSource, source)
+               .eq(PartSoftwareInstallationPo::getSourceEventId, sourceEventId)
+               .eq(PartSoftwareInstallationPo::getSoftwareTargetCode, softwareTargetCode)
+               .eq(PartSoftwareInstallationPo::getRowValid, 1);
+        if (slot != null) {
+            wrapper.eq(PartSoftwareInstallationPo::getSlot, slot);
+        } else {
+            wrapper.isNull(PartSoftwareInstallationPo::getSlot);
+        }
+        return PartSoftwareInstallationConverter.INSTANCE.toDomain(partSoftwareInstallationMapper.selectOne(wrapper));
+    }
 }

@@ -97,6 +97,30 @@ public class VehiclePartAppService {
     }
 
     /**
+     * 根据车架号获取所有活跃绑定
+     *
+     * @param vin 车架号
+     * @return 活跃绑定列表
+     */
+    public List<VehiclePart> getActiveBindingsByVin(String vin) {
+        Map<String, Object> map = new HashMap<>();
+        map.put("vin", vin);
+        map.put("bindState", 1);
+        return vehiclePartRepository.selectByMap(map);
+    }
+
+    /**
+     * 根据车架号和车载节点代码获取活跃绑定实体
+     *
+     * @param vin 车架号
+     * @param vehicleNodeCode 车载节点代码
+     * @return 绑定关系实体，不存在返回 null
+     */
+    public VehiclePart getActiveBindingByVinAndNodeCode(String vin, String vehicleNodeCode) {
+        return vehiclePartRepository.selectActiveByVinAndVehicleNodeCode(vin, vehicleNodeCode);
+    }
+
+    /**
      * 根据车架号和安装位置查询活跃绑定（补偿绑定语义）
      *
      * @param vin 车架号

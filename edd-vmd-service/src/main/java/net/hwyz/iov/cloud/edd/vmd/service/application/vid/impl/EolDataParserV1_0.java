@@ -296,9 +296,9 @@ public class EolDataParserV1_0 extends BaseProcessor implements VehicleImportDat
                                     "UPDATE",  // changeType
                                     "EOL",  // source
                                     batchNum + "_" + vin + "_" + ecuSn + "_" + softwarePartNo,  // sourceEventId
+                                    Instant.now(),  // sourceEventTime
                                     Instant.now(),  // reportedAt
-                                    softwareType,
-                                    flashResult
+                                    true  // isConfirmed (EOL 为 confirmed)
                             );
                         } catch (Exception e) {
                             log.warn("软件实装回写失败: vin={}, ecuSn={}, swPartNo={}, error={}", 

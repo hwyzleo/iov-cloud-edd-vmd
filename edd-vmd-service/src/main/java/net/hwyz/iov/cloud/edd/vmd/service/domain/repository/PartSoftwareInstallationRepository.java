@@ -60,4 +60,16 @@ public interface PartSoftwareInstallationRepository {
      * @return 影响行数
      */
     int deactivateByPartIdAndTargetCode(Long partId, String softwareTargetCode);
+
+    /**
+     * 根据来源和来源事件幂等键查询软件实装记录
+     *
+     * @param source 来源
+     * @param sourceEventId 来源事件幂等键
+     * @param softwareTargetCode 软件目标代码
+     * @param slot 槽位
+     * @return 软件实装记录（可能为null）
+     */
+    PartSoftwareInstallation selectBySourceAndSourceEventId(String source, String sourceEventId,
+                                                            String softwareTargetCode, String slot);
 }

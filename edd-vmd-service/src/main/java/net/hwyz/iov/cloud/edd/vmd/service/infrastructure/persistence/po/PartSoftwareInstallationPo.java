@@ -142,4 +142,16 @@ public class PartSoftwareInstallationPo extends BasePo {
      */
     @TableField("flash_result")
     private String flashResult;
+
+    /**
+     * 是否已确认（CR-045）
+     */
+    @TableField("is_confirmed")
+    private Boolean isConfirmed;
+
+    /**
+     * 来源事件时间（CR-045）
+     */
+    @TableField("source_event_time")
+    private Instant sourceEventTime;
 }

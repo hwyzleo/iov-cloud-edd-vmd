@@ -123,6 +123,21 @@ public class PartSoftwareInstallation extends BaseDo<Long> implements DomainObj<
     private String flashResult;
 
     /**
+     * 是否已确认（CR-045）
+     * <p>
+     * confirmed: 车端/OTA确认的实际安装版本
+     * provisional: 云端下发但尚未确认的版本
+     */
+    private Boolean isConfirmed;
+
+    /**
+     * 来源事件时间（CR-045）
+     * <p>
+     * 用于版本时序 gate 判定，防止乱序写入
+     */
+    private Instant sourceEventTime;
+
+    /**
      * 创建时间
      */
     private Date createTime;
