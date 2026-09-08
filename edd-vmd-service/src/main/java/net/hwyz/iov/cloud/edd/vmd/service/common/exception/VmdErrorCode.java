@@ -51,7 +51,12 @@ public enum VmdErrorCode implements ErrorCode {
     CERTIFICATE_PKI_REJECTED("806049", "PKI明确拒签"),
     CERTIFICATE_INSTALL_CONFIRM_MISMATCH("806050", "证书安装确认对象不匹配"),
     CERTIFICATE_STATUS_NOT_ALLOWED("806051", "证书状态不允许此操作"),
-    CERTIFICATE_REQUEST_NOT_EXIST("806052", "证书申请不存在");
+    CERTIFICATE_REQUEST_NOT_EXIST("806052", "证书申请不存在"),
+    SOFTWARE_MANIFEST_INVALID("806053", "软件实装清单校验失败"),
+    SOFTWARE_MANIFEST_ITEM_INVALID("806054", "软件实装清单条目非法"),
+    SOFTWARE_SOURCE_UNSUPPORTED("806055", "不支持的软件实装来源"),
+    SOFTWARE_SOURCE_VERSION_MISSING("806056", "缺少软件实装来源版本或时刻"),
+    SOFTWARE_IDEMPOTENCY_CONFLICT("806057", "软件实装幂等键冲突");
 
     private final String code;
     private final String message;

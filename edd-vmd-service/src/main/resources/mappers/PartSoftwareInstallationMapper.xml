@@ -23,6 +23,13 @@
         <result column="inventory_version" property="inventoryVersion" />
         <result column="software_type" property="softwareType" />
         <result column="flash_result" property="flashResult" />
+        <result column="is_confirmed" property="isConfirmed" />
+        <result column="source_event_time" property="sourceEventTime" />
+        <result column="is_active_slot" property="isActiveSlot" />
+        <result column="observation_key" property="observationKey" />
+        <result column="canonicalization_version" property="canonicalizationVersion" />
+        <result column="canonical_digest" property="canonicalDigest" />
+        <result column="source_accepted_at" property="sourceAcceptedAt" />
         <result column="description" property="description" />
         <result column="create_time" property="createTime" />
         <result column="create_by" property="createBy" />
@@ -36,9 +43,42 @@
     <sql id="baseColumnList">
         id, part_id, binding_id, vin_snapshot, software_target_code, software_part_no, software_version,
         artifact_hash, slot, install_state, change_type, effective_from, effective_to, source, source_event_id,
-        reported_at, inventory_version, software_type, flash_result, description,
+        reported_at, inventory_version, software_type, flash_result, is_confirmed, source_event_time,
+        is_active_slot, observation_key, canonicalization_version, canonical_digest, source_accepted_at, description,
         create_time, create_by, modify_time, modify_by, row_version, row_valid
     </sql>
+
+    <!-- 停用当前活跃记录（按 Target + Slot 锚点，CR-046 多 Slot） -->
+    <update id="deactivateByPartIdTargetCodeAndSlot">
+        UPDATE tb_part_software_installation
+        SET install_state = 'INACTIVE',
+            effective_to = NOW(),
+            modify_time = NOW(),
+            row_version = row_version + 1
+        WHERE part_id = #{partId}
+          AND software_target_code = #{softwareTargetCode}
+          <if test="slot != null">
+          AND slot = #{slot}
+          </if>
+          <if test="slot == null">
+          AND slot IS NULL
+          </if>
+          AND install_state = 'ACTIVE'
+          AND row_valid = 1
+    </update>
+
+    <!-- 重置同一实例+Target下所有 ACTIVE 记录的 active 槽标记（active 槽切换时调用） -->
+    <update id="resetActiveSlotByPartIdAndTargetCode">
+        UPDATE tb_part_software_installation
+        SET is_active_slot = 0,
+            modify_time = NOW(),
+            row_version = row_version + 1
+        WHERE part_id = #{partId}
+          AND software_target_code = #{softwareTargetCode}
+          AND install_state = 'ACTIVE'
+          AND is_active_slot = 1
+          AND row_valid = 1
+    </update>
 
     <!-- 停用当前活跃记录 -->
     <update id="deactivateByPartIdAndTargetCode">

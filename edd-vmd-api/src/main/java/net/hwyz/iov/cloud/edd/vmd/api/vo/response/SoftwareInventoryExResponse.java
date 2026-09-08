@@ -59,6 +59,16 @@ public class SoftwareInventoryExResponse {
     private String slot;
 
     /**
+     * 是否当前启动槽（同一 Target 多 Slot 的 active/standby，CR-046）
+     */
+    private Boolean active;
+
+    /**
+     * 实装制品摘要（可空，CR-046）
+     */
+    private String digest;
+
+    /**
      * 是否已确认
      */
     private Boolean isConfirmed;

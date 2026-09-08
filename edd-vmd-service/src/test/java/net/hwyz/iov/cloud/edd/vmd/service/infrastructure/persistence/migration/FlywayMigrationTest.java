@@ -197,4 +197,34 @@ class FlywayMigrationTest {
             assertTrue(Files.exists(migrationFile), "迁移脚本文件应该存在: " + fileName);
         }
     }
+
+    @Test
+    @DisplayName("V47迁移脚本文件应存在（CR-046）")
+    void v47MigrationScript_shouldExist() {
+        Path migrationFile = Paths.get(MIGRATION_PATH, "V47__Alter_part_software_installation_cr046.sql");
+        assertTrue(Files.exists(migrationFile), "V47迁移脚本文件应该存在");
+    }
+
+    @Test
+    @DisplayName("V47迁移脚本应包含part_software_installation新列（CR-046）")
+    void v47MigrationScript_shouldContainNewColumns() throws IOException {
+        Path migrationFile = Paths.get(MIGRATION_PATH, "V47__Alter_part_software_installation_cr046.sql");
+        String content = Files.readString(migrationFile);
+        assertTrue(content.contains("is_active_slot"), "迁移脚本应包含is_active_slot列");
+        assertTrue(content.contains("observation_key"), "迁移脚本应包含observation_key列");
+        assertTrue(content.contains("canonicalization_version"), "迁移脚本应包含canonicalization_version列");
+        assertTrue(content.contains("canonical_digest"), "迁移脚本应包含canonical_digest列");
+        assertTrue(content.contains("source_accepted_at"), "迁移脚本应包含source_accepted_at列");
+    }
+
+    @Test
+    @DisplayName("V47迁移脚本应创建消费审计表（CR-046）")
+    void v47MigrationScript_shouldCreateConsumeAuditTable() throws IOException {
+        Path migrationFile = Paths.get(MIGRATION_PATH, "V47__Alter_part_software_installation_cr046.sql");
+        String content = Files.readString(migrationFile);
+        assertTrue(content.contains("tb_software_inventory_consume_audit"), "迁移脚本应创建消费审计表");
+        assertTrue(content.contains("uk_event_id"), "消费审计表应包含event_id唯一约束");
+        assertTrue(content.contains("uk_observation_key"), "消费审计表应包含observation_key唯一约束");
+        assertTrue(content.contains("item_quarantined"), "消费审计表应包含隔离统计列");
+    }
 }

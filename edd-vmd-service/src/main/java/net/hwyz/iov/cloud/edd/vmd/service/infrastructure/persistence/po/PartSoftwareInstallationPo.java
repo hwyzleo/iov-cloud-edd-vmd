@@ -154,4 +154,34 @@ public class PartSoftwareInstallationPo extends BasePo {
      */
     @TableField("source_event_time")
     private Instant sourceEventTime;
+
+    /**
+     * 同一Target多Slot的active/standby状态（与install_state分离，CR-046）
+     */
+    @TableField("is_active_slot")
+    private Boolean isActiveSlot;
+
+    /**
+     * OTA FULL观测幂等身份（CR-046）
+     */
+    @TableField("observation_key")
+    private String observationKey;
+
+    /**
+     * canonicalization版本（跨服务审计，CR-046）
+     */
+    @TableField("canonicalization_version")
+    private Integer canonicalizationVersion;
+
+    /**
+     * canonical摘要（跨服务审计，CR-046）
+     */
+    @TableField("canonical_digest")
+    private String canonicalDigest;
+
+    /**
+     * IOV-OTA成功受理时间（仅链路审计，CR-046）
+     */
+    @TableField("source_accepted_at")
+    private Instant sourceAcceptedAt;
 }

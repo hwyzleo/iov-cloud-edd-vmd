@@ -56,16 +56,6 @@
             <groupId>net.hwyz.iov.cloud.framework</groupId>
             <artifactId>framework-kafka-starter</artifactId>
         </dependency>
-
-        <!-- Proto契约: VMD软件实装清单上报 -->
-        <dependency>
-            <groupId>net.hwyz.iov.cloud.proto</groupId>
-            <artifactId>proto-vmd</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>com.google.protobuf</groupId>
-            <artifactId>protobuf-java-util</artifactId>
-        </dependency>
     </dependencies>
 
     <build>

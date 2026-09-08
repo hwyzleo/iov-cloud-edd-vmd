@@ -37,6 +37,16 @@ public interface PartSoftwareInstallationRepository {
     PartSoftwareInstallation selectActiveByPartIdAndTargetCode(Long partId, String softwareTargetCode);
 
     /**
+     * 根据零件ID、软件目标代码和槽位查询当前活跃的软件实装记录（CR-046 多 Slot 锚点）
+     *
+     * @param partId 零件ID
+     * @param softwareTargetCode 软件目标代码
+     * @param slot 槽位（可空，SINGLE_IMAGE）
+     * @return 软件实装记录（可能为null）
+     */
+    PartSoftwareInstallation selectActiveByPartIdTargetCodeAndSlot(Long partId, String softwareTargetCode, String slot);
+
+    /**
      * 新增软件实装记录
      *
      * @param partSoftwareInstallation 软件实装记录
@@ -60,6 +70,25 @@ public interface PartSoftwareInstallationRepository {
      * @return 影响行数
      */
     int deactivateByPartIdAndTargetCode(Long partId, String softwareTargetCode);
+
+    /**
+     * 根据零件ID、软件目标代码和槽位停用当前活跃的软件实装记录（CR-046 多 Slot 锚点）
+     *
+     * @param partId 零件ID
+     * @param softwareTargetCode 软件目标代码
+     * @param slot 槽位（可空，SINGLE_IMAGE）
+     * @return 影响行数
+     */
+    int deactivateByPartIdTargetCodeAndSlot(Long partId, String softwareTargetCode, String slot);
+
+    /**
+     * 重置同一零件+Target下所有 ACTIVE 记录的 active 槽标记（CR-046 active 槽切换）
+     *
+     * @param partId 零件ID
+     * @param softwareTargetCode 软件目标代码
+     * @return 影响行数
+     */
+    int resetActiveSlotByPartIdAndTargetCode(Long partId, String softwareTargetCode);
 
     /**
      * 根据来源和来源事件幂等键查询软件实装记录

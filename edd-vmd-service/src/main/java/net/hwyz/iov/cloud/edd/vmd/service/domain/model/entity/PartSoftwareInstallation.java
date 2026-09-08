@@ -138,6 +138,33 @@ public class PartSoftwareInstallation extends BaseDo<Long> implements DomainObj<
     private Instant sourceEventTime;
 
     /**
+     * 同一Target多Slot的active/standby状态（CR-046）
+     * <p>
+     * 与 install_state 分离：install_state 表达时态当前记录，is_active_slot 表达同一Target多Slot中的启动槽
+     */
+    private Boolean isActiveSlot;
+
+    /**
+     * OTA FULL观测幂等身份（CR-046）
+     */
+    private String observationKey;
+
+    /**
+     * canonicalization版本（跨服务审计，CR-046）
+     */
+    private Integer canonicalizationVersion;
+
+    /**
+     * canonical摘要（跨服务审计，CR-046）
+     */
+    private String canonicalDigest;
+
+    /**
+     * IOV-OTA成功受理时间（仅链路审计，CR-046）
+     */
+    private Instant sourceAcceptedAt;
+
+    /**
      * 创建时间
      */
     private Date createTime;

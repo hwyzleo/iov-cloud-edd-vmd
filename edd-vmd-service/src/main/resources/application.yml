@@ -11,6 +11,17 @@ vmd:
     kafka:
       enabled: ${VMD_BINDING_KAFKA_ENABLED:true}
       topic: ${VMD_BINDING_KAFKA_TOPIC:vmd-vehicle-binding-changed}
+  software-inventory:
+    observed:
+      kafka:
+        enabled: ${VMD_SOFTWARE_INVENTORY_OBSERVED_KAFKA_ENABLED:false}
+        topic: ${VMD_SOFTWARE_INVENTORY_OBSERVED_KAFKA_TOPIC:ota.vehicle-software-inventory.observed}
+        group-id: ${VMD_SOFTWARE_INVENTORY_OBSERVED_KAFKA_GROUP:edd-vmd-vehicle-software-inventory}
+        dlq-topic: ${VMD_SOFTWARE_INVENTORY_OBSERVED_KAFKA_DLQ:ota.vehicle-software-inventory.observed.dlq}
+    changed:
+      kafka:
+        # 软件清单变更事件经 vmd_outbox → OutboxRelay 发布（Key=VIN）
+        topic: ${VMD_SOFTWARE_INVENTORY_CHANGED_KAFKA_TOPIC:vmd-vehicle-software-inventory-changed}
 
 # MDM同步配置
 # 注意：topic名称必须与MDM需求文档US-064保持一致

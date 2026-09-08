@@ -49,6 +49,21 @@ public class PartSoftwareInstallationRepositoryImpl implements PartSoftwareInsta
     }
 
     @Override
+    public PartSoftwareInstallation selectActiveByPartIdTargetCodeAndSlot(Long partId, String softwareTargetCode, String slot) {
+        LambdaQueryWrapper<PartSoftwareInstallationPo> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(PartSoftwareInstallationPo::getPartId, partId)
+               .eq(PartSoftwareInstallationPo::getSoftwareTargetCode, softwareTargetCode)
+               .eq(PartSoftwareInstallationPo::getInstallState, "ACTIVE")
+               .eq(PartSoftwareInstallationPo::getRowValid, 1);
+        if (slot != null) {
+            wrapper.eq(PartSoftwareInstallationPo::getSlot, slot);
+        } else {
+            wrapper.isNull(PartSoftwareInstallationPo::getSlot);
+        }
+        return PartSoftwareInstallationConverter.INSTANCE.toDomain(partSoftwareInstallationMapper.selectOne(wrapper));
+    }
+
+    @Override
     public int insert(PartSoftwareInstallation partSoftwareInstallation) {
         PartSoftwareInstallationPo po = PartSoftwareInstallationConverter.INSTANCE.fromDomain(partSoftwareInstallation);
         int result = partSoftwareInstallationMapper.insert(po);
@@ -66,6 +81,16 @@ public class PartSoftwareInstallationRepositoryImpl implements PartSoftwareInsta
     @Override
     public int deactivateByPartIdAndTargetCode(Long partId, String softwareTargetCode) {
         return partSoftwareInstallationMapper.deactivateByPartIdAndTargetCode(partId, softwareTargetCode);
+    }
+
+    @Override
+    public int deactivateByPartIdTargetCodeAndSlot(Long partId, String softwareTargetCode, String slot) {
+        return partSoftwareInstallationMapper.deactivateByPartIdTargetCodeAndSlot(partId, softwareTargetCode, slot);
+    }
+
+    @Override
+    public int resetActiveSlotByPartIdAndTargetCode(Long partId, String softwareTargetCode) {
+        return partSoftwareInstallationMapper.resetActiveSlotByPartIdAndTargetCode(partId, softwareTargetCode);
     }
 
     @Override
