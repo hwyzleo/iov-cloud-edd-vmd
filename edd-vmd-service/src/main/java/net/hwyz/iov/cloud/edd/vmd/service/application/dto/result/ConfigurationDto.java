@@ -12,16 +12,27 @@ import lombok.NoArgsConstructor;
 public class ConfigurationDto {
 
     private Long id;
-    private String platformCode;
-    private String carLineCode;
-    private String modelCode;
-    private String baseModelCode;
     private String code;
     private String name;
-    private String nameEn;
-    private String vehicleStageCode;
-    private Boolean enable;
-    private Integer sort;
+    private String nameLocal;
+    private String variantCode;
     private String description;
+
+    /**
+     * 派生：车型代码（沿产品树补全，CR-047）
+     */
+    private String modelCode;
+    /**
+     * 派生：车系代码（沿产品树补全，CR-047）
+     */
+    private String carLineCode;
+    /**
+     * 派生：平台代码（沿产品树补全，CR-047）
+     */
+    private String platformCode;
+    /**
+     * 派生：品牌代码（沿产品树补全，CR-047）
+     */
+    private String brandCode;
 
 }

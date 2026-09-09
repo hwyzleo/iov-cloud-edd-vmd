@@ -15,14 +15,8 @@ public class Configuration implements DomainObj<Configuration> {
 
     private Long id;
 
-    private String platformCode;
-
-    private String carLineCode;
-
-    private String modelCode;
-
     /**
-     * 版本代码（CR-016，承接 baseModelCode 语义）
+     * 版本代码（CR-047：Configuration 唯一直接产品树父引用，层级沿产品树派生）
      */
     private String variantCode;
 
@@ -33,13 +27,12 @@ public class Configuration implements DomainObj<Configuration> {
 
     private String name;
 
-    private String nameEn;
+    /**
+     * 本地化名称（对齐 MDM nameLocal 契约，RD-047-6）
+     */
+    private String nameLocal;
 
-    private String vehicleStageCode;
-
-    private Boolean enable;
-
-    private Integer sort;
+    private String description;
 
     /**
      * 数据来源: MDM/MANUAL

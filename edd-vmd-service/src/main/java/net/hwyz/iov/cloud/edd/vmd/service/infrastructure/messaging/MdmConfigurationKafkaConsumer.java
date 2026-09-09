@@ -5,7 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmConfigurationEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.MdmSyncAppService;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.monitoring.MdmSyncMetrics;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.monitoring.ConfigurationSyncMetrics;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.kafka.annotation.KafkaListener;
@@ -28,7 +28,7 @@ import org.springframework.stereotype.Component;
 public class MdmConfigurationKafkaConsumer {
 
     private final MdmSyncAppService mdmSyncAppService;
-    private final MdmSyncMetrics mdmSyncMetrics;
+    private final ConfigurationSyncMetrics configurationSyncMetrics;
     private final ObjectMapper objectMapper;
 
     /**
@@ -51,16 +51,15 @@ public class MdmConfigurationKafkaConsumer {
         try {
             MdmConfigurationEvent event = parseEvent(record.value());
             mdmSyncAppService.handleConfigurationEvent(event);
-            mdmSyncMetrics.recordSuccess();
             log.info("MDM Configuration事件处理成功: entityId={}, eventType={}",
                     event.getEntityId(), event.getEventType());
         } catch (Exception e) {
-            mdmSyncMetrics.recordFailure();
+            // 契约错误（缺 variantCode 等）与处理失败统一计入失败指标，进入现有重试/DLQ（CR-047 §4.3）
+            configurationSyncMetrics.recordFailure();
             log.error("MDM Configuration事件处理失败: offset={}, error={}",
                     record.offset(), e.getMessage(), e);
         } finally {
             long duration = System.currentTimeMillis() - startTime;
-            mdmSyncMetrics.recordDuration(duration);
         }
     }
 

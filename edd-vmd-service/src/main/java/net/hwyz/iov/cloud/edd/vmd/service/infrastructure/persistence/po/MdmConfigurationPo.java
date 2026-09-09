@@ -26,32 +26,14 @@ public class MdmConfigurationPo extends BasePo {
     @TableId(value = "id", type = IdType.AUTO)
     private Long id;
 
-    @TableField("platform_code")
-    private String platformCode;
-
-    @TableField("car_line_code")
-    private String carLineCode;
-
-    @TableField("model_code")
-    private String modelCode;
-
     @TableField("code")
     private String code;
 
     @TableField("name")
     private String name;
 
-    @TableField("name_en")
-    private String nameEn;
-
-    @TableField("vehicle_stage_code")
-    private String vehicleStageCode;
-
-    @TableField("enable")
-    private Boolean enable;
-
-    @TableField("sort")
-    private Integer sort;
+    @TableField("name_local")
+    private String nameLocal;
 
     @TableField("variant_code")
     private String variantCode;

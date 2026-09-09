@@ -11,15 +11,9 @@
         <result column="modify_by" property="modifyBy" />
         <result column="row_version" property="rowVersion" />
         <result column="row_valid" property="rowValid" />
-        <result column="platform_code" property="platformCode" />
-        <result column="car_line_code" property="carLineCode" />
-        <result column="model_code" property="modelCode" />
         <result column="code" property="code" />
         <result column="name" property="name" />
-        <result column="name_en" property="nameEn" />
-        <result column="vehicle_stage_code" property="vehicleStageCode" />
-        <result column="enable" property="enable" />
-        <result column="sort" property="sort" />
+        <result column="name_local" property="nameLocal" />
         <result column="variant_code" property="variantCode" />
         <result column="source" property="source" />
         <result column="external_ref_id" property="externalRefId" />
@@ -27,36 +21,60 @@
         <result column="last_sync_time" property="lastSyncTime" />
     </resultMap>
 
+    <resultMap id="hierarchyResultMap" type="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.MdmConfigurationHierarchyPo"
+               extends="baseResultMap">
+        <result column="model_code" property="modelCode" />
+        <result column="car_line_code" property="carLineCode" />
+        <result column="platform_code" property="platformCode" />
+        <result column="brand_code" property="brandCode" />
+    </resultMap>
+
     <sql id="baseColumnList">
-        id, platform_code, car_line_code, model_code, code, name, name_en, vehicle_stage_code, enable, sort,
-        variant_code, source, external_ref_id, external_version, last_sync_time,
+        id, code, name, name_local, variant_code,
+        source, external_ref_id, external_version, last_sync_time,
         description, create_time, create_by, modify_time, modify_by, row_version, row_valid
+    </sql>
+
+    <sql id="hierarchyColumnList">
+        c.id, c.code, c.name, c.name_local, c.variant_code,
+        c.source, c.external_ref_id, c.external_version, c.last_sync_time,
+        c.description, c.create_time, c.create_by, c.modify_time, c.modify_by, c.row_version, c.row_valid,
+        v.model_code, m.car_line_code, m.platform_code, cl.brand_code
+    </sql>
+
+    <sql id="productTreeJoin">
+        FROM tb_mdm_configuration c
+        LEFT JOIN tb_mdm_variant v ON v.code = c.variant_code AND v.row_valid = 1
+        LEFT JOIN tb_mdm_model m ON m.code = v.model_code AND m.row_valid = 1
+        LEFT JOIN tb_mdm_car_line cl ON cl.code = m.car_line_code AND cl.row_valid = 1
+        LEFT JOIN tb_mdm_platform p ON p.code = m.platform_code AND p.row_valid = 1
+        LEFT JOIN tb_mdm_brand b ON b.code = cl.brand_code AND b.row_valid = 1
     </sql>
 
     <insert id="insertPo" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO tb_mdm_configuration (
-            id, platform_code, car_line_code, model_code, code, name, name_en, vehicle_stage_code, enable, sort,
-            variant_code, source, external_ref_id, external_version, last_sync_time,
+            id, code, name, name_local, variant_code,
+            source, external_ref_id, external_version, last_sync_time,
             description, create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
         VALUES (
-            #{id}, #{platformCode}, #{carLineCode}, #{modelCode}, #{code}, #{name}, #{nameEn}, #{vehicleStageCode}, #{enable}, #{sort},
-            #{variantCode}, #{source}, #{externalRefId}, #{externalVersion}, #{lastSyncTime},
+            #{id}, #{code}, #{name}, #{nameLocal}, #{variantCode},
+            #{source}, #{externalRefId}, #{externalVersion}, #{lastSyncTime},
             #{description}, now(), #{createBy}, now(), #{modifyBy}, 1, 1
         )
     </insert>
 
     <insert id="batchInsertPo" useGeneratedKeys="true" keyProperty="id" parameterType="java.util.List">
         INSERT INTO tb_mdm_configuration (
-            id, platform_code, car_line_code, model_code, code, name, name_en, vehicle_stage_code, enable, sort,
-            variant_code, source, external_ref_id, external_version, last_sync_time,
+            id, code, name, name_local, variant_code,
+            source, external_ref_id, external_version, last_sync_time,
             description, create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
         VALUES
         <foreach collection="list" item="item" index="index" separator=",">
         (
-            #{item.id}, #{item.platformCode}, #{item.carLineCode}, #{item.modelCode}, #{item.code}, #{item.name}, #{item.nameEn}, #{item.vehicleStageCode}, #{item.enable}, #{item.sort},
-            #{item.variantCode}, #{item.source}, #{item.externalRefId}, #{item.externalVersion}, #{item.lastSyncTime},
+            #{item.id}, #{item.code}, #{item.name}, #{item.nameLocal}, #{item.variantCode},
+            #{item.source}, #{item.externalRefId}, #{item.externalVersion}, #{item.lastSyncTime},
             #{item.description}, now(), #{item.createBy}, now(), #{item.modifyBy}, 1, 1
         )
         </foreach>
@@ -67,17 +85,8 @@
         <if test="name != null and name != ''">
             t.name = #{name},
         </if>
-        <if test="nameEn != null and nameEn != ''">
-            t.name_en = #{nameEn},
-        </if>
-        <if test="vehicleStageCode != null and vehicleStageCode != ''">
-            t.vehicle_stage_code = #{vehicleStageCode},
-        </if>
-        <if test="enable != null">
-            t.enable = #{enable},
-        </if>
-        <if test="sort != null">
-            t.sort = #{sort},
+        <if test="nameLocal != null and nameLocal != ''">
+            t.name_local = #{nameLocal},
         </if>
         <if test="variantCode != null and variantCode != ''">
             t.variant_code = #{variantCode},
@@ -140,32 +149,14 @@
         <if test="id != null">
             AND t.id = #{id}
         </if>
-        <if test="platformCode != null and platformCode != ''">
-            AND t.platform_code = #{platformCode}
-        </if>
-        <if test="carLineCode != null and carLineCode != ''">
-            AND t.car_line_code = #{carLineCode}
-        </if>
-        <if test="modelCode != null and modelCode != ''">
-            AND t.model_code = #{modelCode}
-        </if>
         <if test="code != null and code != ''">
             AND t.code = #{code}
         </if>
         <if test="name != null and name != ''">
             AND t.name = #{name}
         </if>
-        <if test="nameEn != null and nameEn != ''">
-            AND t.name_en = #{nameEn}
-        </if>
-        <if test="vehicleStageCode != null and vehicleStageCode != ''">
-            AND t.vehicle_stage_code = #{vehicleStageCode}
-        </if>
-        <if test="enable != null">
-            AND t.enable = #{enable}
-        </if>
-        <if test="sort != null">
-            AND t.sort = #{sort}
+        <if test="nameLocal != null and nameLocal != ''">
+            AND t.name_local = #{nameLocal}
         </if>
         <if test="variantCode != null and variantCode != ''">
             AND t.variant_code = #{variantCode}
@@ -204,20 +195,14 @@
         SELECT <include refid="baseColumnList"/>
         FROM tb_mdm_configuration t
         WHERE t.row_valid = 1
-        <if test="platformCode != null and platformCode != ''">
-            AND t.platform_code = #{platformCode}
-        </if>
-        <if test="carLineCode != null and carLineCode != ''">
-            AND t.car_line_code = #{carLineCode}
-        </if>
-        <if test="modelCode != null and modelCode != ''">
-            AND t.model_code = #{modelCode}
-        </if>
         <if test="code != null and code != ''">
             AND t.code = #{code}
         </if>
         <if test="name != null and name != ''">
-            AND (t.name LIKE #{name} OR t.name_en LIKE #{name})
+            AND t.name LIKE #{name}
+        </if>
+        <if test="variantCode != null and variantCode != ''">
+            AND t.variant_code = #{variantCode}
         </if>
         <if test="beginTime != null">
             and date_format(t.create_time,'%Y%m%d') &gt;= date_format(#{beginTime},'%Y%m%d')
@@ -225,7 +210,7 @@
         <if test="endTime != null">
             and date_format(t.create_time,'%Y%m%d') &lt;= date_format(#{endTime},'%Y%m%d')
         </if>
-        ORDER BY t.sort ASC, t.id DESC
+        ORDER BY t.id DESC
     </select>
 
     <select id="selectPoByCode" parameterType="java.util.Map" resultMap="baseResultMap">
@@ -255,20 +240,123 @@
         SELECT COUNT(*)
         FROM tb_mdm_configuration t
         WHERE t.row_valid = 1
-        <if test="platformCode != null and platformCode != ''">
-            AND t.platform_code = #{platformCode}
-        </if>
-        <if test="carLineCode != null and carLineCode != ''">
-            AND t.car_line_code = #{carLineCode}
-        </if>
-        <if test="modelCode != null and modelCode != ''">
-            AND t.model_code = #{modelCode}
-        </if>
-        <if test="vehicleStageCode != null and vehicleStageCode != ''">
-            AND t.vehicle_stage_code = #{vehicleStageCode}
-        </if>
         <if test="code != null and code != ''">
             AND t.code = #{code}
         </if>
+        <if test="variantCode != null and variantCode != ''">
+            AND t.variant_code = #{variantCode}
+        </if>
+    </select>
+
+    <!-- ==================== CR-047 产品树补全查询 ==================== -->
+
+    <select id="selectConfigurationHierarchyByCode" parameterType="String" resultMap="hierarchyResultMap">
+        SELECT <include refid="hierarchyColumnList"/>
+        <include refid="productTreeJoin"/>
+        WHERE c.row_valid = 1
+        AND c.code = #{code}
+        LIMIT 1
+    </select>
+
+    <select id="selectConfigurationHierarchyByCodes" parameterType="java.util.List" resultMap="hierarchyResultMap">
+        SELECT <include refid="hierarchyColumnList"/>
+        <include refid="productTreeJoin"/>
+        WHERE c.row_valid = 1
+        AND c.code IN
+        <foreach collection="codes" item="code" open="(" separator="," close=")">
+            #{code}
+        </foreach>
+    </select>
+
+    <select id="selectConfigurationHierarchyByMap" parameterType="java.util.Map" resultMap="hierarchyResultMap">
+        SELECT <include refid="hierarchyColumnList"/>
+        <include refid="productTreeJoin"/>
+        WHERE c.row_valid = 1
+        <if test="code != null and code != ''">
+            AND c.code = #{code}
+        </if>
+        <if test="name != null and name != ''">
+            AND c.name LIKE #{name}
+        </if>
+        <if test="variantCode != null and variantCode != ''">
+            AND c.variant_code = #{variantCode}
+        </if>
+        <if test="modelCode != null and modelCode != ''">
+            AND v.model_code = #{modelCode}
+        </if>
+        <if test="carLineCode != null and carLineCode != ''">
+            AND m.car_line_code = #{carLineCode}
+        </if>
+        <if test="platformCode != null and platformCode != ''">
+            AND m.platform_code = #{platformCode}
+        </if>
+        <if test="brandCode != null and brandCode != ''">
+            AND cl.brand_code = #{brandCode}
+        </if>
+        <if test="beginTime != null">
+            and date_format(c.create_time,'%Y%m%d') &gt;= date_format(#{beginTime},'%Y%m%d')
+        </if>
+        <if test="endTime != null">
+            and date_format(c.create_time,'%Y%m%d') &lt;= date_format(#{endTime},'%Y%m%d')
+        </if>
+        ORDER BY c.id DESC
+    </select>
+
+    <select id="countConfigurationHierarchyByMap" parameterType="java.util.Map" resultType="int">
+        SELECT COUNT(*)
+        FROM tb_mdm_configuration c
+        LEFT JOIN tb_mdm_variant v ON v.code = c.variant_code AND v.row_valid = 1
+        LEFT JOIN tb_mdm_model m ON m.code = v.model_code AND m.row_valid = 1
+        LEFT JOIN tb_mdm_car_line cl ON cl.code = m.car_line_code AND cl.row_valid = 1
+        WHERE c.row_valid = 1
+        <if test="code != null and code != ''">
+            AND c.code = #{code}
+        </if>
+        <if test="name != null and name != ''">
+            AND c.name LIKE #{name}
+        </if>
+        <if test="variantCode != null and variantCode != ''">
+            AND c.variant_code = #{variantCode}
+        </if>
+        <if test="modelCode != null and modelCode != ''">
+            AND v.model_code = #{modelCode}
+        </if>
+        <if test="carLineCode != null and carLineCode != ''">
+            AND m.car_line_code = #{carLineCode}
+        </if>
+        <if test="platformCode != null and platformCode != ''">
+            AND m.platform_code = #{platformCode}
+        </if>
+        <if test="brandCode != null and brandCode != ''">
+            AND cl.brand_code = #{brandCode}
+        </if>
+        <if test="beginTime != null">
+            and date_format(c.create_time,'%Y%m%d') &gt;= date_format(#{beginTime},'%Y%m%d')
+        </if>
+        <if test="endTime != null">
+            and date_format(c.create_time,'%Y%m%d') &lt;= date_format(#{endTime},'%Y%m%d')
+        </if>
+    </select>
+
+    <!-- ProjectionIntegrityChecker：缺失 Variant 引用 -->
+    <select id="countPoMissingVariant" resultType="long">
+        SELECT COUNT(*)
+        FROM tb_mdm_configuration c
+        LEFT JOIN tb_mdm_variant v ON v.code = c.variant_code AND v.row_valid = 1
+        WHERE c.row_valid = 1
+        AND v.code IS NULL
+    </select>
+
+    <!-- ProjectionIntegrityChecker：产品树任一层级（Variant/Model/CarLine/Platform/Brand）缺失 -->
+    <select id="countPoMissingHierarchy" resultType="long">
+        SELECT COUNT(*)
+        FROM tb_mdm_configuration c
+        LEFT JOIN tb_mdm_variant v ON v.code = c.variant_code AND v.row_valid = 1
+        LEFT JOIN tb_mdm_model m ON m.code = v.model_code AND m.row_valid = 1
+        LEFT JOIN tb_mdm_car_line cl ON cl.code = m.car_line_code AND cl.row_valid = 1
+        LEFT JOIN tb_mdm_platform p ON p.code = m.platform_code AND p.row_valid = 1
+        LEFT JOIN tb_mdm_brand b ON b.code = cl.brand_code AND b.row_valid = 1
+        WHERE c.row_valid = 1
+        AND (v.code IS NULL OR m.code IS NULL OR cl.code IS NULL OR p.code IS NULL OR b.code IS NULL)
     </select>
 </mapper>

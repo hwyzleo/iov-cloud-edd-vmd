@@ -227,4 +227,36 @@ class FlywayMigrationTest {
         assertTrue(content.contains("uk_observation_key"), "消费审计表应包含observation_key唯一约束");
         assertTrue(content.contains("item_quarantined"), "消费审计表应包含隔离统计列");
     }
+
+    @Test
+    @DisplayName("V48迁移脚本文件应存在（CR-047）")
+    void v48MigrationScript_shouldExist() {
+        Path migrationFile = Paths.get(MIGRATION_PATH, "V48__cr047_configuration_projection_alignment.sql");
+        assertTrue(Files.exists(migrationFile), "V48迁移脚本文件应该存在");
+    }
+
+    @Test
+    @DisplayName("V48迁移脚本应新增name_local并删除旧层级冗余列（CR-047）")
+    void v48MigrationScript_shouldAlignConfigurationProjection() throws IOException {
+        Path migrationFile = Paths.get(MIGRATION_PATH, "V48__cr047_configuration_projection_alignment.sql");
+        String content = Files.readString(migrationFile);
+        assertTrue(content.contains("name_local"), "迁移脚本应新增name_local列");
+        assertTrue(content.contains("variant_code"), "迁移脚本应收敛variant_code为NOT NULL");
+        assertTrue(content.contains("DROP COLUMN `platform_code`"), "迁移脚本应删除platform_code列");
+        assertTrue(content.contains("DROP COLUMN `car_line_code`"), "迁移脚本应删除car_line_code列");
+        assertTrue(content.contains("DROP COLUMN `model_code`"), "迁移脚本应删除model_code列");
+        assertTrue(content.contains("DROP COLUMN `vehicle_stage_code`"), "迁移脚本应删除vehicle_stage_code列");
+        assertTrue(content.contains("DROP COLUMN `enable`"), "迁移脚本应删除enable列");
+        assertTrue(content.contains("DROP COLUMN `sort`"), "迁移脚本应删除sort列");
+        assertTrue(content.contains("DROP COLUMN `name_en`"), "迁移脚本应删除name_en列");
+    }
+
+    @Test
+    @DisplayName("V48迁移脚本应新增variant查询索引（CR-047）")
+    void v48MigrationScript_shouldAddVariantIndex() throws IOException {
+        Path migrationFile = Paths.get(MIGRATION_PATH, "V48__cr047_configuration_projection_alignment.sql");
+        String content = Files.readString(migrationFile);
+        assertTrue(content.contains("idx_mdm_configuration_variant"), "迁移脚本应新增variant查询索引");
+        assertTrue(content.contains("idx_mdm_configuration_sync"), "迁移脚本应新增同步监控索引");
+    }
 }

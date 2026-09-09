@@ -4,12 +4,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Configuration;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.ConfigurationOptionCode;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.ConfigurationHierarchy;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmConfigurationRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter.ConfigurationConverter;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter.ConfigurationOptionCodeConverter;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.MdmConfigurationMapper;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.MdmConfigurationOptionCodeMapper;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.MdmConfigurationHierarchyPo;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.MdmConfigurationPo;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.MdmConfigurationOptionCodePo;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
@@ -122,6 +124,46 @@ public class MdmConfigurationRepositoryImpl implements MdmConfigurationRepositor
     @Override
     public int updateById(Configuration configuration) {
         return mdmConfigurationMapper.updatePo(ConfigurationConverter.INSTANCE.fromDomain(configuration));
+    }
+
+    @Override
+    public ConfigurationHierarchy selectHierarchyByCode(String code) {
+        return ConfigurationConverter.INSTANCE.toHierarchy(mdmConfigurationMapper.selectConfigurationHierarchyByCode(code));
+    }
+
+    @Override
+    public List<ConfigurationHierarchy> selectHierarchyByCodes(List<String> codes) {
+        if (codes == null || codes.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+        List<MdmConfigurationHierarchyPo> poList = mdmConfigurationMapper.selectConfigurationHierarchyByCodes(codes);
+        return PageUtil.convert(poList, ConfigurationConverter.INSTANCE::toHierarchy);
+    }
+
+    @Override
+    public List<ConfigurationHierarchy> selectHierarchyByMap(Map<String, Object> map) {
+        List<MdmConfigurationHierarchyPo> poList = mdmConfigurationMapper.selectConfigurationHierarchyByMap(map);
+        return PageUtil.convert(poList, ConfigurationConverter.INSTANCE::toHierarchy);
+    }
+
+    @Override
+    public int countHierarchyByMap(Map<String, Object> map) {
+        return mdmConfigurationMapper.countConfigurationHierarchyByMap(map);
+    }
+
+    @Override
+    public long countMissingVariant() {
+        return mdmConfigurationMapper.countPoMissingVariant();
+    }
+
+    @Override
+    public long countMissingHierarchy() {
+        return mdmConfigurationMapper.countPoMissingHierarchy();
+    }
+
+    @Override
+    public int logicalDeleteById(Long id) {
+        return mdmConfigurationMapper.logicalDeletePo(id);
     }
 
 }

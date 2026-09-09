@@ -11,14 +11,20 @@ import net.hwyz.iov.cloud.edd.mdm.api.service.PlantService;
 import net.hwyz.iov.cloud.edd.mdm.api.service.PlatformService;
 import net.hwyz.iov.cloud.edd.mdm.api.service.VariantService;
 import net.hwyz.iov.cloud.edd.mdm.api.service.VehicleNodeService;
+import net.hwyz.iov.cloud.edd.mdm.api.vo.response.ConfigurationPageResponse;
+import net.hwyz.iov.cloud.edd.mdm.api.vo.response.ConfigurationResponse;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.ConfigurationProjectionCommand;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmBrandEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmCarLineEvent;
+import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmConfigurationEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmModelEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmOptionCodeEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmOptionFamilyEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmPartEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmPlatformEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmVehicleNodeEvent;
+import net.hwyz.iov.cloud.edd.vmd.service.application.mapper.MdmConfigurationProjectionMapper;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.monitoring.ConfigurationSyncMetrics;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Brand;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.CarLine;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Configuration;
@@ -91,6 +97,15 @@ class MdmSyncAppServiceTest {
 
     @Mock
     private MdmPartRepository mdmPartRepository;
+
+    @Mock
+    private MdmConfigurationProjectionMapper mdmConfigurationProjectionMapper;
+
+    @Mock
+    private ProjectionIntegrityChecker projectionIntegrityChecker;
+
+    @Mock
+    private ConfigurationSyncMetrics configurationSyncMetrics;
 
     @Mock
     private BrandService brandService;
@@ -407,6 +422,70 @@ class MdmSyncAppServiceTest {
         verify(mdmOptionFamilyRepository).countOptionCodeBySource(SourceType.MDM.name());
         verify(mdmVehicleNodeRepository).countBySource(SourceType.MDM);
         verify(mdmPartRepository).countBySource(SourceType.MDM);
+    }
+
+    @Test
+    @DisplayName("handleConfigurationEvent创建事件应经统一Projection Mapper apply")
+    void handleConfigurationEvent_shouldApplyProjectionForCreatedEvent() {
+        // Given
+        MdmConfigurationEvent event = new MdmConfigurationEvent("CREATED", "mdm-cfg-001", 1L, "CFG001",
+                "配置1", "配置1本地化", "VAR001", "desc", LocalDateTime.now());
+        ConfigurationProjectionCommand command = ConfigurationProjectionCommand.builder()
+                .code("CFG001").name("配置1").nameLocal("配置1本地化").variantCode("VAR001")
+                .externalRefId("mdm-cfg-001").externalVersion(1L).build();
+        when(mdmConfigurationProjectionMapper.fromEvent(event)).thenReturn(command);
+
+        // When
+        mdmSyncAppService.handleConfigurationEvent(event);
+
+        // Then
+        verify(mdmConfigurationProjectionMapper).fromEvent(event);
+        verify(mdmConfigurationProjectionMapper).apply(command);
+        verify(mdmConfigurationProjectionMapper, never()).handleDeletion(any());
+    }
+
+    @Test
+    @DisplayName("handleConfigurationEvent删除事件应经统一Projection Mapper逻辑删除")
+    void handleConfigurationEvent_shouldHandleDeletionForDeletedEvent() {
+        // Given
+        MdmConfigurationEvent event = new MdmConfigurationEvent("DELETED", "mdm-cfg-001", 2L, "CFG001",
+                null, null, null, null, LocalDateTime.now());
+
+        // When
+        mdmSyncAppService.handleConfigurationEvent(event);
+
+        // Then
+        verify(mdmConfigurationProjectionMapper).handleDeletion(event);
+        verify(mdmConfigurationProjectionMapper, never()).apply(any());
+    }
+
+    @Test
+    @DisplayName("bootstrapConfiguration应经统一Projection Mapper写入并执行完整性检查")
+    void bootstrapConfiguration_shouldUseProjectionMapperAndRunIntegrityCheck() {
+        // Given
+        when(mdmConfigurationRepository.countBySource(SourceType.MDM)).thenReturn(0L);
+        ConfigurationResponse snapshot = ConfigurationResponse.builder()
+                .id(1001L).code("CFG001").name("配置1").nameLocal("配置1本地化")
+                .variantCode("VAR001").description("desc").sourceId("mdm-cfg-001").version(1)
+                .build();
+        ConfigurationPageResponse pageResponse = ConfigurationPageResponse.builder()
+                .total(1L)
+                .rows(java.util.Collections.singletonList(snapshot))
+                .build();
+        when(configurationService.listAll(anyInt(), anyInt(), any(), any())).thenReturn(pageResponse);
+        ConfigurationProjectionCommand command = ConfigurationProjectionCommand.builder()
+                .code("CFG001").name("配置1").nameLocal("配置1本地化").variantCode("VAR001")
+                .externalRefId("mdm-cfg-001").externalVersion(1L).build();
+        when(mdmConfigurationProjectionMapper.fromSnapshot(snapshot)).thenReturn(command);
+
+        // When
+        mdmSyncAppService.bootstrapConfiguration();
+
+        // Then
+        verify(configurationService).listAll(anyInt(), anyInt(), any(), any());
+        verify(mdmConfigurationProjectionMapper).fromSnapshot(snapshot);
+        verify(mdmConfigurationProjectionMapper).apply(any(ConfigurationProjectionCommand.class));
+        verify(projectionIntegrityChecker).check();
     }
 
     @Test

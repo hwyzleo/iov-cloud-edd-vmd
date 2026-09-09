@@ -4,9 +4,11 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.ConfigurationCmd;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.ConfigurationQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ConfigurationDto;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Configuration;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.ConfigurationHierarchy;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmConfigurationRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.monitoring.ConfigurationSyncMetrics;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,32 +37,34 @@ class ConfigurationAppServiceTest {
     @Mock
     private OptionFamilyAppService optionFamilyAppService;
 
+    @Mock
+    private ConfigurationSyncMetrics configurationSyncMetrics;
+
     @InjectMocks
     private ConfigurationAppService configurationAppService;
 
     @Test
-    @DisplayName("search方法应返回匹配的配置列表")
+    @DisplayName("search方法应返回匹配的配置列表（产品树 JOIN 查询）")
     void testSearch() {
         ConfigurationQuery query = ConfigurationQuery.builder()
                 .platformCode("P001")
                 .carLineCode("CL001")
                 .modelCode("M001")
                 .variantCode("V001")
-                .baseModelCode("BM001")
                 .code("C001")
                 .name("测试")
                 .build();
 
-        Configuration c1 = Configuration.builder().id(1L).code("C001").name("配置1").build();
-        Configuration c2 = Configuration.builder().id(2L).code("C002").name("配置2").build();
+        ConfigurationHierarchy h1 = ConfigurationHierarchy.builder().id(1L).code("C001").name("配置1").variantCode("V001").build();
+        ConfigurationHierarchy h2 = ConfigurationHierarchy.builder().id(2L).code("C002").name("配置2").variantCode("V001").build();
 
-        when(mdmConfigurationRepository.selectByMap(any(Map.class))).thenReturn(Arrays.asList(c1, c2));
+        when(mdmConfigurationRepository.selectHierarchyByMap(any(Map.class))).thenReturn(Arrays.asList(h1, h2));
 
         List<ConfigurationDto> result = configurationAppService.search(query);
 
         assertNotNull(result);
         assertEquals(2, result.size());
-        verify(mdmConfigurationRepository).selectByMap(any(Map.class));
+        verify(mdmConfigurationRepository).selectHierarchyByMap(any(Map.class));
     }
 
     @Test
@@ -70,29 +74,29 @@ class ConfigurationAppServiceTest {
                 .platformCode("P001")
                 .build();
 
-        when(mdmConfigurationRepository.selectByMap(any(Map.class))).thenReturn(Collections.emptyList());
+        when(mdmConfigurationRepository.selectHierarchyByMap(any(Map.class))).thenReturn(Collections.emptyList());
 
         List<ConfigurationDto> result = configurationAppService.search(query);
 
         assertNotNull(result);
         assertTrue(result.isEmpty());
-        verify(mdmConfigurationRepository).selectByMap(any(Map.class));
+        verify(mdmConfigurationRepository).selectHierarchyByMap(any(Map.class));
     }
 
     @Test
-    @DisplayName("getConfigurationListByVariantCode应返回启用的配置列表")
+    @DisplayName("getConfigurationListByVariantCode应返回该版本下配置列表（批量产品树补全）")
     void testGetConfigurationListByVariantCode() {
         String variantCode = "V001";
-        Configuration c1 = Configuration.builder().id(1L).code("C001").variantCode(variantCode).enable(true).build();
-        Configuration c2 = Configuration.builder().id(2L).code("C002").variantCode(variantCode).enable(true).build();
+        ConfigurationHierarchy h1 = ConfigurationHierarchy.builder().id(1L).code("C001").variantCode(variantCode).build();
+        ConfigurationHierarchy h2 = ConfigurationHierarchy.builder().id(2L).code("C002").variantCode(variantCode).build();
 
-        when(mdmConfigurationRepository.selectByExample(any(Configuration.class))).thenReturn(Arrays.asList(c1, c2));
+        when(mdmConfigurationRepository.selectHierarchyByMap(any(Map.class))).thenReturn(Arrays.asList(h1, h2));
 
         List<ConfigurationDto> result = configurationAppService.getConfigurationListByVariantCode(variantCode);
 
         assertNotNull(result);
         assertEquals(2, result.size());
-        verify(mdmConfigurationRepository).selectByExample(any(Configuration.class));
+        verify(mdmConfigurationRepository).selectHierarchyByMap(any(Map.class));
     }
 
     @Test
@@ -100,28 +104,34 @@ class ConfigurationAppServiceTest {
     void testGetConfigurationListByVariantCode_noResult() {
         String variantCode = "V001";
 
-        when(mdmConfigurationRepository.selectByExample(any(Configuration.class))).thenReturn(Collections.emptyList());
+        when(mdmConfigurationRepository.selectHierarchyByMap(any(Map.class))).thenReturn(Collections.emptyList());
 
         List<ConfigurationDto> result = configurationAppService.getConfigurationListByVariantCode(variantCode);
 
         assertNotNull(result);
         assertTrue(result.isEmpty());
-        verify(mdmConfigurationRepository).selectByExample(any(Configuration.class));
+        verify(mdmConfigurationRepository).selectHierarchyByMap(any(Map.class));
     }
 
     @Test
-    @DisplayName("getConfigurationByCode应返回配置DTO")
+    @DisplayName("getConfigurationByCode应返回配置DTO（含产品树派生字段）")
     void testGetConfigurationByCode() {
         String code = "C001";
-        Configuration configuration = Configuration.builder().id(1L).code(code).name("配置1").build();
+        ConfigurationHierarchy hierarchy = ConfigurationHierarchy.builder()
+                .id(1L).code(code).name("配置1").variantCode("V001")
+                .modelCode("M001").carLineCode("CL001").platformCode("P001").brandCode("B001")
+                .build();
 
-        when(mdmConfigurationRepository.selectByCode(code)).thenReturn(configuration);
+        when(mdmConfigurationRepository.selectHierarchyByCode(code)).thenReturn(hierarchy);
 
         ConfigurationDto result = configurationAppService.getConfigurationByCode(code);
 
         assertNotNull(result);
         assertEquals(code, result.getCode());
-        verify(mdmConfigurationRepository).selectByCode(code);
+        assertEquals("V001", result.getVariantCode());
+        assertEquals("M001", result.getModelCode());
+        assertEquals("B001", result.getBrandCode());
+        verify(mdmConfigurationRepository).selectHierarchyByCode(code);
     }
 
     @Test
@@ -129,12 +139,12 @@ class ConfigurationAppServiceTest {
     void testGetConfigurationByCode_notFound() {
         String code = "C001";
 
-        when(mdmConfigurationRepository.selectByCode(code)).thenReturn(null);
+        when(mdmConfigurationRepository.selectHierarchyByCode(code)).thenReturn(null);
 
         ConfigurationDto result = configurationAppService.getConfigurationByCode(code);
 
         assertNull(result);
-        verify(mdmConfigurationRepository).selectByCode(code);
+        verify(mdmConfigurationRepository).selectHierarchyByCode(code);
     }
 
     @Test
@@ -257,11 +267,7 @@ class ConfigurationAppServiceTest {
         ConfigurationCmd cmd = ConfigurationCmd.builder()
                 .code("C001")
                 .name("新配置")
-                .platformCode("P001")
-                .carLineCode("CL001")
-                .modelCode("M001")
-                .baseModelCode("V001")
-                .enable(true)
+                .variantCode("V001")
                 .build();
 
         when(mdmConfigurationRepository.insert(any(Configuration.class))).thenReturn(1);
@@ -279,11 +285,7 @@ class ConfigurationAppServiceTest {
                 .id(1L)
                 .code("C001")
                 .name("修改后的配置")
-                .platformCode("P001")
-                .carLineCode("CL001")
-                .modelCode("M001")
-                .baseModelCode("V001")
-                .enable(true)
+                .variantCode("V001")
                 .build();
 
         when(mdmConfigurationRepository.update(any(Configuration.class))).thenReturn(1);

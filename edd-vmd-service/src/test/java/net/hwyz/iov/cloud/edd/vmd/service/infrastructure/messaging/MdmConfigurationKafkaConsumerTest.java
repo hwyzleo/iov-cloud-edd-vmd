@@ -3,7 +3,7 @@ package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmConfigurationEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.MdmSyncAppService;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.monitoring.MdmSyncMetrics;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.monitoring.ConfigurationSyncMetrics;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -29,13 +29,18 @@ class MdmConfigurationKafkaConsumerTest {
     private MdmSyncAppService mdmSyncAppService;
 
     @Mock
-    private MdmSyncMetrics mdmSyncMetrics;
+    private ConfigurationSyncMetrics configurationSyncMetrics;
 
     @Mock
     private ObjectMapper objectMapper;
 
     @InjectMocks
     private MdmConfigurationKafkaConsumer kafkaConsumer;
+
+    private MdmConfigurationEvent buildEvent(String eventType, String entityId, Long version, String code) {
+        return new MdmConfigurationEvent(eventType, entityId, version, code,
+                "配置1", "Config1Local", "VAR001", "desc", LocalDateTime.now());
+    }
 
     @Test
     @DisplayName("onConfigurationEvent应成功处理MDM Configuration事件并调用handleConfigurationEvent")
@@ -44,8 +49,7 @@ class MdmConfigurationKafkaConsumerTest {
         String messageJson = "{\"eventType\":\"CREATED\",\"entityId\":\"mdm-cfg-001\",\"version\":1,\"code\":\"CFG001\"}";
         ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.product.configuration.created", 0, 0L, "key", messageJson);
 
-        MdmConfigurationEvent testEvent = new MdmConfigurationEvent("CREATED", "mdm-cfg-001", 1L, "CFG001",
-                "配置1", "Config1", "PF001", "CL001", "MODEL001", "VAR001", "STAGE001", true, 1, LocalDateTime.now());
+        MdmConfigurationEvent testEvent = buildEvent("CREATED", "mdm-cfg-001", 1L, "CFG001");
 
         when(objectMapper.readValue(messageJson, MdmConfigurationEvent.class)).thenReturn(testEvent);
 
@@ -54,8 +58,7 @@ class MdmConfigurationKafkaConsumerTest {
 
         // Then
         verify(mdmSyncAppService).handleConfigurationEvent(testEvent);
-        verify(mdmSyncMetrics).recordSuccess();
-        verify(mdmSyncMetrics, never()).recordFailure();
+        verify(configurationSyncMetrics, never()).recordFailure();
     }
 
     @Test
@@ -73,18 +76,17 @@ class MdmConfigurationKafkaConsumerTest {
 
         // Then
         verify(mdmSyncAppService, never()).handleConfigurationEvent(any());
-        verify(mdmSyncMetrics).recordFailure();
+        verify(configurationSyncMetrics).recordFailure();
     }
 
     @Test
-    @DisplayName("onConfigurationEvent应处理handleConfigurationEvent失败并记录失败指标")
+    @DisplayName("onConfigurationEvent应处理handleConfigurationEvent失败（如缺variantCode契约错误）并记录失败指标")
     void onConfigurationEvent_shouldHandleHandleConfigurationEventFailureAndRecordFailureMetric() throws Exception {
         // Given
         String messageJson = "{\"eventType\":\"CREATED\",\"entityId\":\"mdm-cfg-001\",\"version\":1,\"code\":\"CFG001\"}";
         ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.product.configuration.created", 0, 0L, "key", messageJson);
 
-        MdmConfigurationEvent testEvent = new MdmConfigurationEvent("CREATED", "mdm-cfg-001", 1L, "CFG001",
-                "配置1", "Config1", "PF001", "CL001", "MODEL001", "VAR001", "STAGE001", true, 1, LocalDateTime.now());
+        MdmConfigurationEvent testEvent = buildEvent("CREATED", "mdm-cfg-001", 1L, "CFG001");
 
         when(objectMapper.readValue(messageJson, MdmConfigurationEvent.class)).thenReturn(testEvent);
         doThrow(new RuntimeException("Handle error")).when(mdmSyncAppService).handleConfigurationEvent(testEvent);
@@ -93,25 +95,6 @@ class MdmConfigurationKafkaConsumerTest {
         kafkaConsumer.onConfigurationEvent(record);
 
         // Then
-        verify(mdmSyncMetrics).recordFailure();
-    }
-
-    @Test
-    @DisplayName("onConfigurationEvent应记录处理耗时")
-    void onConfigurationEvent_shouldRecordProcessingDuration() throws Exception {
-        // Given
-        String messageJson = "{\"eventType\":\"CREATED\",\"entityId\":\"mdm-cfg-001\",\"version\":1,\"code\":\"CFG001\"}";
-        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.product.configuration.created", 0, 0L, "key", messageJson);
-
-        MdmConfigurationEvent testEvent = new MdmConfigurationEvent("CREATED", "mdm-cfg-001", 1L, "CFG001",
-                "配置1", "Config1", "PF001", "CL001", "MODEL001", "VAR001", "STAGE001", true, 1, LocalDateTime.now());
-
-        when(objectMapper.readValue(messageJson, MdmConfigurationEvent.class)).thenReturn(testEvent);
-
-        // When
-        kafkaConsumer.onConfigurationEvent(record);
-
-        // Then
-        verify(mdmSyncMetrics).recordDuration(anyLong());
+        verify(configurationSyncMetrics).recordFailure();
     }
 }

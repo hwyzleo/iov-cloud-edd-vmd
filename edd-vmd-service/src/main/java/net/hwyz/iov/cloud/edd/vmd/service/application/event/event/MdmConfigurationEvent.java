@@ -22,59 +22,28 @@ public class MdmConfigurationEvent extends MdmEvent {
     private String name;
 
     /**
-     * 英文名称
+     * 本地化名称（CR-047：对齐 MDM nameLocal 契约）
      */
-    private String nameEn;
+    private String nameLocal;
 
     /**
-     * 平台代码
-     */
-    private String platformCode;
-
-    /**
-     * 车系代码
-     */
-    private String carLineCode;
-
-    /**
-     * 车型代码
-     */
-    private String modelCode;
-
-    /**
-     * 版本代码
+     * 版本代码（CR-047：Configuration 唯一直接产品树父引用）
      */
     private String variantCode;
 
     /**
-     * 阶段代码
+     * 备注
      */
-    private String vehicleStageCode;
-
-    /**
-     * 是否启用
-     */
-    private Boolean enable;
-
-    /**
-     * 排序
-     */
-    private Integer sort;
+    private String description;
 
     public MdmConfigurationEvent(String eventType, String entityId, Long version, String code,
-                                  String name, String nameEn, String platformCode, String carLineCode,
-                                  String modelCode, String variantCode, String vehicleStageCode,
-                                  Boolean enable, Integer sort, LocalDateTime occurredAt) {
+                                  String name, String nameLocal, String variantCode, String description,
+                                  LocalDateTime occurredAt) {
         super(eventType, entityId, version, code, occurredAt);
         this.name = name;
-        this.nameEn = nameEn;
-        this.platformCode = platformCode;
-        this.carLineCode = carLineCode;
-        this.modelCode = modelCode;
+        this.nameLocal = nameLocal;
         this.variantCode = variantCode;
-        this.vehicleStageCode = vehicleStageCode;
-        this.enable = enable;
-        this.sort = sort;
+        this.description = description;
     }
 
 }

@@ -14,27 +14,19 @@ public class ConfigurationRequest extends BaseRequest {
 
     private Long id;
 
-    private String platformCode;
-
-    private String carLineCode;
-
-    private String modelCode;
-
+    /**
+     * 版本代码（CR-047：Configuration 唯一直接产品树父引用）
+     */
     private String variantCode;
-
-    private String baseModelCode;
 
     private String code;
 
     private String name;
 
-    private String nameEn;
-
-    private String vehicleStageCode;
-
-    private Boolean enable;
-
-    private Integer sort;
+    /**
+     * 本地化名称（CR-047）
+     */
+    private String nameLocal;
 
     private Date createTime;
 

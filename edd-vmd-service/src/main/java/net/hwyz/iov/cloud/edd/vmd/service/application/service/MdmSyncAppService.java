@@ -36,8 +36,10 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmPlantEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmVariantEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmVehicleNodeEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmPartEvent;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.ConfigurationProjectionCommand;
+import net.hwyz.iov.cloud.edd.vmd.service.application.mapper.MdmConfigurationProjectionMapper;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.monitoring.ConfigurationSyncMetrics;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Brand;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Configuration;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.OptionFamily;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.OptionCode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Platform;
@@ -86,6 +88,9 @@ public class MdmSyncAppService {
     private final MdmOptionFamilyRepository mdmOptionFamilyRepository;
     private final MdmVehicleNodeRepository mdmVehicleNodeRepository;
     private final MdmPartRepository mdmPartRepository;
+    private final MdmConfigurationProjectionMapper mdmConfigurationProjectionMapper;
+    private final ProjectionIntegrityChecker projectionIntegrityChecker;
+    private final ConfigurationSyncMetrics configurationSyncMetrics;
 
     // 使用 MDM 标准 API 接口
     private final BrandService brandService;
@@ -288,50 +293,22 @@ public class MdmSyncAppService {
 
     /**
      * 处理 MDM 配置事件
+     * <p>
+     * Created/Updated：经统一 Projection Mapper 按 externalVersion 单调 upsert（RD-047-3）；
+     * Deleted/Deactivated：按现有投影删除语义逻辑删除，不物理级联删除选项映射与车辆历史事实；
+     * 旧版本事件忽略并计数；缺 variantCode 等必需字段属契约错误，抛异常进入现有重试/DLQ，不写半条投影。
+     * </p>
      */
     public void handleConfigurationEvent(MdmConfigurationEvent event) {
-        log.info("处理MDM配置事件: entityId={}, version={}", event.getEntityId(), event.getVersion());
-        Configuration localConfiguration = mdmConfigurationRepository.selectByCode(event.getCode());
-        if (localConfiguration == null) {
-            Configuration newConfiguration = Configuration.builder()
-                    .code(event.getCode())
-                    .name(event.getName())
-                    .nameEn(event.getNameEn())
-                    .platformCode(event.getPlatformCode())
-                    .carLineCode(event.getCarLineCode())
-                    .modelCode(event.getModelCode())
-                    .variantCode(event.getVariantCode())
-                    .vehicleStageCode(event.getVehicleStageCode())
-                    .enable(event.getEnable())
-                    .sort(event.getSort())
-                    .source(SourceType.MDM)
-                    .externalRefId(event.getEntityId())
-                    .externalVersion(event.getVersion())
-                    .lastSyncTime(LocalDateTime.now())
-                    .build();
-            mdmConfigurationRepository.insert(newConfiguration);
-            log.info("新增配置: code={}", event.getCode());
-        } else {
-            if (event.getVersion() > localConfiguration.getExternalVersion()) {
-                localConfiguration.setName(event.getName());
-                localConfiguration.setNameEn(event.getNameEn());
-                localConfiguration.setPlatformCode(event.getPlatformCode());
-                localConfiguration.setCarLineCode(event.getCarLineCode());
-                localConfiguration.setModelCode(event.getModelCode());
-                localConfiguration.setVariantCode(event.getVariantCode());
-                localConfiguration.setVehicleStageCode(event.getVehicleStageCode());
-                localConfiguration.setEnable(event.getEnable());
-                localConfiguration.setSort(event.getSort());
-                localConfiguration.setExternalRefId(event.getEntityId());
-                localConfiguration.setExternalVersion(event.getVersion());
-                localConfiguration.setLastSyncTime(LocalDateTime.now());
-                mdmConfigurationRepository.updateById(localConfiguration);
-                log.info("更新配置: code={}, version={}", event.getCode(), event.getVersion());
-            } else {
-                log.info("忽略配置事件（版本不高于本地）: code={}, eventVersion={}, localVersion={}",
-                        event.getCode(), event.getVersion(), localConfiguration.getExternalVersion());
-            }
+        log.info("处理MDM配置事件: eventType={}, entityId={}, version={}",
+                event.getEventType(), event.getEntityId(), event.getVersion());
+        if ("DELETED".equalsIgnoreCase(event.getEventType())
+                || "DEACTIVATED".equalsIgnoreCase(event.getEventType())) {
+            mdmConfigurationProjectionMapper.handleDeletion(event);
+            return;
         }
+        ConfigurationProjectionCommand command = mdmConfigurationProjectionMapper.fromEvent(event);
+        mdmConfigurationProjectionMapper.apply(command);
     }
 
     /**
@@ -884,6 +861,10 @@ public class MdmSyncAppService {
 
     /**
      * Bootstrap 全量同步配置数据
+     * <p>
+     * 与 Kafka 增量事件共用同一 Projection Mapper / 版本门禁 / 幂等 upsert 内核（RD-047-3），
+     * 接受不含旧冗余字段的 MDM 快照；同步完成后运行产品树引用完整性检查（§4.2）。
+     * </p>
      */
     public void bootstrapConfiguration() {
         log.info("开始 Bootstrap 配置数据同步");
@@ -901,18 +882,16 @@ public class MdmSyncAppService {
                         break;
                     }
                     for (ConfigurationResponse configurationData : pageResponse.getRows()) {
-                        // ConfigurationResponse 只含 variantCode，不含 platformCode/carLineCode/modelCode
-                        Configuration configuration = Configuration.builder()
-                                .code(configurationData.getCode())
-                                .name(configurationData.getName())
-                                .variantCode(configurationData.getVariantCode())
-                                .source(SourceType.MDM)
-                                .externalRefId(configurationData.getSourceId())
-                                .externalVersion(configurationData.getVersion() != null ? configurationData.getVersion().longValue() : 0L)
-                                .lastSyncTime(convertToLocalDateTime(configurationData.getModifyTime()))
-                                .build();
-                        mdmConfigurationRepository.insert(configuration);
-                        log.info("Bootstrap 新增 MDM 配置投影: code={}", configurationData.getCode());
+                        configurationSyncMetrics.recordBootstrapTotal();
+                        try {
+                            ConfigurationProjectionCommand command = mdmConfigurationProjectionMapper.fromSnapshot(configurationData);
+                            mdmConfigurationProjectionMapper.apply(command);
+                            configurationSyncMetrics.recordBootstrapSuccess();
+                        } catch (Exception e) {
+                            configurationSyncMetrics.recordBootstrapFailure();
+                            log.error("Bootstrap 新增 MDM 配置投影失败: code={}, error={}",
+                                    configurationData.getCode(), e.getMessage(), e);
+                        }
                     }
                     if (pageResponse.getRows().size() < pageSize) {
                         hasMore = false;
@@ -920,6 +899,7 @@ public class MdmSyncAppService {
                         page++;
                     }
                 }
+                projectionIntegrityChecker.check();
                 log.info("Bootstrap 配置数据同步完成");
             } catch (Exception e) {
                 log.error("Bootstrap 配置数据同步失败", e);

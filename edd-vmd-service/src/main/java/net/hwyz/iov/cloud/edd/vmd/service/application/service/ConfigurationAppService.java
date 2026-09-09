@@ -12,8 +12,10 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.OptionFamilyDto
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.ConfigurationQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Configuration;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.ConfigurationOptionCode;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.ConfigurationHierarchy;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmConfigurationRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.monitoring.ConfigurationSyncMetrics;
 import net.hwyz.iov.cloud.framework.common.util.ParamHelper;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Service;
@@ -32,6 +34,7 @@ public class ConfigurationAppService {
     private final MdmConfigurationRepository mdmConfigurationRepository;
     private final VehBasicInfoRepository vehBasicInfoRepository;
     private final OptionFamilyAppService optionFamilyAppService;
+    private final ConfigurationSyncMetrics configurationSyncMetrics;
 
     public List<ConfigurationDto> search(ConfigurationQuery query) {
         Map<String, Object> map = new HashMap<>();
@@ -39,35 +42,40 @@ public class ConfigurationAppService {
         map.put("carLineCode", query.getCarLineCode());
         map.put("modelCode", query.getModelCode());
         map.put("variantCode", query.getVariantCode());
-        map.put("baseModelCode", query.getBaseModelCode());
         map.put("code", query.getCode());
         map.put("name", ParamHelper.fuzzyQueryParam(query.getName()));
         map.put("beginTime", query.getBeginTime());
         map.put("endTime", query.getEndTime());
-        List<Configuration> configurationList = mdmConfigurationRepository.selectByMap(map);
-        return PageUtil.convert(configurationList, ConfigurationAssembler.INSTANCE::fromDomain);
+        // CR-047：按产品树条件筛选在数据库侧 JOIN 完成并分页，列表组装批量加载（禁 N+1）
+        List<ConfigurationHierarchy> hierarchyList = mdmConfigurationRepository.selectHierarchyByMap(map);
+        return ConfigurationAssembler.INSTANCE.fromHierarchyList(hierarchyList);
     }
 
     public List<ConfigurationDto> getConfigurationListByVariantCode(String variantCode) {
-        List<Configuration> configurationList = mdmConfigurationRepository.selectByExample(Configuration.builder()
-                .variantCode(variantCode)
-                .enable(true)
-                .build());
-        return PageUtil.convert(configurationList, ConfigurationAssembler.INSTANCE::fromDomain);
+        Map<String, Object> map = new HashMap<>();
+        map.put("variantCode", variantCode);
+        // 直接使用 idx_mdm_configuration_variant，并批量补全产品树层级（禁 N+1）
+        List<ConfigurationHierarchy> hierarchyList = mdmConfigurationRepository.selectHierarchyByMap(map);
+        return ConfigurationAssembler.INSTANCE.fromHierarchyList(hierarchyList);
     }
 
     @Deprecated
     public List<ConfigurationDto> getConfigurationListByBaseModelCode(String baseModelCode) {
-        List<Configuration> configurationList = mdmConfigurationRepository.selectByExample(Configuration.builder()
-                .variantCode(baseModelCode)
-                .enable(true)
-                .build());
-        return PageUtil.convert(configurationList, ConfigurationAssembler.INSTANCE::fromDomain);
+        return getConfigurationListByVariantCode(baseModelCode);
     }
 
     public ConfigurationDto getConfigurationByCode(String code) {
-        Configuration configuration = mdmConfigurationRepository.selectByCode(code);
-        return ConfigurationAssembler.INSTANCE.fromDomain(configuration);
+        long start = System.currentTimeMillis();
+        try {
+            // CR-047：单次产品树 LEFT JOIN 补全，缺失上层投影时基础信息保留、派生字段为 null
+            ConfigurationHierarchy hierarchy = mdmConfigurationRepository.selectHierarchyByCode(code);
+            if (hierarchy == null) {
+                return null;
+            }
+            return ConfigurationAssembler.INSTANCE.fromHierarchy(hierarchy);
+        } finally {
+            configurationSyncMetrics.recordGetConfigurationDuration(System.currentTimeMillis() - start);
+        }
     }
 
     public Configuration getConfigurationEntityByCode(String code) {
