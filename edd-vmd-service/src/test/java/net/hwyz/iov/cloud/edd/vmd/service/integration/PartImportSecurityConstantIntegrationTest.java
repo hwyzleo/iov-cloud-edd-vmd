@@ -24,6 +24,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
@@ -297,9 +299,9 @@ class PartImportSecurityConstantIntegrationTest {
         assertNotNull(result);
         // 零件入站成功计数不受影响
         assertEquals(1, result.getSuccessCount());
-        // 安全常量预置失败由 PartSecurityPresetAppService 内部处理，不抛出异常
-        // 因此 failureCount 不变（仍为通用导入阶段的 0）
-        assertEquals(0, result.getFailureCount());
+        // 安全常量预置失败应计入导入失败（preset 返回失败信息，handleSecurityConstantPreset 合并计数）
+        assertEquals(1, result.getFailureCount());
+        assertTrue(result.getDescription() != null && result.getDescription().contains("KMS/HSM服务不可用"));
 
         // 验证安全常量状态更新为失败
         ArgumentCaptor<PartSecurityConstant> updateCaptor = ArgumentCaptor.forClass(PartSecurityConstant.class);
@@ -310,6 +312,13 @@ class PartImportSecurityConstantIntegrationTest {
 
         // 验证 PartSecurityPresetAppService 尝试更新导入数据描述
         verify(partImportDataRepository, atLeastOnce()).selectByBatchNum(batchNum);
+
+        // 预置失败后导入应保持未处理状态（已处理=否），便于修复后重试
+        // （update 有两次：handlePresetFailure 写备注一次、parsePartImportData 收尾一次，取最后一次）
+        ArgumentCaptor<PartImportData> importDataCaptor = ArgumentCaptor.forClass(PartImportData.class);
+        verify(partImportDataRepository, atLeastOnce()).update(importDataCaptor.capture());
+        List<PartImportData> updates = importDataCaptor.getAllValues();
+        assertFalse(updates.get(updates.size() - 1).getHandle());
     }
 
     @Test

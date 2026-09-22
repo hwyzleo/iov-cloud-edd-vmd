@@ -76,7 +76,8 @@ class PartSecurityPresetAppServiceTest {
         when(vehicleNodeSchemaRegistry.getBizType(TEST_VEHICLE_NODE_CODE)).thenReturn(BizType.TBOX_DEVICE_ROOT);
         when(keyProvisioningTemplate.deriveByUid(TEST_CHIP_UID, BizType.TBOX_DEVICE_ROOT)).thenReturn(mockResult());
 
-        service.preset(TEST_PART_CODE, TEST_SN, TEST_CHIP_UID, TEST_BATCH_NUM, TEST_VEHICLE_NODE_CODE);
+        String error = service.preset(TEST_PART_CODE, TEST_SN, TEST_CHIP_UID, TEST_BATCH_NUM, TEST_VEHICLE_NODE_CODE);
+        org.junit.jupiter.api.Assertions.assertNull(error);
 
         verify(partSecurityConstantRepository).insert(any(PartSecurityConstant.class));
         verify(keyProvisioningTemplate).deriveByUid(TEST_CHIP_UID, BizType.TBOX_DEVICE_ROOT);
@@ -104,8 +105,9 @@ class PartSecurityPresetAppServiceTest {
         when(partImportDataRepository.selectByBatchNum(TEST_BATCH_NUM)).thenReturn(null);
         when(partSecurityConstantRepository.update(any())).thenReturn(1);
 
-        org.junit.jupiter.api.Assertions.assertDoesNotThrow(() ->
-                service.preset(TEST_PART_CODE, TEST_SN, TEST_CHIP_UID, TEST_BATCH_NUM, TEST_VEHICLE_NODE_CODE));
+        String error = service.preset(TEST_PART_CODE, TEST_SN, TEST_CHIP_UID, TEST_BATCH_NUM, TEST_VEHICLE_NODE_CODE);
+        org.junit.jupiter.api.Assertions.assertNotNull(error);
+        org.junit.jupiter.api.Assertions.assertTrue(error.contains("KMS unavailable"));
 
         verify(partSecurityConstantRepository).update(argThat(constant ->
                 constant.getPresetState() == SecurityConstantState.FAILED &&

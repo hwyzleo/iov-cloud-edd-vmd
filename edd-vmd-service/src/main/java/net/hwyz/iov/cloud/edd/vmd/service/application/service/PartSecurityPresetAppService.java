@@ -30,14 +30,14 @@ public class PartSecurityPresetAppService {
     private static final String SECURITY_CONSTANT_TYPE = "ROOT";
 
     @Transactional(rollbackFor = Exception.class)
-    public void preset(String partCode, String sn, String chipUid, String batchNum, String vehicleNodeCode) {
+    public String preset(String partCode, String sn, String chipUid, String batchNum, String vehicleNodeCode) {
         log.info("开始预置零件[{}:{}]安全常量, chipUid={}, batchNum={}, vehicleNodeCode={}", partCode, sn, chipUid, batchNum, vehicleNodeCode);
 
         PartSecurityConstant existing = partSecurityConstantRepository.selectByPartCodeAndSn(partCode, sn);
 
         if (existing != null && existing.getPresetState() == SecurityConstantState.PRESET) {
             log.info("零件[{}:{}]安全常量已预置，跳过", partCode, sn);
-            return;
+            return null;
         }
 
         BizType bizType = vehicleNodeSchemaRegistry.getBizType(vehicleNodeCode);
@@ -79,8 +79,11 @@ public class PartSecurityPresetAppService {
             partSecurityConstantRepository.update(securityConstant);
 
             log.info("零件[{}:{}]安全常量预置成功", partCode, sn);
+            return null;
         } catch (Exception e) {
             handlePresetFailure(securityConstant, partCode, sn, batchNum, e.getMessage());
+            // 返回失败信息（KMS异常详情已写入 fail_reason 与导入备注），供调用方计入导入失败
+            return "安全常量预置失败: " + e.getMessage();
         }
     }
 

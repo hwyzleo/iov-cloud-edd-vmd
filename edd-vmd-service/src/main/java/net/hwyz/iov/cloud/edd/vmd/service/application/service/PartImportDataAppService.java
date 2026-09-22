@@ -406,8 +406,14 @@ public class PartImportDataAppService {
             }
             
             try {
-                partSecurityPresetAppService.preset(partCode, sn, chipUid, batchNum, vehicleNodeCode);
-                log.debug("零件[{}:{}]安全常量预置成功", partCode, sn);
+                String presetError = partSecurityPresetAppService.preset(partCode, sn, chipUid, batchNum, vehicleNodeCode);
+                if (presetError != null) {
+                    presetFailureCount++;
+                    presetErrors.add("[" + partCode + ":" + sn + "] " + presetError);
+                    log.warn("零件[{}:{}]安全常量预置失败: {}", partCode, sn, presetError);
+                } else {
+                    log.debug("零件[{}:{}]安全常量预置成功", partCode, sn);
+                }
             } catch (Exception e) {
                 presetFailureCount++;
                 presetErrors.add("安全常量预置失败[" + partCode + ":" + sn + "]: " + e.getMessage());
