@@ -1,6 +1,12 @@
 mybatis-plus:
   type-aliases-package: net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po
 
+iov:
+  kafka:
+    topic-provisioning:
+      # 服务启动后检查并创建 VMD 作为生产者输出的 Kafka Topic（vmd-vehicle-binding-changed 等）
+      enabled: true
+
 crypto:
   provisioning:
     enabled: true
