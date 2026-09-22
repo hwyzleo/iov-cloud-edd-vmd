@@ -88,6 +88,7 @@ public class MptPartImportDataController extends BaseController {
                     .successCount(result.getSuccessCount())
                     .failureCount(result.getFailureCount())
                     .invalidCount(result.getInvalidCount())
+                    .description(result.getDescription())
                     .build();
             return ApiResponse.ok(response);
         } catch (Exception e) {
@@ -115,6 +116,7 @@ public class MptPartImportDataController extends BaseController {
                     .successCount(result.getSuccessCount())
                     .failureCount(result.getFailureCount())
                     .invalidCount(result.getInvalidCount())
+                    .description(result.getDescription())
                     .build();
             return ApiResponse.ok(response);
         } catch (Exception e) {

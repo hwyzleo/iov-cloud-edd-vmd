@@ -75,7 +75,7 @@ class PartImportDataAppServiceTest {
                 .batchNum(batchNum)
                 .partCode("TEST_PART_001")
                 .version("1.0")
-                .data("{\"REQUEST\":{\"HEAD\":{\"ACCOUNT\":\"SUP001\"},\"DATA\":{\"vehicleNodeCode\":\"TSP\",\"ITEMS\":[{\"SN\":\"SN001\",\"vehicleNodeCode\":\"TSP\",\"deviceItem\":\"TSP\"}]}}}")
+                .data("{\"REQUEST\":{\"HEAD\":{\"ACCOUNT\":\"SUP001\"},\"DATA\":{\"vehicleNodeCode\":\"TSP\",\"ITEMS\":[{\"SN\":\"SN001\",\"vehicleNodeCode\":\"TSP\",\"deviceItem\":\"TSP\",\"HARDWARE_PART_NO\":\"TEST_PART_001\"}]}}}")
                 .handle(false)
                 .build();
 
@@ -126,7 +126,7 @@ class PartImportDataAppServiceTest {
                 .batchNum(batchNum)
                 .partCode("TEST_PART_001")
                 .version("1.0")
-                .data("{\"REQUEST\":{\"HEAD\":{\"ACCOUNT\":\"SUP001\"},\"DATA\":{\"vehicleNodeCode\":\"TSP\",\"ITEMS\":[{\"SN\":\"SN001\",\"vehicleNodeCode\":\"TSP\",\"deviceItem\":\"TSP\"}]}}}")
+                .data("{\"REQUEST\":{\"HEAD\":{\"ACCOUNT\":\"SUP001\"},\"DATA\":{\"vehicleNodeCode\":\"TSP\",\"ITEMS\":[{\"SN\":\"SN001\",\"vehicleNodeCode\":\"TSP\",\"deviceItem\":\"TSP\",\"HARDWARE_PART_NO\":\"TEST_PART_001\"}]}}}")
                 .handle(false)
                 .build();
 
@@ -221,6 +221,54 @@ class PartImportDataAppServiceTest {
         assertTrue(updated.getDescription().length() <= 1000, "description 应截断到列宽内");
         assertTrue(updated.getDescription().endsWith("..."));
         assertTrue(updated.getDescription().startsWith("[TSP] 处理失败"));
+        // 下游联动失败时保持未处理，便于修复后重试
+        assertFalse(updated.getHandle());
+    }
+
+    @Test
+    @DisplayName("两段式导入全部成功时标记为已处理")
+    void testTwoStageImportSuccessMarksHandled() {
+        // 准备测试数据（ITEMS 携带 HARDWARE_PART_NO 以保证通用导入成功）
+        String batchNum = "TEST_BATCH_OK";
+        PartImportData importData = PartImportData.builder()
+                .id(1L)
+                .batchNum(batchNum)
+                .partCode("TEST_PART_001")
+                .version("1.0")
+                .data("{\"REQUEST\":{\"HEAD\":{\"ACCOUNT\":\"SUP001\"},\"DATA\":{\"vehicleNodeCode\":\"TSP\",\"ITEMS\":[{\"SN\":\"SN001\",\"vehicleNodeCode\":\"TSP\",\"deviceItem\":\"TSP\",\"HARDWARE_PART_NO\":\"TEST_PART_001\"}]}}}")
+                .handle(false)
+                .build();
+
+        Part mdmPart = Part.builder()
+                .code("TEST_PART_001")
+                .vehicleNodeCode("TSP")
+                .build();
+
+        DownstreamProcessor mockProcessor = mock(DownstreamProcessor.class);
+
+        // 设置mock行为
+        when(partImportDataRepository.selectByBatchNum(batchNum)).thenReturn(importData);
+        when(mdmPartRepository.selectByCode("TEST_PART_001")).thenReturn(mdmPart);
+        when(partInboundAppService.processInbound(any(), any(), any())).thenReturn(
+                PartInboundAppService.PartInboundResult.builder()
+                        .totalCount(1)
+                        .successCount(1)
+                        .failureCount(0)
+                        .build());
+        when(vehicleNodeSchemaRegistry.needsSecurityConstantPreset("TSP")).thenReturn(false);
+        when(downstreamProcessorRegistry.getProcessor("TSP")).thenReturn(mockProcessor);
+
+        // 执行测试
+        ImportResult result = partImportDataAppService.parsePartImportData(batchNum);
+
+        // 验证结果
+        assertNotNull(result);
+        assertEquals(0, result.getFailureCount());
+
+        // 验证全部成功时标记为已处理
+        ArgumentCaptor<PartImportData> captor = ArgumentCaptor.forClass(PartImportData.class);
+        verify(partImportDataRepository).update(captor.capture());
+        PartImportData updated = captor.getValue();
         assertTrue(updated.getHandle());
     }
 
@@ -233,14 +281,14 @@ class PartImportDataAppServiceTest {
                 .batchNum("TEST_BATCH_001")
                 .partCode("TEST_PART_001")
                 .version("1.0")
-                .data("{\"REQUEST\":{\"HEAD\":{\"ACCOUNT\":\"SUP001\"},\"DATA\":{\"ITEMS\":[{\"SN\":\"SN001\",\"deviceItem\":\"TSP\"}]}}}")
+                .data("{\"REQUEST\":{\"HEAD\":{\"ACCOUNT\":\"SUP001\"},\"DATA\":{\"ITEMS\":[{\"SN\":\"SN001\",\"deviceItem\":\"TSP\",\"HARDWARE_PART_NO\":\"TEST_PART_001\"}]}}}")
                 .handle(false)
                 .build();
 
         String batchNum = "TEST_BATCH_001";
+        // MDM Part 无 vehicleNodeCode：通用导入可从 ITEM 兜底，但下游联动应跳过
         Part mdmPart = Part.builder()
                 .code("TEST_PART_001")
-                .vehicleNodeCode("TSP")
                 .build();
 
         ImportResult expectedResult = ImportResult.builder()
@@ -282,7 +330,7 @@ class PartImportDataAppServiceTest {
                 .batchNum(batchNum)
                 .partCode("TBOX_001")
                 .version("1.0")
-                .data("{\"REQUEST\":{\"HEAD\":{\"ACCOUNT\":\"SUP001\"},\"DATA\":{\"vehicleNodeCode\":\"TBOX_5G\",\"ITEMS\":[{\"SN\":\"SN001\",\"HSM\":\"HSM_UID_001\"}]}}}")
+                .data("{\"REQUEST\":{\"HEAD\":{\"ACCOUNT\":\"SUP001\"},\"DATA\":{\"vehicleNodeCode\":\"TBOX_5G\",\"ITEMS\":[{\"SN\":\"SN001\",\"HSM\":\"HSM_UID_001\",\"HARDWARE_PART_NO\":\"TBOX_001\"}]}}}")
                 .handle(false)
                 .build();
 
@@ -333,7 +381,7 @@ class PartImportDataAppServiceTest {
                 .batchNum(batchNum)
                 .partCode("SIM_001")
                 .version("1.0")
-                .data("{\"REQUEST\":{\"HEAD\":{\"ACCOUNT\":\"SUP001\"},\"DATA\":{\"vehicleNodeCode\":\"TSP\",\"ITEMS\":[{\"SN\":\"SN001\",\"iccid\":\"ICCID001\"}]}}}")
+                .data("{\"REQUEST\":{\"HEAD\":{\"ACCOUNT\":\"SUP001\"},\"DATA\":{\"vehicleNodeCode\":\"TSP\",\"ITEMS\":[{\"SN\":\"SN001\",\"iccid\":\"ICCID001\",\"HARDWARE_PART_NO\":\"SIM_001\"}]}}}")
                 .handle(false)
                 .build();
 
@@ -383,7 +431,7 @@ class PartImportDataAppServiceTest {
                 .batchNum(batchNum)
                 .partCode("TBOX_001")
                 .version("1.0")
-                .data("{\"REQUEST\":{\"HEAD\":{\"ACCOUNT\":\"SUP001\"},\"DATA\":{\"vehicleNodeCode\":\"TBOX_5G\",\"ITEMS\":[{\"SN\":\"SN001\",\"HSM\":\"HSM_UID_001\"}]}}}")
+                .data("{\"REQUEST\":{\"HEAD\":{\"ACCOUNT\":\"SUP001\"},\"DATA\":{\"vehicleNodeCode\":\"TBOX_5G\",\"ITEMS\":[{\"SN\":\"SN001\",\"HSM\":\"HSM_UID_001\",\"HARDWARE_PART_NO\":\"TBOX_001\"}]}}}")
                 .handle(false)
                 .build();
 

@@ -36,4 +36,9 @@ public class ImportResultResponse {
      */
     private int invalidCount;
 
+    /**
+     * 描述信息（失败原因，供前端直接展示）
+     */
+    private String description;
+
 }

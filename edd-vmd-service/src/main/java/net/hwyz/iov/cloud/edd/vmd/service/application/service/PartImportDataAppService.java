@@ -173,8 +173,9 @@ public class PartImportDataAppService {
             result = handleDownstreamLinkage(batchNum, partCode, partImportData, result);
         }
         
-        // 标记为已处理（description 按列长截断，避免超长导致写库失败）
-        partImportData.setHandle(true);
+        // 标记处理状态：仅当无失败项时置已处理；有失败项保持未处理，便于修复后重试
+        // （导入链路幂等：通用导入按 partCode+sn upsert、安全预置按状态跳过、下游按批次导入，重复解析安全）
+        partImportData.setHandle(result.getFailureCount() == 0);
         if (result.getDescription() != null) {
             partImportData.setDescription(truncateDescription(result.getDescription()));
         }
@@ -212,13 +213,14 @@ public class PartImportDataAppService {
         PartInboundAppService.PartInboundResult inboundResult = partInboundAppService.processInbound(
                 records, InboundSourceType.MANUAL, null);
         
-        // 转换为ImportResult
+        // 转换为ImportResult（errors为空列表时description置null，避免空串拼接污染下游错误信息）
+        boolean hasErrors = inboundResult.getErrors() != null && !inboundResult.getErrors().isEmpty();
         return ImportResult.builder()
                 .totalCount(inboundResult.getTotalCount())
                 .successCount(inboundResult.getSuccessCount())
                 .failureCount(inboundResult.getFailureCount())
                 .invalidCount(inboundResult.getInvalidCount())
-                .description(inboundResult.getErrors() != null ? String.join("; ", inboundResult.getErrors()) : null)
+                .description(hasErrors ? String.join("; ", inboundResult.getErrors()) : null)
                 .build();
     }
     
