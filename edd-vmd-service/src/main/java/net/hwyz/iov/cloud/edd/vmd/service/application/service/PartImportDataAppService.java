@@ -50,6 +50,11 @@ public class PartImportDataAppService {
     private final PartSecurityPresetAppService partSecurityPresetAppService;
 
     /**
+     * description 字段最大长度（与数据库列定义一致，见 V49 迁移）
+     */
+    private static final int DESCRIPTION_MAX_LENGTH = 1000;
+
+    /**
      * 查询零件导入数据信息
      *
      * @param query 查询 DTO
@@ -168,10 +173,10 @@ public class PartImportDataAppService {
             result = handleDownstreamLinkage(batchNum, partCode, partImportData, result);
         }
         
-        // 标记为已处理
+        // 标记为已处理（description 按列长截断，避免超长导致写库失败）
         partImportData.setHandle(true);
         if (result.getDescription() != null) {
-            partImportData.setDescription(result.getDescription());
+            partImportData.setDescription(truncateDescription(result.getDescription()));
         }
         partImportDataRepository.update(partImportData);
         
@@ -489,6 +494,25 @@ public class PartImportDataAppService {
         }
         
         return generalResult;
+    }
+
+    /**
+     * 截断 description 到列长限制
+     * <p>
+     * 下游联动失败信息（如 FeignException 完整消息）可能远超列宽，
+     * 统一在写库前按 DESCRIPTION_MAX_LENGTH 截断，避免 Data too long 异常。
+     *
+     * @param description 原始描述
+     * @return 截断后的描述
+     */
+    private String truncateDescription(String description) {
+        if (description == null) {
+            return null;
+        }
+        if (description.length() <= DESCRIPTION_MAX_LENGTH) {
+            return description;
+        }
+        return description.substring(0, DESCRIPTION_MAX_LENGTH - 3) + "...";
     }
 
     private PartImportDataDto toDto(PartImportData entity) {

@@ -15,6 +15,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -160,6 +161,67 @@ class PartImportDataAppServiceTest {
         assertEquals(1, result.getSuccessCount());
         assertEquals(1, result.getFailureCount());
         assertTrue(result.getDescription().contains("TSP服务调用失败"));
+    }
+
+    @Test
+    @DisplayName("下游联动失败且错误信息超长时应截断description后写库")
+    void testTwoStageImportDownstreamFailureTruncatesDescription() {
+        // 准备测试数据
+        String batchNum = "TEST_BATCH_001";
+        PartImportData importData = PartImportData.builder()
+                .id(1L)
+                .batchNum(batchNum)
+                .partCode("TEST_PART_001")
+                .version("1.0")
+                .data("{\"REQUEST\":{\"HEAD\":{\"ACCOUNT\":\"SUP001\"},\"DATA\":{\"vehicleNodeCode\":\"TSP\",\"ITEMS\":[{\"SN\":\"SN001\",\"vehicleNodeCode\":\"TSP\",\"deviceItem\":\"TSP\",\"HARDWARE_PART_NO\":\"TEST_PART_001\"}]}}}")
+                .handle(false)
+                .build();
+
+        Part mdmPart = Part.builder()
+                .code("TEST_PART_001")
+                .vehicleNodeCode("TSP")
+                .build();
+
+        DownstreamProcessor mockProcessor = mock(DownstreamProcessor.class);
+
+        // 构造超长错误信息（模拟 FeignException 完整消息拼接后远超列宽 1000）
+        String longErrorMessage = "feign.FeignException$InternalServerError: [500] during [POST] to [http://iov-tsp/api/service/tbox/v1/batchImport] "
+                + "[TspTboxInfoService#batchImport(BatchImportTboxRequest)]: [{\"code\":\"100002\",\"message\":\"系统内部错误\","
+                + "\"traceId\":\"75481fafb1ba426ebbf4ece78335d832\",\"timestamp\":1790040366827}] "
+                + "X".repeat(3000);
+
+        // 设置mock行为
+        when(partImportDataRepository.selectByBatchNum(batchNum)).thenReturn(importData);
+        when(mdmPartRepository.selectByCode("TEST_PART_001")).thenReturn(mdmPart);
+        when(partInboundAppService.processInbound(any(), any(), any())).thenReturn(
+                PartInboundAppService.PartInboundResult.builder()
+                        .totalCount(1)
+                        .successCount(1)
+                        .failureCount(0)
+                        .build());
+        when(downstreamProcessorRegistry.getProcessor("TSP")).thenReturn(mockProcessor);
+
+        // 模拟下游处理器抛出超长异常
+        doThrow(new RuntimeException(longErrorMessage)).when(mockProcessor)
+                .process(eq(batchNum), eq("TEST_PART_001"), eq("TSP"), any(JSONObject.class));
+
+        // 执行测试
+        ImportResult result = partImportDataAppService.parsePartImportData(batchNum);
+
+        // 验证结果
+        assertNotNull(result);
+        assertEquals(1, result.getFailureCount());
+        assertTrue(result.getDescription().length() > 1000);
+
+        // 验证写库时 description 被截断到列宽内，且不抛 Data too long
+        ArgumentCaptor<PartImportData> captor = ArgumentCaptor.forClass(PartImportData.class);
+        verify(partImportDataRepository).update(captor.capture());
+        PartImportData updated = captor.getValue();
+        assertNotNull(updated.getDescription());
+        assertTrue(updated.getDescription().length() <= 1000, "description 应截断到列宽内");
+        assertTrue(updated.getDescription().endsWith("..."));
+        assertTrue(updated.getDescription().startsWith("[TSP] 处理失败"));
+        assertTrue(updated.getHandle());
     }
 
     @Test
