@@ -11,7 +11,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ImportResult;
 public interface VehicleImportDataParser {
 
     /**
-     * 获取数据类型（如 PRODUCE、EOL、IDCM）
+     * 获取数据类型（如 PRODUCE、TOL、EOL）
      *
      * @return 数据类型，大写
      */

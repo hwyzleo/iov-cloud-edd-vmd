@@ -32,7 +32,7 @@ import static org.mockito.Mockito.*;
  * 零件导入触发安全常量生成集成测试
  * <p>
  * 验证零件导入流程与安全常量预置的端到端集成行为：
- * - TBOX/BTM/CCP/IDCM 类型零件导入触发安全常量预置
+ * - TBOX/BTM/CCP/DCU_COCKPIT 类型零件导入触发安全常量预置
  * - SIM/OTHER 类型零件导入跳过安全常量预置
  * - 安全常量预置失败时正确记录错误信息
  * - VehicleNodeSchemaRegistry 与 PartSecurityPresetAppService 联动
@@ -95,7 +95,7 @@ class PartImportSecurityConstantIntegrationTest {
                 .batchNum(batchNum)
                 .partCode("TBOX_5G_001")
                 .version("1.0")
-                .data("{\"REQUEST\":{\"HEAD\":{\"ACCOUNT\":\"SUP001\"},\"DATA\":{\"vehicleNodeCode\":\"TBOX_5G\",\"ITEMS\":[{\"SN\":\"SN_TBOX_001\",\"HSM\":\"HSM_UID_001\"}]}}}")
+                .data("{\"REQUEST\":{\"HEAD\":{\"ACCOUNT\":\"SUP001\"},\"DATA\":{\"vehicleNodeCode\":\"TBOX_5G\",\"ITEMS\":[{\"SN\":\"SN_TBOX_001\",\"HSM\":\"HSM_UID_001\",\"HARDWARE_PART_NO\":\"TBOX_5G_001\"}]}}}")
                 .handle(false)
                 .build();
 
@@ -160,7 +160,7 @@ class PartImportSecurityConstantIntegrationTest {
                 .batchNum(batchNum)
                 .partCode("BTM_001")
                 .version("1.0")
-                .data("{\"REQUEST\":{\"HEAD\":{\"ACCOUNT\":\"SUP002\"},\"DATA\":{\"vehicleNodeCode\":\"BTM\",\"ITEMS\":[{\"SN\":\"SN_BTM_001\",\"HSM\":\"HSM_UID_BTM_001\"}]}}}")
+                .data("{\"REQUEST\":{\"HEAD\":{\"ACCOUNT\":\"SUP002\"},\"DATA\":{\"vehicleNodeCode\":\"BTM\",\"ITEMS\":[{\"SN\":\"SN_BTM_001\",\"HSM\":\"HSM_UID_BTM_001\",\"HARDWARE_PART_NO\":\"BTM_001\"}]}}}")
                 .handle(false)
                 .build();
 
@@ -177,7 +177,7 @@ class PartImportSecurityConstantIntegrationTest {
                         .totalCount(1).successCount(1).failureCount(0).build());
         when(partSecurityConstantRepository.selectByPartCodeAndSn("BTM_001", "SN_BTM_001")).thenReturn(null);
         when(partSecurityConstantRepository.insert(any())).thenReturn(1);
-        when(keyProvisioningTemplate.deriveByUid("HSM_UID_BTM_001", BizType.TBOX_DEVICE_ROOT))
+        when(keyProvisioningTemplate.deriveByUid("HSM_UID_BTM_001", BizType.PEPS_DEVICE_ROOT))
                 .thenReturn(mockProvisioningResult("dev-root-master:sn:HSM_UID_BTM_001"));
 
         ImportResult result = partImportDataAppService.parsePartImportData(batchNum);
@@ -185,7 +185,7 @@ class PartImportSecurityConstantIntegrationTest {
         assertNotNull(result);
         assertEquals(0, result.getFailureCount());
         verify(partSecurityConstantRepository).insert(any());
-        verify(keyProvisioningTemplate).deriveByUid("HSM_UID_BTM_001", BizType.TBOX_DEVICE_ROOT);
+        verify(keyProvisioningTemplate).deriveByUid("HSM_UID_BTM_001", BizType.PEPS_DEVICE_ROOT);
     }
 
     @Test
@@ -197,7 +197,7 @@ class PartImportSecurityConstantIntegrationTest {
                 .batchNum(batchNum)
                 .partCode("SIM_001")
                 .version("1.0")
-                .data("{\"REQUEST\":{\"HEAD\":{\"ACCOUNT\":\"SUP003\"},\"DATA\":{\"vehicleNodeCode\":\"TSP\",\"ITEMS\":[{\"SN\":\"SN_SIM_001\",\"iccid\":\"ICCID001\"}]}}}")
+                .data("{\"REQUEST\":{\"HEAD\":{\"ACCOUNT\":\"SUP003\"},\"DATA\":{\"vehicleNodeCode\":\"TSP\",\"ITEMS\":[{\"SN\":\"SN_SIM_001\",\"iccid\":\"ICCID001\",\"HARDWARE_PART_NO\":\"SIM_001\"}]}}}")
                 .handle(false)
                 .build();
 
@@ -239,7 +239,7 @@ class PartImportSecurityConstantIntegrationTest {
                 .batchNum(batchNum)
                 .partCode("OTHER_001")
                 .version("1.0")
-                .data("{\"REQUEST\":{\"HEAD\":{\"ACCOUNT\":\"SUP004\"},\"DATA\":{\"ITEMS\":[{\"SN\":\"SN_OTHER_001\"}]}}}")
+                .data("{\"REQUEST\":{\"HEAD\":{\"ACCOUNT\":\"SUP004\"},\"DATA\":{\"ITEMS\":[{\"SN\":\"SN_OTHER_001\",\"HARDWARE_PART_NO\":\"OTHER_001\"}]}}}")
                 .handle(false)
                 .build();
 
@@ -272,7 +272,7 @@ class PartImportSecurityConstantIntegrationTest {
                 .batchNum(batchNum)
                 .partCode("TBOX_5G_002")
                 .version("1.0")
-                .data("{\"REQUEST\":{\"HEAD\":{\"ACCOUNT\":\"SUP001\"},\"DATA\":{\"vehicleNodeCode\":\"TBOX_5G\",\"ITEMS\":[{\"SN\":\"SN_FAIL_001\",\"HSM\":\"HSM_UID_FAIL_001\"}]}}}")
+                .data("{\"REQUEST\":{\"HEAD\":{\"ACCOUNT\":\"SUP001\"},\"DATA\":{\"vehicleNodeCode\":\"TBOX_5G\",\"ITEMS\":[{\"SN\":\"SN_FAIL_001\",\"HSM\":\"HSM_UID_FAIL_001\",\"HARDWARE_PART_NO\":\"TBOX_5G_002\"}]}}}")
                 .handle(false)
                 .build();
 
@@ -321,7 +321,7 @@ class PartImportSecurityConstantIntegrationTest {
                 .batchNum(batchNum)
                 .partCode("TBOX_5G_003")
                 .version("1.0")
-                .data("{\"REQUEST\":{\"HEAD\":{\"ACCOUNT\":\"SUP001\"},\"DATA\":{\"vehicleNodeCode\":\"TBOX_5G\",\"ITEMS\":[{\"SN\":\"SN_SKIP_001\",\"HSM\":\"HSM_UID_SKIP_001\"}]}}}")
+                .data("{\"REQUEST\":{\"HEAD\":{\"ACCOUNT\":\"SUP001\"},\"DATA\":{\"vehicleNodeCode\":\"TBOX_5G\",\"ITEMS\":[{\"SN\":\"SN_SKIP_001\",\"HSM\":\"HSM_UID_SKIP_001\",\"HARDWARE_PART_NO\":\"TBOX_5G_003\"}]}}}")
                 .handle(false)
                 .build();
 
@@ -362,7 +362,8 @@ class PartImportSecurityConstantIntegrationTest {
         assertTrue(vehicleNodeSchemaRegistry.needsSecurityConstantPreset("TBOX_5G"));
         assertTrue(vehicleNodeSchemaRegistry.needsSecurityConstantPreset("BTM"));
         assertTrue(vehicleNodeSchemaRegistry.needsSecurityConstantPreset("CCP"));
-        assertTrue(vehicleNodeSchemaRegistry.needsSecurityConstantPreset("IDCM"));
+        assertTrue(vehicleNodeSchemaRegistry.needsSecurityConstantPreset("DCU_COCKPIT"));
+        assertTrue(vehicleNodeSchemaRegistry.needsSecurityConstantPreset("DCU_COCKPIT_SA8295P"));
 
         // 不需要安全常量预置的节点
         assertFalse(vehicleNodeSchemaRegistry.needsSecurityConstantPreset("TSP"));
@@ -378,7 +379,8 @@ class PartImportSecurityConstantIntegrationTest {
         assertEquals("HSM", vehicleNodeSchemaRegistry.getHsmUidField("TBOX_5G"));
         assertEquals("HSM", vehicleNodeSchemaRegistry.getHsmUidField("BTM"));
         assertEquals("HSM", vehicleNodeSchemaRegistry.getHsmUidField("CCP"));
-        assertEquals("HSM", vehicleNodeSchemaRegistry.getHsmUidField("IDCM"));
+        assertEquals("HSM", vehicleNodeSchemaRegistry.getHsmUidField("DCU_COCKPIT"));
+        assertEquals("HSM", vehicleNodeSchemaRegistry.getHsmUidField("DCU_COCKPIT_SA8295P"));
 
         assertNull(vehicleNodeSchemaRegistry.getHsmUidField("TSP"));
         assertNull(vehicleNodeSchemaRegistry.getHsmUidField("UNKNOWN"));
@@ -394,7 +396,7 @@ class PartImportSecurityConstantIntegrationTest {
                 .batchNum(batchNum)
                 .partCode("CCP_001")
                 .version("1.0")
-                .data("{\"REQUEST\":{\"HEAD\":{\"ACCOUNT\":\"SUP005\"},\"DATA\":{\"vehicleNodeCode\":\"CCP\",\"ITEMS\":[{\"SN\":\"SN_CCP_001\",\"HSM\":\"HSM_UID_CCP_001\"}]}}}")
+                .data("{\"REQUEST\":{\"HEAD\":{\"ACCOUNT\":\"SUP005\"},\"DATA\":{\"vehicleNodeCode\":\"CCP\",\"ITEMS\":[{\"SN\":\"SN_CCP_001\",\"HSM\":\"HSM_UID_CCP_001\",\"HARDWARE_PART_NO\":\"CCP_001\"}]}}}")
                 .handle(false)
                 .build();
 
@@ -411,7 +413,7 @@ class PartImportSecurityConstantIntegrationTest {
                         .totalCount(1).successCount(1).failureCount(0).build());
         when(partSecurityConstantRepository.selectByPartCodeAndSn("CCP_001", "SN_CCP_001")).thenReturn(null);
         when(partSecurityConstantRepository.insert(any())).thenReturn(1);
-        when(keyProvisioningTemplate.deriveByUid("HSM_UID_CCP_001", BizType.TBOX_DEVICE_ROOT))
+        when(keyProvisioningTemplate.deriveByUid("HSM_UID_CCP_001", BizType.CGW_DEVICE_ROOT))
                 .thenReturn(mockProvisioningResult("dev-root-master:sn:HSM_UID_CCP_001"));
 
         ImportResult result = partImportDataAppService.parsePartImportData(batchNum);
@@ -419,43 +421,43 @@ class PartImportSecurityConstantIntegrationTest {
         assertNotNull(result);
         assertEquals(0, result.getFailureCount());
         verify(partSecurityConstantRepository).insert(any());
-        verify(keyProvisioningTemplate).deriveByUid("HSM_UID_CCP_001", BizType.TBOX_DEVICE_ROOT);
+        verify(keyProvisioningTemplate).deriveByUid("HSM_UID_CCP_001", BizType.CGW_DEVICE_ROOT);
     }
 
     @Test
-    @DisplayName("IDCM零件导入应触发安全常量预置")
-    void idcmPartImport_shouldTriggerSecurityConstantPreset() throws Exception {
-        String batchNum = "INT_BATCH_IDCM_001";
+    @DisplayName("DCU_COCKPIT零件导入应触发安全常量预置")
+    void dcuCockpitPartImport_shouldTriggerSecurityConstantPreset() throws Exception {
+        String batchNum = "INT_BATCH_DCU_COCKPIT_001";
         PartImportData importData = PartImportData.builder()
                 .id(8L)
                 .batchNum(batchNum)
-                .partCode("IDCM_001")
+                .partCode("DCU_COCKPIT_001")
                 .version("1.0")
-                .data("{\"REQUEST\":{\"HEAD\":{\"ACCOUNT\":\"SUP006\"},\"DATA\":{\"vehicleNodeCode\":\"IDCM\",\"ITEMS\":[{\"SN\":\"SN_IDCM_001\",\"HSM\":\"HSM_UID_IDCM_001\"}]}}}")
+                .data("{\"REQUEST\":{\"HEAD\":{\"ACCOUNT\":\"SUP006\"},\"DATA\":{\"vehicleNodeCode\":\"DCU_COCKPIT\",\"ITEMS\":[{\"SN\":\"SN_DCU_COCKPIT_001\",\"HSM\":\"HSM_UID_DCU_COCKPIT_001\",\"HARDWARE_PART_NO\":\"DCU_COCKPIT_001\"}]}}}")
                 .handle(false)
                 .build();
 
         Part mdmPart = Part.builder()
-                .code("IDCM_001")
-                .partType("IDCM")
-                .vehicleNodeCode("IDCM")
+                .code("DCU_COCKPIT_001")
+                .partType("DCU_COCKPIT")
+                .vehicleNodeCode("DCU_COCKPIT")
                 .build();
 
         when(partImportDataRepository.selectByBatchNum(batchNum)).thenReturn(importData);
-        when(mdmPartRepository.selectByCode("IDCM_001")).thenReturn(mdmPart);
+        when(mdmPartRepository.selectByCode("DCU_COCKPIT_001")).thenReturn(mdmPart);
         when(partInboundAppService.processInbound(any(), any(), any())).thenReturn(
                 PartInboundAppService.PartInboundResult.builder()
                         .totalCount(1).successCount(1).failureCount(0).build());
-        when(partSecurityConstantRepository.selectByPartCodeAndSn("IDCM_001", "SN_IDCM_001")).thenReturn(null);
+        when(partSecurityConstantRepository.selectByPartCodeAndSn("DCU_COCKPIT_001", "SN_DCU_COCKPIT_001")).thenReturn(null);
         when(partSecurityConstantRepository.insert(any())).thenReturn(1);
-        when(keyProvisioningTemplate.deriveByUid("HSM_UID_IDCM_001", BizType.TBOX_DEVICE_ROOT))
-                .thenReturn(mockProvisioningResult("dev-root-master:sn:HSM_UID_IDCM_001"));
+        when(keyProvisioningTemplate.deriveByUid("HSM_UID_DCU_COCKPIT_001", BizType.CPT_DCU_DEVICE_ROOT))
+                .thenReturn(mockProvisioningResult("dev-root-master:sn:HSM_UID_DCU_COCKPIT_001"));
 
         ImportResult result = partImportDataAppService.parsePartImportData(batchNum);
 
         assertNotNull(result);
         assertEquals(0, result.getFailureCount());
         verify(partSecurityConstantRepository).insert(any());
-        verify(keyProvisioningTemplate).deriveByUid("HSM_UID_IDCM_001", BizType.TBOX_DEVICE_ROOT);
+        verify(keyProvisioningTemplate).deriveByUid("HSM_UID_DCU_COCKPIT_001", BizType.CPT_DCU_DEVICE_ROOT);
     }
 }

@@ -28,10 +28,10 @@ public enum VehicleLifecycleNodeEnum {
     ADCM_CERT,
     /** 智驾模块申请通讯密钥 **/
     ADCM_COMM_SK,
-    /** 信息娱乐模块申请证书 **/
-    IDCM_CERT,
-    /** 信息娱乐模块申请通讯密钥 **/
-    IDCM_COMM_SK,
+    /** 座舱域控申请证书 **/
+    DCU_COCKPIT_CERT,
+    /** 座舱域控申请通讯密钥 **/
+    DCU_COCKPIT_COMM_SK,
     /** 总装上线 **/
     TOL,
     /** 车辆下线 **/

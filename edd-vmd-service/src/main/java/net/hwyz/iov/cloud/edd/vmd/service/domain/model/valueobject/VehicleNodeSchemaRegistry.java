@@ -136,13 +136,21 @@ public class VehicleNodeSchemaRegistry {
                 .description("中央计算平台，带安全芯片，需要预置ROOT安全常量")
                 .build());
 
-        // IDCM: 智驾模块，需要安全常量预置
+        // DCU_COCKPIT / DCU_COCKPIT_SA8295P: 座舱域控，需要安全常量预置
         register(VehicleNodeSchema.builder()
-                .vehicleNodeCode("IDCM")
+                .vehicleNodeCode("DCU_COCKPIT")
                 .hsmUid("HSM")
                 .needsSecurityConstantPreset(true)
                 .bizType(BizType.CPT_DCU_DEVICE_ROOT)
-                .description("智驾模块，带安全芯片，需要预置ROOT安全常量")
+                .description("座舱域控，带安全芯片，需要预置ROOT安全常量")
+                .build());
+
+        register(VehicleNodeSchema.builder()
+                .vehicleNodeCode("DCU_COCKPIT_SA8295P")
+                .hsmUid("HSM")
+                .needsSecurityConstantPreset(true)
+                .bizType(BizType.CPT_DCU_DEVICE_ROOT)
+                .description("座舱域控（SA8295P），带安全芯片，需要预置ROOT安全常量")
                 .build());
 
         // TSP: SIM卡节点，不需要安全常量预置
