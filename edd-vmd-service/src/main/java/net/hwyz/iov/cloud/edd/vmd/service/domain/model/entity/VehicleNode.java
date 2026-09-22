@@ -50,6 +50,11 @@ public class VehicleNode implements DomainObj<VehicleNode> {
     private String deviceCategory;
 
     /**
+     * HSM能力（CR-049：MDM主数据 hsmCapability，NONE/SHE/HSM_LIGHT/HSM_FULL）
+     */
+    private String hsmCapability;
+
+    /**
      * 功能域
      */
     private String funcDomain;

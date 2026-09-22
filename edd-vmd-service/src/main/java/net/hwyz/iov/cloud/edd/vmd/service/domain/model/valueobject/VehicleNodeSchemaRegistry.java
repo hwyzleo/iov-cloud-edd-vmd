@@ -8,10 +8,14 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * 车辆节点模式注册表
+ * 车辆节点模式注册表（迁移期兼容兜底组件，CR-049）
  * <p>
- * 管理车辆节点的配置模式，包括是否需要安全常量预置等属性
- * 根据 vehicleNodeCode 查询对应的 VehicleNodeSchema
+ * 管理车辆节点的配置模式（HSM UID 字段名、预置开关、BizType）。
+ * CR-049 后预置资格以 MDM VehicleNode.hsmCapability 主数据为权威来源，
+ * 本注册表仅作为 hsmCapability 缺失时的兼容兜底（RD-049-1 / RD-049-6）：
+ * 存量节点在 MDM 数据回填完成、缺失指标持续为零后可逐步退场删除。
+ * 不再承担新增节点变体的主配置职责（新增变体仅需主数据配置即可生效）。
+ * </p>
  *
  * @author hwyz_leo
  * @since 2026-06-24

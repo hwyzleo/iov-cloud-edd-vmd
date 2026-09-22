@@ -63,6 +63,12 @@ public class MdmVehicleNodePo extends BasePo {
     private String deviceCategory;
 
     /**
+     * HSM能力（CR-049：MDM主数据 hsmCapability，NONE/SHE/HSM_LIGHT/HSM_FULL）
+     */
+    @TableField("hsm_capability")
+    private String hsmCapability;
+
+    /**
      * 功能域
      */
     @TableField("func_domain")

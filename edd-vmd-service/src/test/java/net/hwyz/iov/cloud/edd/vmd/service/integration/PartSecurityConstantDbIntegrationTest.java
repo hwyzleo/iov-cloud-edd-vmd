@@ -3,7 +3,6 @@ package net.hwyz.iov.cloud.edd.vmd.service.integration;
 import net.hwyz.iov.cloud.edd.vmd.service.BaseTest;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartSecurityConstant;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SecurityConstantState;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.VehicleNodeSchemaRegistry;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartSecurityConstantRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartSecurityPresetAppService;
 import net.hwyz.iov.cloud.framework.security.crypto.KeyProvisioningTemplate;
@@ -39,9 +38,6 @@ class PartSecurityConstantDbIntegrationTest extends BaseTest {
     @MockBean
     private KeyProvisioningTemplate keyProvisioningTemplate;
 
-    @MockBean
-    private VehicleNodeSchemaRegistry vehicleNodeSchemaRegistry;
-
     @BeforeEach
     void setUp() {
         ProvisioningResult mockResult = new ProvisioningResult();
@@ -52,7 +48,6 @@ class PartSecurityConstantDbIntegrationTest extends BaseTest {
         mockResult.setKcv(new byte[]{1, 2, 3, 4});
         mockResult.setWrappedMaterial(null);
         when(keyProvisioningTemplate.deriveByUid(any(), any())).thenReturn(mockResult);
-        when(vehicleNodeSchemaRegistry.getBizType(any())).thenReturn(BizType.TBOX_DEVICE_ROOT);
     }
 
     @Test
@@ -64,8 +59,8 @@ class PartSecurityConstantDbIntegrationTest extends BaseTest {
         String chipUid = "HSM_DB_TEST_001";
         String batchNum = "BATCH_DB_TEST_001";
 
-        // 执行预置（使用框架 KeyProvisioningTemplate）
-        partSecurityPresetAppService.preset(partCode, sn, chipUid, batchNum, "TBOX_5G");
+        // 执行预置（使用框架 KeyProvisioningTemplate，BizType 按 deviceCategory 路由，CR-049）
+        partSecurityPresetAppService.preset(partCode, sn, chipUid, batchNum, "TBOX_5G", BizType.TBOX_DEVICE_ROOT);
 
         // 从数据库查询验证
         PartSecurityConstant saved = partSecurityConstantRepository.selectByPartCodeAndSn(partCode, sn);
@@ -91,13 +86,13 @@ class PartSecurityConstantDbIntegrationTest extends BaseTest {
         String batchNum = "BATCH_DB_TEST_002";
 
         // 第一次预置
-        partSecurityPresetAppService.preset(partCode, sn, chipUid, batchNum, "TBOX_5G");
+        partSecurityPresetAppService.preset(partCode, sn, chipUid, batchNum, "TBOX_5G", BizType.TBOX_DEVICE_ROOT);
         PartSecurityConstant first = partSecurityConstantRepository.selectByPartCodeAndSn(partCode, sn);
         assertNotNull(first);
         assertEquals(SecurityConstantState.PRESET, first.getPresetState());
 
         // 第二次预置（应跳过）
-        partSecurityPresetAppService.preset(partCode, sn, "DIFFERENT_CHIP", "BATCH_NEW", "TBOX_5G");
+        partSecurityPresetAppService.preset(partCode, sn, "DIFFERENT_CHIP", "BATCH_NEW", "TBOX_5G", BizType.TBOX_DEVICE_ROOT);
         PartSecurityConstant second = partSecurityConstantRepository.selectByPartCodeAndSn(partCode, sn);
 
         // chipUid 不应被更新
@@ -114,7 +109,7 @@ class PartSecurityConstantDbIntegrationTest extends BaseTest {
         String chipUid = "HSM_DB_TEST_003";
         String batchNum = "BATCH_DB_TEST_003";
 
-        partSecurityPresetAppService.preset(partCode, sn, chipUid, batchNum, "TBOX_5G");
+        partSecurityPresetAppService.preset(partCode, sn, chipUid, batchNum, "TBOX_5G", BizType.TBOX_DEVICE_ROOT);
 
         PartSecurityConstant saved = partSecurityConstantRepository.selectByPartCodeAndSn(partCode, sn);
 

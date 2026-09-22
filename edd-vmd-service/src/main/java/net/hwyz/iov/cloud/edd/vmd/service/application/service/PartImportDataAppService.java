@@ -18,7 +18,10 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmPartRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmVehicleNodeRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartImportDataRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.InboundSourceType;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.VehicleNodeSchemaRegistry;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SecurityPresetDecision;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.SecurityPresetBizTypeUnresolvedException;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.SecurityPresetInvalidCapabilityException;
+import net.hwyz.iov.cloud.framework.security.crypto.model.BizType;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.StrUtil;
@@ -46,8 +49,10 @@ public class PartImportDataAppService {
     private final MdmVehicleNodeRepository mdmVehicleNodeRepository;
     private final PartInboundAppService partInboundAppService;
     private final DownstreamProcessorRegistry downstreamProcessorRegistry;
-    private final VehicleNodeSchemaRegistry vehicleNodeSchemaRegistry;
     private final PartSecurityPresetAppService partSecurityPresetAppService;
+    private final SecurityPresetPolicy securityPresetPolicy;
+    private final HsmUidFieldResolver hsmUidFieldResolver;
+    private final SecurityBizTypeResolver securityBizTypeResolver;
 
     /**
      * description 字段最大长度（与数据库列定义一致，见 V49 迁移）
@@ -359,7 +364,9 @@ public class PartImportDataAppService {
     /**
      * 处理安全常量预置条件分流
      * <p>
-     * 按 vehicleNodeCode 是否命中 VehicleNodeSchema「需安全常量预置」白名单（如 TBOX）分流
+     * CR-049：以 MDM VehicleNode.hsmCapability 主数据为权威判定（SecurityPresetPolicy），
+     * BizType 按 deviceCategory 路由（SecurityBizTypeResolver），HSM UID 字段默认 HSM；
+     * null 走旧注册表兜底，未知枚举/需预置但 BizType 不可解析按失败处理（不静默）。
      *
      * @param batchNum 批次号
      * @param partCode 零件编码
@@ -368,45 +375,79 @@ public class PartImportDataAppService {
      * @param generalResult 通用导入结果
      * @return 处理后的导入结果
      */
-    private ImportResult handleSecurityConstantPreset(String batchNum, String partCode, String vehicleNodeCode, 
+    private ImportResult handleSecurityConstantPreset(String batchNum, String partCode, String vehicleNodeCode,
                                                       JSONObject data, ImportResult generalResult) {
-        // 检查车辆节点是否需要安全常量预置
-        if (StrUtil.isBlank(vehicleNodeCode) || !vehicleNodeSchemaRegistry.needsSecurityConstantPreset(vehicleNodeCode)) {
-            log.debug("零件编码[{}]节点[{}]不需要安全常量预置，跳过", partCode, vehicleNodeCode);
+        if (StrUtil.isBlank(vehicleNodeCode)) {
+            log.debug("零件编码[{}]节点为空，跳过安全常量预置", partCode);
             return generalResult;
         }
-        
-        log.info("零件编码[{}]节点[{}]命中安全常量白名单，开始预置, batchNum={}", partCode, vehicleNodeCode, batchNum);
-        
+
+        // 读取 VehicleNode 投影（可能缺失 → 能力按 null 进入兼容兜底）
+        VehicleNode vehicleNode = mdmVehicleNodeRepository.selectByCode(vehicleNodeCode);
+        String hsmCapability = vehicleNode != null ? vehicleNode.getHsmCapability() : null;
+        String deviceCategory = vehicleNode != null ? vehicleNode.getDeviceCategory() : null;
+
+        // 预置资格判定（能力优先，null 走旧注册表兜底）
+        SecurityPresetDecision decision = securityPresetPolicy.decide(hsmCapability, vehicleNodeCode);
+        switch (decision) {
+            case PRESET_NOT_REQUIRED:
+                log.info("零件编码[{}]节点[{}]能力[{}]不触发安全常量预置: skipReason=capability not in support range",
+                        partCode, vehicleNodeCode, hsmCapability);
+                return generalResult;
+            case INVALID_CAPABILITY:
+                // 未知枚举：契约错误，记录失败不静默跳过
+                return appendPresetNodeFailure(generalResult, partCode, vehicleNodeCode,
+                        new SecurityPresetInvalidCapabilityException(hsmCapability, vehicleNodeCode).getMessage());
+            case PRESET_REQUIRED:
+            default:
+                break;
+        }
+
+        // 解析 HSM UID 字段（本期默认 HSM，RD-049-3）
+        String hsmUidField = hsmUidFieldResolver.resolve(null);
+
+        // 解析 BizType：deviceCategory 路由 → 旧节点码兜底 → 失败（RD-049-5）
+        BizType bizType;
+        try {
+            bizType = securityBizTypeResolver.resolve(deviceCategory, vehicleNodeCode);
+        } catch (SecurityPresetBizTypeUnresolvedException e) {
+            return appendPresetNodeFailure(generalResult, partCode, vehicleNodeCode, e.getMessage());
+        }
+
+        log.info("零件编码[{}]节点[{}]命中安全常量预置, hsmCapability={}, deviceCategory={}, bizType={}, batchNum={}",
+                partCode, vehicleNodeCode, hsmCapability, deviceCategory, bizType, batchNum);
+
         // 获取ITEMS数组，逐条处理安全常量预置
         JSONArray items = data.getJSONArray("ITEMS");
         if (items == null || items.isEmpty()) {
             log.warn("批次号[{}]没有有效的ITEMS记录，跳过安全常量预置", batchNum);
             return generalResult;
         }
-        
+
         int presetFailureCount = 0;
         List<String> presetErrors = new ArrayList<>();
-        
+
         for (Object item : items) {
             JSONObject itemJson = JSONUtil.parseObj(item);
             String sn = itemJson.getStr("SN");
-            
+
             if (StrUtil.isBlank(sn)) {
                 continue;
             }
-            
-            // 提取chipUid（HSM UID字段名由VehicleNodeSchema定义）
-            String hsmUidField = vehicleNodeSchemaRegistry.getHsmUidField(vehicleNodeCode);
-            String chipUid = (hsmUidField != null) ? itemJson.getStr(hsmUidField) : null;
-            
+
+            // 提取chipUid（HSM UID字段名默认 HSM）
+            String chipUid = itemJson.getStr(hsmUidField);
+
             if (StrUtil.isBlank(chipUid)) {
-                log.warn("零件[{}:{}]缺少安全芯片标识(hsmUidField={})，跳过安全常量预置", partCode, sn, hsmUidField);
+                // 需预置但缺少芯片标识：计入失败，不静默跳过
+                presetFailureCount++;
+                presetErrors.add("[" + partCode + ":" + sn + "] 缺少安全芯片标识(hsmUidField=" + hsmUidField + ")");
+                log.warn("零件[{}:{}]缺少安全芯片标识(hsmUidField={})，计入预置失败", partCode, sn, hsmUidField);
                 continue;
             }
-            
+
             try {
-                String presetError = partSecurityPresetAppService.preset(partCode, sn, chipUid, batchNum, vehicleNodeCode);
+                String presetError = partSecurityPresetAppService.preset(partCode, sn, chipUid, batchNum, vehicleNodeCode, bizType);
                 if (presetError != null) {
                     presetFailureCount++;
                     presetErrors.add("[" + partCode + ":" + sn + "] " + presetError);
@@ -420,7 +461,7 @@ public class PartImportDataAppService {
                 log.warn("零件[{}:{}]安全常量预置异常", partCode, sn, e);
             }
         }
-        
+
         // 合并预置失败结果
         if (presetFailureCount > 0) {
             String errorMsg = String.join("; ", presetErrors);
@@ -430,7 +471,7 @@ public class PartImportDataAppService {
             } else {
                 description = errorMsg;
             }
-            
+
             return ImportResult.builder()
                     .totalCount(generalResult.getTotalCount())
                     .successCount(generalResult.getSuccessCount())
@@ -439,9 +480,36 @@ public class PartImportDataAppService {
                     .description(description)
                     .build();
         }
-        
+
         log.info("零件编码[{}]安全常量预置完成, batchNum={}", partCode, batchNum);
         return generalResult;
+    }
+
+    /**
+     * 节点级预置失败（能力非法 / BizType 不可解析）：按预置失败语义追加结果
+     *
+     * @param generalResult 通用导入结果
+     * @param partCode 零件编码
+     * @param vehicleNodeCode 车辆节点编码
+     * @param reason 失败原因
+     * @return 处理后的导入结果
+     */
+    private ImportResult appendPresetNodeFailure(ImportResult generalResult, String partCode, String vehicleNodeCode, String reason) {
+        String errorMsg = "[" + partCode + ":" + vehicleNodeCode + "] 安全常量预置未执行: " + reason;
+        String description = generalResult.getDescription();
+        if (description != null) {
+            description = description + "; " + errorMsg;
+        } else {
+            description = errorMsg;
+        }
+        log.warn("零件[{}]节点[{}]安全常量预置未执行: {}", partCode, vehicleNodeCode, reason);
+        return ImportResult.builder()
+                .totalCount(generalResult.getTotalCount())
+                .successCount(generalResult.getSuccessCount())
+                .failureCount(generalResult.getFailureCount() + 1)
+                .invalidCount(generalResult.getInvalidCount())
+                .description(description)
+                .build();
     }
     
     /**

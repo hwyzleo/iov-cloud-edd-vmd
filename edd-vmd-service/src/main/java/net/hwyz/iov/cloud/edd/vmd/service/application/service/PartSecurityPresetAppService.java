@@ -5,7 +5,6 @@ import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartImportData;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartSecurityConstant;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SecurityConstantState;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.VehicleNodeSchemaRegistry;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartImportDataRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartSecurityConstantRepository;
 import net.hwyz.iov.cloud.framework.security.crypto.KeyProvisioningTemplate;
@@ -24,14 +23,14 @@ public class PartSecurityPresetAppService {
     private final PartSecurityConstantRepository partSecurityConstantRepository;
     private final PartImportDataRepository partImportDataRepository;
     private final KeyProvisioningTemplate keyProvisioningTemplate;
-    private final VehicleNodeSchemaRegistry vehicleNodeSchemaRegistry;
 
     private static final int DESCRIPTION_MAX_LENGTH = 500;
     private static final String SECURITY_CONSTANT_TYPE = "ROOT";
 
     @Transactional(rollbackFor = Exception.class)
-    public String preset(String partCode, String sn, String chipUid, String batchNum, String vehicleNodeCode) {
-        log.info("开始预置零件[{}:{}]安全常量, chipUid={}, batchNum={}, vehicleNodeCode={}", partCode, sn, chipUid, batchNum, vehicleNodeCode);
+    public String preset(String partCode, String sn, String chipUid, String batchNum, String vehicleNodeCode, BizType bizType) {
+        log.info("开始预置零件[{}:{}]安全常量, chipUid={}, batchNum={}, vehicleNodeCode={}, bizType={}",
+                partCode, sn, chipUid, batchNum, vehicleNodeCode, bizType);
 
         PartSecurityConstant existing = partSecurityConstantRepository.selectByPartCodeAndSn(partCode, sn);
 
@@ -40,9 +39,8 @@ public class PartSecurityPresetAppService {
             return null;
         }
 
-        BizType bizType = vehicleNodeSchemaRegistry.getBizType(vehicleNodeCode);
         if (bizType == null) {
-            throw new IllegalArgumentException("不支持的车辆节点类型: " + vehicleNodeCode);
+            throw new IllegalArgumentException("安全常量预置 BizType 为空: partCode=" + partCode + ", vehicleNodeCode=" + vehicleNodeCode);
         }
 
         PartSecurityConstant securityConstant;

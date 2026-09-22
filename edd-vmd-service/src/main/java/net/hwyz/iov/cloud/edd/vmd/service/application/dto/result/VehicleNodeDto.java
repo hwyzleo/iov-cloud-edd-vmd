@@ -22,6 +22,7 @@ public class VehicleNodeDto {
     private String nameLocal;
     private String nodeType;
     private String deviceCategory;
+    private String hsmCapability;
     private String funcDomain;
     private String otaSupport;
     private Boolean core;

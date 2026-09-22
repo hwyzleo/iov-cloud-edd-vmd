@@ -56,7 +56,9 @@ public enum VmdErrorCode implements ErrorCode {
     SOFTWARE_MANIFEST_ITEM_INVALID("806054", "软件实装清单条目非法"),
     SOFTWARE_SOURCE_UNSUPPORTED("806055", "不支持的软件实装来源"),
     SOFTWARE_SOURCE_VERSION_MISSING("806056", "缺少软件实装来源版本或时刻"),
-    SOFTWARE_IDEMPOTENCY_CONFLICT("806057", "软件实装幂等键冲突");
+    SOFTWARE_IDEMPOTENCY_CONFLICT("806057", "软件实装幂等键冲突"),
+    SECURITY_PRESET_INVALID_CAPABILITY("806058", "器件HSM能力值非法或不受支持"),
+    SECURITY_PRESET_BIZ_TYPE_UNRESOLVED("806059", "安全常量预置业务类型不可解析");
 
     private final String code;
     private final String message;

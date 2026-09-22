@@ -76,10 +76,11 @@ class MdmVehicleNodeRepositoryImplTest {
     }
 
     @Test
-    @DisplayName("selectByCode应返回车载节点")
+    @DisplayName("selectByCode应返回车载节点并透传hsmCapability（CR-049）")
     void testSelectByCode() {
         String code = "VN001";
-        MdmVehicleNodePo po = MdmVehicleNodePo.builder().id(1L).code(code).name("车载节点1").build();
+        MdmVehicleNodePo po = MdmVehicleNodePo.builder().id(1L).code(code).name("车载节点1")
+                .deviceCategory("CCU").hsmCapability("HSM_FULL").build();
 
         when(mdmVehicleNodeMapper.selectPoByCode(code)).thenReturn(po);
 
@@ -87,6 +88,8 @@ class MdmVehicleNodeRepositoryImplTest {
 
         assertNotNull(result);
         assertEquals(code, result.getCode());
+        assertEquals("CCU", result.getDeviceCategory());
+        assertEquals("HSM_FULL", result.getHsmCapability());
         verify(mdmVehicleNodeMapper).selectPoByCode(code);
     }
 

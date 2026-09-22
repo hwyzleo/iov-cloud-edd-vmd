@@ -37,7 +37,9 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmVariantEven
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmVehicleNodeEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmPartEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.ConfigurationProjectionCommand;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.VehicleNodeProjectionCommand;
 import net.hwyz.iov.cloud.edd.vmd.service.application.mapper.MdmConfigurationProjectionMapper;
+import net.hwyz.iov.cloud.edd.vmd.service.application.mapper.MdmVehicleNodeProjectionMapper;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.monitoring.ConfigurationSyncMetrics;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Brand;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.OptionFamily;
@@ -47,7 +49,6 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.CarLine;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Model;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Plant;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Variant;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleNode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Part;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmBrandRepository;
@@ -89,6 +90,7 @@ public class MdmSyncAppService {
     private final MdmVehicleNodeRepository mdmVehicleNodeRepository;
     private final MdmPartRepository mdmPartRepository;
     private final MdmConfigurationProjectionMapper mdmConfigurationProjectionMapper;
+    private final MdmVehicleNodeProjectionMapper mdmVehicleNodeProjectionMapper;
     private final ProjectionIntegrityChecker projectionIntegrityChecker;
     private final ConfigurationSyncMetrics configurationSyncMetrics;
 
@@ -421,48 +423,16 @@ public class MdmSyncAppService {
 
     /**
      * 处理 MDM 车载节点事件
+     * <p>
+     * CR-049：统一投影内核（与 Bootstrap 共用 MdmVehicleNodeProjectionMapper），
+     * 透传 hsmCapability/deviceCategory，版本门禁 + 幂等 upsert；
+     * Deleted/Deactivated 沿用现有投影失效语义。
+     * </p>
      */
     public void handleVehicleNodeEvent(MdmVehicleNodeEvent event) {
         log.info("处理MDM车载节点事件: entityId={}, version={}", event.getEntityId(), event.getVersion());
-        VehicleNode localVehicleNode = mdmVehicleNodeRepository.selectByCode(event.getCode());
-        if (localVehicleNode == null) {
-                    VehicleNode newVehicleNode = VehicleNode.builder()
-                            .code(event.getCode())
-                            .name(event.getName())
-                            .nameLocal(event.getNameEn())
-                            .deviceCategory(event.getDeviceCategory())
-                            .funcDomain(event.getFuncDomain())
-                            .nodeType(event.getNodeType())
-                            .otaSupport(event.getOtaSupport())
-                            .core(event.getCore())
-                            .sort(event.getSort() != null ? event.getSort() : 0)
-                            .source(SourceType.MDM)
-                            .externalRefId(event.getEntityId())
-                            .externalVersion(event.getVersion())
-                            .lastSyncTime(LocalDateTime.now())
-                            .build();
-            mdmVehicleNodeRepository.insert(newVehicleNode);
-            log.info("新增车载节点: code={}", event.getCode());
-        } else {
-            if (event.getVersion() > localVehicleNode.getExternalVersion()) {
-                localVehicleNode.setName(event.getName());
-                localVehicleNode.setNameLocal(event.getNameEn());
-                localVehicleNode.setDeviceCategory(event.getDeviceCategory());
-                localVehicleNode.setFuncDomain(event.getFuncDomain());
-                localVehicleNode.setNodeType(event.getNodeType());
-                localVehicleNode.setOtaSupport(event.getOtaSupport());
-                localVehicleNode.setCore(event.getCore());
-                localVehicleNode.setSort(event.getSort() != null ? event.getSort() : 0);
-                localVehicleNode.setExternalRefId(event.getEntityId());
-                localVehicleNode.setExternalVersion(event.getVersion());
-                localVehicleNode.setLastSyncTime(LocalDateTime.now());
-                mdmVehicleNodeRepository.updateById(localVehicleNode);
-                log.info("更新车载节点: code={}, version={}", event.getCode(), event.getVersion());
-            } else {
-                log.info("忽略车载节点事件（版本不高于本地）: code={}, eventVersion={}, localVersion={}",
-                        event.getCode(), event.getVersion(), localVehicleNode.getExternalVersion());
-            }
-        }
+        VehicleNodeProjectionCommand command = mdmVehicleNodeProjectionMapper.fromEvent(event);
+        mdmVehicleNodeProjectionMapper.apply(command);
     }
 
     /**
@@ -1025,6 +995,10 @@ public class MdmSyncAppService {
 
     /**
      * Bootstrap 全量同步车载节点数据
+     * <p>
+     * CR-049：与 Kafka 增量事件共用同一 Projection Mapper（版本门禁 + 幂等 upsert），
+     * 透传 hsmCapability/deviceCategory。
+     * </p>
      */
     public void bootstrapVehicleNode() {
         log.info("开始 Bootstrap 车载节点数据同步");
@@ -1042,39 +1016,12 @@ public class MdmSyncAppService {
                         break;
                     }
                     for (VehicleNodeResponse vehicleNodeData : pageResponse.getRows()) {
-                        VehicleNode existingVehicleNode = mdmVehicleNodeRepository.selectByCode(vehicleNodeData.getNodeCode());
-                        if (existingVehicleNode == null) {
-                            VehicleNode vehicleNode = VehicleNode.builder()
-                                    .code(vehicleNodeData.getNodeCode())
-                                    .name(vehicleNodeData.getName())
-                                    .nameLocal(vehicleNodeData.getNameLocal())
-                                    .deviceCategory(vehicleNodeData.getDeviceCategory())
-                                    .funcDomain(vehicleNodeData.getFunctionalDomain() != null ? vehicleNodeData.getFunctionalDomain() : "GENERAL")
-                                    .nodeType(vehicleNodeData.getNodeType() != null ? vehicleNodeData.getNodeType() : "ECU")
-                                    .otaSupport(vehicleNodeData.getOtaSupportType() != null ? vehicleNodeData.getOtaSupportType() : "NONE")
-                                    .core(vehicleNodeData.getIsCoreNode())
-                                    .sort(0)
-                                    .source(SourceType.MDM)
-                                    .externalRefId(vehicleNodeData.getExternalRefId())
-                                    .externalVersion(vehicleNodeData.getExternalVersion())
-                                    .lastSyncTime(convertToLocalDateTime(vehicleNodeData.getLastSyncTime()))
-                                    .build();
-                            mdmVehicleNodeRepository.insert(vehicleNode);
-                            log.info("Bootstrap 新增 MDM 车载节点投影: code={}", vehicleNodeData.getNodeCode());
-                        } else {
-                            existingVehicleNode.setName(vehicleNodeData.getName());
-                            existingVehicleNode.setNameLocal(vehicleNodeData.getNameLocal());
-                            existingVehicleNode.setDeviceCategory(vehicleNodeData.getDeviceCategory());
-                            existingVehicleNode.setFuncDomain(vehicleNodeData.getFunctionalDomain() != null ? vehicleNodeData.getFunctionalDomain() : "GENERAL");
-                            existingVehicleNode.setNodeType(vehicleNodeData.getNodeType() != null ? vehicleNodeData.getNodeType() : "ECU");
-                            existingVehicleNode.setOtaSupport(vehicleNodeData.getOtaSupportType() != null ? vehicleNodeData.getOtaSupportType() : "NONE");
-                            existingVehicleNode.setCore(vehicleNodeData.getIsCoreNode());
-                            existingVehicleNode.setSource(SourceType.MDM);
-                            existingVehicleNode.setExternalRefId(vehicleNodeData.getExternalRefId());
-                            existingVehicleNode.setExternalVersion(vehicleNodeData.getExternalVersion());
-                            existingVehicleNode.setLastSyncTime(convertToLocalDateTime(vehicleNodeData.getLastSyncTime()));
-                            mdmVehicleNodeRepository.updateById(existingVehicleNode);
-                            log.info("Bootstrap 更新 MDM 车载节点投影: code={}", vehicleNodeData.getNodeCode());
+                        try {
+                            VehicleNodeProjectionCommand command = mdmVehicleNodeProjectionMapper.fromSnapshot(vehicleNodeData);
+                            mdmVehicleNodeProjectionMapper.apply(command);
+                        } catch (Exception e) {
+                            log.error("Bootstrap 新增 MDM 车载节点投影失败: code={}, error={}",
+                                    vehicleNodeData.getNodeCode(), e.getMessage(), e);
                         }
                     }
                     if (pageResponse.getRows().size() < pageSize) {

@@ -8,6 +8,7 @@
         <result column="name" property="name"/>
         <result column="name_local" property="nameLocal"/>
         <result column="device_category" property="deviceCategory"/>
+        <result column="hsm_capability" property="hsmCapability"/>
         <result column="func_domain" property="funcDomain"/>
         <result column="node_type" property="nodeType"/>
         <result column="ota_support" property="otaSupport"/>
@@ -27,18 +28,18 @@
     </resultMap>
 
     <sql id="baseColumnList">
-        id, code, name, name_local, device_category, func_domain, node_type, ota_support, core, sort,
+        id, code, name, name_local, device_category, hsm_capability, func_domain, node_type, ota_support, core, sort,
         source, external_ref_id, external_version, last_sync_time,
         description, create_time, create_by, modify_time, modify_by, row_version, row_valid
     </sql>
 
     <insert id="insertPo" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO tb_mdm_vehicle_node (
-            id, code, name, name_local, device_category, func_domain, node_type, ota_support, core, sort,
+            id, code, name, name_local, device_category, hsm_capability, func_domain, node_type, ota_support, core, sort,
             source, external_ref_id, external_version, last_sync_time,
             description, create_time, create_by, modify_time, modify_by, row_version, row_valid
         ) VALUES (
-            #{id}, #{code}, #{name}, #{nameLocal}, #{deviceCategory}, #{funcDomain}, #{nodeType}, #{otaSupport}, #{core}, #{sort},
+            #{id}, #{code}, #{name}, #{nameLocal}, #{deviceCategory}, #{hsmCapability}, #{funcDomain}, #{nodeType}, #{otaSupport}, #{core}, #{sort},
             #{source}, #{externalRefId}, #{externalVersion}, #{lastSyncTime},
             #{description}, now(), #{createBy}, now(), #{modifyBy}, 1, 1
         )
@@ -50,6 +51,7 @@
             name = #{name},
             name_local = #{nameLocal},
             device_category = #{deviceCategory},
+            hsm_capability = #{hsmCapability},
             func_domain = #{funcDomain},
             node_type = #{nodeType},
             ota_support = #{otaSupport},
@@ -72,6 +74,7 @@
             name = #{name},
             name_local = #{nameLocal},
             device_category = #{deviceCategory},
+            hsm_capability = #{hsmCapability},
             func_domain = #{funcDomain},
             node_type = #{nodeType},
             ota_support = #{otaSupport},

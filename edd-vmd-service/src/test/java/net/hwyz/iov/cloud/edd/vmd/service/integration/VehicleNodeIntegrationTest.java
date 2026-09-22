@@ -123,6 +123,7 @@ class VehicleNodeIntegrationTest {
                 .name("测试车载节点")
                 .nameLocal("Test Vehicle Node")
                 .deviceCategory("TBOX")
+                .hsmCapability("HSM_FULL")
                 .funcDomain("ADAS")
                 .nodeType("CONTROLLER")
                 .otaSupport("OTA")
@@ -138,6 +139,7 @@ class VehicleNodeIntegrationTest {
         assertEquals("测试车载节点", response.getName());
         assertEquals("Test Vehicle Node", response.getNameLocal());
         assertEquals("TBOX", response.getDeviceCategory());
+        assertEquals("HSM_FULL", response.getHsmCapability());
         assertEquals("ADAS", response.getFuncDomain());
         assertNotNull(response.getNodeType());
         assertEquals("CONTROLLER", response.getNodeType());
@@ -187,6 +189,7 @@ class VehicleNodeIntegrationTest {
                 .name("测试车载节点")
                 .nameLocal("Test Vehicle Node")
                 .deviceCategory("TBOX")
+                .hsmCapability("HSM_FULL")
                 .funcDomain("ADAS")
                 .nodeType("CONTROLLER")
                 .otaSupport("OTA")
@@ -205,6 +208,7 @@ class VehicleNodeIntegrationTest {
         assertEquals("VN001", vehicleNode.getCode());
         assertEquals("测试车载节点", vehicleNode.getName());
         assertEquals("TBOX", vehicleNode.getDeviceCategory());
+        assertEquals("HSM_FULL", vehicleNode.getHsmCapability());
         assertEquals("ADAS", vehicleNode.getFuncDomain());
         assertEquals(SourceType.MDM, vehicleNode.getSource());
         assertEquals("ext-001", vehicleNode.getExternalRefId());

@@ -13,6 +13,8 @@ import net.hwyz.iov.cloud.edd.mdm.api.service.VariantService;
 import net.hwyz.iov.cloud.edd.mdm.api.service.VehicleNodeService;
 import net.hwyz.iov.cloud.edd.mdm.api.vo.response.ConfigurationPageResponse;
 import net.hwyz.iov.cloud.edd.mdm.api.vo.response.ConfigurationResponse;
+import net.hwyz.iov.cloud.edd.mdm.api.vo.response.VehicleNodePageResponse;
+import net.hwyz.iov.cloud.edd.mdm.api.vo.response.VehicleNodeResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.ConfigurationProjectionCommand;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmBrandEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmCarLineEvent;
@@ -23,7 +25,10 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmOptionFamil
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmPartEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmPlatformEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmVehicleNodeEvent;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.VehicleNodeProjectionCommand;
 import net.hwyz.iov.cloud.edd.vmd.service.application.mapper.MdmConfigurationProjectionMapper;
+import net.hwyz.iov.cloud.edd.vmd.service.application.mapper.MdmVehicleNodeProjectionMapper;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.VehicleNodeProjectionException;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.monitoring.ConfigurationSyncMetrics;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Brand;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.CarLine;
@@ -55,6 +60,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -100,6 +106,9 @@ class MdmSyncAppServiceTest {
 
     @Mock
     private MdmConfigurationProjectionMapper mdmConfigurationProjectionMapper;
+
+    @Mock
+    private MdmVehicleNodeProjectionMapper mdmVehicleNodeProjectionMapper;
 
     @Mock
     private ProjectionIntegrityChecker projectionIntegrityChecker;
@@ -796,124 +805,114 @@ class MdmSyncAppServiceTest {
     }
 
     @Test
-    @DisplayName("handleVehicleNodeEvent应新增本地不存在的车载节点投影")
+    @DisplayName("handleVehicleNodeEvent应经统一投影Mapper新增本地不存在的车载节点投影")
     void handleVehicleNodeEvent_shouldInsertWhenLocalVehicleNodeNotExists() {
         // Given
         MdmVehicleNodeEvent event = new MdmVehicleNodeEvent("CREATED", "mdm-vn-001", 1L, "VN001",
                 "车载节点1", "Vehicle Node 1", "CATEGORY001", "FUNC001",
                 "TYPE001", "OTA001", true, 10, LocalDateTime.now());
 
-        when(mdmVehicleNodeRepository.selectByCode("VN001")).thenReturn(null);
-        when(mdmVehicleNodeRepository.insert(any(VehicleNode.class))).thenReturn(1);
+        VehicleNodeProjectionCommand command = VehicleNodeProjectionCommand.builder()
+                .code("VN001").name("车载节点1").externalRefId("mdm-vn-001").externalVersion(1L).build();
+        when(mdmVehicleNodeProjectionMapper.fromEvent(event)).thenReturn(command);
 
         // When
         mdmSyncAppService.handleVehicleNodeEvent(event);
 
         // Then
-        verify(mdmVehicleNodeRepository).selectByCode("VN001");
-        verify(mdmVehicleNodeRepository).insert(any(VehicleNode.class));
+        verify(mdmVehicleNodeProjectionMapper).fromEvent(event);
+        verify(mdmVehicleNodeProjectionMapper).apply(command);
+        verify(mdmVehicleNodeRepository, never()).insert(any(VehicleNode.class));
     }
 
     @Test
-    @DisplayName("handleVehicleNodeEvent应在sort为null时使用默认值0")
-    void handleVehicleNodeEvent_shouldInsertWithDefaultSortWhenSortIsNull() {
+    @DisplayName("handleVehicleNodeEvent应透传hsmCapability/deviceCategory到投影命令（CR-049）")
+    void handleVehicleNodeEvent_shouldMapHsmCapabilityAndDeviceCategory() {
         // Given
-        MdmVehicleNodeEvent event = new MdmVehicleNodeEvent("CREATED", "mdm-vn-004", 1L, "VN004",
-                "车载节点4", "Vehicle Node 4", "CATEGORY001", "FUNC001",
-                "TYPE001", "OTA001", true, null, LocalDateTime.now());
+        MdmVehicleNodeEvent event = new MdmVehicleNodeEvent("CREATED", "mdm-vn-006", 1L, "VN006",
+                "车载节点6", "Vehicle Node 6", "CCU", "FUNC001",
+                "TYPE001", "OTA001", true, 10, "HSM_FULL", LocalDateTime.now());
 
-        when(mdmVehicleNodeRepository.selectByCode("VN004")).thenReturn(null);
-        when(mdmVehicleNodeRepository.insert(any(VehicleNode.class))).thenReturn(1);
+        when(mdmVehicleNodeProjectionMapper.fromEvent(event)).thenReturn(
+                VehicleNodeProjectionCommand.builder()
+                        .code("VN006").name("车载节点6").deviceCategory("CCU").hsmCapability("HSM_FULL")
+                        .externalRefId("mdm-vn-006").externalVersion(1L).build());
 
         // When
         mdmSyncAppService.handleVehicleNodeEvent(event);
 
         // Then
-        verify(mdmVehicleNodeRepository).selectByCode("VN004");
-        verify(mdmVehicleNodeRepository).insert(argThat(node -> node.getSort() != null && node.getSort() == 0));
+        verify(mdmVehicleNodeProjectionMapper).fromEvent(event);
+        verify(mdmVehicleNodeProjectionMapper).apply(argThat(command ->
+                "HSM_FULL".equals(command.getHsmCapability()) && "CCU".equals(command.getDeviceCategory())));
     }
 
     @Test
-    @DisplayName("handleVehicleNodeEvent应更新本地已存在且版本更高的车载节点投影")
+    @DisplayName("handleVehicleNodeEvent应更新本地已存在且版本更高的车载节点投影（委托统一Mapper）")
     void handleVehicleNodeEvent_shouldUpdateWhenLocalVehicleNodeExistsAndVersionHigher() {
         // Given
         MdmVehicleNodeEvent event = new MdmVehicleNodeEvent("UPDATED", "mdm-vn-002", 2L, "VN002",
                 "更新后的车载节点", "Updated Vehicle Node", "CATEGORY002", "FUNC002",
                 "TYPE002", "OTA002", false, 20, LocalDateTime.now());
 
-        VehicleNode localVehicleNode = VehicleNode.builder()
-                .id(1L)
-                .code("VN002")
-                .name("原始车载节点")
-                .source(SourceType.MDM)
-                .externalRefId("mdm-vn-002")
-                .externalVersion(1L)
-                .build();
-
-        when(mdmVehicleNodeRepository.selectByCode("VN002")).thenReturn(localVehicleNode);
-        when(mdmVehicleNodeRepository.updateById(any(VehicleNode.class))).thenReturn(1);
+        VehicleNodeProjectionCommand command = VehicleNodeProjectionCommand.builder()
+                .code("VN002").name("更新后的车载节点").externalRefId("mdm-vn-002").externalVersion(2L).build();
+        when(mdmVehicleNodeProjectionMapper.fromEvent(event)).thenReturn(command);
 
         // When
         mdmSyncAppService.handleVehicleNodeEvent(event);
 
         // Then
-        verify(mdmVehicleNodeRepository).selectByCode("VN002");
-        verify(mdmVehicleNodeRepository).updateById(any(VehicleNode.class));
+        verify(mdmVehicleNodeProjectionMapper).fromEvent(event);
+        verify(mdmVehicleNodeProjectionMapper).apply(command);
+        verify(mdmVehicleNodeRepository, never()).updateById(any(VehicleNode.class));
     }
 
     @Test
-    @DisplayName("handleVehicleNodeEvent应更新时sort为null使用默认值0")
-    void handleVehicleNodeEvent_shouldUpdateWithDefaultSortWhenSortIsNull() {
+    @DisplayName("handleVehicleNodeEvent缺失契约字段时由投影Mapper校验抛异常（不写半条投影）")
+    void handleVehicleNodeEvent_shouldThrowProjectionExceptionOnInvalidPayload() {
         // Given
-        MdmVehicleNodeEvent event = new MdmVehicleNodeEvent("UPDATED", "mdm-vn-005", 2L, "VN005",
-                "更新后的车载节点", "Updated Vehicle Node", "CATEGORY002", "FUNC002",
-                "TYPE002", "OTA002", false, null, LocalDateTime.now());
-
-        VehicleNode localVehicleNode = VehicleNode.builder()
-                .id(1L)
-                .code("VN005")
-                .name("原始车载节点")
-                .sort(10)
-                .source(SourceType.MDM)
-                .externalRefId("mdm-vn-005")
-                .externalVersion(1L)
-                .build();
-
-        when(mdmVehicleNodeRepository.selectByCode("VN005")).thenReturn(localVehicleNode);
-        when(mdmVehicleNodeRepository.updateById(any(VehicleNode.class))).thenReturn(1);
-
-        // When
-        mdmSyncAppService.handleVehicleNodeEvent(event);
-
-        // Then
-        verify(mdmVehicleNodeRepository).selectByCode("VN005");
-        verify(mdmVehicleNodeRepository).updateById(argThat(node -> node.getSort() != null && node.getSort() == 0));
-    }
-
-    @Test
-    @DisplayName("handleVehicleNodeEvent应忽略版本不高于本地的车载节点事件")
-    void handleVehicleNodeEvent_shouldIgnoreWhenVersionNotHigher() {
-        // Given
-        MdmVehicleNodeEvent event = new MdmVehicleNodeEvent("UPDATED", "mdm-vn-003", 1L, "VN003",
-                "旧版本车载节点", "Old Vehicle Node", "CATEGORY001", "FUNC001",
+        MdmVehicleNodeEvent event = new MdmVehicleNodeEvent("CREATED", null, 1L, "VN007",
+                "车载节点7", "Vehicle Node 7", "CATEGORY001", "FUNC001",
                 "TYPE001", "OTA001", true, 10, LocalDateTime.now());
 
-        VehicleNode localVehicleNode = VehicleNode.builder()
-                .id(1L)
-                .code("VN003")
-                .name("本地车载节点")
-                .source(SourceType.MDM)
-                .externalRefId("mdm-vn-003")
-                .externalVersion(2L)
-                .build();
+        when(mdmVehicleNodeProjectionMapper.fromEvent(event))
+                .thenThrow(new VehicleNodeProjectionException("VehicleNode 投影 payload 缺少 externalRefId"));
 
-        when(mdmVehicleNodeRepository.selectByCode("VN003")).thenReturn(localVehicleNode);
+        // When & Then
+        assertThrows(VehicleNodeProjectionException.class, () -> mdmSyncAppService.handleVehicleNodeEvent(event));
+        verify(mdmVehicleNodeProjectionMapper, never()).apply(any());
+    }
+
+    @Test
+    @DisplayName("bootstrapVehicleNode应经统一投影Mapper同步快照（CR-049）")
+    void bootstrapVehicleNode_shouldUseProjectionMapper() {
+        // Given
+        when(mdmVehicleNodeRepository.countBySource(SourceType.MDM)).thenReturn(0L);
+        VehicleNodeResponse snapshot = VehicleNodeResponse.builder()
+                .nodeCode("CCU_GEN2")
+                .name("中央计算单元GEN2")
+                .deviceCategory("CCU")
+                .hsmCapability("HSM_FULL")
+                .externalRefId("mdm-vn-ccu2")
+                .externalVersion(12L)
+                .build();
+        VehicleNodePageResponse pageResponse = new VehicleNodePageResponse();
+        pageResponse.setRows(List.of(snapshot));
+        when(vehicleNodeService.snapshot(anyInt(), anyInt(), any())).thenReturn(pageResponse);
+        when(mdmVehicleNodeProjectionMapper.fromSnapshot(snapshot))
+                .thenReturn(VehicleNodeProjectionCommand.builder()
+                        .code("CCU_GEN2").deviceCategory("CCU").hsmCapability("HSM_FULL")
+                        .externalRefId("mdm-vn-ccu2").externalVersion(12L).build());
 
         // When
-        mdmSyncAppService.handleVehicleNodeEvent(event);
+        mdmSyncAppService.bootstrapVehicleNode();
 
         // Then
-        verify(mdmVehicleNodeRepository).selectByCode("VN003");
-        verify(mdmVehicleNodeRepository, never()).updateById(any(VehicleNode.class));
+        verify(mdmVehicleNodeProjectionMapper).fromSnapshot(snapshot);
+        verify(mdmVehicleNodeProjectionMapper).apply(argThat(command ->
+                "CCU_GEN2".equals(command.getCode())
+                        && "HSM_FULL".equals(command.getHsmCapability())
+                        && "CCU".equals(command.getDeviceCategory())));
     }
 }

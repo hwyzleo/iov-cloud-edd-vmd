@@ -68,10 +68,23 @@ public class MdmVehicleNodeEvent extends MdmEvent {
      */
     private Integer sort;
 
+    /**
+     * HSM能力（CR-049：MDM主数据 hsmCapability，NONE/SHE/HSM_LIGHT/HSM_FULL）
+     */
+    private String hsmCapability;
+
     public MdmVehicleNodeEvent(String eventType, String entityId, Long version, String code,
                                 String name, String nameEn, String deviceCategory,
                                 String funcDomain, String nodeType, String otaSupport,
                                 Boolean core, Integer sort, LocalDateTime occurredAt) {
+        this(eventType, entityId, version, code, name, nameEn, deviceCategory,
+                funcDomain, nodeType, otaSupport, core, sort, null, occurredAt);
+    }
+
+    public MdmVehicleNodeEvent(String eventType, String entityId, Long version, String code,
+                                String name, String nameEn, String deviceCategory,
+                                String funcDomain, String nodeType, String otaSupport,
+                                Boolean core, Integer sort, String hsmCapability, LocalDateTime occurredAt) {
         super(eventType, entityId, version, code, occurredAt);
         this.code = code;
         this.name = name;
@@ -82,6 +95,7 @@ public class MdmVehicleNodeEvent extends MdmEvent {
         this.otaSupport = otaSupport;
         this.core = core;
         this.sort = sort;
+        this.hsmCapability = hsmCapability;
     }
 
 }

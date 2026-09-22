@@ -117,4 +117,29 @@ class MdmVehicleNodeKafkaConsumerTest {
         // Then
         verify(mdmSyncMetrics).recordDuration(anyLong());
     }
+
+    @Test
+    @DisplayName("onVehicleNodeEvent应解析MDM事件中的hsmCapability并透传（CR-049）")
+    void onVehicleNodeEvent_shouldParseAndPassHsmCapability() throws Exception {
+        // Given
+        String messageJson = "{\"eventType\":\"CREATED\",\"entityId\":\"mdm-vn-ccu2\",\"version\":12,\"code\":\"CCU_GEN2\","
+                + "\"name\":\"中央计算单元GEN2\",\"deviceCategory\":\"CCU\",\"hsmCapability\":\"HSM_FULL\"}";
+        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.eead.vehicleNode.event", 0, 0L, "key", messageJson);
+
+        MdmVehicleNodeEvent testEvent = new MdmVehicleNodeEvent("CREATED", "mdm-vn-ccu2", 12L, "CCU_GEN2",
+                "中央计算单元GEN2", "Central Computing Unit Gen2", "CCU",
+                "EEAD", "CONTROLLER", "FOTA", true, 1, "HSM_FULL", LocalDateTime.now());
+
+        when(objectMapper.readValue(messageJson, MdmVehicleNodeEvent.class)).thenReturn(testEvent);
+
+        // When
+        kafkaConsumer.onVehicleNodeEvent(record);
+
+        // Then
+        verify(mdmSyncAppService).handleVehicleNodeEvent(argThat(event ->
+                "CCU_GEN2".equals(event.getCode())
+                        && "HSM_FULL".equals(event.getHsmCapability())
+                        && "CCU".equals(event.getDeviceCategory())));
+        verify(mdmSyncMetrics).recordSuccess();
+    }
 }

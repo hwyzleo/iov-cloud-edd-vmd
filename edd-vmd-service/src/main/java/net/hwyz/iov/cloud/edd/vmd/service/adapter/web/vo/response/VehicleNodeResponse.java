@@ -46,6 +46,11 @@ public class VehicleNodeResponse {
     private String deviceCategory;
 
     /**
+     * HSM能力（CR-049：MDM主数据 hsmCapability）
+     */
+    private String hsmCapability;
+
+    /**
      * 功能域
      */
     private String funcDomain;

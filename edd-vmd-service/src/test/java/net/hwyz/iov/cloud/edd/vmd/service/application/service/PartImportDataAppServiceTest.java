@@ -10,7 +10,9 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartImportData;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmPartRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmVehicleNodeRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartImportDataRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.VehicleNodeSchemaRegistry;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleNode;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SecurityPresetDecision;
+import net.hwyz.iov.cloud.framework.security.crypto.model.BizType;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -51,18 +53,27 @@ class PartImportDataAppServiceTest {
     private DownstreamProcessorRegistry downstreamProcessorRegistry;
 
     @Mock
-    private VehicleNodeSchemaRegistry vehicleNodeSchemaRegistry;
+    private PartSecurityPresetAppService partSecurityPresetAppService;
 
     @Mock
-    private PartSecurityPresetAppService partSecurityPresetAppService;
+    private SecurityPresetPolicy securityPresetPolicy;
+
+    @Mock
+    private HsmUidFieldResolver hsmUidFieldResolver;
+
+    @Mock
+    private SecurityBizTypeResolver securityBizTypeResolver;
 
     private PartImportDataAppService partImportDataAppService;
 
     @BeforeEach
     void setUp() {
         partImportDataAppService = new PartImportDataAppService(
-                partImportDataRepository, mdmPartRepository, mdmVehicleNodeRepository, partInboundAppService, 
-                downstreamProcessorRegistry, vehicleNodeSchemaRegistry, partSecurityPresetAppService);
+                partImportDataRepository, mdmPartRepository, mdmVehicleNodeRepository, partInboundAppService,
+                downstreamProcessorRegistry, partSecurityPresetAppService,
+                securityPresetPolicy, hsmUidFieldResolver, securityBizTypeResolver);
+        // 默认不触发预置；具体能力/类别场景由各测试以更具体的 stub 覆盖
+        lenient().when(securityPresetPolicy.decide(any(), any())).thenReturn(SecurityPresetDecision.PRESET_NOT_REQUIRED);
     }
 
     @Test
@@ -255,7 +266,7 @@ class PartImportDataAppServiceTest {
                         .successCount(1)
                         .failureCount(0)
                         .build());
-        when(vehicleNodeSchemaRegistry.needsSecurityConstantPreset("TSP")).thenReturn(false);
+        when(securityPresetPolicy.decide(any(), eq("TSP"))).thenReturn(SecurityPresetDecision.PRESET_NOT_REQUIRED);
         when(downstreamProcessorRegistry.getProcessor("TSP")).thenReturn(mockProcessor);
 
         // 执行测试
@@ -351,8 +362,16 @@ class PartImportDataAppServiceTest {
                         .successCount(1)
                         .failureCount(0)
                         .build());
-        when(vehicleNodeSchemaRegistry.needsSecurityConstantPreset("TBOX_5G")).thenReturn(true);
-        when(vehicleNodeSchemaRegistry.getHsmUidField("TBOX_5G")).thenReturn("HSM");
+        // CR-049：以 VehicleNode 投影主数据（hsmCapability/deviceCategory）驱动判定
+        VehicleNode tbox5gNode = VehicleNode.builder()
+                .code("TBOX_5G")
+                .deviceCategory("TBOX")
+                .hsmCapability("HSM_FULL")
+                .build();
+        when(mdmVehicleNodeRepository.selectByCode("TBOX_5G")).thenReturn(tbox5gNode);
+        when(securityPresetPolicy.decide("HSM_FULL", "TBOX_5G")).thenReturn(SecurityPresetDecision.PRESET_REQUIRED);
+        when(securityBizTypeResolver.resolve("TBOX", "TBOX_5G")).thenReturn(BizType.TBOX_DEVICE_ROOT);
+        when(hsmUidFieldResolver.resolve(any())).thenReturn("HSM");
         when(downstreamProcessorRegistry.getProcessor("TBOX_5G")).thenReturn(mockProcessor);
 
         // 执行测试
@@ -364,8 +383,8 @@ class PartImportDataAppServiceTest {
         assertEquals(1, result.getSuccessCount());
         assertEquals(0, result.getFailureCount());
 
-        // 验证安全常量预置服务被调用
-        verify(partSecurityPresetAppService).preset(eq("TBOX_001"), eq("SN001"), eq("HSM_UID_001"), eq(batchNum), eq("TBOX_5G"));
+        // 验证安全常量预置服务被调用（BizType 按 deviceCategory 路由）
+        verify(partSecurityPresetAppService).preset(eq("TBOX_001"), eq("SN001"), eq("HSM_UID_001"), eq(batchNum), eq("TBOX_5G"), eq(BizType.TBOX_DEVICE_ROOT));
         
         // 验证下游处理器也被调用（与安全常量预置并列）
         verify(mockProcessor).process(eq(batchNum), eq("TBOX_001"), eq("TBOX_5G"), any(JSONObject.class));
@@ -402,7 +421,7 @@ class PartImportDataAppServiceTest {
                         .successCount(1)
                         .failureCount(0)
                         .build());
-        when(vehicleNodeSchemaRegistry.needsSecurityConstantPreset("TSP")).thenReturn(false);
+        when(securityPresetPolicy.decide(any(), eq("TSP"))).thenReturn(SecurityPresetDecision.PRESET_NOT_REQUIRED);
         when(downstreamProcessorRegistry.getProcessor("TSP")).thenReturn(mockProcessor);
 
         // 执行测试
@@ -415,7 +434,7 @@ class PartImportDataAppServiceTest {
         assertEquals(0, result.getFailureCount());
 
         // 验证安全常量预置服务未被调用
-        verify(partSecurityPresetAppService, never()).preset(anyString(), anyString(), anyString(), anyString(), anyString());
+        verify(partSecurityPresetAppService, never()).preset(anyString(), anyString(), anyString(), anyString(), anyString(), any(BizType.class));
         
         // 验证下游处理器被调用
         verify(mockProcessor).process(eq(batchNum), eq("SIM_001"), eq("TSP"), any(JSONObject.class));
@@ -452,13 +471,21 @@ class PartImportDataAppServiceTest {
                         .successCount(1)
                         .failureCount(0)
                         .build());
-        when(vehicleNodeSchemaRegistry.needsSecurityConstantPreset("TBOX_5G")).thenReturn(true);
-        when(vehicleNodeSchemaRegistry.getHsmUidField("TBOX_5G")).thenReturn("HSM");
+        // CR-049：以 VehicleNode 投影主数据（hsmCapability/deviceCategory）驱动判定
+        VehicleNode tbox5gNode = VehicleNode.builder()
+                .code("TBOX_5G")
+                .deviceCategory("TBOX")
+                .hsmCapability("HSM_FULL")
+                .build();
+        when(mdmVehicleNodeRepository.selectByCode("TBOX_5G")).thenReturn(tbox5gNode);
+        when(securityPresetPolicy.decide("HSM_FULL", "TBOX_5G")).thenReturn(SecurityPresetDecision.PRESET_REQUIRED);
+        when(securityBizTypeResolver.resolve("TBOX", "TBOX_5G")).thenReturn(BizType.TBOX_DEVICE_ROOT);
+        when(hsmUidFieldResolver.resolve(any())).thenReturn("HSM");
         when(downstreamProcessorRegistry.getProcessor("TBOX_5G")).thenReturn(mockProcessor);
 
         // 模拟安全常量预置抛出异常
         doThrow(new RuntimeException("KMS/HSM服务不可用")).when(partSecurityPresetAppService)
-                .preset(eq("TBOX_001"), eq("SN001"), eq("HSM_UID_001"), eq(batchNum), eq("TBOX_5G"));
+                .preset(eq("TBOX_001"), eq("SN001"), eq("HSM_UID_001"), eq(batchNum), eq("TBOX_5G"), eq(BizType.TBOX_DEVICE_ROOT));
 
         // 执行测试
         ImportResult result = partImportDataAppService.parsePartImportData(batchNum);

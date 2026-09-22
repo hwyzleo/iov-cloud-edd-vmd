@@ -2,7 +2,6 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartSecurityConstant;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SecurityConstantState;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.VehicleNodeSchemaRegistry;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartImportDataRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartSecurityConstantRepository;
 import net.hwyz.iov.cloud.framework.security.crypto.KeyProvisioningTemplate;
@@ -29,9 +28,6 @@ class PartSecurityPresetAppServiceTest {
 
     @Mock
     private KeyProvisioningTemplate keyProvisioningTemplate;
-
-    @Mock
-    private VehicleNodeSchemaRegistry vehicleNodeSchemaRegistry;
 
     @InjectMocks
     private PartSecurityPresetAppService service;
@@ -62,7 +58,7 @@ class PartSecurityPresetAppServiceTest {
                 .build();
         when(partSecurityConstantRepository.selectByPartCodeAndSn(TEST_PART_CODE, TEST_SN)).thenReturn(existing);
 
-        service.preset(TEST_PART_CODE, TEST_SN, TEST_CHIP_UID, TEST_BATCH_NUM, TEST_VEHICLE_NODE_CODE);
+        service.preset(TEST_PART_CODE, TEST_SN, TEST_CHIP_UID, TEST_BATCH_NUM, TEST_VEHICLE_NODE_CODE, BizType.TBOX_DEVICE_ROOT);
 
         verify(partSecurityConstantRepository, never()).insert(any());
         verify(partSecurityConstantRepository, never()).update(any());
@@ -73,10 +69,9 @@ class PartSecurityPresetAppServiceTest {
     void shouldCreateNewRecordAndCallKeyProvisioningTemplate() {
         when(partSecurityConstantRepository.selectByPartCodeAndSn(TEST_PART_CODE, TEST_SN)).thenReturn(null);
         when(partSecurityConstantRepository.insert(any())).thenReturn(1);
-        when(vehicleNodeSchemaRegistry.getBizType(TEST_VEHICLE_NODE_CODE)).thenReturn(BizType.TBOX_DEVICE_ROOT);
         when(keyProvisioningTemplate.deriveByUid(TEST_CHIP_UID, BizType.TBOX_DEVICE_ROOT)).thenReturn(mockResult());
 
-        String error = service.preset(TEST_PART_CODE, TEST_SN, TEST_CHIP_UID, TEST_BATCH_NUM, TEST_VEHICLE_NODE_CODE);
+        String error = service.preset(TEST_PART_CODE, TEST_SN, TEST_CHIP_UID, TEST_BATCH_NUM, TEST_VEHICLE_NODE_CODE, BizType.TBOX_DEVICE_ROOT);
         org.junit.jupiter.api.Assertions.assertNull(error);
 
         verify(partSecurityConstantRepository).insert(any(PartSecurityConstant.class));
@@ -99,13 +94,12 @@ class PartSecurityPresetAppServiceTest {
     void shouldHandleFailureAndNotThrow() {
         when(partSecurityConstantRepository.selectByPartCodeAndSn(TEST_PART_CODE, TEST_SN)).thenReturn(null);
         when(partSecurityConstantRepository.insert(any())).thenReturn(1);
-        when(vehicleNodeSchemaRegistry.getBizType(TEST_VEHICLE_NODE_CODE)).thenReturn(BizType.TBOX_DEVICE_ROOT);
         when(keyProvisioningTemplate.deriveByUid(TEST_CHIP_UID, BizType.TBOX_DEVICE_ROOT))
                 .thenThrow(new RuntimeException("KMS unavailable"));
         when(partImportDataRepository.selectByBatchNum(TEST_BATCH_NUM)).thenReturn(null);
         when(partSecurityConstantRepository.update(any())).thenReturn(1);
 
-        String error = service.preset(TEST_PART_CODE, TEST_SN, TEST_CHIP_UID, TEST_BATCH_NUM, TEST_VEHICLE_NODE_CODE);
+        String error = service.preset(TEST_PART_CODE, TEST_SN, TEST_CHIP_UID, TEST_BATCH_NUM, TEST_VEHICLE_NODE_CODE, BizType.TBOX_DEVICE_ROOT);
         org.junit.jupiter.api.Assertions.assertNotNull(error);
         org.junit.jupiter.api.Assertions.assertTrue(error.contains("KMS unavailable"));
 
