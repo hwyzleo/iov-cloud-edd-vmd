@@ -41,7 +41,7 @@ public class MdmVehicleNodeKafkaConsumer {
             groupId = "${spring.kafka.consumer.group-id:iov-cloud-edd-vmd}",
             containerFactory = "kafkaListenerContainerFactory"
     )
-    public void onVehicleNodeEvent(ConsumerRecord<String, String> record) {
+    public void onVehicleNodeEvent(ConsumerRecord<String, String> record) throws Exception {
         long startTime = System.currentTimeMillis();
         log.info("收到MDM车载节点事件: topic={}, partition={}, offset={}, key={}",
                 record.topic(), record.partition(), record.offset(), record.key());
@@ -56,6 +56,9 @@ public class MdmVehicleNodeKafkaConsumer {
             mdmSyncMetrics.recordFailure();
             log.error("MDM车载节点事件处理失败: offset={}, error={}",
                     record.offset(), e.getMessage(), e);
+            // 重新抛出交由框架 ErrorHandler 处理（重试/退避/DLQ），
+            // 避免吞异常导致失败消息 offset 被静默提交而永久丢失
+            throw e;
         } finally {
             long duration = System.currentTimeMillis() - startTime;
             mdmSyncMetrics.recordDuration(duration);

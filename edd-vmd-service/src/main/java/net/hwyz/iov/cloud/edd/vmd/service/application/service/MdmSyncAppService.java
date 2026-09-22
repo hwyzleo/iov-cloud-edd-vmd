@@ -130,7 +130,9 @@ public class MdmSyncAppService {
             mdmBrandRepository.insert(newBrand);
             log.info("新增 MDM 品牌投影: code={}, name={}", event.getCode(), event.getName());
         } else {
-            if (event.getVersion() > localBrand.getExternalVersion()) {
+            // 本地 externalVersion 可能为 NULL（历史遗留投影数据），视为无版本信息，直接接受事件覆盖
+            Long localBrandVersion = localBrand.getExternalVersion();
+            if (localBrandVersion == null || event.getVersion() > localBrandVersion) {
                 localBrand.setName(event.getName());
                 localBrand.setExternalRefId(event.getEntityId());
                 localBrand.setExternalVersion(event.getVersion());
@@ -166,7 +168,9 @@ public class MdmSyncAppService {
             mdmCarLineRepository.insert(newCarLine);
             log.info("新增车系: code={}", event.getCode());
         } else {
-            if (event.getVersion() > localCarLine.getExternalVersion()) {
+            // 本地 externalVersion 可能为 NULL（历史遗留投影数据），视为无版本信息，直接接受事件覆盖
+            Long localCarLineVersion = localCarLine.getExternalVersion();
+            if (localCarLineVersion == null || event.getVersion() > localCarLineVersion) {
                 localCarLine.setName(event.getName());
                 localCarLine.setBrandCode(event.getBrandCode());
                 localCarLine.setExternalRefId(event.getEntityId());
@@ -201,7 +205,9 @@ public class MdmSyncAppService {
             mdmPlatformRepository.insert(newPlatform);
             log.info("新增平台: code={}", event.getCode());
         } else {
-            if (event.getVersion() > localPlatform.getExternalVersion()) {
+            // 本地 externalVersion 可能为 NULL（历史遗留投影数据），视为无版本信息，直接接受事件覆盖
+            Long localPlatformVersion = localPlatform.getExternalVersion();
+            if (localPlatformVersion == null || event.getVersion() > localPlatformVersion) {
                 localPlatform.setName(event.getName());
                 localPlatform.setExternalRefId(event.getEntityId());
                 localPlatform.setExternalVersion(event.getVersion());
@@ -237,7 +243,9 @@ public class MdmSyncAppService {
             mdmModelRepository.insert(newModel);
             log.info("新增车型: code={}", event.getCode());
         } else {
-            if (event.getVersion() > localModel.getExternalVersion()) {
+            // 本地 externalVersion 可能为 NULL（历史遗留投影数据），视为无版本信息，直接接受事件覆盖
+            Long localModelVersion = localModel.getExternalVersion();
+            if (localModelVersion == null || event.getVersion() > localModelVersion) {
                 localModel.setName(event.getName());
                 localModel.setPlatformCode(event.getPlatformCode());
                 localModel.setCarLineCode(event.getCarLineCode());
@@ -276,7 +284,9 @@ public class MdmSyncAppService {
             mdmVariantRepository.insert(newVariant);
             log.info("新增版本: code={}", event.getCode());
         } else {
-            if (event.getVersion() > localVariant.getExternalVersion()) {
+            // 本地 externalVersion 可能为 NULL（历史遗留投影数据），视为无版本信息，直接接受事件覆盖
+            Long localVariantVersion = localVariant.getExternalVersion();
+            if (localVariantVersion == null || event.getVersion() > localVariantVersion) {
                 localVariant.setName(event.getName());
                 localVariant.setPlatformCode(event.getPlatformCode());
                 localVariant.setCarLineCode(event.getCarLineCode());
@@ -333,7 +343,9 @@ public class MdmSyncAppService {
             mdmOptionFamilyRepository.insert(newOptionFamily);
             log.info("新增选项族: code={}", event.getCode());
         } else {
-            if (event.getVersion() > localOptionFamily.getExternalVersion()) {
+            // 本地 externalVersion 可能为 NULL（历史遗留投影数据），视为无版本信息，直接接受事件覆盖
+            Long localOptionFamilyVersion = localOptionFamily.getExternalVersion();
+            if (localOptionFamilyVersion == null || event.getVersion() > localOptionFamilyVersion) {
                 localOptionFamily.setName(event.getName());
                 localOptionFamily.setNameLocal(event.getNameLocal());
                 localOptionFamily.setType(event.getType());
@@ -369,7 +381,9 @@ public class MdmSyncAppService {
             mdmOptionFamilyRepository.insertOptionCode(newOptionCode);
             log.info("新增选项值: code={}", event.getCode());
         } else {
-            if (event.getVersion() > localOptionCode.getExternalVersion()) {
+            // 本地 externalVersion 可能为 NULL（历史遗留投影数据），视为无版本信息，直接接受事件覆盖
+            Long localOptionCodeVersion = localOptionCode.getExternalVersion();
+            if (localOptionCodeVersion == null || event.getVersion() > localOptionCodeVersion) {
                 localOptionCode.setOptionFamilyCode(event.getOptionFamilyCode());
                 localOptionCode.setName(event.getName());
                 localOptionCode.setNameLocal(event.getNameLocal());
@@ -406,7 +420,9 @@ public class MdmSyncAppService {
             mdmPlantRepository.insert(newPlant);
             log.info("新增 MDM 工厂投影: code={}, name={}", event.getCode(), event.getName());
         } else {
-            if (event.getVersion() > localPlant.getExternalVersion()) {
+            // 本地 externalVersion 可能为 NULL（历史遗留投影数据），视为无版本信息，直接接受事件覆盖
+            Long localPlantVersion = localPlant.getExternalVersion();
+            if (localPlantVersion == null || event.getVersion() > localPlantVersion) {
                 localPlant.setName(event.getName());
                 localPlant.setExternalRefId(event.getEntityId());
                 localPlant.setExternalVersion(event.getVersion());
@@ -464,7 +480,9 @@ public class MdmSyncAppService {
             mdmPartRepository.insert(newPart);
             log.info("新增零件: code={}", event.getCode());
         } else {
-            if (event.getVersion() > localPart.getExternalVersion()) {
+            // 本地 externalVersion 可能为 NULL（历史遗留投影数据），视为无版本信息，直接接受事件覆盖
+            Long localPartVersion = localPart.getExternalVersion();
+            if (localPartVersion == null || event.getVersion() > localPartVersion) {
                 localPart.setName(event.getName());
                 localPart.setPartType(event.getPartType());
                 localPart.setVehicleNodeCode(event.getVehicleNodeCode());
@@ -1087,7 +1105,8 @@ public class MdmSyncAppService {
                         insertCount++;
                     } else {
                         Long remoteVersion = partData.getVersion() != null ? partData.getVersion().longValue() : 0L;
-                        if (remoteVersion > localPart.getExternalVersion()) {
+                        Long localPartVersion = localPart.getExternalVersion() != null ? localPart.getExternalVersion() : 0L;
+                        if (remoteVersion > localPartVersion) {
                             localPart.setCode(partData.getCode());
                             localPart.setName(partData.getName());
                             localPart.setPartType(partData.getPartType());
@@ -1161,7 +1180,8 @@ public class MdmSyncAppService {
                         insertCount++;
                     } else {
                         Long remoteVersion = partData.getVersion() != null ? partData.getVersion().longValue() : 0L;
-                        if (remoteVersion > localPart.getExternalVersion()) {
+                        Long localPartVersion = localPart.getExternalVersion() != null ? localPart.getExternalVersion() : 0L;
+                        if (remoteVersion > localPartVersion) {
                             localPart.setCode(partData.getCode());
                             localPart.setName(partData.getName());
                             localPart.setPartType(partData.getPartType());

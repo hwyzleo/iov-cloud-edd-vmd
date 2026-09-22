@@ -14,6 +14,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -60,7 +61,7 @@ class MdmVehicleNodeKafkaConsumerTest {
     }
 
     @Test
-    @DisplayName("onVehicleNodeEvent应处理解析失败并记录失败指标")
+    @DisplayName("onVehicleNodeEvent应处理解析失败并记录失败指标，异常重新抛出交给框架重试")
     void onVehicleNodeEvent_shouldHandleParseFailureAndRecordFailureMetric() throws Exception {
         // Given
         String invalidJson = "invalid-json";
@@ -69,16 +70,14 @@ class MdmVehicleNodeKafkaConsumerTest {
         when(objectMapper.readValue(invalidJson, MdmVehicleNodeEvent.class))
                 .thenThrow(new RuntimeException("Parse error"));
 
-        // When
-        kafkaConsumer.onVehicleNodeEvent(record);
-
-        // Then
+        // When / Then
+        assertThrows(RuntimeException.class, () -> kafkaConsumer.onVehicleNodeEvent(record));
         verify(mdmSyncAppService, never()).handleVehicleNodeEvent(any());
         verify(mdmSyncMetrics).recordFailure();
     }
 
     @Test
-    @DisplayName("onVehicleNodeEvent应处理handleVehicleNodeEvent失败并记录失败指标")
+    @DisplayName("onVehicleNodeEvent应处理handleVehicleNodeEvent失败并记录失败指标，异常重新抛出交给框架重试")
     void onVehicleNodeEvent_shouldHandleHandleVehicleNodeEventFailureAndRecordFailureMetric() throws Exception {
         // Given
         String messageJson = "{\"eventType\":\"CREATED\",\"entityId\":\"mdm-vn-001\",\"version\":1,\"code\":\"CPT_DCU_8295\"}";
@@ -91,10 +90,8 @@ class MdmVehicleNodeKafkaConsumerTest {
         when(objectMapper.readValue(messageJson, MdmVehicleNodeEvent.class)).thenReturn(testEvent);
         doThrow(new RuntimeException("Handle error")).when(mdmSyncAppService).handleVehicleNodeEvent(testEvent);
 
-        // When
-        kafkaConsumer.onVehicleNodeEvent(record);
-
-        // Then
+        // When / Then
+        assertThrows(RuntimeException.class, () -> kafkaConsumer.onVehicleNodeEvent(record));
         verify(mdmSyncMetrics).recordFailure();
     }
 

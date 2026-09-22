@@ -139,9 +139,12 @@ public class MdmVehicleNodeProjectionMapper {
             log.info("VehicleNode 投影新增: code={}, hsmCapability={}, deviceCategory={}, version={}",
                     command.getCode(), command.getHsmCapability(), command.getDeviceCategory(), command.getExternalVersion());
         } else {
-            if (command.getExternalVersion() <= local.getExternalVersion()) {
+            // 本地 externalVersion 可能为 NULL（历史遗留投影数据），视为无版本信息：
+            // 直接接受事件覆盖并回填版本，避免版本门禁对 null 做拆箱引发 NPE（CR-049 修复）
+            Long localVersion = local.getExternalVersion();
+            if (localVersion != null && command.getExternalVersion() <= localVersion) {
                 log.info("VehicleNode 投影忽略旧版本: code={}, eventVersion={}, localVersion={}",
-                        command.getCode(), command.getExternalVersion(), local.getExternalVersion());
+                        command.getCode(), command.getExternalVersion(), localVersion);
                 return;
             }
             local.setName(command.getName());
