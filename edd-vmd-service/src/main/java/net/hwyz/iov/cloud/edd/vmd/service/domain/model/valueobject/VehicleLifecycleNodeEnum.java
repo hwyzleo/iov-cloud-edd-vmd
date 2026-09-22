@@ -20,10 +20,10 @@ public enum VehicleLifecycleNodeEnum {
     TBOX_CERT,
     /** 车联终端申请通讯密钥 **/
     TBOX_COMM_SK,
-    /** 中央计算平台申请证书 **/
-    CCP_CERT,
-    /** 中央计算平台申请通讯密钥 **/
-    CCP_COMM_SK,
+    /** 中央计算单元申请证书 **/
+    CCU_CERT,
+    /** 中央计算单元申请通讯密钥 **/
+    CCU_COMM_SK,
     /** 智驾模块申请证书 **/
     ADCM_CERT,
     /** 智驾模块申请通讯密钥 **/

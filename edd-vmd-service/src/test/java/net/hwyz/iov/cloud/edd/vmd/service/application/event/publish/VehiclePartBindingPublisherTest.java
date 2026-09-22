@@ -52,7 +52,7 @@ class VehiclePartBindingPublisherTest {
     private static final String SN = "SN001";
     private static final String VEHICLE_NODE_CODE = "TBOX_5G";
     private static final String DEVICE_CATEGORY_TBOX = "TBOX";
-    private static final String DEVICE_CATEGORY_CCP = "CCP";
+    private static final String DEVICE_CATEGORY_CCU = "CCU";
 
     private VehiclePart vehiclePart;
     private PartInfo partInfo;
@@ -88,8 +88,8 @@ class VehiclePartBindingPublisherTest {
                 .build();
 
         vehicleNodeCcp = VehicleNode.builder()
-                .code("CCP_01")
-                .deviceCategory(DEVICE_CATEGORY_CCP)
+                .code("CCU_01")
+                .deviceCategory(DEVICE_CATEGORY_CCU)
                 .build();
     }
 
@@ -131,7 +131,7 @@ class VehiclePartBindingPublisherTest {
         verify(ctx).publishEvent(eventCaptor.capture());
 
         VehiclePartBindingChangedEvent capturedEvent = eventCaptor.getValue();
-        assertEquals(DEVICE_CATEGORY_CCP, capturedEvent.getDeviceCategory());
+        assertEquals(DEVICE_CATEGORY_CCU, capturedEvent.getDeviceCategory());
         assertNull(capturedEvent.getIccid1());
         assertNull(capturedEvent.getIccid2());
     }

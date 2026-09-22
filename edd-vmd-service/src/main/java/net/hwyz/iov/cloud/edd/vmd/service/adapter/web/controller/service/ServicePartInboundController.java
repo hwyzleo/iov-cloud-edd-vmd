@@ -107,7 +107,7 @@ public class ServicePartInboundController {
          */
         private String sn;
         /**
-         * 零件类型：TBOX/BTM/CCP/DCU_COCKPIT/SIM/OTHER
+         * 零件类型：TBOX/BTM/CCU/DCU_COCKPIT/SIM/OTHER
          */
         private String partType;
         /**

@@ -55,23 +55,23 @@ public class VehiclePartBindingKafkaProducerTest extends BaseTest {
     }
 
     @Test
-    @DisplayName("模拟TOL导入绑定CCP后发送Kafka消息")
-    void testSendCcpBindingChangedEvent() throws Exception {
+    @DisplayName("模拟TOL导入绑定CCU后发送Kafka消息")
+    void testSendCcuBindingChangedEvent() throws Exception {
         String testVin = "LFV2TEST000000002";
 
         JSONObject event = new JSONObject();
         event.set("bindingId", 90002L);
-        event.set("partCode", "CCP_001");
-        event.set("sn", "SN_CCP_TEST_001");
-        event.set("deviceCategory", "CCP");
-        event.set("vehicleNodeCode", "CCP");
+        event.set("partCode", "CCU_001");
+        event.set("sn", "SN_CCU_TEST_001");
+        event.set("deviceCategory", "CCU");
+        event.set("vehicleNodeCode", "CCU");
         event.set("changeType", "BIND");
         event.set("replaceOfBindingId", null);
         event.set("occurredAt", Instant.now().toString());
         event.set("seq", 900020001L);
 
         String eventJson = JSONUtil.toJsonStr(event);
-        log.info("发送CCP绑定变更消息到Kafka: topic={}, key={}, value={}", TOPIC, testVin, eventJson);
+        log.info("发送CCU绑定变更消息到Kafka: topic={}, key={}, value={}", TOPIC, testVin, eventJson);
 
         kafkaTemplate.send(TOPIC, testVin, eventJson).get(10, TimeUnit.SECONDS);
 
@@ -80,7 +80,7 @@ public class VehiclePartBindingKafkaProducerTest extends BaseTest {
     }
 
     @Test
-    @DisplayName("模拟发送非TBOX/CCP设备类别消息（应被TSP忽略）")
+    @DisplayName("模拟发送非TBOX/CCU设备类别消息（应被TSP忽略）")
     void testSendOtherDeviceCategoryEvent() throws Exception {
         String testVin = "LFV2TEST000000003";
 
@@ -100,7 +100,7 @@ public class VehiclePartBindingKafkaProducerTest extends BaseTest {
 
         kafkaTemplate.send(TOPIC, testVin, eventJson).get(10, TimeUnit.SECONDS);
 
-        log.info("消息发送成功，TSP应忽略此消息（非TBOX/CCP设备类别）");
+        log.info("消息发送成功，TSP应忽略此消息（非TBOX/CCU设备类别）");
         Thread.sleep(5000);
     }
 

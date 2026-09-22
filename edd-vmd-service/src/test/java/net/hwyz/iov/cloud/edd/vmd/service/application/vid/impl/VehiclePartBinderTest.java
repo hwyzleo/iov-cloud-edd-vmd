@@ -234,7 +234,7 @@ class VehiclePartBinderTest {
         parts.add(part2);
 
         VehicleNode device1 = VehicleNode.builder().code("DEV1").deviceCategory("TBOX").build();
-        VehicleNode device2 = VehicleNode.builder().code("DEV2").deviceCategory("CCP").build();
+        VehicleNode device2 = VehicleNode.builder().code("DEV2").deviceCategory("CCU").build();
         when(vehicleNodeAppService.getVehicleNodeByCode("DEV1")).thenReturn(device1);
         when(vehicleNodeAppService.getVehicleNodeByCode("DEV2")).thenReturn(device2);
         doThrow(new RuntimeException("bind error")).when(vehiclePartAppService).bindVehiclePart(any());

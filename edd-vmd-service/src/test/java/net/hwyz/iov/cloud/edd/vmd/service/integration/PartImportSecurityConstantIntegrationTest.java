@@ -34,7 +34,7 @@ import static org.mockito.Mockito.*;
  * 零件导入触发安全常量生成集成测试
  * <p>
  * 验证零件导入流程与安全常量预置的端到端集成行为：
- * - TBOX/BTM/CCP/DCU_COCKPIT 类型零件导入触发安全常量预置
+ * - TBOX/BTM/CCU/DCU_COCKPIT 类型零件导入触发安全常量预置
  * - SIM/OTHER 类型零件导入跳过安全常量预置
  * - 安全常量预置失败时正确记录错误信息
  * - VehicleNodeSchemaRegistry 与 PartSecurityPresetAppService 联动
@@ -370,7 +370,8 @@ class PartImportSecurityConstantIntegrationTest {
         // 需要安全常量预置的节点
         assertTrue(vehicleNodeSchemaRegistry.needsSecurityConstantPreset("TBOX_5G"));
         assertTrue(vehicleNodeSchemaRegistry.needsSecurityConstantPreset("BTM"));
-        assertTrue(vehicleNodeSchemaRegistry.needsSecurityConstantPreset("CCP"));
+        assertTrue(vehicleNodeSchemaRegistry.needsSecurityConstantPreset("CCU"));
+        assertTrue(vehicleNodeSchemaRegistry.needsSecurityConstantPreset("CGW"));
         assertTrue(vehicleNodeSchemaRegistry.needsSecurityConstantPreset("DCU_COCKPIT"));
         assertTrue(vehicleNodeSchemaRegistry.needsSecurityConstantPreset("DCU_COCKPIT_SA8295P"));
 
@@ -387,7 +388,8 @@ class PartImportSecurityConstantIntegrationTest {
     void vehicleNodeSchemaRegistry_shouldReturnCorrectHsmUidField() {
         assertEquals("HSM", vehicleNodeSchemaRegistry.getHsmUidField("TBOX_5G"));
         assertEquals("HSM", vehicleNodeSchemaRegistry.getHsmUidField("BTM"));
-        assertEquals("HSM", vehicleNodeSchemaRegistry.getHsmUidField("CCP"));
+        assertEquals("HSM", vehicleNodeSchemaRegistry.getHsmUidField("CCU"));
+        assertEquals("HSM", vehicleNodeSchemaRegistry.getHsmUidField("CGW"));
         assertEquals("HSM", vehicleNodeSchemaRegistry.getHsmUidField("DCU_COCKPIT"));
         assertEquals("HSM", vehicleNodeSchemaRegistry.getHsmUidField("DCU_COCKPIT_SA8295P"));
 
@@ -397,40 +399,40 @@ class PartImportSecurityConstantIntegrationTest {
     }
 
     @Test
-    @DisplayName("CCP零件导入应触发安全常量预置")
-    void ccpPartImport_shouldTriggerSecurityConstantPreset() throws Exception {
-        String batchNum = "INT_BATCH_CCP_001";
+    @DisplayName("CCU零件导入应触发安全常量预置")
+    void ccuPartImport_shouldTriggerSecurityConstantPreset() throws Exception {
+        String batchNum = "INT_BATCH_CCU_001";
         PartImportData importData = PartImportData.builder()
                 .id(7L)
                 .batchNum(batchNum)
-                .partCode("CCP_001")
+                .partCode("CCU_001")
                 .version("1.0")
-                .data("{\"REQUEST\":{\"HEAD\":{\"ACCOUNT\":\"SUP005\"},\"DATA\":{\"vehicleNodeCode\":\"CCP\",\"ITEMS\":[{\"SN\":\"SN_CCP_001\",\"HSM\":\"HSM_UID_CCP_001\",\"HARDWARE_PART_NO\":\"CCP_001\"}]}}}")
+                .data("{\"REQUEST\":{\"HEAD\":{\"ACCOUNT\":\"SUP005\"},\"DATA\":{\"vehicleNodeCode\":\"CCU\",\"ITEMS\":[{\"SN\":\"SN_CCU_001\",\"HSM\":\"HSM_UID_CCU_001\",\"HARDWARE_PART_NO\":\"CCU_001\"}]}}}")
                 .handle(false)
                 .build();
 
         Part mdmPart = Part.builder()
-                .code("CCP_001")
-                .partType("CCP")
-                .vehicleNodeCode("CCP")
+                .code("CCU_001")
+                .partType("CCU")
+                .vehicleNodeCode("CCU")
                 .build();
 
         when(partImportDataRepository.selectByBatchNum(batchNum)).thenReturn(importData);
-        when(mdmPartRepository.selectByCode("CCP_001")).thenReturn(mdmPart);
+        when(mdmPartRepository.selectByCode("CCU_001")).thenReturn(mdmPart);
         when(partInboundAppService.processInbound(any(), any(), any())).thenReturn(
                 PartInboundAppService.PartInboundResult.builder()
                         .totalCount(1).successCount(1).failureCount(0).build());
-        when(partSecurityConstantRepository.selectByPartCodeAndSn("CCP_001", "SN_CCP_001")).thenReturn(null);
+        when(partSecurityConstantRepository.selectByPartCodeAndSn("CCU_001", "SN_CCU_001")).thenReturn(null);
         when(partSecurityConstantRepository.insert(any())).thenReturn(1);
-        when(keyProvisioningTemplate.deriveByUid("HSM_UID_CCP_001", BizType.CGW_DEVICE_ROOT))
-                .thenReturn(mockProvisioningResult("dev-root-master:sn:HSM_UID_CCP_001"));
+        when(keyProvisioningTemplate.deriveByUid("HSM_UID_CCU_001", BizType.CCU_DEVICE_ROOT))
+                .thenReturn(mockProvisioningResult("dev-root-master:sn:HSM_UID_CCU_001"));
 
         ImportResult result = partImportDataAppService.parsePartImportData(batchNum);
 
         assertNotNull(result);
         assertEquals(0, result.getFailureCount());
         verify(partSecurityConstantRepository).insert(any());
-        verify(keyProvisioningTemplate).deriveByUid("HSM_UID_CCP_001", BizType.CGW_DEVICE_ROOT);
+        verify(keyProvisioningTemplate).deriveByUid("HSM_UID_CCU_001", BizType.CCU_DEVICE_ROOT);
     }
 
     @Test

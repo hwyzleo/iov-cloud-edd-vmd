@@ -33,7 +33,7 @@ public class CsrUtils {
             byte[] csrDer = Base64.getUrlDecoder().decode(csrDerBase64);
             String csrContent = new String(csrDer);
             // 如果CSR内容包含设备SN，则返回设备SN
-            if (csrContent.startsWith("TBOX-") || csrContent.startsWith("CCP-") || csrContent.startsWith("ADCM-")) {
+            if (csrContent.startsWith("TBOX-") || csrContent.startsWith("CCU-") || csrContent.startsWith("ADCM-")) {
                 return csrContent;
             }
             return "MOCK_DEVICE_SN";
