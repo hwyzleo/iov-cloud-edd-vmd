@@ -16,11 +16,12 @@ class VehicleNodeSchemaRegistryTest {
 
     @Test
     void shouldRegisterBuiltinSchemasOnConstruction() {
-        // 内置的TBOX_5G、TBOX、BTM、CCU、CGW、DCU_COCKPIT、DCU_COCKPIT_SA8295P、TSP应该被注册
+        // 内置的TBOX_5G、TBOX、BTM、CCU、CCU_GEN1、CGW、DCU_COCKPIT、DCU_COCKPIT_SA8295P、TSP应该被注册
         assertNotNull(registry.getSchema("TBOX_5G"));
         assertNotNull(registry.getSchema("TBOX"));
         assertNotNull(registry.getSchema("BTM"));
         assertNotNull(registry.getSchema("CCU"));
+        assertNotNull(registry.getSchema("CCU_GEN1"));
         assertNotNull(registry.getSchema("CGW"));
         assertNotNull(registry.getSchema("DCU_COCKPIT"));
         assertNotNull(registry.getSchema("DCU_COCKPIT_SA8295P"));
@@ -33,6 +34,7 @@ class VehicleNodeSchemaRegistryTest {
         assertTrue(registry.needsSecurityConstantPreset("TBOX"));
         assertTrue(registry.needsSecurityConstantPreset("BTM"));
         assertTrue(registry.needsSecurityConstantPreset("CCU"));
+        assertTrue(registry.needsSecurityConstantPreset("CCU_GEN1"));
         assertTrue(registry.needsSecurityConstantPreset("CGW"));
         assertTrue(registry.needsSecurityConstantPreset("DCU_COCKPIT"));
         assertTrue(registry.needsSecurityConstantPreset("DCU_COCKPIT_SA8295P"));
@@ -55,6 +57,7 @@ class VehicleNodeSchemaRegistryTest {
         assertEquals("HSM", registry.getHsmUidField("TBOX"));
         assertEquals("HSM", registry.getHsmUidField("BTM"));
         assertEquals("HSM", registry.getHsmUidField("CCU"));
+        assertEquals("HSM", registry.getHsmUidField("CCU_GEN1"));
         assertEquals("HSM", registry.getHsmUidField("CGW"));
         assertEquals("HSM", registry.getHsmUidField("DCU_COCKPIT"));
         assertEquals("HSM", registry.getHsmUidField("DCU_COCKPIT_SA8295P"));

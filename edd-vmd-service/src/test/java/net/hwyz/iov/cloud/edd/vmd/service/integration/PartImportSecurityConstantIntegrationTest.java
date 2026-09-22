@@ -371,6 +371,7 @@ class PartImportSecurityConstantIntegrationTest {
         assertTrue(vehicleNodeSchemaRegistry.needsSecurityConstantPreset("TBOX_5G"));
         assertTrue(vehicleNodeSchemaRegistry.needsSecurityConstantPreset("BTM"));
         assertTrue(vehicleNodeSchemaRegistry.needsSecurityConstantPreset("CCU"));
+        assertTrue(vehicleNodeSchemaRegistry.needsSecurityConstantPreset("CCU_GEN1"));
         assertTrue(vehicleNodeSchemaRegistry.needsSecurityConstantPreset("CGW"));
         assertTrue(vehicleNodeSchemaRegistry.needsSecurityConstantPreset("DCU_COCKPIT"));
         assertTrue(vehicleNodeSchemaRegistry.needsSecurityConstantPreset("DCU_COCKPIT_SA8295P"));
@@ -389,6 +390,7 @@ class PartImportSecurityConstantIntegrationTest {
         assertEquals("HSM", vehicleNodeSchemaRegistry.getHsmUidField("TBOX_5G"));
         assertEquals("HSM", vehicleNodeSchemaRegistry.getHsmUidField("BTM"));
         assertEquals("HSM", vehicleNodeSchemaRegistry.getHsmUidField("CCU"));
+        assertEquals("HSM", vehicleNodeSchemaRegistry.getHsmUidField("CCU_GEN1"));
         assertEquals("HSM", vehicleNodeSchemaRegistry.getHsmUidField("CGW"));
         assertEquals("HSM", vehicleNodeSchemaRegistry.getHsmUidField("DCU_COCKPIT"));
         assertEquals("HSM", vehicleNodeSchemaRegistry.getHsmUidField("DCU_COCKPIT_SA8295P"));

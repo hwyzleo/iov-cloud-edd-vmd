@@ -127,13 +127,21 @@ public class VehicleNodeSchemaRegistry {
                 .description("蓝牙模块，带安全芯片，需要预置ROOT安全常量")
                 .build());
 
-        // CCU: 中央计算单元，需要安全常量预置
+        // CCU / CCU_GEN1: 中央计算单元，需要安全常量预置
         register(VehicleNodeSchema.builder()
                 .vehicleNodeCode("CCU")
                 .hsmUid("HSM")
                 .needsSecurityConstantPreset(true)
                 .bizType(BizType.CCU_DEVICE_ROOT)
                 .description("中央计算单元，带安全芯片，需要预置ROOT安全常量")
+                .build());
+
+        register(VehicleNodeSchema.builder()
+                .vehicleNodeCode("CCU_GEN1")
+                .hsmUid("HSM")
+                .needsSecurityConstantPreset(true)
+                .bizType(BizType.CCU_DEVICE_ROOT)
+                .description("中央计算单元（GEN1），带安全芯片，需要预置ROOT安全常量")
                 .build());
 
         // CGW: 中央网关，可独立或归属CCU，需要安全常量预置
