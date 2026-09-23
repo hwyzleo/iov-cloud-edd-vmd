@@ -25,7 +25,9 @@ import org.springframework.stereotype.Component;
 import jakarta.annotation.PostConstruct;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -90,11 +92,18 @@ public class VehicleProduceDataParserV1_0 extends BaseProcessor implements Vehic
         int successCount = 0;
         int failureCount = 0;
         int invalidCount = 0;
+        // VMD-DSN-CR-050: 同批 VIN 去重，首次记录胜出（去重发生在落库/选项快照/事件发布/生命周期/安全预置之前）
+        Set<String> seenVins = new HashSet<>();
         for (Object item : items) {
             JSONObject itemJson = JSONUtil.parseObj(item);
             String vin = itemJson.getStr("VIN");
             if (StrUtil.isBlank(vin)) {
                 invalidCount++;
+                continue;
+            }
+            if (!seenVins.add(vin)) {
+                invalidCount++;
+                log.warn("车辆生产导入数据批次号[{}]存在重复VIN[{}]，跳过，保留首次记录", batchNum, vin);
                 continue;
             }
             try {

@@ -10,6 +10,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.VehicleLifecy
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehicleLifecycleNodeRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehLifecycleRepository;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -52,18 +53,35 @@ public class VehicleLifecycleAppService {
     }
 
     /**
-     * 记录车辆生产节点
+     * 记录车辆生产节点（VMD-DSN-CR-050 幂等：首次写入胜出，重复调用忽略）
+     * <p>
+     * 采用存在性判断 + 并发唯一键回查兜底，已存在或并发插入冲突且节点已存在时均视为成功，
+     * 不更新已有 reachTime，不将重复节点包装成新的业务错误码。
      *
      * @param vin 车架号
      */
     public void recordProduceNode(String vin) {
-        VehicleLifecycleNode node = VehicleLifecycleNode.builder()
+        VehicleLifecycleNodeEnum node = VehicleLifecycleNodeEnum.PRODUCE;
+        if (vehicleLifecycleNodeRepository.existsByVinAndNode(vin, node)) {
+            log.debug("车辆生命周期节点已存在，跳过写入: vin={}, node={}", vin, node);
+            return;
+        }
+        VehicleLifecycleNode lifecycleNode = VehicleLifecycleNode.builder()
                 .vin(vin)
-                .node(VehicleLifecycleNodeEnum.PRODUCE)
+                .node(node)
                 .reachTime(Instant.now())
                 .build();
-        node.init();
-        vehicleLifecycleNodeRepository.save(node);
+        lifecycleNode.init();
+        try {
+            vehicleLifecycleNodeRepository.save(lifecycleNode);
+        } catch (DuplicateKeyException ex) {
+            // 并发竞态兜底：唯一键冲突但目标 VIN+PRODUCE 节点已存在，视为幂等成功
+            if (vehicleLifecycleNodeRepository.existsByVinAndNode(vin, node)) {
+                log.debug("并发写入生命周期节点冲突，回查已存在，视为幂等成功: vin={}, node={}", vin, node);
+                return;
+            }
+            throw ex;
+        }
     }
 
     /**

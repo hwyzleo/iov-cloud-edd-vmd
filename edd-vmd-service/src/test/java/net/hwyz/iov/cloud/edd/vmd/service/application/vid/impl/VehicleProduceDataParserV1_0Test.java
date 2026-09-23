@@ -518,6 +518,67 @@ class VehicleProduceDataParserV1_0Test {
         return data;
     }
 
+    @Test
+    @DisplayName("同批重复VIN应只处理首次记录，重复项计入invalidCount")
+    void testDuplicateVinInSameBatch() {
+        // Given
+        String batchNum = "BATCH_013";
+        String vin1 = "DUP_VIN_001";
+        String vin2 = "OTHER_VIN_001";
+        JSONObject dataJson = buildDataJsonWithDuplicateVins(vin1, vin2);
+
+        when(vehBasicInfoRepository.selectByVin(vin1)).thenReturn(null);
+        when(vehBasicInfoRepository.insert(any(VehicleBasicInfo.class))).thenReturn(1);
+        when(vehBasicInfoRepository.selectByVin(vin2)).thenReturn(null);
+
+        // When
+        ImportResult result = parser.parse(batchNum, dataJson);
+
+        // Then
+        assertEquals(3, result.getTotalCount());
+        assertEquals(2, result.getSuccessCount());
+        assertEquals(1, result.getInvalidCount());
+        assertEquals(0, result.getFailureCount());
+
+        // 重复 VIN 不产生第二次副作用（落库/produce/预置均只针对首次记录与另一 VIN）
+        verify(vehBasicInfoRepository, times(2)).insert(any(VehicleBasicInfo.class));
+        verify(vehiclePublish).produce(vin1, batchNum);
+        verify(vehiclePublish).produce(vin2, batchNum);
+        verify(vehicleSecurityPresetAppService).preset(vin1, batchNum);
+        verify(vehicleSecurityPresetAppService).preset(vin2, batchNum);
+    }
+
+    private JSONObject buildDataJsonWithDuplicateVins(String vin1, String vin2) {
+        JSONObject data = new JSONObject();
+        JSONObject request = new JSONObject();
+        JSONObject dataObj = new JSONObject();
+        cn.hutool.json.JSONArray items = new cn.hutool.json.JSONArray();
+
+        // vin1 首次出现
+        JSONObject item1 = new JSONObject();
+        item1.set("VIN", vin1);
+        item1.set("PLANT", "P001");
+        item1.set("BRAND", "B001");
+        items.add(item1);
+
+        // vin1 重复（应被跳过）
+        JSONObject item2 = new JSONObject();
+        item2.set("VIN", vin1);
+        item2.set("PLANT", "P001");
+        items.add(item2);
+
+        // vin2 不同 VIN
+        JSONObject item3 = new JSONObject();
+        item3.set("VIN", vin2);
+        item3.set("PLANT", "P002");
+        items.add(item3);
+
+        dataObj.set("ITEMS", items);
+        request.set("DATA", dataObj);
+        data.set("REQUEST", request);
+        return data;
+    }
+
     private JSONObject buildDataJsonWithMultipleVins(String vin1, String vin2, String vin3) {
         JSONObject data = new JSONObject();
         JSONObject request = new JSONObject();

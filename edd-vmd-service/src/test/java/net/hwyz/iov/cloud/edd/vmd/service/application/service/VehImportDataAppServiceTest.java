@@ -180,6 +180,43 @@ class VehImportDataAppServiceTest {
     }
 
     @Test
+    @DisplayName("invalidCount>0不应阻断批次收敛为已处理")
+    void testInvalidCountDoesNotBlockHandle() {
+        // 准备测试数据
+        String batchNum = "INVALID_COUNT_BATCH";
+        VehImportData importData = VehImportData.builder()
+                .id(1L)
+                .batchNum(batchNum)
+                .type("PRODUCE")
+                .version("1.0")
+                .data("{\"REQUEST\":{\"HEAD\":{},\"DATA\":{\"ITEMS\":[{\"VIN\":\"VIN001\"}]}}}")
+                .handle(false)
+                .createTime(LocalDateTime.now())
+                .build();
+
+        // VMD-DSN-CR-050: 同批重复/无效计入 invalidCount，failureCount==0 时批次仍收敛为已处理
+        ImportResult expectedResult = ImportResult.builder()
+                .totalCount(3)
+                .successCount(2)
+                .failureCount(0)
+                .invalidCount(1)
+                .build();
+
+        // 设置mock行为
+        when(vehImportDataRepository.selectByBatchNum(batchNum)).thenReturn(importData);
+        when(parserRegistry.getParser("PRODUCE", "1.0")).thenReturn(importDataParser);
+        when(importDataParser.parse(eq(batchNum), any(JSONObject.class))).thenReturn(expectedResult);
+
+        // 执行测试
+        ImportResult result = vehImportDataAppService.parseVehImportData(batchNum);
+
+        // 验证结果：invalidCount 不阻断收敛
+        assertEquals(0, result.getFailureCount());
+        assertEquals(1, result.getInvalidCount());
+        verify(vehImportDataRepository).update(argThat(veh -> Boolean.TRUE.equals(veh.getHandle())));
+    }
+
+    @Test
     @DisplayName("description截断应正确工作")
     void testDescriptionTruncation() {
         // 准备测试数据 - 超长description

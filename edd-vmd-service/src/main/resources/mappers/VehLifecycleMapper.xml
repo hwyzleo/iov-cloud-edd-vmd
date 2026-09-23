@@ -162,6 +162,12 @@
         FROM tb_veh_lifecycle t
         WHERE t.row_valid = 1
         <!-- 添加自定义条件 -->
+        <if test="vin != null and vin != ''">
+            AND t.vin = #{vin}
+        </if>
+        <if test="node != null and node != ''">
+            AND t.node = #{node}
+        </if>
         ORDER BY t.id DESC
     </select>
 
@@ -171,5 +177,11 @@
         FROM tb_veh_lifecycle t
         WHERE t.row_valid = 1
         <!-- 添加自定义条件 -->
+        <if test="vin != null and vin != ''">
+            AND t.vin = #{vin}
+        </if>
+        <if test="node != null and node != ''">
+            AND t.node = #{node}
+        </if>
     </select>
 </mapper>
