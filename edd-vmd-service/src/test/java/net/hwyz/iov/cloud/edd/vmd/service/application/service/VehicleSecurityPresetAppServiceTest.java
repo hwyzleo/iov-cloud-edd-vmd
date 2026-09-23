@@ -79,7 +79,7 @@ class VehicleSecurityPresetAppServiceTest {
         when(keyProvisioningTemplate.deriveByVin(vin, BizType.IMMO_GROUP_KEY)).thenReturn(mockResult());
         when(keyProvisioningTemplate.deriveByVin(vin, BizType.OTA_VEHICLE_ROOT)).thenReturn(mockResult());
 
-        vehicleSecurityPresetAppService.preset(vin, batchNum);
+        assertTrue(vehicleSecurityPresetAppService.preset(vin, batchNum));
 
         verify(vehSecurityConstantRepository).selectByVinAndConstantType(vin, "ROOT");
         verify(vehSecurityConstantRepository).selectByVinAndConstantType(vin, "IMMO");
@@ -114,7 +114,7 @@ class VehicleSecurityPresetAppServiceTest {
         when(vehSecurityConstantRepository.selectByVinAndConstantType(vin, "IMMO")).thenReturn(existingImmo);
         when(vehSecurityConstantRepository.selectByVinAndConstantType(vin, "OTA")).thenReturn(existingOta);
 
-        vehicleSecurityPresetAppService.preset(vin, batchNum);
+        assertTrue(vehicleSecurityPresetAppService.preset(vin, batchNum));
 
         verify(vehSecurityConstantRepository, never()).insert(any());
         verify(vehSecurityConstantRepository, never()).update(any());
@@ -141,7 +141,7 @@ class VehicleSecurityPresetAppServiceTest {
         when(keyProvisioningTemplate.deriveByVin(vin, BizType.IMMO_GROUP_KEY)).thenReturn(mockResult());
         when(keyProvisioningTemplate.deriveByVin(vin, BizType.OTA_VEHICLE_ROOT)).thenReturn(mockResult());
 
-        vehicleSecurityPresetAppService.preset(vin, batchNum);
+        assertTrue(vehicleSecurityPresetAppService.preset(vin, batchNum));
 
         verify(vehSecurityConstantRepository, times(2)).insert(any());
         verify(vehSecurityConstantRepository, times(3)).update(any(VehSecurityConstant.class));
@@ -158,7 +158,7 @@ class VehicleSecurityPresetAppServiceTest {
         when(vehSecurityConstantRepository.update(any(VehSecurityConstant.class))).thenReturn(1);
         when(keyProvisioningTemplate.deriveByVin(eq(vin), any())).thenReturn(mockResult());
 
-        vehicleSecurityPresetAppService.preset(vin, batchNum);
+        assertTrue(vehicleSecurityPresetAppService.preset(vin, batchNum));
 
         verify(vehSecurityConstantRepository, times(3)).insert(argThat(entity -> {
             assertNotNull(entity.getVin());
@@ -188,7 +188,7 @@ class VehicleSecurityPresetAppServiceTest {
         when(vehImportDataRepository.selectByBatchNum(batchNum)).thenReturn(null);
         when(vehSecurityConstantRepository.update(any(VehSecurityConstant.class))).thenReturn(1);
 
-        assertDoesNotThrow(() -> vehicleSecurityPresetAppService.preset(vin, batchNum));
+        assertFalse(vehicleSecurityPresetAppService.preset(vin, batchNum));
 
         ArgumentCaptor<VehSecurityConstant> updateCaptor = ArgumentCaptor.forClass(VehSecurityConstant.class);
         verify(vehSecurityConstantRepository, times(3)).update(updateCaptor.capture());
@@ -220,7 +220,7 @@ class VehicleSecurityPresetAppServiceTest {
         when(vehImportDataRepository.update(any(VehImportData.class))).thenReturn(1);
         when(vehSecurityConstantRepository.update(any(VehSecurityConstant.class))).thenReturn(1);
 
-        assertDoesNotThrow(() -> vehicleSecurityPresetAppService.preset(vin, batchNum));
+        assertFalse(vehicleSecurityPresetAppService.preset(vin, batchNum));
 
         verify(vehImportDataRepository, atLeastOnce()).update(argThat(entity -> {
             assertNotNull(entity.getDescription());
@@ -236,7 +236,7 @@ class VehicleSecurityPresetAppServiceTest {
         String vin = "TEST_VIN_007";
         String batchNum = "EOL-BATCH_007";
 
-        vehicleSecurityPresetAppService.preset(vin, batchNum);
+        assertTrue(vehicleSecurityPresetAppService.preset(vin, batchNum));
 
         verify(vehSecurityConstantRepository, never()).selectByVinAndConstantType(any(), any());
         verify(keyProvisioningTemplate, never()).deriveByVin(any(), any());
@@ -255,7 +255,7 @@ class VehicleSecurityPresetAppServiceTest {
         when(vehImportDataRepository.selectByBatchNum(batchNum)).thenReturn(null);
         when(vehSecurityConstantRepository.update(any(VehSecurityConstant.class))).thenReturn(1);
 
-        assertDoesNotThrow(() -> vehicleSecurityPresetAppService.preset(vin, batchNum));
+        assertFalse(vehicleSecurityPresetAppService.preset(vin, batchNum));
 
         verify(vehImportDataRepository, atLeastOnce()).selectByBatchNum(batchNum);
         verify(vehImportDataRepository, never()).update(any());

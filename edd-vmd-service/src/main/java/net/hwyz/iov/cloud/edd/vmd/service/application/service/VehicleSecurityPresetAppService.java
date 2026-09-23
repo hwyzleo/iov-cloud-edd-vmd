@@ -56,28 +56,35 @@ public class VehicleSecurityPresetAppService {
      * <p>
      * 在 PRODUCE 建档成功后同步触发，遍历 ROOT / IMMO / OTA 三种常量类型，
      * 各自独立派生、幂等、失败不阻断其他类型、不回滚建档。
+     * 任一类型预置失败返回 false，调用方据此计入批次失败（failureCount），
+     * 批次保持未处理（handle=false）可重试；失败详情已写回 veh_import_data.description。
      *
      * @param vin      车架号
      * @param batchNum 批次号
+     * @return 是否全部预置成功
      */
     @Transactional(rollbackFor = Exception.class)
-    public void preset(String vin, String batchNum) {
+    public boolean preset(String vin, String batchNum) {
         log.info("开始预置车辆[{}]安全常量, batchNum={}", vin, batchNum);
 
         if (batchNum != null && batchNum.startsWith("EOL-")) {
             log.debug("EOL 补发的 PRODUCE 事件，不触发安全预置: {}", vin);
-            return;
+            return true;
         }
 
+        boolean allSuccess = true;
         for (Map.Entry<String, BizType> entry : CONSTANT_TYPE_BIZ_TYPE_MAP.entrySet()) {
-            presetSingleType(vin, batchNum, entry.getKey(), entry.getValue());
+            allSuccess = presetSingleType(vin, batchNum, entry.getKey(), entry.getValue()) && allSuccess;
         }
+        return allSuccess;
     }
 
     /**
      * 预置单个常量类型
+     *
+     * @return 该类型是否预置成功
      */
-    private void presetSingleType(String vin, String batchNum, String constantType, BizType bizType) {
+    private boolean presetSingleType(String vin, String batchNum, String constantType, BizType bizType) {
         String typeLabel;
         if (CONSTANT_TYPE_ROOT.equals(constantType)) {
             typeLabel = "车云通信根";
@@ -91,7 +98,7 @@ public class VehicleSecurityPresetAppService {
 
         if (existing != null && existing.getPresetState() == SecurityConstantState.PRESET) {
             log.info("车辆[{}]{}已预置，跳过", vin, typeLabel);
-            return;
+            return true;
         }
 
         VehSecurityConstant securityConstant;
@@ -125,11 +132,14 @@ public class VehicleSecurityPresetAppService {
             vehSecurityConstantRepository.update(securityConstant);
 
             log.info("车辆[{}]{}预置成功", vin, typeLabel);
+            return true;
         } catch (CryptoDependencyUnavailableException e) {
             handlePresetFailure(securityConstant, vin, batchNum, constantType, typeLabel,
                     "KMS/HSM服务不可用: " + e.getMessage());
+            return false;
         } catch (Exception e) {
             handlePresetFailure(securityConstant, vin, batchNum, constantType, typeLabel, e.getMessage());
+            return false;
         }
     }
 

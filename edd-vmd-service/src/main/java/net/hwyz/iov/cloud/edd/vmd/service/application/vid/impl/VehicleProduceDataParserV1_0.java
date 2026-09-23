@@ -150,12 +150,13 @@ public class VehicleProduceDataParserV1_0 extends BaseProcessor implements Vehic
                     // Outbox 写入失败不计入 failureCount，因为它是异步投递步骤
                 }
 
-                // 预置安全常量
-                try {
-                    vehicleSecurityPresetAppService.preset(vin, batchNum);
-                } catch (Exception e) {
-                    log.warn("车辆[{}]安全常量预置失败: {}", vin, e.getMessage());
-                    // 安全常量预置失败不计入failureCount，因为它是后置步骤
+                // 预置安全常量（VMD-DSN-CR-028: 预置失败计入 failureCount，批次保持未处理可重试；
+                // 失败详情已由 VehicleSecurityPresetAppService 写回 veh_import_data.description）
+                boolean presetSuccess = vehicleSecurityPresetAppService.preset(vin, batchNum);
+                if (!presetSuccess) {
+                    failureCount++;
+                    log.warn("车辆生产导入数据批次号[{}]车辆[{}]安全常量预置失败，计入批次失败", batchNum, vin);
+                    continue;
                 }
                 successCount++;
             } catch (Exception e) {

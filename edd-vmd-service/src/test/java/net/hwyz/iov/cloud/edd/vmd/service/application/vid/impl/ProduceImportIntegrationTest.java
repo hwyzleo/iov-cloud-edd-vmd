@@ -11,10 +11,15 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoReposito
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehImportDataRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehSecurityConstantRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehicleLifecycleNodeRepository;
+import net.hwyz.iov.cloud.framework.security.crypto.KeyProvisioningTemplate;
+import net.hwyz.iov.cloud.framework.security.crypto.model.BizType;
+import net.hwyz.iov.cloud.framework.security.crypto.model.ProvisioningResult;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +28,10 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.when;
 
 /**
  * PRODUCE 导入集成测试
@@ -52,6 +61,24 @@ class ProduceImportIntegrationTest {
 
     @Autowired
     private VehSecurityConstantRepository vehSecurityConstantRepository;
+
+    /**
+     * Mock KMS（本地 OpenBao 可能处于 sealed 状态），保证安全常量预置成功路径可测
+     */
+    @MockBean
+    private KeyProvisioningTemplate keyProvisioningTemplate;
+
+    @BeforeEach
+    void stubKms() {
+        ProvisioningResult mockResult = new ProvisioningResult();
+        mockResult.setKmsKeyRef("dev-root-master:vin:MOCK");
+        mockResult.setKeySpec("256-bit");
+        mockResult.setProvider("Vault-Transit");
+        mockResult.setAlgorithm("HMAC-SHA256");
+        mockResult.setKcv(new byte[]{1, 2, 3, 4});
+        mockResult.setWrappedMaterial(null);
+        when(keyProvisioningTemplate.deriveByVin(anyString(), any(BizType.class))).thenReturn(mockResult);
+    }
 
     @Test
     @DisplayName("同批重复VIN应去重且批次收敛为已处理")
@@ -143,6 +170,32 @@ class ProduceImportIntegrationTest {
 
         // 批次收敛
         assertTrue(Boolean.TRUE.equals(vehImportDataRepository.selectByBatchNum(batchNum).getHandle()));
+    }
+
+    @Test
+    @DisplayName("安全常量预置失败时批次应保持未处理且description记录错误")
+    void testPresetFailureLeavesBatchUnprocessed() {
+        // Given：KMS 调用失败（模拟 OpenBao sealed 等不可用场景）
+        doThrow(new RuntimeException("KMS unavailable"))
+                .when(keyProvisioningTemplate).deriveByVin(anyString(), any(BizType.class));
+        String batchNum = "PRODUCE_BATCH_PRESET_FAIL_001";
+        String vin = "PRESETFAIL_VIN_01";
+        insertImportData(batchNum, buildProduceDataJson(vin));
+
+        // When
+        ImportResult result = vehImportDataAppService.parseVehImportData(batchNum);
+
+        // Then：预置失败计入 failureCount
+        assertEquals(1, result.getTotalCount());
+        assertEquals(0, result.getSuccessCount());
+        assertEquals(1, result.getFailureCount());
+
+        // 批次保持未处理，允许重试
+        VehImportData persisted = vehImportDataRepository.selectByBatchNum(batchNum);
+        assertNotNull(persisted);
+        assertEquals(Boolean.FALSE, persisted.getHandle());
+        assertNotNull(persisted.getDescription());
+        assertTrue(persisted.getDescription().contains("预置失败"));
     }
 
     private void insertImportData(String batchNum, String dataJson) {

@@ -59,6 +59,8 @@ class VehicleProduceDataParserV1_0Test {
     void setUp() {
         parser = new VehicleProduceDataParserV1_0(
                 vehiclePublish, vehBasicInfoRepository, parserRegistry, vehicleSecurityPresetAppService, vehicleOptionRepository, vmdOutboxRepository);
+        // VMD-DSN-CR-050: 预置成功默认返回 true（各测试可覆盖为 false 模拟预置失败）
+        lenient().when(vehicleSecurityPresetAppService.preset(any(), any())).thenReturn(true);
     }
 
     @Test
@@ -87,8 +89,8 @@ class VehicleProduceDataParserV1_0Test {
     }
 
     @Test
-    @DisplayName("安全常量预置失败不应影响successCount")
-    void testPresetFailureDoesNotAffectSuccessCount() {
+    @DisplayName("安全常量预置失败应计入failureCount且不增加successCount")
+    void testPresetFailureCountsAsFailure() {
         // Given
         String batchNum = "BATCH_002";
         String vin = "TEST_VIN_002";
@@ -96,16 +98,15 @@ class VehicleProduceDataParserV1_0Test {
 
         when(vehBasicInfoRepository.selectByVin(vin)).thenReturn(null);
         when(vehBasicInfoRepository.insert(any(VehicleBasicInfo.class))).thenReturn(1);
-        doThrow(new RuntimeException("KMS/HSM unavailable"))
-                .when(vehicleSecurityPresetAppService).preset(vin, batchNum);
+        doReturn(false).when(vehicleSecurityPresetAppService).preset(any(), any());
 
         // When
         ImportResult result = parser.parse(batchNum, dataJson);
 
         // Then
         assertEquals(1, result.getTotalCount());
-        assertEquals(1, result.getSuccessCount());
-        assertEquals(0, result.getFailureCount());
+        assertEquals(0, result.getSuccessCount());
+        assertEquals(1, result.getFailureCount());
         assertEquals(0, result.getInvalidCount());
 
         verify(vehicleSecurityPresetAppService).preset(vin, batchNum);
