@@ -370,7 +370,7 @@ class PartImportDataAppServiceTest {
                 .build();
         when(mdmVehicleNodeRepository.selectByCode("TBOX_5G")).thenReturn(tbox5gNode);
         when(securityPresetPolicy.decide("HSM_FULL", "TBOX_5G")).thenReturn(SecurityPresetDecision.PRESET_REQUIRED);
-        when(securityBizTypeResolver.resolve("TBOX", "TBOX_5G")).thenReturn(BizType.TBOX_DEVICE_ROOT);
+        when(securityBizTypeResolver.resolve("TBOX", null, "TBOX_5G")).thenReturn(BizType.TBOX_DEVICE_ROOT);
         when(hsmUidFieldResolver.resolve(any())).thenReturn("HSM");
         when(downstreamProcessorRegistry.getProcessor("TBOX_5G")).thenReturn(mockProcessor);
 
@@ -479,7 +479,7 @@ class PartImportDataAppServiceTest {
                 .build();
         when(mdmVehicleNodeRepository.selectByCode("TBOX_5G")).thenReturn(tbox5gNode);
         when(securityPresetPolicy.decide("HSM_FULL", "TBOX_5G")).thenReturn(SecurityPresetDecision.PRESET_REQUIRED);
-        when(securityBizTypeResolver.resolve("TBOX", "TBOX_5G")).thenReturn(BizType.TBOX_DEVICE_ROOT);
+        when(securityBizTypeResolver.resolve("TBOX", null, "TBOX_5G")).thenReturn(BizType.TBOX_DEVICE_ROOT);
         when(hsmUidFieldResolver.resolve(any())).thenReturn("HSM");
         when(downstreamProcessorRegistry.getProcessor("TBOX_5G")).thenReturn(mockProcessor);
 

@@ -386,6 +386,7 @@ public class PartImportDataAppService {
         VehicleNode vehicleNode = mdmVehicleNodeRepository.selectByCode(vehicleNodeCode);
         String hsmCapability = vehicleNode != null ? vehicleNode.getHsmCapability() : null;
         String deviceCategory = vehicleNode != null ? vehicleNode.getDeviceCategory() : null;
+        String funcDomain = vehicleNode != null ? vehicleNode.getFuncDomain() : null;
 
         // 预置资格判定（能力优先，null 走旧注册表兜底）
         SecurityPresetDecision decision = securityPresetPolicy.decide(hsmCapability, vehicleNodeCode);
@@ -406,10 +407,10 @@ public class PartImportDataAppService {
         // 解析 HSM UID 字段（本期默认 HSM，RD-049-3）
         String hsmUidField = hsmUidFieldResolver.resolve(null);
 
-        // 解析 BizType：deviceCategory 路由 → 旧节点码兜底 → 失败（RD-049-5）
+        // 解析 BizType：deviceCategory 路由（DCU 按 funcDomain 消歧）→ 旧节点码兜底 → 失败（RD-049-5）
         BizType bizType;
         try {
-            bizType = securityBizTypeResolver.resolve(deviceCategory, vehicleNodeCode);
+            bizType = securityBizTypeResolver.resolve(deviceCategory, funcDomain, vehicleNodeCode);
         } catch (SecurityPresetBizTypeUnresolvedException e) {
             return appendPresetNodeFailure(generalResult, partCode, vehicleNodeCode, e.getMessage());
         }

@@ -174,6 +174,25 @@ public class VehicleNodeSchemaRegistry {
                 .description("座舱域控（SA8295P），带安全芯片，需要预置ROOT安全常量")
                 .build());
 
+        // DCU_ADAS / DCU_ADAS_GEN1: 智驾域控，带安全芯片，需要预置ROOT安全常量
+        // 迁移期兼容兜底：与 DCU_COCKPIT_SA8295P 同口径，当 hsmCapability/funcDomain 主数据缺失时按节点码兜底；
+        // 权威路径为 deviceCategory=DCU + funcDomain=ADAS → AD_DCU_DEVICE_ROOT（SecurityBizTypeResolver 受控映射）。
+        register(VehicleNodeSchema.builder()
+                .vehicleNodeCode("DCU_ADAS")
+                .hsmUid("HSM")
+                .needsSecurityConstantPreset(true)
+                .bizType(BizType.AD_DCU_DEVICE_ROOT)
+                .description("智驾域控，带安全芯片，需要预置ROOT安全常量")
+                .build());
+
+        register(VehicleNodeSchema.builder()
+                .vehicleNodeCode("DCU_ADAS_GEN1")
+                .hsmUid("HSM")
+                .needsSecurityConstantPreset(true)
+                .bizType(BizType.AD_DCU_DEVICE_ROOT)
+                .description("智驾域控（GEN1），带安全芯片，需要预置ROOT安全常量")
+                .build());
+
         // TSP: SIM卡节点，不需要安全常量预置
         register(VehicleNodeSchema.builder()
                 .vehicleNodeCode("TSP")

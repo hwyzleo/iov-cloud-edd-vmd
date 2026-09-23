@@ -73,10 +73,15 @@ class PartImportSecurityConstantIntegrationTest {
     }
 
     private VehicleNode vehicleNode(String code, String deviceCategory, String hsmCapability) {
+        return vehicleNode(code, deviceCategory, hsmCapability, null);
+    }
+
+    private VehicleNode vehicleNode(String code, String deviceCategory, String hsmCapability, String funcDomain) {
         return VehicleNode.builder()
                 .code(code)
                 .deviceCategory(deviceCategory)
                 .hsmCapability(hsmCapability)
+                .funcDomain(funcDomain)
                 .build();
     }
 
@@ -96,6 +101,11 @@ class PartImportSecurityConstantIntegrationTest {
 
     private void stubCommon(PartImportData importData, String partCode, String vehicleNodeCode,
                             String deviceCategory, String hsmCapability) {
+        stubCommon(importData, partCode, vehicleNodeCode, deviceCategory, hsmCapability, null);
+    }
+
+    private void stubCommon(PartImportData importData, String partCode, String vehicleNodeCode,
+                            String deviceCategory, String hsmCapability, String funcDomain) {
         when(partImportDataRepository.selectByBatchNum(importData.getBatchNum())).thenReturn(importData);
         when(mdmPartRepository.selectByCode(partCode)).thenReturn(Part.builder()
                 .code(partCode)
@@ -103,7 +113,7 @@ class PartImportSecurityConstantIntegrationTest {
                 .vehicleNodeCode(vehicleNodeCode)
                 .build());
         when(mdmVehicleNodeRepository.selectByCode(vehicleNodeCode))
-                .thenReturn(vehicleNode(vehicleNodeCode, deviceCategory, hsmCapability));
+                .thenReturn(vehicleNode(vehicleNodeCode, deviceCategory, hsmCapability, funcDomain));
         when(partInboundAppService.processInbound(any(), any(), any())).thenReturn(
                 PartInboundAppService.PartInboundResult.builder()
                         .totalCount(1).successCount(1).failureCount(0).build());
@@ -393,11 +403,11 @@ class PartImportSecurityConstantIntegrationTest {
     }
 
     @Test
-    @DisplayName("智驾域控 DCU_ADAS_GEN1 按 deviceCategory=DCU_ADAS 路由到 AD_DCU_DEVICE_ROOT（HSM_FULL 触发预置）")
+    @DisplayName("智驾域控 DCU_ADAS_GEN1（deviceCategory=DCU + funcDomain=ADAS）路由到 AD_DCU_DEVICE_ROOT（HSM_FULL 触发预置）")
     void dcuAdasGen1_shouldRouteToAdasBizType() throws Exception {
         String batchNum = "INT_BATCH_DCU_ADAS_001";
         stubCommon(importData(batchNum, "DCU_ADAS_001", "DCU_ADAS_GEN1", "SN_ADAS_001", "HSM_UID_ADAS_001"),
-                "DCU_ADAS_001", "DCU_ADAS_GEN1", "DCU_ADAS", "HSM_FULL");
+                "DCU_ADAS_001", "DCU_ADAS_GEN1", "DCU", "HSM_FULL", "ADAS");
         when(partSecurityConstantRepository.selectByPartCodeAndSn("DCU_ADAS_001", "SN_ADAS_001")).thenReturn(null);
         when(partSecurityConstantRepository.insert(any())).thenReturn(1);
         when(keyProvisioningTemplate.deriveByUid("HSM_UID_ADAS_001", BizType.AD_DCU_DEVICE_ROOT))
@@ -412,21 +422,56 @@ class PartImportSecurityConstantIntegrationTest {
     }
 
     @Test
-    @DisplayName("智驾域控 DCU_ADAS_GEN1 能力缺失时旧注册表未登记，按主数据 deviceCategory 仍可路由预置（R-049-1）")
-    void dcuAdasGen1_nullCapability_shouldFallbackByMasterDataCategory() throws Exception {
+    @DisplayName("座舱域控与智驾域控同享 deviceCategory=DCU，按 funcDomain 消歧互不跨域（R-049-4）")
+    void dcuCockpitAndAdas_shareCategory_shouldRouteByFuncDomain() throws Exception {
+        // 座舱域控：deviceCategory=DCU + funcDomain=COCKPIT → CPT_DCU_DEVICE_ROOT
+        String cockpitBatch = "INT_BATCH_DCU_DOMAIN_CPT_001";
+        stubCommon(importData(cockpitBatch, "DCU_CPT_001", "DCU_COCKPIT", "SN_DCUC_001", "HSM_UID_DCUC_001"),
+                "DCU_CPT_001", "DCU_COCKPIT", "DCU", "HSM_FULL", "COCKPIT");
+        when(partSecurityConstantRepository.selectByPartCodeAndSn("DCU_CPT_001", "SN_DCUC_001")).thenReturn(null);
+        when(partSecurityConstantRepository.insert(any())).thenReturn(1);
+        when(keyProvisioningTemplate.deriveByUid("HSM_UID_DCUC_001", BizType.CPT_DCU_DEVICE_ROOT))
+                .thenReturn(mockProvisioningResult("dev-root-master:sn:HSM_UID_DCUC_001"));
+
+        ImportResult cockpitResult = partImportDataAppService.parsePartImportData(cockpitBatch);
+        assertNotNull(cockpitResult);
+        assertEquals(0, cockpitResult.getFailureCount());
+        verify(keyProvisioningTemplate).deriveByUid("HSM_UID_DCUC_001", BizType.CPT_DCU_DEVICE_ROOT);
+
+        // 智驾域控：deviceCategory=DCU + funcDomain=ADAS → AD_DCU_DEVICE_ROOT
+        String adasBatch = "INT_BATCH_DCU_DOMAIN_ADAS_001";
+        stubCommon(importData(adasBatch, "DCU_ADAS_003", "DCU_ADAS_GEN1", "SN_DCUA_001", "HSM_UID_DCUA_001"),
+                "DCU_ADAS_003", "DCU_ADAS_GEN1", "DCU", "HSM_FULL", "ADAS");
+        when(partSecurityConstantRepository.selectByPartCodeAndSn("DCU_ADAS_003", "SN_DCUA_001")).thenReturn(null);
+        when(partSecurityConstantRepository.insert(any())).thenReturn(1);
+        when(keyProvisioningTemplate.deriveByUid("HSM_UID_DCUA_001", BizType.AD_DCU_DEVICE_ROOT))
+                .thenReturn(mockProvisioningResult("dev-root-master:sn:HSM_UID_DCUA_001"));
+
+        ImportResult adasResult = partImportDataAppService.parsePartImportData(adasBatch);
+        assertNotNull(adasResult);
+        assertEquals(0, adasResult.getFailureCount());
+        verify(keyProvisioningTemplate).deriveByUid("HSM_UID_DCUA_001", BizType.AD_DCU_DEVICE_ROOT);
+    }
+
+    @Test
+    @DisplayName("智驾域控 DCU_ADAS_GEN1 能力缺失时旧注册表兜底触发预置（AD_DCU_DEVICE_ROOT）")
+    void dcuAdasGen1_nullCapability_shouldFallbackToLegacyRegistry() throws Exception {
         String batchNum = "INT_BATCH_DCU_ADAS_002";
-        // 注册表不含 DCU_ADAS_GEN1，能力缺失时策略判定不触发预置（旧注册表未登记）
-        assertFalse(vehicleNodeSchemaRegistry.needsSecurityConstantPreset("DCU_ADAS_GEN1"));
+        // 注册表已登记 DCU_ADAS_GEN1（迁移期兼容兜底），能力缺失时按节点码触发预置
+        assertTrue(vehicleNodeSchemaRegistry.needsSecurityConstantPreset("DCU_ADAS_GEN1"));
         stubCommon(importData(batchNum, "DCU_ADAS_002", "DCU_ADAS_GEN1", "SN_ADAS_002", "HSM_UID_ADAS_002"),
-                "DCU_ADAS_002", "DCU_ADAS_GEN1", "DCU_ADAS", null);
+                "DCU_ADAS_002", "DCU_ADAS_GEN1", "DCU", null, null);
+        when(partSecurityConstantRepository.selectByPartCodeAndSn("DCU_ADAS_002", "SN_ADAS_002")).thenReturn(null);
+        when(partSecurityConstantRepository.insert(any())).thenReturn(1);
+        when(keyProvisioningTemplate.deriveByUid("HSM_UID_ADAS_002", BizType.AD_DCU_DEVICE_ROOT))
+                .thenReturn(mockProvisioningResult("dev-root-master:sn:HSM_UID_ADAS_002"));
 
         ImportResult result = partImportDataAppService.parsePartImportData(batchNum);
 
         assertNotNull(result);
         assertEquals(0, result.getFailureCount());
-        // 能力缺失 + 注册表未登记 → 不触发预置（显式主数据 HSM_FULL 才是权威路径）
-        verify(partSecurityConstantRepository, never()).insert(any());
-        verify(keyProvisioningTemplate, never()).deriveByUid(any(), any());
+        verify(partSecurityConstantRepository).insert(any());
+        verify(keyProvisioningTemplate).deriveByUid("HSM_UID_ADAS_002", BizType.AD_DCU_DEVICE_ROOT);
     }
 
     @Test

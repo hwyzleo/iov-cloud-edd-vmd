@@ -49,22 +49,47 @@ public class SecurityBizTypeResolver {
     );
 
     /**
+     * 歧义设备族：DCU（域控制器大类）同时覆盖座舱域控与智驾域控，
+     * 需按 MDM VehicleNode.funcDomain 消歧，避免跨 KMS key 域误路由（R-049-4）。
+     * 其余功能域（GENERAL/CONNECTIVITY 等）不落入受控消歧，回落旧节点码兜底。
+     */
+    private static final Map<String, BizType> DCU_FUNC_DOMAIN_BIZ_TYPE = Map.of(
+            "ADAS", BizType.AD_DCU_DEVICE_ROOT,
+            "COCKPIT", BizType.CPT_DCU_DEVICE_ROOT
+    );
+
+    /**
      * 解析器件级安全常量预置的 BizType
      *
      * @param deviceCategory 设备类别（MDM VehicleNode.deviceCategory，可空）
+     * @param funcDomain     功能域（MDM VehicleNode.funcDomain，可空；用于 DCU 歧义消歧）
      * @param legacyNodeCode 车载节点代码（迁移期兜底）
      * @return BizType
      * @throws SecurityPresetBizTypeUnresolvedException 需预置但最终仍无法解析 BizType
      */
-    public BizType resolve(String deviceCategory, String legacyNodeCode) {
+    public BizType resolve(String deviceCategory, String funcDomain, String legacyNodeCode) {
         if (deviceCategory != null && !deviceCategory.isBlank()) {
-            BizType bizType = CATEGORY_BIZ_TYPE.get(deviceCategory.trim().toUpperCase(Locale.ROOT));
-            if (bizType != null) {
-                log.info("BizType 按 deviceCategory 路由: deviceCategory={}, nodeCode={}, bizType={}",
-                        deviceCategory, legacyNodeCode, bizType);
-                return bizType;
+            String category = deviceCategory.trim().toUpperCase(Locale.ROOT);
+            if ("DCU".equals(category)) {
+                // 歧义设备族：按功能域消歧（ADAS→智驾域，COCKPIT→座舱域）
+                BizType byDomain = resolveDcuByFuncDomain(funcDomain);
+                if (byDomain != null) {
+                    log.info("BizType 按 deviceCategory=DCU+funcDomain 路由: deviceCategory={}, funcDomain={}, nodeCode={}, bizType={}",
+                            deviceCategory, funcDomain, legacyNodeCode, byDomain);
+                    return byDomain;
+                }
+                log.warn("deviceCategory=DCU 但 funcDomain[{}]不可消歧，落旧节点码兜底: nodeCode={}",
+                        funcDomain, legacyNodeCode);
+                metrics.recordBizTypeUnresolved(deviceCategory, legacyNodeCode);
+            } else {
+                BizType bizType = CATEGORY_BIZ_TYPE.get(category);
+                if (bizType != null) {
+                    log.info("BizType 按 deviceCategory 路由: deviceCategory={}, nodeCode={}, bizType={}",
+                            deviceCategory, legacyNodeCode, bizType);
+                    return bizType;
+                }
+                metrics.recordBizTypeUnresolved(deviceCategory, legacyNodeCode);
             }
-            metrics.recordBizTypeUnresolved(deviceCategory, legacyNodeCode);
         }
 
         // 无类别或无受控映射 → 迁移期按旧节点码兜底
@@ -79,5 +104,18 @@ public class SecurityBizTypeResolver {
         log.error("需要安全常量预置但 BizType 不可解析: deviceCategory={}, nodeCode={}",
                 deviceCategory, legacyNodeCode);
         throw new SecurityPresetBizTypeUnresolvedException(deviceCategory, legacyNodeCode);
+    }
+
+    /**
+     * DCU 歧义设备族按功能域消歧
+     *
+     * @param funcDomain 功能域（可空）
+     * @return 消歧后的 BizType；功能域缺失或不可识别返回 null
+     */
+    private BizType resolveDcuByFuncDomain(String funcDomain) {
+        if (funcDomain == null || funcDomain.isBlank()) {
+            return null;
+        }
+        return DCU_FUNC_DOMAIN_BIZ_TYPE.get(funcDomain.trim().toUpperCase(Locale.ROOT));
     }
 }
