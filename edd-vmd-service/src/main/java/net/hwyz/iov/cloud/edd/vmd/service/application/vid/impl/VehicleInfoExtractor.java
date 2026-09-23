@@ -103,9 +103,37 @@ public class VehicleInfoExtractor extends BaseProcessor {
                 .variantCode(STUB_DEFAULT)
                 .configurationCode(STUB_DEFAULT)
                 .build();
-        // 尝试从 JSON 中提取基础版本信息
-        handleVehicleInfo(itemJson, basicInfo, "VEHICLE_BASE_VERSION", "vehicleBaseVersion", "车辆基线版本", batchNum, vin);
+        // 新格式：工厂代码取顶层 PLANT（旧格式 MANUFACTURER）
+        String plant = itemJson.getStr("PLANT");
+        if (StrUtil.isNotBlank(plant)) {
+            basicInfo.setPlantCode(plant.trim().toUpperCase());
+        } else {
+            handleVehicleInfo(itemJson, basicInfo, "MANUFACTURER", "plantCode", "工厂数据", batchNum, vin);
+        }
+        // 车辆基线版本：优先新格式 OTA_BASELINE.VEHICLE_VERSION，兜底旧格式顶层 VEHICLE_BASE_VERSION
+        String vehicleBaseVersion = resolveVehicleBaseVersion(itemJson);
+        if (StrUtil.isNotBlank(vehicleBaseVersion)) {
+            basicInfo.setVehicleBaseVersion(vehicleBaseVersion.trim());
+        } else {
+            handleVehicleInfo(itemJson, basicInfo, "VEHICLE_BASE_VERSION", "vehicleBaseVersion", "车辆基线版本", batchNum, vin);
+        }
         return basicInfo;
+    }
+
+    /**
+     * 解析车辆基线版本（兼容新旧格式）
+     * <p>
+     * 新格式位于 OTA_BASELINE.VEHICLE_VERSION，旧格式为顶层 VEHICLE_BASE_VERSION。
+     */
+    private String resolveVehicleBaseVersion(JSONObject itemJson) {
+        JSONObject otaBaseline = itemJson.getJSONObject("OTA_BASELINE");
+        if (otaBaseline != null) {
+            String vehicleVersion = otaBaseline.getStr("VEHICLE_VERSION");
+            if (StrUtil.isNotBlank(vehicleVersion)) {
+                return vehicleVersion;
+            }
+        }
+        return itemJson.getStr("VEHICLE_BASE_VERSION");
     }
 
     /**
@@ -136,6 +164,13 @@ public class VehicleInfoExtractor extends BaseProcessor {
                 }
             }
             // EOL场景下不打印字段为空的WARN日志，因为这些字段可能在PRODUCE数据中提供
+        }
+        // 新格式兼容：基线版本兜底取 OTA_BASELINE.VEHICLE_VERSION
+        if (StrUtil.isBlank(basicInfo.getVehicleBaseVersion())) {
+            String vehicleBaseVersion = resolveVehicleBaseVersion(itemJson);
+            if (StrUtil.isNotBlank(vehicleBaseVersion)) {
+                basicInfo.setVehicleBaseVersion(vehicleBaseVersion.trim());
+            }
         }
         return basicInfo;
     }

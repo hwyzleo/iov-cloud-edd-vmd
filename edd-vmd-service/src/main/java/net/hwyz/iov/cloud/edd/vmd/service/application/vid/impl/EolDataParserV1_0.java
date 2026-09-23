@@ -2,6 +2,7 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.vid.impl;
 
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.ObjUtil;
+import cn.hutool.crypto.digest.DigestUtil;
 import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
@@ -31,6 +32,7 @@ import java.time.Instant;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -58,6 +60,26 @@ public class EolDataParserV1_0 extends BaseProcessor implements VehicleImportDat
     private final SoftwareInventoryAppService softwareInventoryAppService;
     private final SecurityProvisionConfirmService securityProvisionConfirmService;
     private final VehiclePartAppService vehiclePartAppService;
+
+    /**
+     * 车辆级安全根字段 → veh_security_constant.constant_type 映射（CR-043 安全回执对账）
+     * <p>
+     * 新格式 SECURITY 子字段名即 BizType 名，而 veh_security_constant 的 constant_type 仅 ROOT/IMMO/OTA，
+     * 对账前需按此映射归一。
+     */
+    private static final Map<String, String> VEHICLE_ROOT_CONSTANT_TYPE = Map.of(
+            "V2C_COMM_ROOT", "ROOT",
+            "IMMO_GROUP_KEY", "IMMO",
+            "OTA_VEHICLE_ROOT", "OTA"
+    );
+
+    /**
+     * 器件级安全根字段（BizType 名），按 (ASSEMBLY_PART_NO, SN) 走 part_security_constant 对账
+     */
+    private static final Set<String> DEVICE_ROOT_FIELDS = Set.of(
+            "TBOX_DEVICE_ROOT", "CCU_DEVICE_ROOT", "CGW_DEVICE_ROOT",
+            "CPT_DCU_DEVICE_ROOT", "AD_DCU_DEVICE_ROOT", "PEPS_DEVICE_ROOT"
+    );
 
     @PostConstruct
     public void init() {
@@ -155,13 +177,16 @@ public class EolDataParserV1_0 extends BaseProcessor implements VehicleImportDat
             eolResultGateService.processEolResult(vin, eolResult);
         }
 
-        // 5. 软件实装回写（CR-041/CR-043）
+        // 5. 补偿绑定（CR-035 语义：TOL 已绑跳过、漏绑补绑；新格式 ECU_BASELINE 转换后绑定）
+        bindEcuBaselineParts(batchNum, vin, ecuBaseline);
+
+        // 6. 软件实装回写（CR-041/CR-043，需先有绑定关系）
         processSoftwareInventory(batchNum, vin, ecuBaseline);
 
-        // 6. 安全回执对账（CR-043）
+        // 7. 安全回执对账（CR-043，车辆级 ROOT/IMMO/OTA + 器件级 ROOT）
         processSecurityProvisionConfirm(vin, ecuBaseline);
 
-        // 7. 生命周期节点
+        // 8. 生命周期节点
         if (isNewVehicle) {
             // EOL 补发的 PRODUCE 事件，标记为 EOL- 前缀
             vehiclePublish.produce(vin, "EOL-" + batchNum);
@@ -170,7 +195,7 @@ public class EolDataParserV1_0 extends BaseProcessor implements VehicleImportDat
             vehiclePublish.eol(vin, eolDate);
         }
 
-        // 8. 合格证节点（从CERTIFICATE子对象提取）
+        // 9. 合格证节点（从CERTIFICATE子对象提取）
         if (certificate != null) {
             Long certDateTs = certificate.getLong("CERT_DATE");
             if (certDateTs != null && certDateTs > 0) {
@@ -179,13 +204,13 @@ public class EolDataParserV1_0 extends BaseProcessor implements VehicleImportDat
             }
         }
 
-        // 9. POWER_DOWN节点（CR-043）- 时间戳格式
+        // 10. POWER_DOWN节点（CR-043）- 时间戳格式
         processPowerDownNode(vin, itemJson);
 
-        // 10. 按域转发（CR-043）
+        // 11. 按域转发（CR-043）
         processDomainForwarding(vin, inspectionItems, diagnostic, otaBaseline, powertrain);
         
-        // 11. 记录生产元数据（新增字段）
+        // 12. 记录生产元数据（新增字段）
         logProductionMetadata(vin, itemJson);
     }
 
@@ -223,6 +248,54 @@ public class EolDataParserV1_0 extends BaseProcessor implements VehicleImportDat
                 vin, plant, lineCode, stationCode, shift, operator, transportMode, odometerKm, soc, hvStatus);
         
         // TODO: 可扩展存储到 vehicle_production_metadata 表或写入详情
+    }
+
+    /**
+     * 补偿绑定（CR-035 语义：TOL 已绑跳过、漏绑补绑）
+     * <p>
+     * 新格式 ECU_BASELINE 字段映射为 {@link VehiclePartBinder#bindParts} 所需的旧格式键：
+     * SN→PART_SN、ASSEMBLY_PART_NO→PART_NO、VEHICLE_NODE→DEVICE_CODE、
+     * HARDWARE_PART_NO→HARDWARE_PN、HARDWARE_VERSION→HARDWARE_VERSION、ICCID1/2、
+     * 软件版本取 SOFTWARE[] 首条。绑定成功且非空时发布 {@code VehicleEolPartBoundEvent}（CR-033 下游供给）。
+     */
+    private void bindEcuBaselineParts(String batchNum, String vin, JSONArray ecuBaseline) {
+        if (ecuBaseline == null || ecuBaseline.isEmpty()) {
+            return;
+        }
+        JSONArray bindParts = new JSONArray();
+        for (Object ecuObj : ecuBaseline) {
+            JSONObject ecu = JSONUtil.parseObj(ecuObj);
+            String sn = ecu.getStr("SN");
+            String assemblyPartNo = ecu.getStr("ASSEMBLY_PART_NO");
+            String vehicleNode = ecu.getStr("VEHICLE_NODE");
+            if (StrUtil.isBlank(sn) || StrUtil.isBlank(assemblyPartNo) || StrUtil.isBlank(vehicleNode)) {
+                log.debug("ECU基线缺少SN/装配零件号/车载节点，跳过补偿绑定: vin={}, vehicleNode={}", vin, vehicleNode);
+                continue;
+            }
+            JSONObject part = new JSONObject();
+            part.set("VIN", vin);
+            part.set("DEVICE_CODE", vehicleNode);
+            part.set("PART_NO", assemblyPartNo);
+            part.set("PART_SN", sn);
+            part.set("HARDWARE_PN", ecu.getStr("HARDWARE_PART_NO"));
+            part.set("HARDWARE_VERSION", ecu.getStr("HARDWARE_VERSION"));
+            part.set("ICCID1", ecu.getStr("ICCID1"));
+            part.set("ICCID2", ecu.getStr("ICCID2"));
+            JSONArray softwareList = ecu.getJSONArray("SOFTWARE");
+            if (softwareList != null && !softwareList.isEmpty()) {
+                JSONObject sw = JSONUtil.parseObj(softwareList.get(0));
+                part.set("SOFTWARE_PN", sw.getStr("SOFTWARE_PART_NO"));
+                part.set("SOFTWARE_VERSION", sw.getStr("SOFTWARE_VERSION"));
+            }
+            bindParts.add(part);
+        }
+        if (bindParts.isEmpty()) {
+            return;
+        }
+        List<VehicleEolPartBoundEvent.PartMeta> partMetaList = vehiclePartBinder.bindParts(bindParts, vin, batchNum);
+        if (!partMetaList.isEmpty()) {
+            vehiclePublish.eolPartBound(vin, partMetaList);
+        }
     }
 
     /**
@@ -295,7 +368,7 @@ public class EolDataParserV1_0 extends BaseProcessor implements VehicleImportDat
                                     null,  // slot
                                     "UPDATE",  // changeType
                                     "EOL",  // source
-                                    batchNum + "_" + vin + "_" + ecuSn + "_" + softwarePartNo,  // sourceEventId
+                                    buildSourceEventId(batchNum, vin, ecuSn, softwarePartNo),  // sourceEventId
                                     Instant.now(),  // sourceEventTime
                                     Instant.now(),  // reportedAt
                                     true  // isConfirmed (EOL 为 confirmed)
@@ -311,13 +384,25 @@ public class EolDataParserV1_0 extends BaseProcessor implements VehicleImportDat
     }
 
     /**
+     * 构造软件实装回写幂等键
+     * <p>
+     * part_software_installation.source_event_id 列 varchar(64)，
+     * 原拼接 batchNum+vin+ecuSn+softwarePartNo 会超长导致插入失败，改为稳定 MD5 摘要（32 位）。
+     * 摘要仅由输入决定，同一 EOL 批次重导可保持幂等。
+     */
+    private String buildSourceEventId(String batchNum, String vin, String ecuSn, String softwarePartNo) {
+        String raw = batchNum + "_" + vin + "_" + ecuSn + "_" + softwarePartNo;
+        return DigestUtil.md5Hex(raw);
+    }
+
+    /**
      * 处理安全回执对账
      * <p>
-     * 新格式SECURITY字段映射（按ECU类型区分）：
-     * - TBOX: CERT_INJECTED, V2C_COMM_ROOT, TBOX_DEVICE_ROOT
-     * - CPT_DCU: CERT_INJECTED, CPT_DCU_DEVICE_ROOT
-     * - CGW: CERT_INJECTED, OTA_VEHICLE_ROOT, CGW_DEVICE_ROOT
-     * - PEPS: CERT_INJECTED, PEPS_DEVICE_ROOT
+     * 新格式 SECURITY 子字段按类型分流对账：
+     * - 车辆级根（V2C_COMM_ROOT/IMMO_GROUP_KEY/OTA_VEHICLE_ROOT）→ 映射为 constant_type ROOT/IMMO/OTA 走 veh_security_constant 对账；
+     * - 器件级根（TBOX_DEVICE_ROOT/CCU_DEVICE_ROOT/CGW_DEVICE_ROOT/CPT_DCU_DEVICE_ROOT/AD_DCU_DEVICE_ROOT/PEPS_DEVICE_ROOT）
+     *   → 按 (ASSEMBLY_PART_NO, SN) 走 part_security_constant 对账；
+     * - 不再依赖 VEHICLE_NODE 名称硬编码匹配（新旧节点名均可）。
      */
     private void processSecurityProvisionConfirm(String vin, JSONArray ecuBaseline) {
         if (ecuBaseline == null || ecuBaseline.isEmpty()) {
@@ -327,48 +412,65 @@ public class EolDataParserV1_0 extends BaseProcessor implements VehicleImportDat
         for (Object ecuObj : ecuBaseline) {
             JSONObject ecu = JSONUtil.parseObj(ecuObj);
             JSONObject security = ecu.getJSONObject("SECURITY");
-            
+
             if (security == null) {
                 continue;
             }
 
             String vehicleNode = ecu.getStr("VEHICLE_NODE");
             String deviceItem = ecu.getStr("DEVICE_ITEM");
+            String assemblyPartNo = ecu.getStr("ASSEMBLY_PART_NO");
+            String sn = ecu.getStr("SN");
             Boolean certInjected = security.getBool("CERT_INJECTED");
-            
-            log.debug("处理安全回执: vin={}, vehicleNode={}, deviceItem={}, certInjected={}", 
+
+            log.debug("处理安全回执: vin={}, vehicleNode={}, deviceItem={}, certInjected={}",
                     vin, vehicleNode, deviceItem, certInjected);
 
-            // 根据VEHICLE_NODE类型处理不同的安全根
-            if ("TBOX_5G".equals(vehicleNode)) {
-                // TBOX: V2C_COMM_ROOT, TBOX_DEVICE_ROOT
-                processSecurityRoot(vin, "V2C_COMM_ROOT", security.getStr("V2C_COMM_ROOT"), "EOL");
-                processSecurityRoot(vin, "TBOX_DEVICE_ROOT", security.getStr("TBOX_DEVICE_ROOT"), "EOL");
-            } else if ("CPT_DCU_8295".equals(vehicleNode)) {
-                // CPT_DCU: CPT_DCU_DEVICE_ROOT
-                processSecurityRoot(vin, "CPT_DCU_DEVICE_ROOT", security.getStr("CPT_DCU_DEVICE_ROOT"), "EOL");
-            } else if ("CGW_S32G".equals(vehicleNode)) {
-                // CGW: OTA_VEHICLE_ROOT, CGW_DEVICE_ROOT
-                processSecurityRoot(vin, "OTA_VEHICLE_ROOT", security.getStr("OTA_VEHICLE_ROOT"), "EOL");
-                processSecurityRoot(vin, "CGW_DEVICE_ROOT", security.getStr("CGW_DEVICE_ROOT"), "EOL");
-            } else if ("PEPS_COMBO".equals(vehicleNode)) {
-                // PEPS: PEPS_DEVICE_ROOT
-                processSecurityRoot(vin, "PEPS_DEVICE_ROOT", security.getStr("PEPS_DEVICE_ROOT"), "EOL");
-            } else {
-                // 通用处理：尝试提取常见字段
-                processSecurityRoot(vin, "COMM_ROOT", security.getStr("COMM_ROOT"), "EOL");
-                processSecurityRoot(vin, "IMMO_ROOT", security.getStr("IMMO_ROOT"), "EOL");
-                processSecurityRoot(vin, "OTA_ROOT", security.getStr("OTA_ROOT"), "EOL");
+            for (String field : security.keySet()) {
+                if ("CERT_INJECTED".equals(field)) {
+                    continue;
+                }
+                String status = security.getStr(field);
+                if (StrUtil.isBlank(status)) {
+                    continue;
+                }
+                String constantType = VEHICLE_ROOT_CONSTANT_TYPE.get(field);
+                if (constantType != null) {
+                    // 车辆级安全根（车云通信根/防盗根/OTA根）
+                    processSecurityRoot(vin, constantType, status, "EOL");
+                } else if (DEVICE_ROOT_FIELDS.contains(field)) {
+                    // 器件级安全根（按零件编码+序列号对账）
+                    processDeviceSecurityRoot(vin, assemblyPartNo, sn, vehicleNode, field, status, "EOL");
+                } else {
+                    log.warn("车辆[{}]节点[{}]安全回执字段[{}]未识别，忽略", vin, vehicleNode, field);
+                }
             }
         }
     }
 
     /**
-     * 处理单个安全根的灌注确认
+     * 处理单个车辆级安全根的灌注确认
+     *
+     * @param constantType veh_security_constant 常量类型（ROOT/IMMO/OTA）
      */
-    private void processSecurityRoot(String vin, String rootType, String status, String source) {
+    private void processSecurityRoot(String vin, String constantType, String status, String source) {
         if (StrUtil.isNotBlank(status)) {
-            securityProvisionConfirmService.processVehicleSecurityProvision(vin, rootType, status, source);
+            securityProvisionConfirmService.processVehicleSecurityProvision(vin, constantType, status, source);
+        }
+    }
+
+    /**
+     * 处理单个器件级安全根的灌注确认（part_security_constant，按 part_code+sn 对账）
+     */
+    private void processDeviceSecurityRoot(String vin, String partCode, String sn, String vehicleNode,
+                                           String rootType, String status, String source) {
+        if (StrUtil.isBlank(partCode) || StrUtil.isBlank(sn)) {
+            log.warn("车辆[{}]节点[{}]安全回执[{}]缺少零件编码/序列号，跳过器件级对账: partCode={}, sn={}",
+                    vin, vehicleNode, rootType, partCode, sn);
+            return;
+        }
+        if (StrUtil.isNotBlank(status)) {
+            securityProvisionConfirmService.processPartSecurityProvision(partCode, sn, rootType, status, source);
         }
     }
 

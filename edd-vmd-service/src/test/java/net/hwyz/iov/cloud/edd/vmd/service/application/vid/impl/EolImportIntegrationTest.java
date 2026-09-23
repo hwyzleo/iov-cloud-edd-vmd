@@ -44,7 +44,7 @@ class EolImportIntegrationTest {
 
     @Test
     @Order(1)
-    @DisplayName("新车辆EOL导入应尝试自动建车兜底")
+    @DisplayName("新车辆EOL导入应自动建车兜底（残档）")
     void testEolImport_newVehicle() {
         String batchNum = "EOL_BATCH_NEW_001";
         String vin = "NEW_VIN_EOL_001";
@@ -63,10 +63,10 @@ class EolImportIntegrationTest {
 
         assertNotNull(result);
         assertEquals(1, result.getTotalCount());
-        // 新车辆自动建车兜底：当前实现 createStubVehicle 仅设置 vehicleBaseVersion，
-        // 数据库 NOT NULL 约束导致插入失败，计入 failureCount
-        assertEquals(0, result.getSuccessCount());
-        assertEquals(1, result.getFailureCount());
+        // 新车辆自动建车兜底：createStubVehicle 以 UNKNOWN 填充七项 NOT NULL 生产配置列，插入成功
+        // （残档，缺七项生产配置与选项值快照，需后续 PRODUCE 重导补全）
+        assertEquals(1, result.getSuccessCount());
+        assertEquals(0, result.getFailureCount());
     }
 
     @Test
@@ -118,6 +118,68 @@ class EolImportIntegrationTest {
     }
 
     @Test
+    @Order(5)
+    @DisplayName("新格式结构化EOL导入应正确处理（ECU_BASELINE/SECURITY/补偿绑定）")
+    void testEolImport_structuredNewFormat() {
+        String batchNum = "EOL_BATCH_STRUCT_001";
+        String vin = "HWYZTEST000000001";
+        String dataJson = buildStructuredEolDataJson(vin);
+
+        VehImportData vehImportData = VehImportData.builder()
+                .batchNum(batchNum)
+                .type("EOL")
+                .version("1.0")
+                .data(dataJson)
+                .handle(false)
+                .build();
+        vehImportDataRepository.insert(vehImportData);
+
+        ImportResult result = vehImportDataAppService.parseVehImportData(batchNum);
+
+        assertNotNull(result);
+        assertEquals(1, result.getTotalCount());
+        // 新格式 ECU_BASELINE 补偿绑定 + 安全回执对账不应使整条失败（对账缺失仅 WARN）
+        assertEquals(1, result.getSuccessCount());
+        assertEquals(0, result.getFailureCount());
+    }
+
+    @Test
+    @Order(6)
+    @DisplayName("同一VIN重复EOL导入应幂等（生命周期节点重复写入不失败）")
+    void testEolImport_duplicateImport_idempotent() {
+        String batchNum = "EOL_BATCH_DUP_001";
+        String vin = "HWYZTEST000000001";
+        String dataJson = buildStructuredEolDataJson(vin);
+
+        VehImportData vehImportData = VehImportData.builder()
+                .batchNum(batchNum)
+                .type("EOL")
+                .version("1.0")
+                .data(dataJson)
+                .handle(false)
+                .build();
+        vehImportDataRepository.insert(vehImportData);
+
+        // 先执行一次，再以另一批次重复导入同一 VIN
+        vehImportDataAppService.parseVehImportData(batchNum);
+        String batchNum2 = "EOL_BATCH_DUP_002";
+        vehImportDataRepository.insert(VehImportData.builder()
+                .batchNum(batchNum2)
+                .type("EOL")
+                .version("1.0")
+                .data(dataJson)
+                .handle(false)
+                .build());
+        ImportResult result = vehImportDataAppService.parseVehImportData(batchNum2);
+
+        assertNotNull(result);
+        // 重复导入：EOL 事件不再发布（firstEol=false），证书/下电节点幂等跳过，不应失败
+        assertEquals(1, result.getTotalCount());
+        assertEquals(1, result.getSuccessCount());
+        assertEquals(0, result.getFailureCount());
+    }
+
+    @Test
     @Order(4)
     @DisplayName("TOL导入后应写入生命周期节点")
     void testTolImport_lifecycleNode() {
@@ -139,6 +201,115 @@ class EolImportIntegrationTest {
         assertNotNull(result);
         assertTrue(result.getTotalCount() > 0);
         assertTrue(result.getSuccessCount() >= 0);
+    }
+
+    private String buildStructuredEolDataJson(String vin) {
+        JSONObject data = new JSONObject();
+        JSONObject request = new JSONObject();
+        JSONObject dataObj = new JSONObject();
+        JSONArray items = new JSONArray();
+
+        JSONObject item = new JSONObject();
+        item.set("VIN", vin);
+        item.set("EOL_RESULT", "PASS");
+        item.set("EOL_TIME", 1784391702000L);
+        item.set("POWER_DOWN_TIME", 1784391734000L);
+        item.set("PLANT", "HWYZ");
+        item.set("LINE_CODE", "FA1");
+        item.set("STATION_CODE", "EOL-ELE-01");
+        item.set("SHIFT", "A");
+        item.set("OPERATOR", "OP10086");
+        item.set("TRANSPORT_MODE", "TRANSPORT");
+        item.set("ODOMETER_KM", 3);
+        item.set("SOC", 40);
+        item.set("HV_STATUS", "POWER_OFF");
+
+        JSONObject certificate = new JSONObject();
+        certificate.set("CERT_NO", "WHC20260101000001");
+        certificate.set("CERT_DATE", 1784391768000L);
+        certificate.set("MANUFACTURE_DATE", 1784391783000L);
+        item.set("CERTIFICATE", certificate);
+
+        JSONObject otaBaseline = new JSONObject();
+        otaBaseline.set("VEHICLE_VERSION", "HSRE26_2026.1.0");
+        otaBaseline.set("PACKAGE_ID", "BL_HSRE26_20260101");
+        otaBaseline.set("EE_ARCH", "CENTRAL_ZONE");
+        item.set("OTA_BASELINE", otaBaseline);
+
+        JSONArray ecuBaseline = new JSONArray();
+        JSONObject tbox = new JSONObject();
+        tbox.set("VEHICLE_NODE", "TBOX_5G");
+        tbox.set("DEVICE_ITEM", "TBOX");
+        tbox.set("SN", "IT_SN_TBOX_0001");
+        tbox.set("ASSEMBLY_PART_NO", "IT_PN_TBOX_0001");
+        tbox.set("HARDWARE_PART_NO", "IT_HW_TBOX_0001");
+        tbox.set("HARDWARE_VERSION", "00");
+        JSONArray tboxSw = new JSONArray();
+        JSONObject sw1 = new JSONObject();
+        sw1.set("SOFTWARE_TYPE", "APP");
+        sw1.set("SOFTWARE_PART_NO", "IT_SW_TBOX_0001");
+        sw1.set("SOFTWARE_VERSION", "V1.0.0");
+        sw1.set("FLASH_RESULT", "OK");
+        tboxSw.add(sw1);
+        tbox.set("SOFTWARE", tboxSw);
+        JSONObject tboxSec = new JSONObject();
+        tboxSec.set("CERT_INJECTED", true);
+        tboxSec.set("V2C_COMM_ROOT", "PROVISIONED");
+        tboxSec.set("TBOX_DEVICE_ROOT", "PROVISIONED");
+        tbox.set("SECURITY", tboxSec);
+        ecuBaseline.add(tbox);
+
+        JSONObject cockpit = new JSONObject();
+        cockpit.set("VEHICLE_NODE", "DCU_COCKPIT_SA8295P");
+        cockpit.set("DEVICE_ITEM", "DCU");
+        cockpit.set("SN", "IT_SN_DCU_0001");
+        cockpit.set("ASSEMBLY_PART_NO", "IT_PN_DCU_0001");
+        cockpit.set("HARDWARE_PART_NO", "IT_HW_DCU_0001");
+        cockpit.set("HARDWARE_VERSION", "00");
+        JSONArray cockpitSw = new JSONArray();
+        JSONObject sw2 = new JSONObject();
+        sw2.set("SOFTWARE_TYPE", "APP");
+        sw2.set("SOFTWARE_PART_NO", "IT_SW_DCU_0001");
+        sw2.set("SOFTWARE_VERSION", "V1.0.0");
+        sw2.set("FLASH_RESULT", "OK");
+        cockpitSw.add(sw2);
+        cockpit.set("SOFTWARE", cockpitSw);
+        JSONObject cockpitSec = new JSONObject();
+        cockpitSec.set("CERT_INJECTED", true);
+        cockpitSec.set("CPT_DCU_DEVICE_ROOT", "PROVISIONED");
+        cockpit.set("SECURITY", cockpitSec);
+        ecuBaseline.add(cockpit);
+        item.set("ECU_BASELINE", ecuBaseline);
+
+        JSONArray inspectionItems = new JSONArray();
+        JSONObject inspection = new JSONObject();
+        inspection.set("ITEM_CODE", "HV_INSULATION");
+        inspection.set("NAME", "高压绝缘");
+        inspection.set("RESULT", "PASS");
+        inspection.set("VALUE", "50");
+        inspection.set("UNIT", "MΩ");
+        inspectionItems.add(inspection);
+        item.set("INSPECTION_ITEMS", inspectionItems);
+
+        JSONObject diagnostic = new JSONObject();
+        diagnostic.set("DTC_CLEARED", true);
+        diagnostic.set("RESIDUAL_DTC", new JSONArray());
+        item.set("DIAGNOSTIC", diagnostic);
+
+        JSONObject powertrain = new JSONObject();
+        powertrain.set("POWER_BATTERY_PACK_NO", "PB0000000001");
+        powertrain.set("POWER_BATTERY_SOH", 100);
+        powertrain.set("FRONT_DRIVE_MOTOR_NO", "FM0000000001");
+        powertrain.set("REAR_DRIVE_MOTOR_NO", "RM0000000001");
+        powertrain.set("GENERATOR_NO", "GEN0000000001");
+        powertrain.set("ENGINE_NO", "ENG0000000001");
+        item.set("POWERTRAIN", powertrain);
+
+        items.add(item);
+        dataObj.set("ITEMS", items);
+        request.set("DATA", dataObj);
+        data.set("REQUEST", request);
+        return data.toString();
     }
 
     private String buildEolDataJson(String vin, String partNo, String sn, String deviceCode) {

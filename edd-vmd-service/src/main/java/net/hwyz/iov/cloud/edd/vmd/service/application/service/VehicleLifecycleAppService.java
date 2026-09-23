@@ -147,35 +147,63 @@ public class VehicleLifecycleAppService {
     }
 
     /**
-     * 记录车辆合格证节点
+     * 记录车辆合格证节点（幂等：首次写入胜出，重复调用忽略）
      *
      * @param vin             车架号
      * @param certificateTime 合格证打印时间
      */
     public void recordCertificateNode(String vin, Date certificateTime) {
-        VehicleLifecycleNode node = VehicleLifecycleNode.builder()
+        VehicleLifecycleNodeEnum node = VehicleLifecycleNodeEnum.CERTIFICATE;
+        if (vehicleLifecycleNodeRepository.existsByVinAndNode(vin, node)) {
+            log.debug("车辆生命周期节点已存在，跳过写入: vin={}, node={}", vin, node);
+            return;
+        }
+        VehicleLifecycleNode lifecycleNode = VehicleLifecycleNode.builder()
                 .vin(vin)
-                .node(VehicleLifecycleNodeEnum.CERTIFICATE)
+                .node(node)
                 .reachTime(certificateTime == null ? null : certificateTime.toInstant())
                 .build();
-        node.init();
-        vehicleLifecycleNodeRepository.save(node);
+        lifecycleNode.init();
+        try {
+            vehicleLifecycleNodeRepository.save(lifecycleNode);
+        } catch (DuplicateKeyException ex) {
+            // 并发竞态兜底：唯一键冲突但目标 VIN+CERTIFICATE 节点已存在，视为幂等成功
+            if (vehicleLifecycleNodeRepository.existsByVinAndNode(vin, node)) {
+                log.debug("并发写入生命周期节点冲突，回查已存在，视为幂等成功: vin={}, node={}", vin, node);
+                return;
+            }
+            throw ex;
+        }
     }
 
     /**
-     * 记录车辆下电节点（CR-043）
+     * 记录车辆下电节点（CR-043，幂等：首次写入胜出，重复调用忽略）
      *
      * @param vin           车架号
      * @param powerDownTime 下电时间
      */
     public void recordPowerDownNode(String vin, Instant powerDownTime) {
-        VehicleLifecycleNode node = VehicleLifecycleNode.builder()
+        VehicleLifecycleNodeEnum node = VehicleLifecycleNodeEnum.POWER_DOWN;
+        if (vehicleLifecycleNodeRepository.existsByVinAndNode(vin, node)) {
+            log.debug("车辆生命周期节点已存在，跳过写入: vin={}, node={}", vin, node);
+            return;
+        }
+        VehicleLifecycleNode lifecycleNode = VehicleLifecycleNode.builder()
                 .vin(vin)
-                .node(VehicleLifecycleNodeEnum.POWER_DOWN)
+                .node(node)
                 .reachTime(powerDownTime)
                 .build();
-        node.init();
-        vehicleLifecycleNodeRepository.save(node);
+        lifecycleNode.init();
+        try {
+            vehicleLifecycleNodeRepository.save(lifecycleNode);
+        } catch (DuplicateKeyException ex) {
+            // 并发竞态兜底：唯一键冲突但目标 VIN+POWER_DOWN 节点已存在，视为幂等成功
+            if (vehicleLifecycleNodeRepository.existsByVinAndNode(vin, node)) {
+                log.debug("并发写入生命周期节点冲突，回查已存在，视为幂等成功: vin={}, node={}", vin, node);
+                return;
+            }
+            throw ex;
+        }
     }
 
     /**
