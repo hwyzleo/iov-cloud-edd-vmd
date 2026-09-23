@@ -8,7 +8,9 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.VehiclePartQuery
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.publish.VehiclePartBindingPublisher;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartInfo;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehiclePart;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.PartBindingConflictException;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.BindingChangeType;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.VehiclePartBindResult;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartInfoRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehiclePartRepository;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
@@ -196,6 +198,55 @@ public class VehiclePartAppService {
         vehiclePartRepository.insert(vehiclePart);
         // 发布绑定变更事件
         vehiclePartBindingPublisher.publishBindingChanged(vehiclePart, BindingChangeType.BIND);
+    }
+
+    /**
+     * 幂等绑定车辆零件（对齐 VMD-DSN-CR-029 F9 时序与 §3.3 幂等约束）
+     * <p>
+     * 绑定前先做幂等与冲突检查：
+     * 1. 按零件实例 partId 查 active 绑定（一零件一车不变量）：
+     *    - 已绑定同一 VIN → 幂等命中，返回 {@link VehiclePartBindResult#SKIPPED_IDEMPOTENT}（视为成功）
+     *    - 已绑定其他 VIN → 抛 {@link PartBindingConflictException}
+     * 2. 按 (vin, vehicle_node_code) 查装车槽位（同一装车槽位仅一条 active 绑定）：
+     *    - 槽位已被其他零件实例占用 → 抛 {@link PartBindingConflictException}
+     *    - 槽位已被同一零件实例占用 → 幂等命中，返回 {@link VehiclePartBindResult#SKIPPED_IDEMPOTENT}
+     * 3. 未绑定 → 新建 active 绑定并发布绑定变更事件，返回 {@link VehiclePartBindResult#BOUND}
+     *
+     * @param vehiclePart 绑定关系（含 vin、partId、vehicleNodeCode）
+     * @return 绑定结果
+     * @throws PartBindingConflictException 零件已绑定其他VIN或装车槽位被其他零件占用
+     */
+    public VehiclePartBindResult bindVehiclePartIdempotent(VehiclePart vehiclePart) {
+        // 1. 按零件实例查 active 绑定（一零件一车不变量）
+        VehiclePart boundByPart = vehiclePartRepository.selectActiveByPartId(vehiclePart.getPartId());
+        if (boundByPart != null) {
+            if (boundByPart.getVin().equalsIgnoreCase(vehiclePart.getVin())) {
+                log.info("零件实例[id={}]已绑定车辆[{}]，幂等命中跳过", vehiclePart.getPartId(), vehiclePart.getVin());
+                return VehiclePartBindResult.SKIPPED_IDEMPOTENT;
+            }
+            throw new PartBindingConflictException(
+                    String.format("零件实例[id=%s]已绑定车辆[%s]，无法绑定到车辆[%s]",
+                            vehiclePart.getPartId(), boundByPart.getVin(), vehiclePart.getVin()));
+        }
+
+        // 2. 按 (vin, 车载节点) 查装车槽位（同一装车槽位仅一条 active 绑定）
+        VehiclePart boundBySlot = vehiclePartRepository.selectActiveByVinAndVehicleNodeCode(
+                vehiclePart.getVin(), vehiclePart.getVehicleNodeCode());
+        if (boundBySlot != null) {
+            if (boundBySlot.getPartId().longValue() == vehiclePart.getPartId().longValue()) {
+                // 同一零件实例已绑定该槽位（第一步已拦截，兜底防御）
+                log.info("零件实例[id={}]已绑定车辆[{}]车载节点[{}]，幂等命中跳过",
+                        vehiclePart.getPartId(), vehiclePart.getVin(), vehiclePart.getVehicleNodeCode());
+                return VehiclePartBindResult.SKIPPED_IDEMPOTENT;
+            }
+            throw new PartBindingConflictException(
+                    String.format("车辆[%s]车载节点[%s]槽位已被零件实例[id=%s]占用",
+                            vehiclePart.getVin(), vehiclePart.getVehicleNodeCode(), boundBySlot.getPartId()));
+        }
+
+        // 3. 新建 active 绑定并发布事件
+        bindVehiclePart(vehiclePart);
+        return VehiclePartBindResult.BOUND;
     }
 
     /**

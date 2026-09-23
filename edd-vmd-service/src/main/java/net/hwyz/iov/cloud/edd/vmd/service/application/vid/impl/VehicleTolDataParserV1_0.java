@@ -22,6 +22,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleNode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehiclePart;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.InboundSourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.PartInstanceState;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.VehiclePartBindResult;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmPartRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
 import net.hwyz.iov.cloud.framework.common.util.StrUtil;
@@ -192,11 +193,11 @@ public class VehicleTolDataParserV1_0 extends BaseProcessor implements VehicleIm
                             .bindType("INITIAL")
                             .bindOrg(sourceSystem)
                             .build();
-                    vehiclePartAppService.bindVehiclePart(vehiclePart);
+                    VehiclePartBindResult bindResult = vehiclePartAppService.bindVehiclePartIdempotent(vehiclePart);
 
                     successCount++;
                     vinSuccess = true;
-                    log.debug("TOL导入数据批次号[{}]车辆[{}]零件[{}]绑定成功", batchNum, vin, partCode);
+                    log.debug("TOL导入数据批次号[{}]车辆[{}]零件[{}]绑定成功({})", batchNum, vin, partCode, bindResult);
                 } catch (VehicleNotExistException e) {
                     failureCount++;
                     String errorMsg = String.format("VIN[%s]不存在", vin);
