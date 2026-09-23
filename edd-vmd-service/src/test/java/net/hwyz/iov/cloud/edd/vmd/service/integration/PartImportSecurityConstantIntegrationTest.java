@@ -393,6 +393,43 @@ class PartImportSecurityConstantIntegrationTest {
     }
 
     @Test
+    @DisplayName("智驾域控 DCU_ADAS_GEN1 按 deviceCategory=DCU_ADAS 路由到 AD_DCU_DEVICE_ROOT（HSM_FULL 触发预置）")
+    void dcuAdasGen1_shouldRouteToAdasBizType() throws Exception {
+        String batchNum = "INT_BATCH_DCU_ADAS_001";
+        stubCommon(importData(batchNum, "DCU_ADAS_001", "DCU_ADAS_GEN1", "SN_ADAS_001", "HSM_UID_ADAS_001"),
+                "DCU_ADAS_001", "DCU_ADAS_GEN1", "DCU_ADAS", "HSM_FULL");
+        when(partSecurityConstantRepository.selectByPartCodeAndSn("DCU_ADAS_001", "SN_ADAS_001")).thenReturn(null);
+        when(partSecurityConstantRepository.insert(any())).thenReturn(1);
+        when(keyProvisioningTemplate.deriveByUid("HSM_UID_ADAS_001", BizType.AD_DCU_DEVICE_ROOT))
+                .thenReturn(mockProvisioningResult("dev-root-master:sn:HSM_UID_ADAS_001"));
+
+        ImportResult result = partImportDataAppService.parsePartImportData(batchNum);
+
+        assertNotNull(result);
+        assertEquals(0, result.getFailureCount());
+        verify(partSecurityConstantRepository).insert(any());
+        verify(keyProvisioningTemplate).deriveByUid("HSM_UID_ADAS_001", BizType.AD_DCU_DEVICE_ROOT);
+    }
+
+    @Test
+    @DisplayName("智驾域控 DCU_ADAS_GEN1 能力缺失时旧注册表未登记，按主数据 deviceCategory 仍可路由预置（R-049-1）")
+    void dcuAdasGen1_nullCapability_shouldFallbackByMasterDataCategory() throws Exception {
+        String batchNum = "INT_BATCH_DCU_ADAS_002";
+        // 注册表不含 DCU_ADAS_GEN1，能力缺失时策略判定不触发预置（旧注册表未登记）
+        assertFalse(vehicleNodeSchemaRegistry.needsSecurityConstantPreset("DCU_ADAS_GEN1"));
+        stubCommon(importData(batchNum, "DCU_ADAS_002", "DCU_ADAS_GEN1", "SN_ADAS_002", "HSM_UID_ADAS_002"),
+                "DCU_ADAS_002", "DCU_ADAS_GEN1", "DCU_ADAS", null);
+
+        ImportResult result = partImportDataAppService.parsePartImportData(batchNum);
+
+        assertNotNull(result);
+        assertEquals(0, result.getFailureCount());
+        // 能力缺失 + 注册表未登记 → 不触发预置（显式主数据 HSM_FULL 才是权威路径）
+        verify(partSecurityConstantRepository, never()).insert(any());
+        verify(keyProvisioningTemplate, never()).deriveByUid(any(), any());
+    }
+
+    @Test
     @DisplayName("回归：CCU 按 deviceCategory 路由到 CCU_DEVICE_ROOT")
     void ccuRegression_shouldRouteToCcuBizType() throws Exception {
         String batchNum = "INT_BATCH_CCU_001";

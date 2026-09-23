@@ -64,6 +64,18 @@ class SecurityBizTypeResolverTest {
     }
 
     @Test
+    @DisplayName("deviceCategory=DCU_ADAS 应路由到 AD_DCU_DEVICE_ROOT（智驾域，新变体无需发版）")
+    void categoryDcuAdas_shouldRouteToAdasBizType() {
+        assertEquals(BizType.AD_DCU_DEVICE_ROOT, resolver.resolve("DCU_ADAS", "DCU_ADAS_GEN1"));
+    }
+
+    @Test
+    @DisplayName("deviceCategory=AD_DCU（framework 命名）应路由到 AD_DCU_DEVICE_ROOT")
+    void categoryAdDcu_shouldRouteToAdasBizType() {
+        assertEquals(BizType.AD_DCU_DEVICE_ROOT, resolver.resolve("AD_DCU", "DCU_ADAS_GEN1"));
+    }
+
+    @Test
     @DisplayName("无类别且旧节点码命中应兜底解析")
     void nullCategory_shouldFallbackToLegacyNodeCode() {
         assertEquals(BizType.TBOX_DEVICE_ROOT, resolver.resolve(null, "TBOX_5G"));

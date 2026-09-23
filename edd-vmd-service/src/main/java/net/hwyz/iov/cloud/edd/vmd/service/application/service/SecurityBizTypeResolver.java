@@ -33,13 +33,19 @@ public class SecurityBizTypeResolver {
 
     /**
      * 受控 deviceCategory → BizType 映射（对应既有 BizType 与 KMS key 配置，不在本 CR 新建密钥域）
+     * <p>
+     * 智驾域控（DCU_ADAS_GEN1 等）路由至既有 AD_DCU_DEVICE_ROOT 密钥域；
+     * 兼容 framework DeviceCategory 命名（AD_DCU）与 VMD/MDM 节点前缀命名（DCU_ADAS）两种取值。
+     * </p>
      */
     private static final Map<String, BizType> CATEGORY_BIZ_TYPE = Map.of(
             "TBOX", BizType.TBOX_DEVICE_ROOT,
             "CCU", BizType.CCU_DEVICE_ROOT,
             "BTM", BizType.PEPS_DEVICE_ROOT,
             "CGW", BizType.CGW_DEVICE_ROOT,
-            "DCU_COCKPIT", BizType.CPT_DCU_DEVICE_ROOT
+            "DCU_COCKPIT", BizType.CPT_DCU_DEVICE_ROOT,
+            "DCU_ADAS", BizType.AD_DCU_DEVICE_ROOT,
+            "AD_DCU", BizType.AD_DCU_DEVICE_ROOT
     );
 
     /**
