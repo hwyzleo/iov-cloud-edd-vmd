@@ -273,6 +273,41 @@ class VmdKafkaTopicInitializerTest {
     }
 
     @Test
+    @DisplayName("Broker 启动期瞬断校验失败置 DOWN 后，后台重试自愈回 UP")
+    void retryValidate_afterTransientFailure_healsToUp() {
+        // 首次校验失败（Broker 超时）→ 生产 DOWN、观测 DOWN
+        KafkaFuture<TopicDescription> binding = failedFuture(new TimeoutException("timeout"));
+        KafkaFuture<TopicDescription> produce = failedFuture(new TimeoutException("timeout"));
+        KafkaFuture<TopicDescription> sw = failedFuture(new TimeoutException("timeout"));
+        DescribeTopicsResult result = mock(DescribeTopicsResult.class);
+        when(result.values()).thenReturn(Map.of(BINDING, binding, PRODUCE, produce, SW_INVENTORY, sw));
+        when(admin.describeTopics(anyCollection())).thenReturn(result);
+
+        initializer.onTopicsReady(new KafkaTopicsReadyEvent());
+        assertEquals(VmdKafkaTopicReadiness.State.DOWN, readiness.producerTopicsState());
+
+        // Broker 仍不可达：重试后保持 DOWN
+        initializer.retryValidate();
+        assertEquals(VmdKafkaTopicReadiness.State.DOWN, readiness.producerTopicsState());
+
+        // Broker 恢复：重试后生产 UP、观测 UP
+        stubProducerDescribe("delete");
+        stubConsumerPresent();
+        initializer.retryValidate();
+        assertEquals(VmdKafkaTopicReadiness.State.UP, readiness.producerTopicsState());
+        assertEquals(VmdKafkaTopicReadiness.State.UP, readiness.inventoryObservedState());
+    }
+
+    @Test
+    @DisplayName("事件未触发前后台重试不执行")
+    void retryValidate_beforeEvent_doesNothing() {
+        initializer.retryValidate();
+
+        verify(admin, never()).describeTopics(anyCollection());
+        assertEquals(VmdKafkaTopicReadiness.State.INIT, readiness.producerTopicsState());
+    }
+
+    @Test
     @DisplayName("初始化结果按 Topic 记录指标")
     void recordsInitMetrics() {
         VmdKafkaTopicMetrics metrics = mock(VmdKafkaTopicMetrics.class);

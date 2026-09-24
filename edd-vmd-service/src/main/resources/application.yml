@@ -43,6 +43,8 @@ vmd:
       partitions: ${VMD_KAFKA_TOPIC_PARTITIONS:3}
       replication-factor: ${VMD_KAFKA_TOPIC_REPLICATION_FACTOR:1}
       cleanup-policy: ${VMD_KAFKA_TOPIC_CLEANUP_POLICY:delete}
+      # 生产 Topic 既有校验 / 观测 Topic 探测未达成（启动期 Broker 连接预热、瞬断等）时，后台重试间隔（毫秒）
+      retry-interval-ms: ${VMD_KAFKA_TOPIC_RETRY_INTERVAL_MS:60000}
     readiness:
       # 生产 Topic readiness=DOWN 时暂停 Outbox Relay 发布
       gate-producer: ${VMD_KAFKA_READINESS_GATE_PRODUCER:true}

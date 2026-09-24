@@ -19,6 +19,7 @@ import org.apache.kafka.common.errors.UnknownTopicOrPartitionException;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.event.EventListener;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -28,6 +29,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * VMD Kafka Topic 初始化与既有校验组件（VMD-DSN-CR-051）
@@ -62,6 +64,11 @@ public class VmdKafkaTopicInitializer {
     private final MdmTopicPreflight mdmTopicPreflight;
 
     /**
+     * KafkaTopicsReadyEvent 是否已触发（未触发前不执行后台重试）。
+     */
+    private final AtomicBoolean started = new AtomicBoolean(false);
+
+    /**
      * 启动日志：逻辑名 → 实际 Topic → 角色 → 参数（不打印凭证）。
      */
     @PostConstruct
@@ -83,10 +90,39 @@ public class VmdKafkaTopicInitializer {
 
     @EventListener
     public void onTopicsReady(KafkaTopicsReadyEvent event) {
+        started.set(true);
         log.info("KafkaTopicsReadyEvent 触发 VMD 生产 Topic 既有校验、观测 Topic 探测与 MDM 消费 Topic 预检");
         validateProducerTopics();
         probeInventoryObserved();
         mdmTopicPreflight.preflight();
+    }
+
+    /**
+     * 就绪未达成时的后台重试（仅校验，不创建/修改 Topic）。
+     * <p>
+     * 生产 Topic 既有校验与观测 Topic 探测均为一次性执行：若应用启动瞬间
+     * AdminClient 与 Broker 的连接尚未就绪（DNS / 双栈 / advertised listener
+     * 预热等）而超时失败，readiness 会被置 DOWN 且永不恢复，导致 Outbox Relay
+     * 永久暂停。此处仿照 {@link MdmTopicPreflight#retryProbe()} 增加定时自愈：
+     * 生产 Topic 未达 UP、或观测 Topic 处于 DOWN（瞬态失败）时周期重试。
+     */
+    @Scheduled(fixedDelayString = "${vmd.kafka.topic-provisioning.retry-interval-ms:60000}")
+    public void retryValidate() {
+        if (!started.get()) {
+            return;
+        }
+        boolean producerNotReady = readiness.producerTopicsState() != VmdKafkaTopicReadiness.State.UP;
+        boolean observedDown = readiness.inventoryObservedState() == VmdKafkaTopicReadiness.State.DOWN;
+        if (!producerNotReady && !observedDown) {
+            return;
+        }
+        log.warn("VMD 生产/观测 Topic 就绪未达成，后台重试既有校验与探测（仅校验，不创建/修改 Topic）");
+        if (producerNotReady) {
+            validateProducerTopics();
+        }
+        if (observedDown) {
+            probeInventoryObserved();
+        }
     }
 
     /**
