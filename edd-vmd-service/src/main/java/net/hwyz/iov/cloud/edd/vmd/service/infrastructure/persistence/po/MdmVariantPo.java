@@ -35,18 +35,6 @@ public class MdmVariantPo extends BasePo {
     private Long id;
 
     /**
-     * 平台代码
-     */
-    @TableField("platform_code")
-    private String platformCode;
-
-    /**
-     * 车系代码
-     */
-    @TableField("car_line_code")
-    private String carLineCode;
-
-    /**
      * 车型代码
      */
     @TableField("model_code")
@@ -65,22 +53,10 @@ public class MdmVariantPo extends BasePo {
     private String name;
 
     /**
-     * 版本英文名称
+     * 版本本地化名称
      */
-    @TableField("name_en")
-    private String nameEn;
-
-    /**
-     * 是否启用
-     */
-    @TableField("enable")
-    private Boolean enable;
-
-    /**
-     * 排序
-     */
-    @TableField("sort")
-    private Integer sort;
+    @TableField("name_local")
+    private String nameLocal;
 
     /**
      * 数据来源：MDM=来自MDM系统，MANUAL=本地手动维护

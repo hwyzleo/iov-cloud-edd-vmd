@@ -5,11 +5,13 @@ import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VariantOptionCode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Variant;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.VariantHierarchy;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmVariantRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter.VariantConverter;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter.VariantOptionCodeConverter;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.MdmVariantOptionCodeMapper;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.MdmVariantMapper;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.MdmVariantHierarchyPo;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.MdmVariantOptionCodePo;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.MdmVariantPo;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
@@ -81,6 +83,22 @@ public class MdmVariantRepositoryImpl implements MdmVariantRepository {
     @Override
     public int batchPhysicalDelete(Long[] ids) {
         return mdmVariantMapper.batchPhysicalDeletePo(ids);
+    }
+
+    @Override
+    public int logicalDeleteById(Long id) {
+        return mdmVariantMapper.logicalDeletePo(id);
+    }
+
+    @Override
+    public List<VariantHierarchy> selectHierarchyByMap(Map<String, Object> map) {
+        List<MdmVariantHierarchyPo> poList = mdmVariantMapper.selectVariantHierarchyByMap(map);
+        return PageUtil.convert(poList, VariantConverter.INSTANCE::toHierarchy);
+    }
+
+    @Override
+    public int countHierarchyByMap(Map<String, Object> map) {
+        return mdmVariantMapper.countVariantHierarchyByMap(map);
     }
 
     @Override

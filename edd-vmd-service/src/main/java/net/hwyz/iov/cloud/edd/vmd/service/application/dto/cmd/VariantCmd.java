@@ -19,15 +19,10 @@ import java.time.Instant;
 public class VariantCmd {
 
     private Long id;
-    private String platformCode;
-    private String carLineCode;
     private String modelCode;
     private String code;
     private String name;
-    private String nameEn;
-    private Boolean enable;
-    private Integer sort;
+    private String nameLocal;
     private String description;
-    private Instant createTime;
 
 }

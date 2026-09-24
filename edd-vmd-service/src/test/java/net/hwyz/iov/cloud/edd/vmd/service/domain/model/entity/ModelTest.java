@@ -24,9 +24,8 @@ class ModelTest {
         String carLineCode = "CARLINE001";
         String code = "MODEL001";
         String name = "测试车型";
-        String nameEn = "Test Model";
-        Boolean enable = true;
-        Integer sort = 10;
+        String nameLocal = "测试车型本地化";
+        String description = "车型备注";
         SourceType source = SourceType.MANUAL;
         String externalRefId = "ext-001";
         Long externalVersion = 1L;
@@ -39,9 +38,8 @@ class ModelTest {
                 .carLineCode(carLineCode)
                 .code(code)
                 .name(name)
-                .nameEn(nameEn)
-                .enable(enable)
-                .sort(sort)
+                .nameLocal(nameLocal)
+                .description(description)
                 .source(source)
                 .externalRefId(externalRefId)
                 .externalVersion(externalVersion)
@@ -55,9 +53,8 @@ class ModelTest {
         assertEquals(carLineCode, model.getCarLineCode());
         assertEquals(code, model.getCode());
         assertEquals(name, model.getName());
-        assertEquals(nameEn, model.getNameEn());
-        assertEquals(enable, model.getEnable());
-        assertEquals(sort, model.getSort());
+        assertEquals(nameLocal, model.getNameLocal());
+        assertEquals(description, model.getDescription());
         assertEquals(source, model.getSource());
         assertEquals(externalRefId, model.getExternalRefId());
         assertEquals(externalVersion, model.getExternalVersion());
@@ -80,9 +77,8 @@ class ModelTest {
         assertNull(model.getId());
         assertNull(model.getPlatformCode());
         assertNull(model.getCarLineCode());
-        assertNull(model.getNameEn());
-        assertNull(model.getEnable());
-        assertNull(model.getSort());
+        assertNull(model.getNameLocal());
+        assertNull(model.getDescription());
         assertNull(model.getSource());
         assertNull(model.getExternalRefId());
         assertNull(model.getExternalVersion());
@@ -132,14 +128,14 @@ class ModelTest {
         // When
         model.setName("更新后的名称");
         model.setCode("MODEL006_UPDATED");
-        model.setEnable(false);
+        model.setNameLocal("更新后的本地化名称");
         model.setPlatformCode("PLATFORM002");
         model.setCarLineCode("CARLINE002");
 
         // Then
         assertEquals("更新后的名称", model.getName());
         assertEquals("MODEL006_UPDATED", model.getCode());
-        assertFalse(model.getEnable());
+        assertEquals("更新后的本地化名称", model.getNameLocal());
         assertEquals("PLATFORM002", model.getPlatformCode());
         assertEquals("CARLINE002", model.getCarLineCode());
     }

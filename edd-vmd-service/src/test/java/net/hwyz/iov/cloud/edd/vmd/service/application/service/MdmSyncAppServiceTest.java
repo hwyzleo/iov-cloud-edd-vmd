@@ -13,9 +13,14 @@ import net.hwyz.iov.cloud.edd.mdm.api.service.VariantService;
 import net.hwyz.iov.cloud.edd.mdm.api.service.VehicleNodeService;
 import net.hwyz.iov.cloud.edd.mdm.api.vo.response.ConfigurationPageResponse;
 import net.hwyz.iov.cloud.edd.mdm.api.vo.response.ConfigurationResponse;
+import net.hwyz.iov.cloud.edd.mdm.api.vo.response.ModelPageResponse;
+import net.hwyz.iov.cloud.edd.mdm.api.vo.response.ModelResponse;
 import net.hwyz.iov.cloud.edd.mdm.api.vo.response.VehicleNodePageResponse;
 import net.hwyz.iov.cloud.edd.mdm.api.vo.response.VehicleNodeResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.ConfigurationProjectionCommand;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.VehicleNodeProjectionCommand;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.ModelProjectionCommand;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.VariantProjectionCommand;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmBrandEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmCarLineEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmConfigurationEvent;
@@ -24,10 +29,13 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmOptionCodeE
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmOptionFamilyEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmPartEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmPlatformEvent;
+import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmVariantEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmVehicleNodeEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.VehicleNodeProjectionCommand;
 import net.hwyz.iov.cloud.edd.vmd.service.application.mapper.MdmConfigurationProjectionMapper;
 import net.hwyz.iov.cloud.edd.vmd.service.application.mapper.MdmVehicleNodeProjectionMapper;
+import net.hwyz.iov.cloud.edd.vmd.service.application.mapper.MdmModelProjectionMapper;
+import net.hwyz.iov.cloud.edd.vmd.service.application.mapper.MdmVariantProjectionMapper;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.VehicleNodeProjectionException;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging.kafka.MdmConsumerMetrics;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging.kafka.MdmProjectionType;
@@ -111,6 +119,12 @@ class MdmSyncAppServiceTest {
 
     @Mock
     private MdmVehicleNodeProjectionMapper mdmVehicleNodeProjectionMapper;
+
+    @Mock
+    private MdmModelProjectionMapper mdmModelProjectionMapper;
+
+    @Mock
+    private MdmVariantProjectionMapper mdmVariantProjectionMapper;
 
     @Mock
     private ProjectionIntegrityChecker projectionIntegrityChecker;
@@ -503,75 +517,99 @@ class MdmSyncAppServiceTest {
     }
 
     @Test
-    @DisplayName("handleModelEvent应新增本地不存在的车型投影")
-    void handleModelEvent_shouldInsertWhenLocalModelNotExists() {
+    @DisplayName("handleModelEvent创建事件应经统一Projection Mapper apply")
+    void handleModelEvent_shouldApplyProjectionForCreatedEvent() {
         // Given
         MdmModelEvent event = new MdmModelEvent("CREATED", "mdm-model-001", 1L, "MODEL001", "新车型", "PLATFORM001", "CARLINE001", LocalDateTime.now());
-
-        when(mdmModelRepository.selectByCode("MODEL001")).thenReturn(null);
-        when(mdmModelRepository.insert(any(Model.class))).thenReturn(1);
+        ModelProjectionCommand command = ModelProjectionCommand.builder()
+                .code("MODEL001").name("新车型")
+                .platformCode("PLATFORM001").carLineCode("CARLINE001")
+                .externalRefId("mdm-model-001").externalVersion(1L).build();
+        when(mdmModelProjectionMapper.fromEvent(event)).thenReturn(command);
 
         // When
         mdmSyncAppService.handleModelEvent(event);
 
         // Then
-        verify(mdmModelRepository).selectByCode("MODEL001");
-        verify(mdmModelRepository).insert(any(Model.class));
+        verify(mdmModelProjectionMapper).fromEvent(event);
+        verify(mdmModelProjectionMapper).apply(command);
+        verify(mdmModelProjectionMapper, never()).handleDeletion(any());
     }
 
     @Test
-    @DisplayName("handleModelEvent应更新本地已存在且版本更高的车型投影")
-    void handleModelEvent_shouldUpdateWhenLocalModelExistsAndVersionHigher() {
+    @DisplayName("handleModelEvent删除/失效事件应经统一Projection Mapper逻辑删除")
+    void handleModelEvent_shouldHandleDeletionForDeletedEvent() {
         // Given
-        MdmModelEvent event = new MdmModelEvent("UPDATED", "mdm-model-002", 2L, "MODEL002", "更新后的车型", "PLATFORM002", "CARLINE002", LocalDateTime.now());
-
-        Model localModel = Model.builder()
-                .id(1L)
-                .code("MODEL002")
-                .name("原始车型")
-                .platformCode("PLATFORM002")
-                .carLineCode("CARLINE002")
-                .source(SourceType.MDM)
-                .externalRefId("mdm-model-002")
-                .externalVersion(1L)
-                .build();
-
-        when(mdmModelRepository.selectByCode("MODEL002")).thenReturn(localModel);
-        when(mdmModelRepository.updateById(any(Model.class))).thenReturn(1);
+        MdmModelEvent event = new MdmModelEvent("DELETED", "mdm-model-002", 2L, "MODEL002", null, null, null, LocalDateTime.now());
 
         // When
         mdmSyncAppService.handleModelEvent(event);
 
         // Then
-        verify(mdmModelRepository).selectByCode("MODEL002");
-        verify(mdmModelRepository).updateById(any(Model.class));
+        verify(mdmModelProjectionMapper).handleDeletion(event);
+        verify(mdmModelProjectionMapper, never()).apply(any());
     }
 
     @Test
-    @DisplayName("handleModelEvent应忽略版本不高于本地的车型事件")
-    void handleModelEvent_shouldIgnoreWhenVersionNotHigher() {
+    @DisplayName("bootstrapModel应经统一Projection Mapper写入")
+    void bootstrapModel_shouldUseProjectionMapper() {
         // Given
-        MdmModelEvent event = new MdmModelEvent("UPDATED", "mdm-model-003", 1L, "MODEL003", "旧版本车型", "PLATFORM003", "CARLINE003", LocalDateTime.now());
-
-        Model localModel = Model.builder()
-                .id(1L)
-                .code("MODEL003")
-                .name("本地车型")
-                .platformCode("PLATFORM003")
-                .carLineCode("CARLINE003")
-                .source(SourceType.MDM)
-                .externalRefId("mdm-model-003")
-                .externalVersion(2L)
+        when(mdmModelRepository.countBySource(SourceType.MDM)).thenReturn(0L);
+        ModelResponse snapshot = ModelResponse.builder()
+                .id(1001L).code("MODEL001").name("新车型").nameLocal("新车型本地化")
+                .platformCode("PLATFORM001").carLineCode("CARLINE001").sourceId("mdm-model-001").version(1)
                 .build();
-
-        when(mdmModelRepository.selectByCode("MODEL003")).thenReturn(localModel);
+        ModelPageResponse pageResponse = ModelPageResponse.builder()
+                .total(1L)
+                .rows(java.util.Collections.singletonList(snapshot))
+                .build();
+        when(modelService.listAll(anyInt(), anyInt(), any(), any(), any())).thenReturn(pageResponse);
+        ModelProjectionCommand command = ModelProjectionCommand.builder()
+                .code("MODEL001").name("新车型")
+                .platformCode("PLATFORM001").carLineCode("CARLINE001")
+                .externalRefId("mdm-model-001").externalVersion(1L).build();
+        when(mdmModelProjectionMapper.fromSnapshot(snapshot)).thenReturn(command);
 
         // When
-        mdmSyncAppService.handleModelEvent(event);
+        mdmSyncAppService.bootstrapModel();
 
         // Then
-        verify(mdmModelRepository).selectByCode("MODEL003");
-        verify(mdmModelRepository, never()).updateById(any(Model.class));
+        verify(modelService).listAll(anyInt(), anyInt(), any(), any(), any());
+        verify(mdmModelProjectionMapper).fromSnapshot(snapshot);
+        verify(mdmModelProjectionMapper).apply(any(ModelProjectionCommand.class));
+    }
+
+    @Test
+    @DisplayName("handleVariantEvent创建事件应经统一Projection Mapper apply")
+    void handleVariantEvent_shouldApplyProjectionForCreatedEvent() {
+        // Given
+        MdmVariantEvent event = new MdmVariantEvent("CREATED", "mdm-var-001", 1L, "VAR001", "新版本", "MODEL001", LocalDateTime.now());
+        VariantProjectionCommand command = VariantProjectionCommand.builder()
+                .code("VAR001").name("新版本").modelCode("MODEL001")
+                .externalRefId("mdm-var-001").externalVersion(1L).build();
+        when(mdmVariantProjectionMapper.fromEvent(event)).thenReturn(command);
+
+        // When
+        mdmSyncAppService.handleVariantEvent(event);
+
+        // Then
+        verify(mdmVariantProjectionMapper).fromEvent(event);
+        verify(mdmVariantProjectionMapper).apply(command);
+        verify(mdmVariantProjectionMapper, never()).handleDeletion(any());
+    }
+
+    @Test
+    @DisplayName("handleVariantEvent删除/失效事件应经统一Projection Mapper逻辑删除")
+    void handleVariantEvent_shouldHandleDeletionForDeletedEvent() {
+        // Given
+        MdmVariantEvent event = new MdmVariantEvent("DELETED", "mdm-var-002", 2L, "VAR002", null, "MODEL001", LocalDateTime.now());
+
+        // When
+        mdmSyncAppService.handleVariantEvent(event);
+
+        // Then
+        verify(mdmVariantProjectionMapper).handleDeletion(event);
+        verify(mdmVariantProjectionMapper, never()).apply(any());
     }
 
     @Test

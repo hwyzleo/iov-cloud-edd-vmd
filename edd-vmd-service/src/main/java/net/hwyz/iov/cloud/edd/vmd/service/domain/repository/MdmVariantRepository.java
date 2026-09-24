@@ -3,6 +3,7 @@ package net.hwyz.iov.cloud.edd.vmd.service.domain.repository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VariantOptionCode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Variant;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.VariantHierarchy;
 
 import java.util.List;
 import java.util.Map;
@@ -94,6 +95,29 @@ public interface MdmVariantRepository {
      */
     int batchPhysicalDelete(Long[] ids);
 
+    /**
+     * 逻辑删除版本（CR-048：删除/失效事件语义）
+     *
+     * @param id 主键ID
+     * @return 影响行数
+     */
+    int logicalDeleteById(Long id);
+
+    /**
+     * 产品树补全查询（CR-048：平台/车系经 JOIN Model 派生，过滤与分页在数据库侧执行）
+     *
+     * @param map 查询条件（platformCode / carLineCode / modelCode / code / name / beginTime / endTime）
+     * @return 版本产品树补全列表
+     */
+    List<VariantHierarchy> selectHierarchyByMap(Map<String, Object> map);
+
+    /**
+     * 产品树补全查询计数（与 selectHierarchyByMap 同条件，支撑分页）
+     *
+     * @param map 查询条件
+     * @return 数量
+     */
+    int countHierarchyByMap(Map<String, Object> map);
     /**
      * 根据条件查询版本选项值关系列表
      *

@@ -16,6 +16,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.common.exception.ProductDataReadOnlyEx
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Variant;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VariantOptionCode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.VariantHierarchy;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmConfigurationRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmVariantRepository;
@@ -59,8 +60,9 @@ public class VariantAppService {
         map.put("name", ParamHelper.fuzzyQueryParam(query.getName()));
         map.put("beginTime", query.getBeginTime());
         map.put("endTime", query.getEndTime());
-        List<Variant> variantList = mdmVariantRepository.selectByMap(map);
-        return PageUtil.convert(variantList, VariantAssembler.INSTANCE::fromDomain);
+        // CR-048：平台/车系条件在数据库侧 JOIN Model 过滤并分页（禁 N+1，RD-048-4）
+        List<VariantHierarchy> hierarchyList = mdmVariantRepository.selectHierarchyByMap(map);
+        return VariantAssembler.INSTANCE.fromHierarchyList(hierarchyList);
     }
 
     /**

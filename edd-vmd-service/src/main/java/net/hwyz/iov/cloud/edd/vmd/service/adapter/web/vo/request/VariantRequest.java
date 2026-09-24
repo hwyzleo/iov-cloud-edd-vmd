@@ -21,16 +21,6 @@ public class VariantRequest extends BaseRequest {
     private Long id;
 
     /**
-     * 车辆平台代码
-     */
-    private String platformCode;
-
-    /**
-     * 车系代码
-     */
-    private String carLineCode;
-
-    /**
      * 车型代码
      */
     private String modelCode;
@@ -46,19 +36,9 @@ public class VariantRequest extends BaseRequest {
     private String name;
 
     /**
-     * 版本英文名称
+     * 版本本地化名称
      */
-    private String nameEn;
-
-    /**
-     * 是否启用
-     */
-    private Boolean enable;
-
-    /**
-     * 排序
-     */
-    private Integer sort;
+    private String nameLocal;
 
     /**
      * 备注

@@ -6,6 +6,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.VariantDto;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.ProductDataReadOnlyException;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Variant;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.VariantHierarchy;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmConfigurationRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmVariantRepository;
@@ -54,16 +55,16 @@ class VariantAppServiceTest {
                 .name("测试")
                 .build();
 
-        Variant v1 = Variant.builder().id(1L).code("V001").name("版本1").build();
-        Variant v2 = Variant.builder().id(2L).code("V002").name("版本2").build();
+        VariantHierarchy h1 = VariantHierarchy.builder().id(1L).code("V001").name("版本1").modelCode("M001").build();
+        VariantHierarchy h2 = VariantHierarchy.builder().id(2L).code("V002").name("版本2").modelCode("M001").build();
 
-        when(mdmVariantRepository.selectByMap(any(Map.class))).thenReturn(Arrays.asList(v1, v2));
+        when(mdmVariantRepository.selectHierarchyByMap(any(Map.class))).thenReturn(Arrays.asList(h1, h2));
 
         List<VariantDto> result = variantAppService.search(query);
 
         assertNotNull(result);
         assertEquals(2, result.size());
-        verify(mdmVariantRepository).selectByMap(any(Map.class));
+        verify(mdmVariantRepository).selectHierarchyByMap(any(Map.class));
     }
 
     @Test

@@ -22,6 +22,11 @@ public class MdmModelEvent extends MdmEvent {
     private String name;
 
     /**
+     * 车型本地化名称
+     */
+    private String nameLocal;
+
+    /**
      * 平台代码
      */
     private String platformCode;
@@ -30,6 +35,11 @@ public class MdmModelEvent extends MdmEvent {
      * 车系代码
      */
     private String carLineCode;
+
+    /**
+     * 备注
+     */
+    private String description;
 
     public MdmModelEvent(String eventType, String entityId, Long version, String code,
                          String name, String platformCode, String carLineCode, LocalDateTime occurredAt) {

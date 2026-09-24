@@ -49,7 +49,7 @@ class MdmVariantKafkaConsumerTest {
         ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.variant", 0, 0L, "key", messageJson);
 
         MdmVariantEvent testEvent = new MdmVariantEvent("CREATED", "mdm-var-001", 1L, "VAR001",
-                "版本1", "PF001", "CL001", "MODEL001", LocalDateTime.now());
+                "版本1", "MODEL001", LocalDateTime.now());
 
         when(objectMapper.readValue(messageJson, MdmVariantEvent.class)).thenReturn(testEvent);
 
@@ -88,7 +88,7 @@ class MdmVariantKafkaConsumerTest {
         ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.variant", 0, 0L, "key", messageJson);
 
         MdmVariantEvent testEvent = new MdmVariantEvent("CREATED", "mdm-var-001", 1L, "VAR001",
-                "版本1", "PF001", "CL001", "MODEL001", LocalDateTime.now());
+                "版本1", "MODEL001", LocalDateTime.now());
 
         when(objectMapper.readValue(messageJson, MdmVariantEvent.class)).thenReturn(testEvent);
         doThrow(new RuntimeException("Handle error")).when(mdmSyncAppService).handleVariantEvent(testEvent);
@@ -108,7 +108,7 @@ class MdmVariantKafkaConsumerTest {
         ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.variant", 0, 0L, "key", messageJson);
 
         MdmVariantEvent testEvent = new MdmVariantEvent("CREATED", "mdm-var-001", 1L, "VAR001",
-                "版本1", "PF001", "CL001", "MODEL001", LocalDateTime.now());
+                "版本1", "MODEL001", LocalDateTime.now());
 
         when(objectMapper.readValue(messageJson, MdmVariantEvent.class)).thenReturn(testEvent);
 

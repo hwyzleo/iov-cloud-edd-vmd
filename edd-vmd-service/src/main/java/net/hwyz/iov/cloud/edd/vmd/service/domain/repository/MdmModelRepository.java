@@ -93,4 +93,12 @@ public interface MdmModelRepository {
      */
     int batchPhysicalDelete(Long[] ids);
 
+    /**
+     * 逻辑删除车型（CR-048：删除/失效事件语义）
+     *
+     * @param id 主键ID
+     * @return 影响行数
+     */
+    int logicalDeleteById(Long id);
+
 }

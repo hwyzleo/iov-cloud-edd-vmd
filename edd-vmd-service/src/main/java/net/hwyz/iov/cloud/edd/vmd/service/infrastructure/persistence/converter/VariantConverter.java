@@ -1,6 +1,8 @@
 package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter;
 
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Variant;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.VariantHierarchy;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.MdmVariantHierarchyPo;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.MdmVariantPo;
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
@@ -40,4 +42,20 @@ public interface VariantConverter {
      * @return PO
      */
     MdmVariantPo fromDomain(Variant variant);
+
+    /**
+     * 产品树补全视图 PO 转领域值对象（CR-048 / RD-048-4）
+     *
+     * @param mdmVariantHierarchyPo 产品树补全视图 PO
+     * @return 版本产品树补全值对象
+     */
+    VariantHierarchy toHierarchy(MdmVariantHierarchyPo mdmVariantHierarchyPo);
+
+    /**
+     * 产品树补全视图 PO 列表转领域值对象列表
+     *
+     * @param mdmVariantHierarchyPoList 产品树补全视图 PO 列表
+     * @return 版本产品树补全值对象列表
+     */
+    List<VariantHierarchy> toHierarchyList(List<MdmVariantHierarchyPo> mdmVariantHierarchyPoList);
 }

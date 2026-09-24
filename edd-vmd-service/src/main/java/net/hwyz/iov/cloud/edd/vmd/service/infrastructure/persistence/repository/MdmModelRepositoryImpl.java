@@ -80,4 +80,9 @@ public class MdmModelRepositoryImpl implements MdmModelRepository {
         return mdmModelMapper.batchPhysicalDeletePo(ids);
     }
 
+    @Override
+    public int logicalDeleteById(Long id) {
+        return mdmModelMapper.logicalDeletePo(id);
+    }
+
 }

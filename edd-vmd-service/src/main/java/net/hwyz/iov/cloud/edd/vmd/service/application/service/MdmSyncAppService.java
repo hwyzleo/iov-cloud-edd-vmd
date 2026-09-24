@@ -38,8 +38,12 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmVehicleNode
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmPartEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.ConfigurationProjectionCommand;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.VehicleNodeProjectionCommand;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.ModelProjectionCommand;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.VariantProjectionCommand;
 import net.hwyz.iov.cloud.edd.vmd.service.application.mapper.MdmConfigurationProjectionMapper;
 import net.hwyz.iov.cloud.edd.vmd.service.application.mapper.MdmVehicleNodeProjectionMapper;
+import net.hwyz.iov.cloud.edd.vmd.service.application.mapper.MdmModelProjectionMapper;
+import net.hwyz.iov.cloud.edd.vmd.service.application.mapper.MdmVariantProjectionMapper;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging.kafka.MdmConsumerMetrics;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging.kafka.MdmProjectionType;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.monitoring.ConfigurationSyncMetrics;
@@ -48,9 +52,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.OptionFamily;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.OptionCode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Platform;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.CarLine;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Model;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Plant;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Variant;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Part;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmBrandRepository;
@@ -93,6 +95,8 @@ public class MdmSyncAppService {
     private final MdmPartRepository mdmPartRepository;
     private final MdmConfigurationProjectionMapper mdmConfigurationProjectionMapper;
     private final MdmVehicleNodeProjectionMapper mdmVehicleNodeProjectionMapper;
+    private final MdmModelProjectionMapper mdmModelProjectionMapper;
+    private final MdmVariantProjectionMapper mdmVariantProjectionMapper;
     private final ProjectionIntegrityChecker projectionIntegrityChecker;
     private final ConfigurationSyncMetrics configurationSyncMetrics;
     private final MdmConsumerMetrics mdmConsumerMetrics;
@@ -229,86 +233,40 @@ public class MdmSyncAppService {
 
     /**
      * 处理 MDM 车型事件
+     * <p>
+     * CR-048：经统一 Projection Mapper 按 externalVersion 单调 upsert（RD-048-3）；
+     * Deleted/Deactivated 按投影语义逻辑删除，不物理级联车辆历史事实与下游映射；
+     * 缺 carLineCode/platformCode 等必需字段属契约错误，抛异常进入现有重试/DLQ，不写半条投影。
+     * </p>
      */
     public void handleModelEvent(MdmModelEvent event) {
         log.info("处理MDM车型事件: entityId={}, version={}", event.getEntityId(), event.getVersion());
-        Model localModel = mdmModelRepository.selectByCode(event.getCode());
-        if (localModel == null) {
-            Model newModel = Model.builder()
-                    .code(event.getCode())
-                    .name(event.getName())
-                    .platformCode(event.getPlatformCode())
-                    .carLineCode(event.getCarLineCode())
-                    .enable(true)
-                    .sort(0)
-                    .source(SourceType.MDM)
-                    .externalRefId(event.getEntityId())
-                    .externalVersion(event.getVersion())
-                    .lastSyncTime(LocalDateTime.now())
-                    .build();
-            mdmModelRepository.insert(newModel);
-            log.info("新增车型: code={}", event.getCode());
-        } else {
-            // 本地 externalVersion 可能为 NULL（历史遗留投影数据），视为无版本信息，直接接受事件覆盖
-            Long localModelVersion = localModel.getExternalVersion();
-            if (localModelVersion == null || event.getVersion() > localModelVersion) {
-                localModel.setName(event.getName());
-                localModel.setPlatformCode(event.getPlatformCode());
-                localModel.setCarLineCode(event.getCarLineCode());
-                localModel.setExternalRefId(event.getEntityId());
-                localModel.setExternalVersion(event.getVersion());
-                localModel.setLastSyncTime(LocalDateTime.now());
-                mdmModelRepository.updateById(localModel);
-                log.info("更新车型: code={}, version={}", event.getCode(), event.getVersion());
-            } else {
-                log.info("忽略车型事件（版本不高于本地）: code={}, eventVersion={}, localVersion={}",
-                        event.getCode(), event.getVersion(), localModel.getExternalVersion());
-                mdmConsumerMetrics.recordIgnored(MdmProjectionType.MODEL, ignoreReason(event.getVersion(), localModel.getExternalVersion()));
-            }
+        if ("DELETED".equalsIgnoreCase(event.getEventType())
+                || "DEACTIVATED".equalsIgnoreCase(event.getEventType())) {
+            mdmModelProjectionMapper.handleDeletion(event);
+            return;
         }
+        ModelProjectionCommand command = mdmModelProjectionMapper.fromEvent(event);
+        mdmModelProjectionMapper.apply(command);
     }
 
     /**
      * 处理 MDM 版本事件
+     * <p>
+     * CR-048：经统一 Projection Mapper 按 externalVersion 单调 upsert（RD-048-3）；
+     * Deleted/Deactivated 按投影语义逻辑删除，不物理级联车辆历史事实与下游映射；
+     * 缺 modelCode 等必需字段属契约错误，抛异常进入现有重试/DLQ，不写半条投影。
+     * </p>
      */
     public void handleVariantEvent(MdmVariantEvent event) {
         log.info("处理MDM版本事件: entityId={}, version={}", event.getEntityId(), event.getVersion());
-        Variant localVariant = mdmVariantRepository.selectByCode(event.getCode());
-        if (localVariant == null) {
-            Variant newVariant = Variant.builder()
-                    .code(event.getCode())
-                    .name(event.getName())
-                    .platformCode(event.getPlatformCode())
-                    .carLineCode(event.getCarLineCode())
-                    .modelCode(event.getModelCode())
-                    .enable(true)
-                    .sort(0)
-                    .source(SourceType.MDM)
-                    .externalRefId(event.getEntityId())
-                    .externalVersion(event.getVersion())
-                    .lastSyncTime(LocalDateTime.now())
-                    .build();
-            mdmVariantRepository.insert(newVariant);
-            log.info("新增版本: code={}", event.getCode());
-        } else {
-            // 本地 externalVersion 可能为 NULL（历史遗留投影数据），视为无版本信息，直接接受事件覆盖
-            Long localVariantVersion = localVariant.getExternalVersion();
-            if (localVariantVersion == null || event.getVersion() > localVariantVersion) {
-                localVariant.setName(event.getName());
-                localVariant.setPlatformCode(event.getPlatformCode());
-                localVariant.setCarLineCode(event.getCarLineCode());
-                localVariant.setModelCode(event.getModelCode());
-                localVariant.setExternalRefId(event.getEntityId());
-                localVariant.setExternalVersion(event.getVersion());
-                localVariant.setLastSyncTime(LocalDateTime.now());
-                mdmVariantRepository.updateById(localVariant);
-                log.info("更新版本: code={}, version={}", event.getCode(), event.getVersion());
-            } else {
-                log.info("忽略版本事件（版本不高于本地）: code={}, eventVersion={}, localVersion={}",
-                        event.getCode(), event.getVersion(), localVariant.getExternalVersion());
-                mdmConsumerMetrics.recordIgnored(MdmProjectionType.VARIANT, ignoreReason(event.getVersion(), localVariant.getExternalVersion()));
-            }
+        if ("DELETED".equalsIgnoreCase(event.getEventType())
+                || "DEACTIVATED".equalsIgnoreCase(event.getEventType())) {
+            mdmVariantProjectionMapper.handleDeletion(event);
+            return;
         }
+        VariantProjectionCommand command = mdmVariantProjectionMapper.fromEvent(event);
+        mdmVariantProjectionMapper.apply(command);
     }
 
     /**
@@ -780,18 +738,13 @@ public class MdmSyncAppService {
                         break;
                     }
                     for (ModelResponse modelData : pageResponse.getRows()) {
-                        Model model = Model.builder()
-                                .code(modelData.getCode())
-                                .name(modelData.getName())
-                                .platformCode(modelData.getPlatformCode())
-                                .carLineCode(modelData.getCarLineCode())
-                                .source(SourceType.MDM)
-                                .externalRefId(modelData.getSourceId())
-                                .externalVersion(modelData.getVersion() != null ? modelData.getVersion().longValue() : 0L)
-                                .lastSyncTime(convertToLocalDateTime(modelData.getModifyTime()))
-                                .build();
-                        mdmModelRepository.insert(model);
-                        log.info("Bootstrap 新增 MDM 车型投影: code={}", modelData.getCode());
+                        try {
+                            ModelProjectionCommand command = mdmModelProjectionMapper.fromSnapshot(modelData);
+                            mdmModelProjectionMapper.apply(command);
+                        } catch (Exception e) {
+                            log.error("Bootstrap 新增 MDM 车型投影失败: code={}, error={}",
+                                    modelData.getCode(), e.getMessage(), e);
+                        }
                     }
                     if (pageResponse.getRows().size() < pageSize) {
                         hasMore = false;
@@ -830,32 +783,12 @@ public class MdmSyncAppService {
                         break;
                     }
                     for (VariantResponse variantData : pageResponse.getRows()) {
-                        Variant existingVariant = mdmVariantRepository.selectByCode(variantData.getCode());
-                        if (existingVariant == null) {
-                            Variant variant = Variant.builder()
-                                    .code(variantData.getCode())
-                                    .name(variantData.getName())
-                                    .platformCode("DEFAULT")
-                                    .carLineCode("DEFAULT")
-                                    .modelCode(variantData.getModelCode())
-                                    .enable(true)
-                                    .sort(0)
-                                    .source(SourceType.MDM)
-                                    .externalRefId(variantData.getSourceId())
-                                    .externalVersion(variantData.getVersion() != null ? variantData.getVersion().longValue() : 0L)
-                                    .lastSyncTime(convertToLocalDateTime(variantData.getModifyTime()))
-                                    .build();
-                            mdmVariantRepository.insert(variant);
-                            log.info("Bootstrap 新增 MDM 版本投影: code={}", variantData.getCode());
-                        } else {
-                            existingVariant.setName(variantData.getName());
-                            existingVariant.setModelCode(variantData.getModelCode());
-                            existingVariant.setSource(SourceType.MDM);
-                            existingVariant.setExternalRefId(variantData.getSourceId());
-                            existingVariant.setExternalVersion(variantData.getVersion() != null ? variantData.getVersion().longValue() : 0L);
-                            existingVariant.setLastSyncTime(convertToLocalDateTime(variantData.getModifyTime()));
-                            mdmVariantRepository.updateById(existingVariant);
-                            log.info("Bootstrap 更新 MDM 版本投影: code={}", variantData.getCode());
+                        try {
+                            VariantProjectionCommand command = mdmVariantProjectionMapper.fromSnapshot(variantData);
+                            mdmVariantProjectionMapper.apply(command);
+                        } catch (Exception e) {
+                            log.error("Bootstrap 新增 MDM 版本投影失败: code={}, error={}",
+                                    variantData.getCode(), e.getMessage(), e);
                         }
                     }
                     if (pageResponse.getRows().size() < pageSize) {

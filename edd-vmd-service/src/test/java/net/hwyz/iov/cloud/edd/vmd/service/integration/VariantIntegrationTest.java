@@ -25,26 +25,20 @@ class VariantIntegrationTest {
     void testVariantEntityBuild() {
         Variant variant = Variant.builder()
                 .id(1L)
-                .platformCode("P001")
-                .carLineCode("CL001")
                 .modelCode("M001")
                 .code("V001")
                 .name("测试版本")
-                .nameEn("Test Variant")
-                .enable(true)
-                .sort(1)
+                .nameLocal("测试版本本地化")
+                .description("版本备注")
                 .source(SourceType.MANUAL)
                 .build();
 
         assertEquals(1L, variant.getId());
-        assertEquals("P001", variant.getPlatformCode());
-        assertEquals("CL001", variant.getCarLineCode());
         assertEquals("M001", variant.getModelCode());
         assertEquals("V001", variant.getCode());
         assertEquals("测试版本", variant.getName());
-        assertEquals("Test Variant", variant.getNameEn());
-        assertTrue(variant.getEnable());
-        assertEquals(1, variant.getSort());
+        assertEquals("测试版本本地化", variant.getNameLocal());
+        assertEquals("版本备注", variant.getDescription());
         assertEquals(SourceType.MANUAL, variant.getSource());
     }
 
@@ -53,28 +47,22 @@ class VariantIntegrationTest {
     void testVariantAssembler_fromDomain() {
         Variant variant = Variant.builder()
                 .id(1L)
-                .platformCode("P001")
-                .carLineCode("CL001")
                 .modelCode("M001")
                 .code("V001")
                 .name("测试版本")
-                .nameEn("Test Variant")
-                .enable(true)
-                .sort(1)
+                .nameLocal("测试版本本地化")
+                .description("版本备注")
                 .build();
 
         VariantDto dto = VariantAssembler.INSTANCE.fromDomain(variant);
 
         assertNotNull(dto);
         assertEquals(1L, dto.getId());
-        assertEquals("P001", dto.getPlatformCode());
-        assertEquals("CL001", dto.getCarLineCode());
         assertEquals("M001", dto.getModelCode());
         assertEquals("V001", dto.getCode());
         assertEquals("测试版本", dto.getName());
-        assertEquals("Test Variant", dto.getNameEn());
-        assertTrue(dto.getEnable());
-        assertEquals(1, dto.getSort());
+        assertEquals("测试版本本地化", dto.getNameLocal());
+        assertEquals("版本备注", dto.getDescription());
     }
 
     @Test
@@ -82,32 +70,26 @@ class VariantIntegrationTest {
     void testVariantAssembler_toDomain() {
         VariantCmd cmd = VariantCmd.builder()
                 .id(1L)
-                .platformCode("P001")
-                .carLineCode("CL001")
                 .modelCode("M001")
                 .code("V001")
                 .name("测试版本")
-                .nameEn("Test Variant")
-                .enable(true)
-                .sort(1)
+                .nameLocal("测试版本本地化")
+                .description("版本备注")
                 .build();
 
         Variant variant = VariantAssembler.INSTANCE.toDomain(cmd);
 
         assertNotNull(variant);
         assertEquals(1L, variant.getId());
-        assertEquals("P001", variant.getPlatformCode());
-        assertEquals("CL001", variant.getCarLineCode());
         assertEquals("M001", variant.getModelCode());
         assertEquals("V001", variant.getCode());
         assertEquals("测试版本", variant.getName());
-        assertEquals("Test Variant", variant.getNameEn());
-        assertTrue(variant.getEnable());
-        assertEquals(1, variant.getSort());
+        assertEquals("测试版本本地化", variant.getNameLocal());
+        assertEquals("版本备注", variant.getDescription());
     }
 
     @Test
-    @DisplayName("MptVariantAssembler应正确将DTO转为Response")
+    @DisplayName("MptVariantAssembler应正确将DTO转为Response（派生平台/车系保留，CR-048）")
     void testMptVariantAssembler_fromDto() {
         VariantDto dto = VariantDto.builder()
                 .id(1L)
@@ -116,9 +98,8 @@ class VariantIntegrationTest {
                 .modelCode("M001")
                 .code("V001")
                 .name("测试版本")
-                .nameEn("Test Variant")
-                .enable(true)
-                .sort(1)
+                .nameLocal("测试版本本地化")
+                .description("版本备注")
                 .build();
 
         VariantResponse response = MptVariantAssembler.INSTANCE.fromDto(dto);
@@ -130,9 +111,7 @@ class VariantIntegrationTest {
         assertEquals("M001", response.getModelCode());
         assertEquals("V001", response.getCode());
         assertEquals("测试版本", response.getName());
-        assertEquals("Test Variant", response.getNameEn());
-        assertTrue(response.getEnable());
-        assertEquals(1, response.getSort());
+        assertEquals("测试版本本地化", response.getNameLocal());
     }
 
     @Test
@@ -140,28 +119,22 @@ class VariantIntegrationTest {
     void testMptVariantAssembler_toCmd() {
         VariantRequest request = VariantRequest.builder()
                 .id(1L)
-                .platformCode("P001")
-                .carLineCode("CL001")
                 .modelCode("M001")
                 .code("V001")
                 .name("测试版本")
-                .nameEn("Test Variant")
-                .enable(true)
-                .sort(1)
+                .nameLocal("测试版本本地化")
+                .description("版本备注")
                 .build();
 
         VariantCmd cmd = MptVariantAssembler.INSTANCE.toCmd(request);
 
         assertNotNull(cmd);
         assertEquals(1L, cmd.getId());
-        assertEquals("P001", cmd.getPlatformCode());
-        assertEquals("CL001", cmd.getCarLineCode());
         assertEquals("M001", cmd.getModelCode());
         assertEquals("V001", cmd.getCode());
         assertEquals("测试版本", cmd.getName());
-        assertEquals("Test Variant", cmd.getNameEn());
-        assertTrue(cmd.getEnable());
-        assertEquals(1, cmd.getSort());
+        assertEquals("测试版本本地化", cmd.getNameLocal());
+        assertEquals("版本备注", cmd.getDescription());
     }
 
     @Test
@@ -169,14 +142,10 @@ class VariantIntegrationTest {
     void testVariantConverter_toDomain() {
         MdmVariantPo po = MdmVariantPo.builder()
                 .id(1L)
-                .platformCode("P001")
-                .carLineCode("CL001")
                 .modelCode("M001")
                 .code("V001")
                 .name("测试版本")
-                .nameEn("Test Variant")
-                .enable(true)
-                .sort(1)
+                .nameLocal("测试版本本地化")
                 .source("MDM")
                 .externalRefId("ext-001")
                 .externalVersion(1L)
@@ -187,7 +156,7 @@ class VariantIntegrationTest {
 
         assertNotNull(variant);
         assertEquals(1L, variant.getId());
-        assertEquals("P001", variant.getPlatformCode());
+        assertEquals("M001", variant.getModelCode());
         assertEquals("V001", variant.getCode());
         assertEquals(SourceType.MDM, variant.getSource());
         assertEquals("ext-001", variant.getExternalRefId());
@@ -200,14 +169,10 @@ class VariantIntegrationTest {
     void testVariantConverter_fromDomain() {
         Variant variant = Variant.builder()
                 .id(1L)
-                .platformCode("P001")
-                .carLineCode("CL001")
                 .modelCode("M001")
                 .code("V001")
                 .name("测试版本")
-                .nameEn("Test Variant")
-                .enable(true)
-                .sort(1)
+                .nameLocal("测试版本本地化")
                 .source(SourceType.MDM)
                 .externalRefId("ext-001")
                 .externalVersion(1L)
@@ -218,7 +183,7 @@ class VariantIntegrationTest {
 
         assertNotNull(po);
         assertEquals(1L, po.getId());
-        assertEquals("P001", po.getPlatformCode());
+        assertEquals("M001", po.getModelCode());
         assertEquals("V001", po.getCode());
         assertEquals("MDM", po.getSource());
         assertEquals("ext-001", po.getExternalRefId());

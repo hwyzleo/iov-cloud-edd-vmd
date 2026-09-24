@@ -22,9 +22,7 @@ public class ModelDto {
     private String carLineCode;
     private String code;
     private String name;
-    private String nameEn;
-    private Boolean enable;
-    private Integer sort;
+    private String nameLocal;
     private String description;
 
 }

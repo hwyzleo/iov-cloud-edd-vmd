@@ -35,8 +35,6 @@ class MdmVariantRepositoryImplTest {
                 .id(id)
                 .code(code)
                 .name("测试版本")
-                .platformCode("P001")
-                .carLineCode("CL001")
                 .modelCode("M001")
                 .source("MANUAL")
                 .build();
@@ -112,8 +110,6 @@ class MdmVariantRepositoryImplTest {
         Variant variant = Variant.builder()
                 .code("V001")
                 .name("新版本")
-                .platformCode("P001")
-                .carLineCode("CL001")
                 .modelCode("M001")
                 .source(SourceType.MANUAL)
                 .build();
@@ -133,8 +129,6 @@ class MdmVariantRepositoryImplTest {
                 .id(1L)
                 .code("V001")
                 .name("更新后的版本")
-                .platformCode("P001")
-                .carLineCode("CL001")
                 .modelCode("M001")
                 .source(SourceType.MANUAL)
                 .build();
@@ -154,8 +148,6 @@ class MdmVariantRepositoryImplTest {
                 .id(1L)
                 .code("V001")
                 .name("更新后的版本")
-                .platformCode("P001")
-                .carLineCode("CL001")
                 .modelCode("M001")
                 .source(SourceType.MANUAL)
                 .build();

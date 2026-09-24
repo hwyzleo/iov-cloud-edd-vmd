@@ -21,12 +21,12 @@ public class VariantResponse {
     private Long id;
 
     /**
-     * 车辆平台代码
+     * 派生：车辆平台代码（经 Model.platformCode，CR-048）
      */
     private String platformCode;
 
     /**
-     * 车系代码
+     * 派生：车系代码（经 Model.carLineCode，CR-048）
      */
     private String carLineCode;
 
@@ -46,19 +46,9 @@ public class VariantResponse {
     private String name;
 
     /**
-     * 版本英文名称
+     * 版本本地化名称
      */
-    private String nameEn;
-
-    /**
-     * 是否启用
-     */
-    private Boolean enable;
-
-    /**
-     * 排序
-     */
-    private Integer sort;
+    private String nameLocal;
 
     /**
      * 备注

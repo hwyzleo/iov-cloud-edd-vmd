@@ -22,26 +22,24 @@ public class MdmVariantEvent extends MdmEvent {
     private String name;
 
     /**
-     * 平台代码
+     * 版本本地化名称
      */
-    private String platformCode;
-
-    /**
-     * 车系代码
-     */
-    private String carLineCode;
+    private String nameLocal;
 
     /**
      * 车型代码
      */
     private String modelCode;
 
+    /**
+     * 备注
+     */
+    private String description;
+
     public MdmVariantEvent(String eventType, String entityId, Long version, String code,
-                           String name, String platformCode, String carLineCode, String modelCode, LocalDateTime occurredAt) {
+                           String name, String modelCode, LocalDateTime occurredAt) {
         super(eventType, entityId, version, code, occurredAt);
         this.name = name;
-        this.platformCode = platformCode;
-        this.carLineCode = carLineCode;
         this.modelCode = modelCode;
     }
 

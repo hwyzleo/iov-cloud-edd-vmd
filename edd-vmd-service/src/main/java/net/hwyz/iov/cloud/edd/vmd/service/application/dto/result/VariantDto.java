@@ -19,14 +19,18 @@ import java.time.Instant;
 public class VariantDto {
 
     private Long id;
+    /**
+     * 派生：平台代码（经 Model.platformCode，CR-048）
+     */
     private String platformCode;
+    /**
+     * 派生：车系代码（经 Model.carLineCode，CR-048）
+     */
     private String carLineCode;
     private String modelCode;
     private String code;
     private String name;
-    private String nameEn;
-    private Boolean enable;
-    private Integer sort;
+    private String nameLocal;
     private String description;
     private Instant createTime;
 

@@ -47,19 +47,14 @@ public class Model implements DomainObj<Model> {
     private String name;
 
     /**
-     * 车型英文名称
+     * 车型本地化名称
      */
-    private String nameEn;
+    private String nameLocal;
 
     /**
-     * 是否启用
+     * 备注
      */
-    private Boolean enable;
-
-    /**
-     * 排序
-     */
-    private Integer sort;
+    private String description;
 
     /**
      * 数据来源：MDM=来自MDM系统，MANUAL=本地手动维护

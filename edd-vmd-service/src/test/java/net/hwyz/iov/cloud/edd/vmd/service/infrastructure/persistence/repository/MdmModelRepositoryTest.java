@@ -50,11 +50,9 @@ class MdmModelRepositoryTest extends BaseTest {
         Model model = Model.builder()
                 .code(code)
                 .name("测试车型")
-                .nameEn("Test Model")
+                .nameLocal("Test Model")
                 .platformCode("PLATFORM001")
                 .carLineCode("CARLINE001")
-                .enable(true)
-                .sort(1)
                 .source(SourceType.MANUAL)
                 .build();
 
@@ -76,8 +74,6 @@ class MdmModelRepositoryTest extends BaseTest {
                 .name("测试车型2")
                 .platformCode("PLATFORM001")
                 .carLineCode("CARLINE001")
-                .enable(true)
-                .sort(2)
                 .source(SourceType.MANUAL)
                 .build();
         mdmModelRepository.insert(model);
@@ -104,8 +100,6 @@ class MdmModelRepositoryTest extends BaseTest {
                 .name("测试车型3")
                 .platformCode("PLATFORM001")
                 .carLineCode("CARLINE001")
-                .enable(true)
-                .sort(3)
                 .source(SourceType.MANUAL)
                 .build();
         mdmModelRepository.insert(model);
@@ -128,15 +122,12 @@ class MdmModelRepositoryTest extends BaseTest {
                 .name("原始名称")
                 .platformCode("PLATFORM001")
                 .carLineCode("CARLINE001")
-                .enable(true)
-                .sort(4)
                 .source(SourceType.MANUAL)
                 .build();
         mdmModelRepository.insert(model);
 
         // When
-        model.setName("更新后的名称");
-        model.setSort(10);
+        model.setName("更新后的名称");        model.setNameLocal("更新后的本地化名称");
         model.setPlatformCode("PLATFORM002");
         int result = mdmModelRepository.update(model);
 
@@ -144,7 +135,6 @@ class MdmModelRepositoryTest extends BaseTest {
         assertEquals(1, result);
         Model updatedModel = mdmModelRepository.selectById(model.getId());
         assertEquals("更新后的名称", updatedModel.getName());
-        assertEquals(10, updatedModel.getSort());
         assertEquals("PLATFORM002", updatedModel.getPlatformCode());
     }
 
@@ -159,8 +149,6 @@ class MdmModelRepositoryTest extends BaseTest {
                 .name("车型5")
                 .platformCode("PLATFORM001")
                 .carLineCode("CARLINE001")
-                .enable(true)
-                .sort(5)
                 .source(SourceType.MANUAL)
                 .build();
         Model model2 = Model.builder()
@@ -168,8 +156,6 @@ class MdmModelRepositoryTest extends BaseTest {
                 .name("车型6")
                 .platformCode("PLATFORM001")
                 .carLineCode("CARLINE001")
-                .enable(true)
-                .sort(6)
                 .source(SourceType.MANUAL)
                 .build();
         mdmModelRepository.insert(model1);
@@ -197,8 +183,6 @@ class MdmModelRepositoryTest extends BaseTest {
                 .name("测试车型7")
                 .platformCode("PLATFORM001")
                 .carLineCode("CARLINE001")
-                .enable(true)
-                .sort(7)
                 .source(SourceType.MANUAL)
                 .build();
         Model model2 = Model.builder()
@@ -206,8 +190,6 @@ class MdmModelRepositoryTest extends BaseTest {
                 .name("其他车型")
                 .platformCode("PLATFORM002")
                 .carLineCode("CARLINE002")
-                .enable(true)
-                .sort(8)
                 .source(SourceType.MANUAL)
                 .build();
         mdmModelRepository.insert(model1);
@@ -234,8 +216,6 @@ class MdmModelRepositoryTest extends BaseTest {
                 .name("车型9")
                 .platformCode("PLATFORM001")
                 .carLineCode("CARLINE001")
-                .enable(true)
-                .sort(9)
                 .source(SourceType.MANUAL)
                 .build();
         mdmModelRepository.insert(model);
@@ -261,8 +241,6 @@ class MdmModelRepositoryTest extends BaseTest {
                 .name("车型10")
                 .platformCode("PLATFORM001")
                 .carLineCode("CARLINE001")
-                .enable(true)
-                .sort(10)
                 .source(SourceType.MDM)
                 .externalRefId(externalRefId)
                 .externalVersion(1L)
@@ -290,8 +268,6 @@ class MdmModelRepositoryTest extends BaseTest {
                 .name("MDM车型")
                 .platformCode("PLATFORM001")
                 .carLineCode("CARLINE001")
-                .enable(true)
-                .sort(11)
                 .source(SourceType.MDM)
                 .externalRefId("ext-" + UUID.randomUUID().toString().substring(0, 8))
                 .externalVersion(1L)
@@ -301,8 +277,6 @@ class MdmModelRepositoryTest extends BaseTest {
                 .name("手动车型")
                 .platformCode("PLATFORM001")
                 .carLineCode("CARLINE001")
-                .enable(true)
-                .sort(12)
                 .source(SourceType.MANUAL)
                 .build();
         mdmModelRepository.insert(modelMdm);
@@ -327,8 +301,6 @@ class MdmModelRepositoryTest extends BaseTest {
                 .name("车型13")
                 .platformCode("PLATFORM001")
                 .carLineCode("CARLINE001")
-                .enable(true)
-                .sort(13)
                 .source(SourceType.MANUAL)
                 .build();
         mdmModelRepository.insert(model);
@@ -359,8 +331,6 @@ class MdmModelRepositoryTest extends BaseTest {
                 .name("MDM车型14")
                 .platformCode("PLATFORM001")
                 .carLineCode("CARLINE001")
-                .enable(true)
-                .sort(14)
                 .source(SourceType.MDM)
                 .externalRefId("ext-" + UUID.randomUUID().toString().substring(0, 8))
                 .externalVersion(1L)
@@ -393,8 +363,6 @@ class MdmModelRepositoryTest extends BaseTest {
                 .name("车型15")
                 .platformCode(platformCode)
                 .carLineCode(carLineCode)
-                .enable(true)
-                .sort(15)
                 .source(SourceType.MANUAL)
                 .build();
         Model model2 = Model.builder()
@@ -402,8 +370,6 @@ class MdmModelRepositoryTest extends BaseTest {
                 .name("车型16")
                 .platformCode(platformCode)
                 .carLineCode(carLineCode)
-                .enable(true)
-                .sort(16)
                 .source(SourceType.MDM)
                 .externalRefId("ext-" + UUID.randomUUID().toString().substring(0, 8))
                 .externalVersion(1L)
@@ -435,8 +401,6 @@ class MdmModelRepositoryTest extends BaseTest {
                 .name("车型17")
                 .platformCode("PLATFORM_ORIGINAL")
                 .carLineCode("CARLINE_ORIGINAL")
-                .enable(true)
-                .sort(17)
                 .source(SourceType.MANUAL)
                 .build();
         mdmModelRepository.insert(model);

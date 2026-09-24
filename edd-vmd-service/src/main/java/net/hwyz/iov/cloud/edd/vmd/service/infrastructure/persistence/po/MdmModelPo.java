@@ -60,22 +60,10 @@ public class MdmModelPo extends BasePo {
     private String name;
 
     /**
-     * 车型英文名称
+     * 车型本地化名称
      */
-    @TableField("name_en")
-    private String nameEn;
-
-    /**
-     * 是否启用
-     */
-    @TableField("enable")
-    private Boolean enable;
-
-    /**
-     * 排序
-     */
-    @TableField("sort")
-    private Integer sort;
+    @TableField("name_local")
+    private String nameLocal;
 
     /**
      * 数据来源：MDM=来自MDM系统，MANUAL=本地手动维护

@@ -43,19 +43,9 @@ public class ModelRequest extends BaseRequest {
     private String name;
 
     /**
-     * 车型英文名称
+     * 车型本地化名称
      */
-    private String nameEn;
-
-    /**
-     * 是否启用
-     */
-    private Boolean enable;
-
-    /**
-     * 排序
-     */
-    private Integer sort;
+    private String nameLocal;
 
     /**
      * 描述

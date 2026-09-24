@@ -26,16 +26,6 @@ public class Variant implements DomainObj<Variant> {
     private Long id;
 
     /**
-     * 平台代码
-     */
-    private String platformCode;
-
-    /**
-     * 车系代码
-     */
-    private String carLineCode;
-
-    /**
      * 车型代码
      */
     private String modelCode;
@@ -51,19 +41,14 @@ public class Variant implements DomainObj<Variant> {
     private String name;
 
     /**
-     * 版本英文名称
+     * 版本本地化名称
      */
-    private String nameEn;
+    private String nameLocal;
 
     /**
-     * 是否启用
+     * 备注
      */
-    private Boolean enable;
-
-    /**
-     * 排序
-     */
-    private Integer sort;
+    private String description;
 
     /**
      * 数据来源：MDM=来自MDM系统，MANUAL=本地手动维护

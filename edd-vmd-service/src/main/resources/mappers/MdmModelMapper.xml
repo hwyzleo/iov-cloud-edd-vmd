@@ -16,9 +16,7 @@
         <result column="car_line_code" property="carLineCode" />
         <result column="code" property="code" />
         <result column="name" property="name" />
-        <result column="name_en" property="nameEn" />
-        <result column="enable" property="enable" />
-        <result column="sort" property="sort" />
+        <result column="name_local" property="nameLocal" />
         <result column="source" property="source" />
         <result column="external_ref_id" property="externalRefId" />
         <result column="external_version" property="externalVersion" />
@@ -27,7 +25,7 @@
 
     <!-- 通用查询结果列 -->
     <sql id="baseColumnList">
-        id, platform_code, car_line_code, code, name, name_en, enable, sort,
+        id, platform_code, car_line_code, code, name, name_local,
         description, source, external_ref_id, external_version, last_sync_time,
         create_time, create_by, modify_time, modify_by, row_version, row_valid
     </sql>
@@ -35,12 +33,12 @@
     <!-- 插入 -->
     <insert id="insertPo" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO tb_mdm_model (
-            id, platform_code, car_line_code, code, name, name_en, enable, sort,
+            id, platform_code, car_line_code, code, name, name_local,
             description, source, external_ref_id, external_version, last_sync_time,
             create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
         VALUES (
-            #{id}, #{platformCode}, #{carLineCode}, #{code}, #{name}, #{nameEn}, #{enable}, #{sort},
+            #{id}, #{platformCode}, #{carLineCode}, #{code}, #{name}, #{nameLocal},
             #{description}, #{source}, #{externalRefId}, #{externalVersion}, #{lastSyncTime},
             now(), #{createBy}, now(), #{modifyBy}, 1, 1
         )
@@ -49,14 +47,14 @@
     <!-- 批量插入 -->
     <insert id="batchInsertPo" useGeneratedKeys="true" keyProperty="id" parameterType="java.util.List">
         INSERT INTO tb_mdm_model (
-            id, platform_code, car_line_code, code, name, name_en, enable, sort,
+            id, platform_code, car_line_code, code, name, name_local,
             description, source, external_ref_id, external_version, last_sync_time,
             create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
         VALUES
         <foreach collection="list" item="item" index="index" separator=",">
         (
-            #{item.id}, #{item.platformCode}, #{item.carLineCode}, #{item.code}, #{item.name}, #{item.nameEn}, #{item.enable}, #{item.sort},
+            #{item.id}, #{item.platformCode}, #{item.carLineCode}, #{item.code}, #{item.name}, #{item.nameLocal},
             #{item.description}, #{item.source}, #{item.externalRefId}, #{item.externalVersion}, #{item.lastSyncTime},
             now(), #{item.createBy}, now(), #{item.modifyBy}, 1, 1
         )
@@ -69,20 +67,14 @@
         <if test="name != null and name != ''">
             t.name = #{name},
         </if>
-        <if test="nameEn != null and nameEn != ''">
-            t.name_en = #{nameEn},
+        <if test="nameLocal != null and nameLocal != ''">
+            t.name_local = #{nameLocal},
         </if>
         <if test="platformCode != null and platformCode != ''">
             t.platform_code = #{platformCode},
         </if>
         <if test="carLineCode != null and carLineCode != ''">
             t.car_line_code = #{carLineCode},
-        </if>
-        <if test="enable != null">
-            t.enable = #{enable},
-        </if>
-        <if test="sort != null">
-            t.sort = #{sort},
         </if>
         <if test="description != null and description != ''">
             t.description = #{description},
@@ -159,14 +151,8 @@
         <if test="name != null and name != ''">
             AND t.name = #{name}
         </if>
-        <if test="nameEn != null and nameEn != ''">
-            AND t.name_en = #{nameEn}
-        </if>
-        <if test="enable != null">
-            AND t.enable = #{enable}
-        </if>
-        <if test="sort != null">
-            AND t.sort = #{sort}
+        <if test="nameLocal != null and nameLocal != ''">
+            AND t.name_local = #{nameLocal}
         </if>
         <if test="description != null and description != ''">
             AND t.description = #{description}
@@ -205,7 +191,7 @@
             AND t.code = #{code}
         </if>
         <if test="name != null and name != ''">
-            AND (t.name LIKE #{name} OR t.name_en LIKE #{name})
+            AND (t.name LIKE #{name} OR t.name_local LIKE #{name})
         </if>
         <if test="beginTime != null">
             and date_format(t.create_time,'%Y%m%d') &gt;= date_format(#{beginTime},'%Y%m%d')
@@ -213,7 +199,7 @@
         <if test="endTime != null">
             and date_format(t.create_time,'%Y%m%d') &lt;= date_format(#{endTime},'%Y%m%d')
         </if>
-        ORDER BY t.sort ASC, t.id DESC
+        ORDER BY t.id DESC
     </select>
 
     <!-- 通过code查询车型信息 -->

@@ -1,10 +1,14 @@
 package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper;
 
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.MdmVariantPo;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.MdmVariantHierarchyPo;
 import net.hwyz.iov.cloud.framework.mysql.dao.BaseDao;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  * <p>
@@ -23,7 +27,6 @@ public interface MdmVariantMapper extends BaseDao<MdmVariantPo, Long> {
      * @param code 版本编码
      * @return 版本信息
      */
-    @Select("SELECT * FROM tb_mdm_variant WHERE code = #{code} AND row_valid = 1 LIMIT 1")
     MdmVariantPo selectPoByCode(@Param("code") String code);
 
     /**
@@ -43,5 +46,21 @@ public interface MdmVariantMapper extends BaseDao<MdmVariantPo, Long> {
      */
     @Select("SELECT COUNT(*) FROM tb_mdm_variant WHERE source = #{source} AND row_valid = 1")
     long countPoBySource(@Param("source") String source);
+
+    /**
+     * 产品树补全查询（CR-048：平台/车系经 JOIN tb_mdm_model 派生）
+     *
+     * @param map 查询条件（platformCode / carLineCode / modelCode / code / name / beginTime / endTime）
+     * @return 版本产品树补全列表
+     */
+    List<MdmVariantHierarchyPo> selectVariantHierarchyByMap(Map<String, Object> map);
+
+    /**
+     * 产品树补全查询计数（与 selectVariantHierarchyByMap 同条件，支撑分页）
+     *
+     * @param map 查询条件
+     * @return 数量
+     */
+    int countVariantHierarchyByMap(Map<String, Object> map);
 
 }
