@@ -11,7 +11,7 @@ crypto:
   provisioning:
     enabled: true
 
-# VMD Kafka Topic 目录（VMD-DSN-CR-051）：Listener 占位符 / Producer / Outbox 统一引用
+# VMD Kafka Topic 目录（VMD-DSN-CR-051 / VMD-DSN-CR-052）：Listener 占位符 / Producer / Outbox 统一引用
 vmd:
   kafka:
     topics:
@@ -19,6 +19,26 @@ vmd:
       part-binding-changed: ${VMD_KAFKA_TOPIC_PART_BINDING_CHANGED:vmd.vehcile-part-binding.changed}
       vehicle-produce: ${VMD_KAFKA_TOPIC_VEHICLE_PRODUCE:vmd.vehicle-produce}
       software-inventory-changed: ${VMD_KAFKA_TOPIC_SOFTWARE_INVENTORY_CHANGED:vmd.vehicle-software-inventory.changed}
+      # 11 个 EDD-MDM 消费 Topic（VMD-DSN-CR-052，全部 CONSUMER_ONLY，归 EDD-MDM 管理，VMD 只预检不创建）
+      mdm:
+        brand: ${VMD_KAFKA_TOPIC_MDM_BRAND:mdm.brand}
+        car-line: ${VMD_KAFKA_TOPIC_MDM_CAR_LINE:mdm.car-line}
+        configuration: ${VMD_KAFKA_TOPIC_MDM_CONFIGURATION:mdm.configuration}
+        model: ${VMD_KAFKA_TOPIC_MDM_MODEL:mdm.model}
+        option-code: ${VMD_KAFKA_TOPIC_MDM_OPTION_CODE:mdm.option-code}
+        option-family: ${VMD_KAFKA_TOPIC_MDM_OPTION_FAMILY:mdm.option-family}
+        part: ${VMD_KAFKA_TOPIC_MDM_PART:mdm.part}
+        plant: ${VMD_KAFKA_TOPIC_MDM_PLANT:mdm.plant}
+        platform: ${VMD_KAFKA_TOPIC_MDM_PLATFORM:mdm.platform}
+        variant: ${VMD_KAFKA_TOPIC_MDM_VARIANT:mdm.variant}
+        vehicle-node: ${VMD_KAFKA_TOPIC_MDM_VEHICLE_NODE:mdm.vehicle-node}
+    mdm-consumer:
+      # 预检失败是否 fail-fast（生产默认 true）；false 为降级启动，健康仍 DOWN/DEGRADED + 后台重试
+      fail-fast: ${VMD_KAFKA_MDM_CONSUMER_FAIL_FAST:true}
+      # MDM Listener 是否由 Spring 自动启动（默认 true）；false 时由预检 Readiness 门禁协调启动
+      auto-startup: ${VMD_KAFKA_MDM_CONSUMER_AUTO_STARTUP:true}
+      # 预检失败后的后台重试探测间隔（毫秒）
+      retry-interval-ms: ${VMD_KAFKA_MDM_CONSUMER_RETRY_INTERVAL_MS:60000}
     topic-provisioning:
       partitions: ${VMD_KAFKA_TOPIC_PARTITIONS:3}
       replication-factor: ${VMD_KAFKA_TOPIC_REPLICATION_FACTOR:1}
@@ -41,64 +61,79 @@ vmd:
       kafka:
         # 软件清单变更事件经 vmd_outbox → OutboxRelay 发布（Key=VIN）；topic 由 vmd.kafka.topics.software-inventory-changed 提供
 
-# MDM同步配置
-# 注意：topic名称必须与MDM需求文档US-064保持一致
+# MDM同步配置（VMD-DSN-CR-052：Topic 名称统一由 vmd.kafka.topics.mdm.* 提供，归 EDD-MDM 管理）
+# 迁移映射（旧名 → 目录名，REQ §3.1.3；观察期结束后清理旧配置，代码/测试已零引用）:
+#   mdm.product.brand.{created,updated,deactivated}      → mdm.brand
+#   mdm.product.carLine.{created,updated,deactivated}    → mdm.car-line
+#   mdm.product.platform.{created,updated,deactivated}   → mdm.platform
+#   mdm.org.plant.event                                  → mdm.plant
+#   mdm.product.model.{created,updated,deactivated}      → mdm.model
+#   mdm.product.variant.{created,updated,deactivated}    → mdm.variant
+#   mdm.product.configuration.{created,updated,deactivated} → mdm.configuration
+#   mdm.product.optionFamily.{created,updated,deactivated}  → mdm.option-family
+#   mdm.eead.vehicleNode.event                           → mdm.vehicle-node
+#   mdm.material.part.event                              → mdm.part
+#   （旧）无 OptionCode 消费者（新增）                    → mdm.option-code
 mdm:
   sync:
     brand:
       kafka:
         enabled: ${MDM_BRAND_KAFKA_ENABLED:true}
-        created-topic: ${MDM_BRAND_KAFKA_CREATED_TOPIC:mdm.product.brand.created}
-        updated-topic: ${MDM_BRAND_KAFKA_UPDATED_TOPIC:mdm.product.brand.updated}
-        deactivated-topic: ${MDM_BRAND_KAFKA_DEACTIVATED_TOPIC:mdm.product.brand.deactivated}
+        # created-topic: ${MDM_BRAND_KAFKA_CREATED_TOPIC:mdm.product.brand.created}   # 已迁移至 vmd.kafka.topics.mdm.brand
+        # updated-topic: ${MDM_BRAND_KAFKA_UPDATED_TOPIC:mdm.product.brand.updated}   # 已迁移至 vmd.kafka.topics.mdm.brand
+        # deactivated-topic: ${MDM_BRAND_KAFKA_DEACTIVATED_TOPIC:mdm.product.brand.deactivated} # 已迁移至 vmd.kafka.topics.mdm.brand
     car-line:
       kafka:
         enabled: ${MDM_CAR_LINE_KAFKA_ENABLED:true}
-        created-topic: ${MDM_CAR_LINE_KAFKA_CREATED_TOPIC:mdm.product.carLine.created}
-        updated-topic: ${MDM_CAR_LINE_KAFKA_UPDATED_TOPIC:mdm.product.carLine.updated}
-        deactivated-topic: ${MDM_CAR_LINE_KAFKA_DEACTIVATED_TOPIC:mdm.product.carLine.deactivated}
+        # created-topic: ${MDM_CAR_LINE_KAFKA_CREATED_TOPIC:mdm.product.carLine.created}     # 已迁移至 vmd.kafka.topics.mdm.car-line
+        # updated-topic: ${MDM_CAR_LINE_KAFKA_UPDATED_TOPIC:mdm.product.carLine.updated}     # 已迁移至 vmd.kafka.topics.mdm.car-line
+        # deactivated-topic: ${MDM_CAR_LINE_KAFKA_DEACTIVATED_TOPIC:mdm.product.carLine.deactivated} # 已迁移至 vmd.kafka.topics.mdm.car-line
     platform:
       kafka:
         enabled: ${MDM_PLATFORM_KAFKA_ENABLED:true}
-        created-topic: ${MDM_PLATFORM_KAFKA_CREATED_TOPIC:mdm.product.platform.created}
-        updated-topic: ${MDM_PLATFORM_KAFKA_UPDATED_TOPIC:mdm.product.platform.updated}
-        deactivated-topic: ${MDM_PLATFORM_KAFKA_DEACTIVATED_TOPIC:mdm.product.platform.deactivated}
+        # created-topic: ${MDM_PLATFORM_KAFKA_CREATED_TOPIC:mdm.product.platform.created}   # 已迁移至 vmd.kafka.topics.mdm.platform
+        # updated-topic: ${MDM_PLATFORM_KAFKA_UPDATED_TOPIC:mdm.product.platform.updated}   # 已迁移至 vmd.kafka.topics.mdm.platform
+        # deactivated-topic: ${MDM_PLATFORM_KAFKA_DEACTIVATED_TOPIC:mdm.product.platform.deactivated} # 已迁移至 vmd.kafka.topics.mdm.platform
     plant:
       kafka:
         enabled: ${MDM_PLANT_KAFKA_ENABLED:true}
-        topic: ${MDM_PLANT_KAFKA_TOPIC:mdm.org.plant.event}
+        # topic: ${MDM_PLANT_KAFKA_TOPIC:mdm.org.plant.event}    # 已迁移至 vmd.kafka.topics.mdm.plant
     model:
       kafka:
         enabled: ${MDM_MODEL_KAFKA_ENABLED:true}
-        created-topic: ${MDM_MODEL_KAFKA_CREATED_TOPIC:mdm.product.model.created}
-        updated-topic: ${MDM_MODEL_KAFKA_UPDATED_TOPIC:mdm.product.model.updated}
-        deactivated-topic: ${MDM_MODEL_KAFKA_DEACTIVATED_TOPIC:mdm.product.model.deactivated}
+        # created-topic: ${MDM_MODEL_KAFKA_CREATED_TOPIC:mdm.product.model.created}     # 已迁移至 vmd.kafka.topics.mdm.model
+        # updated-topic: ${MDM_MODEL_KAFKA_UPDATED_TOPIC:mdm.product.model.updated}     # 已迁移至 vmd.kafka.topics.mdm.model
+        # deactivated-topic: ${MDM_MODEL_KAFKA_DEACTIVATED_TOPIC:mdm.product.model.deactivated} # 已迁移至 vmd.kafka.topics.mdm.model
     variant:
       kafka:
         enabled: ${MDM_VARIANT_KAFKA_ENABLED:true}
-        created-topic: ${MDM_VARIANT_KAFKA_CREATED_TOPIC:mdm.product.variant.created}
-        updated-topic: ${MDM_VARIANT_KAFKA_UPDATED_TOPIC:mdm.product.variant.updated}
-        deactivated-topic: ${MDM_VARIANT_KAFKA_DEACTIVATED_TOPIC:mdm.product.variant.deactivated}
+        # created-topic: ${MDM_VARIANT_KAFKA_CREATED_TOPIC:mdm.product.variant.created}   # 已迁移至 vmd.kafka.topics.mdm.variant
+        # updated-topic: ${MDM_VARIANT_KAFKA_UPDATED_TOPIC:mdm.product.variant.updated}   # 已迁移至 vmd.kafka.topics.mdm.variant
+        # deactivated-topic: ${MDM_VARIANT_KAFKA_DEACTIVATED_TOPIC:mdm.product.variant.deactivated} # 已迁移至 vmd.kafka.topics.mdm.variant
     configuration:
       kafka:
         enabled: ${MDM_CONFIGURATION_KAFKA_ENABLED:true}
-        created-topic: ${MDM_CONFIGURATION_KAFKA_CREATED_TOPIC:mdm.product.configuration.created}
-        updated-topic: ${MDM_CONFIGURATION_KAFKA_UPDATED_TOPIC:mdm.product.configuration.updated}
-        deactivated-topic: ${MDM_CONFIGURATION_KAFKA_DEACTIVATED_TOPIC:mdm.product.configuration.deactivated}
+        # created-topic: ${MDM_CONFIGURATION_KAFKA_CREATED_TOPIC:mdm.product.configuration.created}     # 已迁移至 vmd.kafka.topics.mdm.configuration
+        # updated-topic: ${MDM_CONFIGURATION_KAFKA_UPDATED_TOPIC:mdm.product.configuration.updated}     # 已迁移至 vmd.kafka.topics.mdm.configuration
+        # deactivated-topic: ${MDM_CONFIGURATION_KAFKA_DEACTIVATED_TOPIC:mdm.product.configuration.deactivated} # 已迁移至 vmd.kafka.topics.mdm.configuration
     option-family:
       kafka:
         enabled: ${MDM_OPTION_FAMILY_KAFKA_ENABLED:true}
-        created-topic: ${MDM_OPTION_FAMILY_KAFKA_CREATED_TOPIC:mdm.product.optionFamily.created}
-        updated-topic: ${MDM_OPTION_FAMILY_KAFKA_UPDATED_TOPIC:mdm.product.optionFamily.updated}
-        deactivated-topic: ${MDM_OPTION_FAMILY_KAFKA_DEACTIVATED_TOPIC:mdm.product.optionFamily.deactivated}
+        # created-topic: ${MDM_OPTION_FAMILY_KAFKA_CREATED_TOPIC:mdm.product.optionFamily.created}     # 已迁移至 vmd.kafka.topics.mdm.option-family
+        # updated-topic: ${MDM_OPTION_FAMILY_KAFKA_UPDATED_TOPIC:mdm.product.optionFamily.updated}     # 已迁移至 vmd.kafka.topics.mdm.option-family
+        # deactivated-topic: ${MDM_OPTION_FAMILY_KAFKA_DEACTIVATED_TOPIC:mdm.product.optionFamily.deactivated} # 已迁移至 vmd.kafka.topics.mdm.option-family
+    option-code:
+      kafka:
+        enabled: ${MDM_OPTION_CODE_KAFKA_ENABLED:true}
+        # topic 由 vmd.kafka.topics.mdm.option-code 提供（VMD-DSN-CR-052 新增消费者）
     vehicle-node:
       kafka:
         enabled: ${MDM_VEHICLE_NODE_KAFKA_ENABLED:true}
-        topic: ${MDM_VEHICLE_NODE_KAFKA_TOPIC:mdm.eead.vehicleNode.event}
+        # topic: ${MDM_VEHICLE_NODE_KAFKA_TOPIC:mdm.eead.vehicleNode.event}   # 已迁移至 vmd.kafka.topics.mdm.vehicle-node
     part:
       kafka:
         enabled: ${MDM_PART_KAFKA_ENABLED:true}
-        topic: ${MDM_PART_KAFKA_TOPIC:mdm.material.part.event}
+        # topic: ${MDM_PART_KAFKA_TOPIC:mdm.material.part.event}    # 已迁移至 vmd.kafka.topics.mdm.part
       scheduler:
         enabled: ${MDM_PART_SCHEDULER_ENABLED:true}
         cron: ${MDM_PART_SCHEDULER_CRON:0 0 */1 * * ?}  # 每小时执行一次

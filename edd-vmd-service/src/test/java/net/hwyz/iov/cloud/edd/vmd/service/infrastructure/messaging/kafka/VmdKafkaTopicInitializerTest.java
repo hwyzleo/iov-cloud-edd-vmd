@@ -64,6 +64,9 @@ class VmdKafkaTopicInitializerTest {
     @Mock
     private ObjectProvider<VmdKafkaTopicMetrics> metricsProvider;
 
+    @Mock
+    private MdmTopicPreflight mdmTopicPreflight;
+
     private VmdKafkaTopicProperties topicProperties;
     private VmdKafkaTopicProvisioningProperties provisioningProperties;
     private VmdKafkaTopicReadiness readiness;
@@ -79,7 +82,7 @@ class VmdKafkaTopicInitializerTest {
         provisioningProperties.setCleanupPolicy("delete");
         readiness = new VmdKafkaTopicReadiness();
         initializer = new VmdKafkaTopicInitializer(
-                admin, topicProperties, provisioningProperties, readiness, metricsProvider);
+                admin, topicProperties, provisioningProperties, readiness, metricsProvider, mdmTopicPreflight);
     }
 
     private TopicDescription topicDescription(String name, int partitions, int replication) {

@@ -13,14 +13,17 @@ import org.springframework.stereotype.Component;
 import java.util.stream.Collectors;
 
 /**
- * VMD Kafka 健康检查（VMD-DSN-CR-051）
+ * VMD Kafka 健康检查（VMD-DSN-CR-051 / VMD-DSN-CR-052）
  * <p>
- * 生产 Topic（producerTopics）与观测消费 Topic（inventoryObservedConsumer）分离，
- * 便于区分 VMD 自有 Topic 故障与上游 Topic 未就绪：
+ * 生产 Topic（producerTopics）、观测消费 Topic（inventoryObservedConsumer）与
+ * MDM 消费投影（mdmProjections）分离，便于区分 VMD 自有 Topic 故障、上游 Topic 未就绪
+ * 与 MDM 投影依赖故障：
  * <ul>
  *   <li>producerTopics：FW-KAFKA Provisioning 状态（Broker 不可用 / 无权限 / 缺失 → NOT_READY）
  *       或 VMD 漂移校验 DOWN 时报告 DOWN</li>
  *   <li>inventoryObservedConsumer：观测 Topic 可访问性；仅消费者启用时上报（默认暗部署关闭）</li>
+ *   <li>mdmProjections：11 个 MDM 消费投影逐项明细（topicReachable / aclReady / bootstrapStatus /
+ *       consumerRunning / lag / lastEventAt），任一必需投影失败 → DOWN，不掩蔽单投影故障（§8.2）</li>
  * </ul>
  *
  * @author hwyz_leo
@@ -32,6 +35,7 @@ public class VmdKafkaHealthIndicator implements HealthIndicator {
 
     private final ObjectProvider<KafkaTopicProvisioningStatus> provisioningStatusProvider;
     private final VmdKafkaTopicReadiness readiness;
+    private final MdmProjectionReadiness mdmProjectionReadiness;
 
     /**
      * 观测消费者是否启用（默认关闭）。
@@ -51,6 +55,9 @@ public class VmdKafkaHealthIndicator implements HealthIndicator {
         if (observedEnabled) {
             down |= buildInventoryObserved(builder);
         }
+
+        // MDM 消费投影健康项（逐投影明细，不掩蔽单投影故障）
+        down |= buildMdmProjections(builder);
 
         builder.status(down ? Status.DOWN : Status.UP);
         return builder.build();
@@ -114,5 +121,29 @@ public class VmdKafkaHealthIndicator implements HealthIndicator {
                 return false;
             }
         }
+    }
+
+    /**
+     * MDM 消费投影逐项健康明细；任一必需投影 DOWN/DEGRADED → 整体 DOWN。
+     */
+    private boolean buildMdmProjections(Health.Builder builder) {
+        boolean anyDown = false;
+        for (MdmProjectionReadiness.ProjectionStatus status : mdmProjectionReadiness.statuses()) {
+            String prefix = "mdmProjections." + status.projection().configKey();
+            builder.withDetail(prefix + ".topic", status.topic())
+                    .withDetail(prefix + ".state", status.state().name())
+                    .withDetail(prefix + ".topicReachable", status.topicReachable())
+                    .withDetail(prefix + ".aclReady", status.aclReady())
+                    .withDetail(prefix + ".bootstrapStatus", status.bootstrapStatus().name())
+                    .withDetail(prefix + ".consumerRunning", status.consumerRunning())
+                    .withDetail(prefix + ".lag", status.lag())
+                    .withDetail(prefix + ".lastEventAt", status.lastEventAt() == null ? "none" : status.lastEventAt().toString());
+            if (status.state() == MdmProjectionReadiness.State.DOWN
+                    || status.state() == MdmProjectionReadiness.State.DEGRADED) {
+                anyDown = true;
+                builder.withDetail(prefix + ".reason", status.reason() == null ? "预检失败" : status.reason());
+            }
+        }
+        return anyDown;
     }
 }

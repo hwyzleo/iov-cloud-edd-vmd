@@ -3,7 +3,7 @@ package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmVariantEvent;
+import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmOptionCodeEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.MdmSyncAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging.kafka.MdmConsumerMetrics;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging.kafka.MdmProjectionType;
@@ -14,21 +14,21 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
 /**
- * MDM Variant事件Kafka消费者
+ * MDM OptionCode事件Kafka消费者（VMD-DSN-CR-052 新增第 11 个 MDM 消费 Listener）
  * <p>
- * 监听 EDD-MDM 标准 Topic（VMD-DSN-CR-052：topic 统一由
- * {@code vmd.kafka.topics.mdm.variant} 提供，归 EDD-MDM 管理，VMD 只消费不创建），
- * 转换为本地MdmVariantEvent并调用 MdmSyncAppService.handleVariantEvent() 进行幂等upsert。
+ * 监听 EDD-MDM 标准 Topic（topic 统一由 {@code vmd.kafka.topics.mdm.option-code} 提供，
+ * 归 EDD-MDM 管理，VMD 只消费不创建），转换为本地MdmOptionCodeEvent并调用
+ * MdmSyncAppService.handleOptionCodeEvent() 进行幂等upsert。
  * </p>
  *
- * @author CR-024
- * @see MdmSyncAppService#handleVariantEvent(MdmVariantEvent)
+ * @author hwyz_leo
+ * @see MdmSyncAppService#handleOptionCodeEvent(MdmOptionCodeEvent)
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
-@ConditionalOnProperty(name = "mdm.sync.variant.kafka.enabled", havingValue = "true", matchIfMissing = true)
-public class MdmVariantKafkaConsumer {
+@ConditionalOnProperty(name = "mdm.sync.option-code.kafka.enabled", havingValue = "true", matchIfMissing = true)
+public class MdmOptionCodeKafkaConsumer {
 
     private final MdmSyncAppService mdmSyncAppService;
     private final MdmSyncMetrics mdmSyncMetrics;
@@ -36,43 +36,43 @@ public class MdmVariantKafkaConsumer {
     private final ObjectMapper objectMapper;
 
     /**
-     * 消费MDM Variant事件
+     * 消费MDM OptionCode事件
      *
      * @param record Kafka消费者记录
      */
     @KafkaListener(
-            id = MdmProjectionType.ConsumerIds.VARIANT,
-            topics = {"${vmd.kafka.topics.mdm.variant:mdm.variant}"},
+            id = MdmProjectionType.ConsumerIds.OPTION_CODE,
+            topics = {"${vmd.kafka.topics.mdm.option-code:mdm.option-code}"},
             groupId = "${spring.kafka.consumer.group-id:iov-cloud-edd-vmd}",
             autoStartup = "${vmd.kafka.mdm-consumer.auto-startup:true}",
             containerFactory = "kafkaListenerContainerFactory"
     )
-    public void onVariantEvent(ConsumerRecord<String, String> record) {
+    public void onOptionCodeEvent(ConsumerRecord<String, String> record) {
         long startTime = System.currentTimeMillis();
-        log.info("收到MDM Variant事件: topic={}, partition={}, offset={}, key={}",
+        log.info("收到MDM OptionCode事件: topic={}, partition={}, offset={}, key={}",
                 record.topic(), record.partition(), record.offset(), record.key());
 
-        MdmVariantEvent event;
+        MdmOptionCodeEvent event;
         try {
             event = parseEvent(record.value());
         } catch (Exception e) {
             mdmSyncMetrics.recordFailure();
-            mdmConsumerMetrics.recordConsume(MdmProjectionType.VARIANT, "parse_error");
-            log.error("MDM Variant事件解析失败: offset={}, error={}",
+            mdmConsumerMetrics.recordConsume(MdmProjectionType.OPTION_CODE, "parse_error");
+            log.error("MDM OptionCode事件解析失败: offset={}, error={}",
                     record.offset(), e.getMessage(), e);
             return;
         }
 
         try {
-            mdmSyncAppService.handleVariantEvent(event);
+            mdmSyncAppService.handleOptionCodeEvent(event);
             mdmSyncMetrics.recordSuccess();
-            mdmConsumerMetrics.recordConsume(MdmProjectionType.VARIANT, "success");
-            log.info("MDM Variant事件处理成功: entityId={}, eventType={}",
+            mdmConsumerMetrics.recordConsume(MdmProjectionType.OPTION_CODE, "success");
+            log.info("MDM OptionCode事件处理成功: entityId={}, eventType={}",
                     event.getEntityId(), event.getEventType());
         } catch (Exception e) {
             mdmSyncMetrics.recordFailure();
-            mdmConsumerMetrics.recordConsume(MdmProjectionType.VARIANT, "failure");
-            log.error("MDM Variant事件处理失败: offset={}, error={}",
+            mdmConsumerMetrics.recordConsume(MdmProjectionType.OPTION_CODE, "failure");
+            log.error("MDM OptionCode事件处理失败: offset={}, error={}",
                     record.offset(), e.getMessage(), e);
         } finally {
             long duration = System.currentTimeMillis() - startTime;
@@ -81,13 +81,13 @@ public class MdmVariantKafkaConsumer {
     }
 
     /**
-     * 解析Kafka消息为MdmVariantEvent
+     * 解析Kafka消息为MdmOptionCodeEvent
      *
      * @param messageJson 消息JSON字符串
-     * @return MdmVariantEvent
+     * @return MdmOptionCodeEvent
      * @throws Exception 解析异常
      */
-    private MdmVariantEvent parseEvent(String messageJson) throws Exception {
-        return objectMapper.readValue(messageJson, MdmVariantEvent.class);
+    private MdmOptionCodeEvent parseEvent(String messageJson) throws Exception {
+        return objectMapper.readValue(messageJson, MdmOptionCodeEvent.class);
     }
 }

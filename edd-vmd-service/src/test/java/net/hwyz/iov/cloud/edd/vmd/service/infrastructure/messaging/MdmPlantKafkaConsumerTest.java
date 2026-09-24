@@ -3,6 +3,7 @@ package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmPlantEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.MdmSyncAppService;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging.kafka.MdmConsumerMetrics;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.monitoring.MdmSyncMetrics;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.junit.jupiter.api.DisplayName;
@@ -32,6 +33,9 @@ class MdmPlantKafkaConsumerTest {
     private MdmSyncMetrics mdmSyncMetrics;
 
     @Mock
+    private MdmConsumerMetrics mdmConsumerMetrics;
+
+    @Mock
     private ObjectMapper objectMapper;
 
     @InjectMocks
@@ -42,7 +46,7 @@ class MdmPlantKafkaConsumerTest {
     void onPlantEvent_shouldSuccessfullyProcessEventAndCallHandlePlantEvent() throws Exception {
         // Given
         String messageJson = "{\"eventType\":\"CREATED\",\"entityId\":\"mdm-plant-001\",\"version\":1,\"code\":\"PLANT001\"}";
-        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.org.plant.event", 0, 0L, "key", messageJson);
+        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.plant", 0, 0L, "key", messageJson);
 
         MdmPlantEvent testEvent = new MdmPlantEvent("CREATED", "mdm-plant-001", 1L, "PLANT001",
                 "工厂1", LocalDateTime.now());
@@ -63,7 +67,7 @@ class MdmPlantKafkaConsumerTest {
     void onPlantEvent_shouldHandleParseFailureAndRecordFailureMetric() throws Exception {
         // Given
         String invalidJson = "invalid-json";
-        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.org.plant.event", 0, 0L, "key", invalidJson);
+        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.plant", 0, 0L, "key", invalidJson);
 
         when(objectMapper.readValue(invalidJson, MdmPlantEvent.class))
                 .thenThrow(new RuntimeException("Parse error"));
@@ -81,7 +85,7 @@ class MdmPlantKafkaConsumerTest {
     void onPlantEvent_shouldHandleHandlePlantEventFailureAndRecordFailureMetric() throws Exception {
         // Given
         String messageJson = "{\"eventType\":\"CREATED\",\"entityId\":\"mdm-plant-001\",\"version\":1,\"code\":\"PLANT001\"}";
-        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.org.plant.event", 0, 0L, "key", messageJson);
+        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.plant", 0, 0L, "key", messageJson);
 
         MdmPlantEvent testEvent = new MdmPlantEvent("CREATED", "mdm-plant-001", 1L, "PLANT001",
                 "工厂1", LocalDateTime.now());
@@ -101,7 +105,7 @@ class MdmPlantKafkaConsumerTest {
     void onPlantEvent_shouldRecordProcessingDuration() throws Exception {
         // Given
         String messageJson = "{\"eventType\":\"CREATED\",\"entityId\":\"mdm-plant-001\",\"version\":1,\"code\":\"PLANT001\"}";
-        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.org.plant.event", 0, 0L, "key", messageJson);
+        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.plant", 0, 0L, "key", messageJson);
 
         MdmPlantEvent testEvent = new MdmPlantEvent("CREATED", "mdm-plant-001", 1L, "PLANT001",
                 "工厂1", LocalDateTime.now());

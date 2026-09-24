@@ -59,13 +59,14 @@ public class VmdKafkaTopicInitializer {
     private final VmdKafkaTopicProvisioningProperties provisioningProperties;
     private final VmdKafkaTopicReadiness readiness;
     private final ObjectProvider<VmdKafkaTopicMetrics> metricsProvider;
+    private final MdmTopicPreflight mdmTopicPreflight;
 
     /**
      * 启动日志：逻辑名 → 实际 Topic → 角色 → 参数（不打印凭证）。
      */
     @PostConstruct
     public void logTopicCatalog() {
-        log.info("VMD Kafka Topic 目录（VMD-DSN-CR-051）:");
+        log.info("VMD Kafka Topic 目录（VMD-DSN-CR-051 / VMD-DSN-CR-052）:");
         for (VmdKafkaLogicalTopic logical : VmdKafkaLogicalTopic.values()) {
             log.info("  logicalName={}, topic={}, role={}, partitions={}, replicationFactor={}, cleanupPolicy={}",
                     logical.configKey(), topicProperties.topic(logical), logical.role(),
@@ -73,13 +74,19 @@ public class VmdKafkaTopicInitializer {
                     provisioningProperties.getReplicationFactor(),
                     provisioningProperties.getCleanupPolicy());
         }
+        log.info("  MDM 消费 Topic（11，全部 CONSUMER_ONLY，归 EDD-MDM 管理，VMD 只预检不创建）:");
+        for (MdmProjectionType projection : MdmProjectionType.values()) {
+            log.info("  projection={}, topic={}, consumerId={}",
+                    projection.configKey(), topicProperties.topic(projection), projection.consumerId());
+        }
     }
 
     @EventListener
     public void onTopicsReady(KafkaTopicsReadyEvent event) {
-        log.info("KafkaTopicsReadyEvent 触发 VMD 生产 Topic 既有校验与观测 Topic 探测");
+        log.info("KafkaTopicsReadyEvent 触发 VMD 生产 Topic 既有校验、观测 Topic 探测与 MDM 消费 Topic 预检");
         validateProducerTopics();
         probeInventoryObserved();
+        mdmTopicPreflight.preflight();
     }
 
     /**

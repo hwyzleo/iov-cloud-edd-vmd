@@ -40,6 +40,8 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.ConfigurationProje
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.VehicleNodeProjectionCommand;
 import net.hwyz.iov.cloud.edd.vmd.service.application.mapper.MdmConfigurationProjectionMapper;
 import net.hwyz.iov.cloud.edd.vmd.service.application.mapper.MdmVehicleNodeProjectionMapper;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging.kafka.MdmConsumerMetrics;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging.kafka.MdmProjectionType;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.monitoring.ConfigurationSyncMetrics;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Brand;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.OptionFamily;
@@ -93,6 +95,7 @@ public class MdmSyncAppService {
     private final MdmVehicleNodeProjectionMapper mdmVehicleNodeProjectionMapper;
     private final ProjectionIntegrityChecker projectionIntegrityChecker;
     private final ConfigurationSyncMetrics configurationSyncMetrics;
+    private final MdmConsumerMetrics mdmConsumerMetrics;
 
     // 使用 MDM 标准 API 接口
     private final BrandService brandService;
@@ -143,6 +146,7 @@ public class MdmSyncAppService {
             } else {
                 log.debug("忽略 MDM 品牌事件（版本不满足）: code={}, eventVersion={}, localVersion={}",
                         event.getCode(), event.getVersion(), localBrand.getExternalVersion());
+                mdmConsumerMetrics.recordIgnored(MdmProjectionType.BRAND, ignoreReason(event.getVersion(), localBrand.getExternalVersion()));
             }
         }
     }
@@ -181,6 +185,7 @@ public class MdmSyncAppService {
             } else {
                 log.info("忽略车系事件（版本不高于本地）: code={}, eventVersion={}, localVersion={}",
                         event.getCode(), event.getVersion(), localCarLine.getExternalVersion());
+                mdmConsumerMetrics.recordIgnored(MdmProjectionType.CAR_LINE, ignoreReason(event.getVersion(), localCarLine.getExternalVersion()));
             }
         }
     }
@@ -217,6 +222,7 @@ public class MdmSyncAppService {
             } else {
                 log.info("忽略平台事件（版本不高于本地）: code={}, eventVersion={}, localVersion={}",
                         event.getCode(), event.getVersion(), localPlatform.getExternalVersion());
+                mdmConsumerMetrics.recordIgnored(MdmProjectionType.PLATFORM, ignoreReason(event.getVersion(), localPlatform.getExternalVersion()));
             }
         }
     }
@@ -257,6 +263,7 @@ public class MdmSyncAppService {
             } else {
                 log.info("忽略车型事件（版本不高于本地）: code={}, eventVersion={}, localVersion={}",
                         event.getCode(), event.getVersion(), localModel.getExternalVersion());
+                mdmConsumerMetrics.recordIgnored(MdmProjectionType.MODEL, ignoreReason(event.getVersion(), localModel.getExternalVersion()));
             }
         }
     }
@@ -299,6 +306,7 @@ public class MdmSyncAppService {
             } else {
                 log.info("忽略版本事件（版本不高于本地）: code={}, eventVersion={}, localVersion={}",
                         event.getCode(), event.getVersion(), localVariant.getExternalVersion());
+                mdmConsumerMetrics.recordIgnored(MdmProjectionType.VARIANT, ignoreReason(event.getVersion(), localVariant.getExternalVersion()));
             }
         }
     }
@@ -357,6 +365,7 @@ public class MdmSyncAppService {
             } else {
                 log.info("忽略选项族事件（版本不高于本地）: code={}, eventVersion={}, localVersion={}",
                         event.getCode(), event.getVersion(), localOptionFamily.getExternalVersion());
+                mdmConsumerMetrics.recordIgnored(MdmProjectionType.OPTION_FAMILY, ignoreReason(event.getVersion(), localOptionFamily.getExternalVersion()));
             }
         }
     }
@@ -395,6 +404,7 @@ public class MdmSyncAppService {
             } else {
                 log.info("忽略选项值事件（版本不高于本地）: code={}, eventVersion={}, localVersion={}",
                         event.getCode(), event.getVersion(), localOptionCode.getExternalVersion());
+                mdmConsumerMetrics.recordIgnored(MdmProjectionType.OPTION_CODE, ignoreReason(event.getVersion(), localOptionCode.getExternalVersion()));
             }
         }
     }
@@ -499,6 +509,7 @@ public class MdmSyncAppService {
             } else {
                 log.info("忽略零件事件（版本不高于本地）: code={}, eventVersion={}, localVersion={}",
                         event.getCode(), event.getVersion(), localPart.getExternalVersion());
+                mdmConsumerMetrics.recordIgnored(MdmProjectionType.PART, ignoreReason(event.getVersion(), localPart.getExternalVersion()));
             }
         }
     }
@@ -553,11 +564,14 @@ public class MdmSyncAppService {
                         page++;
                     }
                 }
+                mdmConsumerMetrics.recordBootstrap(MdmProjectionType.BRAND, "completed");
                 log.info("Bootstrap 品牌数据同步完成");
             } catch (Exception e) {
+                mdmConsumerMetrics.recordBootstrap(MdmProjectionType.BRAND, "failed");
                 log.error("Bootstrap 品牌数据同步失败", e);
             }
         } else {
+            mdmConsumerMetrics.recordBootstrap(MdmProjectionType.BRAND, "skipped");
             log.info("本地已有 MDM 品牌数据 {} 条，跳过 Bootstrap", count);
         }
     }
@@ -613,11 +627,14 @@ public class MdmSyncAppService {
                         page++;
                     }
                 }
+                mdmConsumerMetrics.recordBootstrap(MdmProjectionType.CAR_LINE, "completed");
                 log.info("Bootstrap 车系数据同步完成");
             } catch (Exception e) {
+                mdmConsumerMetrics.recordBootstrap(MdmProjectionType.CAR_LINE, "failed");
                 log.error("Bootstrap 车系数据同步失败", e);
             }
         } else {
+            mdmConsumerMetrics.recordBootstrap(MdmProjectionType.CAR_LINE, "skipped");
             log.info("本地已有 MDM 车系数据 {} 条，跳过 Bootstrap", count);
         }
     }
@@ -671,11 +688,14 @@ public class MdmSyncAppService {
                         page++;
                     }
                 }
+                mdmConsumerMetrics.recordBootstrap(MdmProjectionType.PLATFORM, "completed");
                 log.info("Bootstrap 平台数据同步完成");
             } catch (Exception e) {
+                mdmConsumerMetrics.recordBootstrap(MdmProjectionType.PLATFORM, "failed");
                 log.error("Bootstrap 平台数据同步失败", e);
             }
         } else {
+            mdmConsumerMetrics.recordBootstrap(MdmProjectionType.PLATFORM, "skipped");
             log.info("本地已有 MDM 平台数据 {} 条，跳过 Bootstrap", count);
         }
     }
@@ -729,11 +749,14 @@ public class MdmSyncAppService {
                         page++;
                     }
                 }
+                mdmConsumerMetrics.recordBootstrap(MdmProjectionType.PLANT, "completed");
                 log.info("Bootstrap 工厂数据同步完成");
             } catch (Exception e) {
+                mdmConsumerMetrics.recordBootstrap(MdmProjectionType.PLANT, "failed");
                 log.error("Bootstrap 工厂数据同步失败", e);
             }
         } else {
+            mdmConsumerMetrics.recordBootstrap(MdmProjectionType.PLANT, "skipped");
             log.info("本地已有 MDM 工厂数据 {} 条，跳过 Bootstrap", count);
         }
     }
@@ -776,11 +799,14 @@ public class MdmSyncAppService {
                         page++;
                     }
                 }
+                mdmConsumerMetrics.recordBootstrap(MdmProjectionType.MODEL, "completed");
                 log.info("Bootstrap 车型数据同步完成");
             } catch (Exception e) {
+                mdmConsumerMetrics.recordBootstrap(MdmProjectionType.MODEL, "failed");
                 log.error("Bootstrap 车型数据同步失败", e);
             }
         } else {
+            mdmConsumerMetrics.recordBootstrap(MdmProjectionType.MODEL, "skipped");
             log.info("本地已有 MDM 车型数据 {} 条，跳过 Bootstrap", count);
         }
     }
@@ -838,11 +864,14 @@ public class MdmSyncAppService {
                         page++;
                     }
                 }
+                mdmConsumerMetrics.recordBootstrap(MdmProjectionType.VARIANT, "completed");
                 log.info("Bootstrap 版本数据同步完成");
             } catch (Exception e) {
+                mdmConsumerMetrics.recordBootstrap(MdmProjectionType.VARIANT, "failed");
                 log.error("Bootstrap 版本数据同步失败", e);
             }
         } else {
+            mdmConsumerMetrics.recordBootstrap(MdmProjectionType.VARIANT, "skipped");
             log.info("本地已有 MDM 版本数据 {} 条，跳过 Bootstrap", count);
         }
     }
@@ -888,11 +917,14 @@ public class MdmSyncAppService {
                     }
                 }
                 projectionIntegrityChecker.check();
+                mdmConsumerMetrics.recordBootstrap(MdmProjectionType.CONFIGURATION, "completed");
                 log.info("Bootstrap 配置数据同步完成");
             } catch (Exception e) {
+                mdmConsumerMetrics.recordBootstrap(MdmProjectionType.CONFIGURATION, "failed");
                 log.error("Bootstrap 配置数据同步失败", e);
             }
         } else {
+            mdmConsumerMetrics.recordBootstrap(MdmProjectionType.CONFIGURATION, "skipped");
             log.info("本地已有 MDM 配置数据 {} 条，跳过 Bootstrap", count);
         }
     }
@@ -944,11 +976,14 @@ public class MdmSyncAppService {
                         page++;
                     }
                 }
+                mdmConsumerMetrics.recordBootstrap(MdmProjectionType.OPTION_FAMILY, "completed");
                 log.info("Bootstrap 选项族数据同步完成");
             } catch (Exception e) {
+                mdmConsumerMetrics.recordBootstrap(MdmProjectionType.OPTION_FAMILY, "failed");
                 log.error("Bootstrap 选项族数据同步失败", e);
             }
         } else {
+            mdmConsumerMetrics.recordBootstrap(MdmProjectionType.OPTION_FAMILY, "skipped");
             log.info("本地已有 MDM 选项族数据 {} 条，跳过 Bootstrap", count);
         }
     }
@@ -1002,11 +1037,14 @@ public class MdmSyncAppService {
                         page++;
                     }
                 }
+                mdmConsumerMetrics.recordBootstrap(MdmProjectionType.OPTION_CODE, "completed");
                 log.info("Bootstrap 选项值数据同步完成");
             } catch (Exception e) {
+                mdmConsumerMetrics.recordBootstrap(MdmProjectionType.OPTION_CODE, "failed");
                 log.error("Bootstrap 选项值数据同步失败", e);
             }
         } else {
+            mdmConsumerMetrics.recordBootstrap(MdmProjectionType.OPTION_CODE, "skipped");
             log.info("本地已有 MDM 选项值数据 {} 条，跳过 Bootstrap", count);
         }
     }
@@ -1048,11 +1086,14 @@ public class MdmSyncAppService {
                         page++;
                     }
                 }
+                mdmConsumerMetrics.recordBootstrap(MdmProjectionType.VEHICLE_NODE, "completed");
                 log.info("Bootstrap 车载节点数据同步完成");
             } catch (Exception e) {
+                mdmConsumerMetrics.recordBootstrap(MdmProjectionType.VEHICLE_NODE, "failed");
                 log.error("Bootstrap 车载节点数据同步失败", e);
             }
         } else {
+            mdmConsumerMetrics.recordBootstrap(MdmProjectionType.VEHICLE_NODE, "skipped");
             log.info("本地已有 MDM 车载节点数据 {} 条，跳过 Bootstrap", count);
         }
     }
@@ -1065,6 +1106,7 @@ public class MdmSyncAppService {
         try {
             long existingCount = mdmPartRepository.countBySource(SourceType.MDM);
             if (existingCount > 0) {
+                mdmConsumerMetrics.recordBootstrap(MdmProjectionType.PART, "skipped");
                 log.info("本地已存在 {} 条 MDM 零件数据，跳过 Bootstrap 同步", existingCount);
                 return;
             }
@@ -1132,8 +1174,10 @@ public class MdmSyncAppService {
                     page++;
                 }
             }
+            mdmConsumerMetrics.recordBootstrap(MdmProjectionType.PART, "completed");
             log.info("Bootstrap 零件数据同步完成: 新增={}, 更新={}, 跳过={}", insertCount, updateCount, skipCount);
         } catch (Exception e) {
+            mdmConsumerMetrics.recordBootstrap(MdmProjectionType.PART, "failed");
             log.error("Bootstrap 零件数据同步失败", e);
         }
     }
@@ -1230,6 +1274,16 @@ public class MdmSyncAppService {
         bootstrapVehicleNode();
         bootstrapPart();
         log.info("Bootstrap全量数据同步完成");
+    }
+
+    /**
+     * 版本门禁忽略原因（VMD-DSN-CR-052 §8.2）：同版本重复 → duplicate，低版本 → stale。
+     */
+    private String ignoreReason(Long eventVersion, Long localVersion) {
+        if (eventVersion != null && eventVersion.equals(localVersion)) {
+            return "duplicate";
+        }
+        return "stale";
     }
 
     /**

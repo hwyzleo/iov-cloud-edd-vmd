@@ -29,6 +29,8 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.VehicleNodeProject
 import net.hwyz.iov.cloud.edd.vmd.service.application.mapper.MdmConfigurationProjectionMapper;
 import net.hwyz.iov.cloud.edd.vmd.service.application.mapper.MdmVehicleNodeProjectionMapper;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.VehicleNodeProjectionException;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging.kafka.MdmConsumerMetrics;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging.kafka.MdmProjectionType;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.monitoring.ConfigurationSyncMetrics;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Brand;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.CarLine;
@@ -115,6 +117,9 @@ class MdmSyncAppServiceTest {
 
     @Mock
     private ConfigurationSyncMetrics configurationSyncMetrics;
+
+    @Mock
+    private MdmConsumerMetrics mdmConsumerMetrics;
 
     @Mock
     private BrandService brandService;

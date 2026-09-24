@@ -3,6 +3,7 @@ package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmConfigurationEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.MdmSyncAppService;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging.kafka.MdmConsumerMetrics;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.monitoring.ConfigurationSyncMetrics;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.junit.jupiter.api.DisplayName;
@@ -32,6 +33,9 @@ class MdmConfigurationKafkaConsumerTest {
     private ConfigurationSyncMetrics configurationSyncMetrics;
 
     @Mock
+    private MdmConsumerMetrics mdmConsumerMetrics;
+
+    @Mock
     private ObjectMapper objectMapper;
 
     @InjectMocks
@@ -47,7 +51,7 @@ class MdmConfigurationKafkaConsumerTest {
     void onConfigurationEvent_shouldSuccessfullyProcessEventAndCallHandleConfigurationEvent() throws Exception {
         // Given
         String messageJson = "{\"eventType\":\"CREATED\",\"entityId\":\"mdm-cfg-001\",\"version\":1,\"code\":\"CFG001\"}";
-        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.product.configuration.created", 0, 0L, "key", messageJson);
+        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.configuration", 0, 0L, "key", messageJson);
 
         MdmConfigurationEvent testEvent = buildEvent("CREATED", "mdm-cfg-001", 1L, "CFG001");
 
@@ -66,7 +70,7 @@ class MdmConfigurationKafkaConsumerTest {
     void onConfigurationEvent_shouldHandleParseFailureAndRecordFailureMetric() throws Exception {
         // Given
         String invalidJson = "invalid-json";
-        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.product.configuration.created", 0, 0L, "key", invalidJson);
+        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.configuration", 0, 0L, "key", invalidJson);
 
         when(objectMapper.readValue(invalidJson, MdmConfigurationEvent.class))
                 .thenThrow(new RuntimeException("Parse error"));
@@ -84,7 +88,7 @@ class MdmConfigurationKafkaConsumerTest {
     void onConfigurationEvent_shouldHandleHandleConfigurationEventFailureAndRecordFailureMetric() throws Exception {
         // Given
         String messageJson = "{\"eventType\":\"CREATED\",\"entityId\":\"mdm-cfg-001\",\"version\":1,\"code\":\"CFG001\"}";
-        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.product.configuration.created", 0, 0L, "key", messageJson);
+        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.configuration", 0, 0L, "key", messageJson);
 
         MdmConfigurationEvent testEvent = buildEvent("CREATED", "mdm-cfg-001", 1L, "CFG001");
 

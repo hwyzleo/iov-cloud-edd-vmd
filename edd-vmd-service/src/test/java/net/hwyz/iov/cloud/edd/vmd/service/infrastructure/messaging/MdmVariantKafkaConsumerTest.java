@@ -3,6 +3,7 @@ package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmVariantEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.MdmSyncAppService;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging.kafka.MdmConsumerMetrics;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.monitoring.MdmSyncMetrics;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.junit.jupiter.api.DisplayName;
@@ -32,6 +33,9 @@ class MdmVariantKafkaConsumerTest {
     private MdmSyncMetrics mdmSyncMetrics;
 
     @Mock
+    private MdmConsumerMetrics mdmConsumerMetrics;
+
+    @Mock
     private ObjectMapper objectMapper;
 
     @InjectMocks
@@ -42,7 +46,7 @@ class MdmVariantKafkaConsumerTest {
     void onVariantEvent_shouldSuccessfullyProcessEventAndCallHandleVariantEvent() throws Exception {
         // Given
         String messageJson = "{\"eventType\":\"CREATED\",\"entityId\":\"mdm-var-001\",\"version\":1,\"code\":\"VAR001\"}";
-        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.product.variant.created", 0, 0L, "key", messageJson);
+        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.variant", 0, 0L, "key", messageJson);
 
         MdmVariantEvent testEvent = new MdmVariantEvent("CREATED", "mdm-var-001", 1L, "VAR001",
                 "版本1", "PF001", "CL001", "MODEL001", LocalDateTime.now());
@@ -63,7 +67,7 @@ class MdmVariantKafkaConsumerTest {
     void onVariantEvent_shouldHandleParseFailureAndRecordFailureMetric() throws Exception {
         // Given
         String invalidJson = "invalid-json";
-        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.product.variant.created", 0, 0L, "key", invalidJson);
+        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.variant", 0, 0L, "key", invalidJson);
 
         when(objectMapper.readValue(invalidJson, MdmVariantEvent.class))
                 .thenThrow(new RuntimeException("Parse error"));
@@ -81,7 +85,7 @@ class MdmVariantKafkaConsumerTest {
     void onVariantEvent_shouldHandleHandleVariantEventFailureAndRecordFailureMetric() throws Exception {
         // Given
         String messageJson = "{\"eventType\":\"CREATED\",\"entityId\":\"mdm-var-001\",\"version\":1,\"code\":\"VAR001\"}";
-        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.product.variant.created", 0, 0L, "key", messageJson);
+        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.variant", 0, 0L, "key", messageJson);
 
         MdmVariantEvent testEvent = new MdmVariantEvent("CREATED", "mdm-var-001", 1L, "VAR001",
                 "版本1", "PF001", "CL001", "MODEL001", LocalDateTime.now());
@@ -101,7 +105,7 @@ class MdmVariantKafkaConsumerTest {
     void onVariantEvent_shouldRecordProcessingDuration() throws Exception {
         // Given
         String messageJson = "{\"eventType\":\"CREATED\",\"entityId\":\"mdm-var-001\",\"version\":1,\"code\":\"VAR001\"}";
-        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.product.variant.created", 0, 0L, "key", messageJson);
+        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.variant", 0, 0L, "key", messageJson);
 
         MdmVariantEvent testEvent = new MdmVariantEvent("CREATED", "mdm-var-001", 1L, "VAR001",
                 "版本1", "PF001", "CL001", "MODEL001", LocalDateTime.now());

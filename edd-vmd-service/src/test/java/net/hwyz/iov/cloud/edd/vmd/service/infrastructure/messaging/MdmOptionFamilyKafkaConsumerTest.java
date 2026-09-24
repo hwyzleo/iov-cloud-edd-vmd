@@ -3,6 +3,7 @@ package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmOptionFamilyEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.MdmSyncAppService;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging.kafka.MdmConsumerMetrics;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.monitoring.MdmSyncMetrics;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.junit.jupiter.api.DisplayName;
@@ -32,6 +33,9 @@ class MdmOptionFamilyKafkaConsumerTest {
     private MdmSyncMetrics mdmSyncMetrics;
 
     @Mock
+    private MdmConsumerMetrics mdmConsumerMetrics;
+
+    @Mock
     private ObjectMapper objectMapper;
 
     @InjectMocks
@@ -42,7 +46,7 @@ class MdmOptionFamilyKafkaConsumerTest {
     void onOptionFamilyEvent_shouldSuccessfullyProcessEventAndCallHandleOptionFamilyEvent() throws Exception {
         // Given
         String messageJson = "{\"eventType\":\"CREATED\",\"entityId\":\"mdm-of-001\",\"version\":1,\"code\":\"OF001\"}";
-        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.product.optionFamily.created", 0, 0L, "key", messageJson);
+        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.option-family", 0, 0L, "key", messageJson);
 
         MdmOptionFamilyEvent testEvent = new MdmOptionFamilyEvent("CREATED", "mdm-of-001", 1L, "OF001",
                 "选项族1", "OptionFamily1", "EXTERIOR", LocalDateTime.now());
@@ -63,7 +67,7 @@ class MdmOptionFamilyKafkaConsumerTest {
     void onOptionFamilyEvent_shouldHandleParseFailureAndRecordFailureMetric() throws Exception {
         // Given
         String invalidJson = "invalid-json";
-        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.product.optionFamily.created", 0, 0L, "key", invalidJson);
+        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.option-family", 0, 0L, "key", invalidJson);
 
         when(objectMapper.readValue(invalidJson, MdmOptionFamilyEvent.class))
                 .thenThrow(new RuntimeException("Parse error"));
@@ -81,7 +85,7 @@ class MdmOptionFamilyKafkaConsumerTest {
     void onOptionFamilyEvent_shouldHandleHandleOptionFamilyEventFailureAndRecordFailureMetric() throws Exception {
         // Given
         String messageJson = "{\"eventType\":\"CREATED\",\"entityId\":\"mdm-of-001\",\"version\":1,\"code\":\"OF001\"}";
-        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.product.optionFamily.created", 0, 0L, "key", messageJson);
+        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.option-family", 0, 0L, "key", messageJson);
 
         MdmOptionFamilyEvent testEvent = new MdmOptionFamilyEvent("CREATED", "mdm-of-001", 1L, "OF001",
                 "选项族1", "OptionFamily1", "EXTERIOR", LocalDateTime.now());
@@ -101,7 +105,7 @@ class MdmOptionFamilyKafkaConsumerTest {
     void onOptionFamilyEvent_shouldRecordProcessingDuration() throws Exception {
         // Given
         String messageJson = "{\"eventType\":\"CREATED\",\"entityId\":\"mdm-of-001\",\"version\":1,\"code\":\"OF001\"}";
-        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.product.optionFamily.created", 0, 0L, "key", messageJson);
+        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.option-family", 0, 0L, "key", messageJson);
 
         MdmOptionFamilyEvent testEvent = new MdmOptionFamilyEvent("CREATED", "mdm-of-001", 1L, "OF001",
                 "选项族1", "OptionFamily1", "EXTERIOR", LocalDateTime.now());

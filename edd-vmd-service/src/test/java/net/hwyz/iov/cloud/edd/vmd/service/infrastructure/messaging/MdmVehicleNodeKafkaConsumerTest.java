@@ -3,6 +3,7 @@ package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmVehicleNodeEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.MdmSyncAppService;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging.kafka.MdmConsumerMetrics;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.monitoring.MdmSyncMetrics;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.junit.jupiter.api.DisplayName;
@@ -33,6 +34,9 @@ class MdmVehicleNodeKafkaConsumerTest {
     private MdmSyncMetrics mdmSyncMetrics;
 
     @Mock
+    private MdmConsumerMetrics mdmConsumerMetrics;
+
+    @Mock
     private ObjectMapper objectMapper;
 
     @InjectMocks
@@ -43,7 +47,7 @@ class MdmVehicleNodeKafkaConsumerTest {
     void onVehicleNodeEvent_shouldSuccessfullyProcessEventAndCallHandleVehicleNodeEvent() throws Exception {
         // Given
         String messageJson = "{\"eventType\":\"CREATED\",\"entityId\":\"mdm-vn-001\",\"version\":1,\"code\":\"CPT_DCU_8295\"}";
-        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.eead.vehicleNode.event", 0, 0L, "key", messageJson);
+        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.vehicle-node", 0, 0L, "key", messageJson);
 
         MdmVehicleNodeEvent testEvent = new MdmVehicleNodeEvent("CREATED", "mdm-vn-001", 1L, "CPT_DCU_8295",
                 "车载节点1", "Vehicle Node 1", "DCU",
@@ -65,7 +69,7 @@ class MdmVehicleNodeKafkaConsumerTest {
     void onVehicleNodeEvent_shouldHandleParseFailureAndRecordFailureMetric() throws Exception {
         // Given
         String invalidJson = "invalid-json";
-        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.eead.vehicleNode.event", 0, 0L, "key", invalidJson);
+        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.vehicle-node", 0, 0L, "key", invalidJson);
 
         when(objectMapper.readValue(invalidJson, MdmVehicleNodeEvent.class))
                 .thenThrow(new RuntimeException("Parse error"));
@@ -81,7 +85,7 @@ class MdmVehicleNodeKafkaConsumerTest {
     void onVehicleNodeEvent_shouldHandleHandleVehicleNodeEventFailureAndRecordFailureMetric() throws Exception {
         // Given
         String messageJson = "{\"eventType\":\"CREATED\",\"entityId\":\"mdm-vn-001\",\"version\":1,\"code\":\"CPT_DCU_8295\"}";
-        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.eead.vehicleNode.event", 0, 0L, "key", messageJson);
+        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.vehicle-node", 0, 0L, "key", messageJson);
 
         MdmVehicleNodeEvent testEvent = new MdmVehicleNodeEvent("CREATED", "mdm-vn-001", 1L, "CPT_DCU_8295",
                 "车载节点1", "Vehicle Node 1", "DCU",
@@ -100,7 +104,7 @@ class MdmVehicleNodeKafkaConsumerTest {
     void onVehicleNodeEvent_shouldRecordProcessingDuration() throws Exception {
         // Given
         String messageJson = "{\"eventType\":\"CREATED\",\"entityId\":\"mdm-vn-001\",\"version\":1,\"code\":\"CPT_DCU_8295\"}";
-        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.eead.vehicleNode.event", 0, 0L, "key", messageJson);
+        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.vehicle-node", 0, 0L, "key", messageJson);
 
         MdmVehicleNodeEvent testEvent = new MdmVehicleNodeEvent("CREATED", "mdm-vn-001", 1L, "CPT_DCU_8295",
                 "车载节点1", "Vehicle Node 1", "DCU",
@@ -121,7 +125,7 @@ class MdmVehicleNodeKafkaConsumerTest {
         // Given
         String messageJson = "{\"eventType\":\"CREATED\",\"entityId\":\"mdm-vn-ccu2\",\"version\":12,\"code\":\"CCU_GEN2\","
                 + "\"name\":\"中央计算单元GEN2\",\"deviceCategory\":\"CCU\",\"hsmCapability\":\"HSM_FULL\"}";
-        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.eead.vehicleNode.event", 0, 0L, "key", messageJson);
+        ConsumerRecord<String, String> record = new ConsumerRecord<>("mdm.vehicle-node", 0, 0L, "key", messageJson);
 
         MdmVehicleNodeEvent testEvent = new MdmVehicleNodeEvent("CREATED", "mdm-vn-ccu2", 12L, "CCU_GEN2",
                 "中央计算单元GEN2", "Central Computing Unit Gen2", "CCU",

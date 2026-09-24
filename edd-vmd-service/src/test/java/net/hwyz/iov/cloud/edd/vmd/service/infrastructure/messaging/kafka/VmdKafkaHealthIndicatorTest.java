@@ -34,12 +34,14 @@ class VmdKafkaHealthIndicatorTest {
     private ObjectProvider<KafkaTopicProvisioningStatus> provisioningStatusProvider;
 
     private VmdKafkaTopicReadiness readiness;
+    private MdmProjectionReadiness mdmProjectionReadiness;
     private VmdKafkaHealthIndicator indicator;
 
     @BeforeEach
     void setUp() {
         readiness = new VmdKafkaTopicReadiness();
-        indicator = new VmdKafkaHealthIndicator(provisioningStatusProvider, readiness);
+        mdmProjectionReadiness = new MdmProjectionReadiness();
+        indicator = new VmdKafkaHealthIndicator(provisioningStatusProvider, readiness, mdmProjectionReadiness);
         ReflectionTestUtils.setField(indicator, "observedEnabled", false);
     }
 
@@ -135,5 +137,66 @@ class VmdKafkaHealthIndicatorTest {
         assertEquals("DISABLED", health.getDetails().get("producerTopics.state"));
         assertNull(health.getDetails().get("inventoryObservedConsumer"),
                 "消费者未启用时不应上报消费健康项");
+    }
+
+    @Test
+    @DisplayName("MDM 预检未执行（INIT）：逐投影 INIT 明细，不阻断整体健康")
+    void mdmInit_healthUpWithDetails() {
+        when(provisioningStatusProvider.getIfAvailable()).thenReturn(provisioning(KafkaTopicProvisioningStatus.State.READY));
+        readiness.markProducerTopicsUp();
+        Health health = indicator.health();
+        assertEquals(Status.UP, health.getStatus());
+        assertEquals("INIT", health.getDetails().get("mdmProjections.brand.state"));
+        assertEquals("mdm.brand", health.getDetails().get("mdmProjections.brand.topic"));
+        assertEquals(Boolean.FALSE, health.getDetails().get("mdmProjections.brand.topicReachable"));
+        assertEquals("NOT_RUN", health.getDetails().get("mdmProjections.brand.bootstrapStatus"));
+        assertEquals(Long.valueOf(-1), health.getDetails().get("mdmProjections.brand.lag"));
+    }
+
+    @Test
+    @DisplayName("MDM 单投影预检失败：逐投影 DOWN 明细，整体 DOWN（不掩蔽单投影故障）")
+    void mdmSingleFailure_healthDown() {
+        when(provisioningStatusProvider.getIfAvailable()).thenReturn(provisioning(KafkaTopicProvisioningStatus.State.READY));
+        readiness.markProducerTopicsUp();
+        mdmProjectionReadiness.markPreflightFailed(MdmProjectionType.BRAND, "mdm.brand", "missing: Topic 不存在");
+        Health health = indicator.health();
+        assertEquals(Status.DOWN, health.getStatus());
+        assertEquals("DOWN", health.getDetails().get("mdmProjections.brand.state"));
+        assertEquals(Boolean.FALSE, health.getDetails().get("mdmProjections.brand.topicReachable"));
+        assertEquals(true, ((String) health.getDetails().get("mdmProjections.brand.reason")).contains("missing"));
+        // 其它投影仍独立上报，不被失败投影掩蔽
+        assertEquals("INIT", health.getDetails().get("mdmProjections.part.state"));
+    }
+
+    @Test
+    @DisplayName("MDM 全投影预检通过：逐投影 UP 明细，整体 UP")
+    void mdmAllPassed_healthUp() {
+        when(provisioningStatusProvider.getIfAvailable()).thenReturn(provisioning(KafkaTopicProvisioningStatus.State.READY));
+        readiness.markProducerTopicsUp();
+        for (MdmProjectionType p : MdmProjectionType.values()) {
+            mdmProjectionReadiness.markPreflightPassed(p, p.directoryTopic());
+        }
+        mdmProjectionReadiness.markBootstrap(MdmProjectionType.BRAND, MdmProjectionReadiness.BootstrapStatus.COMPLETED);
+        mdmProjectionReadiness.markConsumerRunning(MdmProjectionType.BRAND, true);
+        mdmProjectionReadiness.recordEvent(MdmProjectionType.BRAND, java.time.Instant.now());
+        Health health = indicator.health();
+        assertEquals(Status.UP, health.getStatus());
+        assertEquals("UP", health.getDetails().get("mdmProjections.brand.state"));
+        assertEquals(Boolean.TRUE, health.getDetails().get("mdmProjections.brand.topicReachable"));
+        assertEquals(Boolean.TRUE, health.getDetails().get("mdmProjections.brand.aclReady"));
+        assertEquals("COMPLETED", health.getDetails().get("mdmProjections.brand.bootstrapStatus"));
+        assertEquals(Boolean.TRUE, health.getDetails().get("mdmProjections.brand.consumerRunning"));
+        assertNull(health.getDetails().get("mdmProjections.brand.reason"));
+    }
+
+    @Test
+    @DisplayName("MDM 降级启动（DEGRADED）：健康仍 DOWN")
+    void mdmDegraded_healthDown() {
+        when(provisioningStatusProvider.getIfAvailable()).thenReturn(provisioning(KafkaTopicProvisioningStatus.State.READY));
+        readiness.markProducerTopicsUp();
+        mdmProjectionReadiness.markDegraded(MdmProjectionType.PART, "mdm.part", "unauthorized: ACL 不足");
+        Health health = indicator.health();
+        assertEquals(Status.DOWN, health.getStatus());
+        assertEquals("DEGRADED", health.getDetails().get("mdmProjections.part.state"));
     }
 }

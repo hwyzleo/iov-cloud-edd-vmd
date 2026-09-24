@@ -5,6 +5,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmPartEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.MdmSyncAppService;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging.kafka.MdmConsumerMetrics;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging.kafka.MdmProjectionType;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.monitoring.MdmSyncMetrics;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -14,8 +16,9 @@ import org.springframework.stereotype.Component;
 /**
  * MDM Part事件Kafka消费者
  * <p>
- * 监听MDM Part子域推送的Kafka事件，转换为本地MdmPartEvent并调用
- * MdmSyncAppService.handlePartEvent()进行幂等upsert。
+ * 监听 EDD-MDM 标准 Topic（VMD-DSN-CR-052：topic 统一由
+ * {@code vmd.kafka.topics.mdm.part} 提供，归 EDD-MDM 管理，VMD 只消费不创建），
+ * 转换为本地MdmPartEvent并调用 MdmSyncAppService.handlePartEvent() 进行幂等upsert。
  * </p>
  *
  * @author CR-024
@@ -29,6 +32,7 @@ public class MdmPartKafkaConsumer {
 
     private final MdmSyncAppService mdmSyncAppService;
     private final MdmSyncMetrics mdmSyncMetrics;
+    private final MdmConsumerMetrics mdmConsumerMetrics;
     private final ObjectMapper objectMapper;
 
     /**
@@ -37,8 +41,10 @@ public class MdmPartKafkaConsumer {
      * @param record Kafka消费者记录
      */
     @KafkaListener(
-            topics = "${mdm.sync.part.kafka.topic:mdm.material.part.event}",
+            id = MdmProjectionType.ConsumerIds.PART,
+            topics = {"${vmd.kafka.topics.mdm.part:mdm.part}"},
             groupId = "${spring.kafka.consumer.group-id:iov-cloud-edd-vmd}",
+            autoStartup = "${vmd.kafka.mdm-consumer.auto-startup:true}",
             containerFactory = "kafkaListenerContainerFactory"
     )
     public void onPartEvent(ConsumerRecord<String, String> record) {
@@ -46,14 +52,26 @@ public class MdmPartKafkaConsumer {
         log.info("收到MDM Part事件: topic={}, partition={}, offset={}, key={}",
                 record.topic(), record.partition(), record.offset(), record.key());
 
+        MdmPartEvent event;
         try {
-            MdmPartEvent event = parseEvent(record.value());
+            event = parseEvent(record.value());
+        } catch (Exception e) {
+            mdmSyncMetrics.recordFailure();
+            mdmConsumerMetrics.recordConsume(MdmProjectionType.PART, "parse_error");
+            log.error("MDM Part事件解析失败: offset={}, error={}",
+                    record.offset(), e.getMessage(), e);
+            return;
+        }
+
+        try {
             mdmSyncAppService.handlePartEvent(event);
             mdmSyncMetrics.recordSuccess();
+            mdmConsumerMetrics.recordConsume(MdmProjectionType.PART, "success");
             log.info("MDM Part事件处理成功: entityId={}, eventType={}",
                     event.getEntityId(), event.getEventType());
         } catch (Exception e) {
             mdmSyncMetrics.recordFailure();
+            mdmConsumerMetrics.recordConsume(MdmProjectionType.PART, "failure");
             log.error("MDM Part事件处理失败: offset={}, error={}",
                     record.offset(), e.getMessage(), e);
         } finally {
