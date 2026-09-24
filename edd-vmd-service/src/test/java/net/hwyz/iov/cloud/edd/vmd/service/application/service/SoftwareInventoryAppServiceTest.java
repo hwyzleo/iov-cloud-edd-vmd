@@ -6,13 +6,14 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartInfoRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartSoftwareInstallationRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehiclePartRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VmdOutboxRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging.kafka.VmdKafkaLogicalTopic;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging.kafka.VmdKafkaTopicRoutes;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Instant;
 import java.util.List;
@@ -43,6 +44,9 @@ class SoftwareInventoryAppServiceTest {
     @Mock
     private VehiclePartRepository vehiclePartRepository;
 
+    @Mock
+    private VmdKafkaTopicRoutes topicRoutes;
+
     @InjectMocks
     private SoftwareInventoryAppService appService;
 
@@ -54,7 +58,9 @@ class SoftwareInventoryAppServiceTest {
 
     @BeforeEach
     void setUp() {
-        ReflectionTestUtils.setField(appService, "changedEventTopic", "vmd-vehicle-software-inventory-changed");
+        // VMD-DSN-CR-051: 软件清单变更事件标准 Topic 来自路由注册表
+        lenient().when(topicRoutes.topicName(VmdKafkaLogicalTopic.SOFTWARE_INVENTORY_CHANGED))
+                .thenReturn("vmd.vehicle-software-inventory.changed");
     }
 
     private PartSoftwareInstallation currentRecord(String version, String slot, Boolean activeSlot,

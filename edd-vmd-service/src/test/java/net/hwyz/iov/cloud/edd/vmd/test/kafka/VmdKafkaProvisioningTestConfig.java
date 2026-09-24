@@ -1,5 +1,6 @@
 package net.hwyz.iov.cloud.edd.vmd.test.kafka;
 
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.config.VmdKafkaTopicProperties;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.config.VmdKafkaTopicProvisioningProperties;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging.kafka.VmdKafkaTopicDefinitionProvider;
 import net.hwyz.iov.cloud.framework.kafka.autoconfigure.KafkaAutoConfiguration;
@@ -19,7 +20,7 @@ import org.springframework.context.annotation.Bean;
  * @author hwyz_leo
  */
 @SpringBootConfiguration
-@EnableConfigurationProperties({KafkaProperties.class, VmdKafkaTopicProvisioningProperties.class})
+@EnableConfigurationProperties({KafkaProperties.class, VmdKafkaTopicProvisioningProperties.class, VmdKafkaTopicProperties.class})
 @ImportAutoConfiguration({
         KafkaAutoConfiguration.class,
         KafkaTopicProvisioningAutoConfiguration.class
@@ -28,7 +29,8 @@ public class VmdKafkaProvisioningTestConfig {
 
     @Bean
     VmdKafkaTopicDefinitionProvider vmdKafkaTopicDefinitionProvider(
-            VmdKafkaTopicProvisioningProperties properties) {
-        return new VmdKafkaTopicDefinitionProvider(properties);
+            VmdKafkaTopicProvisioningProperties properties,
+            VmdKafkaTopicProperties topicProperties) {
+        return new VmdKafkaTopicDefinitionProvider(properties, topicProperties);
     }
 }

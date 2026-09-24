@@ -25,7 +25,7 @@ public class VehiclePartBindingKafkaProducerTest extends BaseTest {
     @Autowired
     private KafkaTemplate<String, String> kafkaTemplate;
 
-    private static final String TOPIC = "vmd-vehicle-binding-changed";
+    private static final String TOPIC = "vmd.vehcile-part-binding.changed";
 
     @Test
     @DisplayName("模拟TOL导入绑定TBOX后发送Kafka消息")

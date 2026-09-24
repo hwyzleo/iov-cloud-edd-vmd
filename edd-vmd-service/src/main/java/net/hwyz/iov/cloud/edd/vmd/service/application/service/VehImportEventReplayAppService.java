@@ -18,6 +18,8 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoReposito
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehImportDataRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehImportEventReplayRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VmdOutboxRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging.kafka.VmdKafkaLogicalTopic;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging.kafka.VmdKafkaTopicRoutes;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -54,6 +56,7 @@ public class VehImportEventReplayAppService {
     private final VehBasicInfoRepository vehBasicInfoRepository;
     private final VmdOutboxRepository vmdOutboxRepository;
     private final ProduceEventReplayExtractor produceEventReplayExtractor;
+    private final VmdKafkaTopicRoutes topicRoutes;
 
     /**
      * failure_detail 字段最大长度
@@ -65,11 +68,6 @@ public class VehImportEventReplayAppService {
      */
     @Value("${vmd.replay.running-timeout-minutes:30}")
     private int runningTimeoutMinutes;
-
-    /**
-     * Kafka Topic
-     */
-    private static final String KAFKA_TOPIC = "vmd.vehicle.produce.event";
 
     /**
      * 事件类型
@@ -200,7 +198,7 @@ public class VehImportEventReplayAppService {
                         .aggregateType(AGGREGATE_TYPE)
                         .aggregateId(vin)
                         .aggregateVersion(envelope.getVersion())
-                        .topic(KAFKA_TOPIC)
+                        .topic(topicRoutes.topicName(VmdKafkaLogicalTopic.VEHICLE_PRODUCE))
                         .messageKey(vin)
                         .payload(JSONUtil.toJsonStr(envelope))
                         .publishState("PENDING")

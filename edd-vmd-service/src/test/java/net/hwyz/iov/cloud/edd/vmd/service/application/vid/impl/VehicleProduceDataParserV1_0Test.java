@@ -10,6 +10,8 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleOption;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehicleOptionRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VmdOutboxRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging.kafka.VmdKafkaLogicalTopic;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging.kafka.VmdKafkaTopicRoutes;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -53,12 +55,18 @@ class VehicleProduceDataParserV1_0Test {
     @Mock
     private VmdOutboxRepository vmdOutboxRepository;
 
+    @Mock
+    private VmdKafkaTopicRoutes topicRoutes;
+
     private VehicleProduceDataParserV1_0 parser;
 
     @BeforeEach
     void setUp() {
         parser = new VehicleProduceDataParserV1_0(
-                vehiclePublish, vehBasicInfoRepository, parserRegistry, vehicleSecurityPresetAppService, vehicleOptionRepository, vmdOutboxRepository);
+                vehiclePublish, vehBasicInfoRepository, parserRegistry, vehicleSecurityPresetAppService, vehicleOptionRepository, vmdOutboxRepository, topicRoutes);
+        // VMD-DSN-CR-051: 车辆生产事件标准 Topic 来自路由注册表
+        lenient().when(topicRoutes.topicName(VmdKafkaLogicalTopic.VEHICLE_PRODUCE))
+                .thenReturn("vmd.vehicle-produce");
         // VMD-DSN-CR-050: 预置成功默认返回 true（各测试可覆盖为 false 模拟预置失败）
         lenient().when(vehicleSecurityPresetAppService.preset(any(), any())).thenReturn(true);
     }

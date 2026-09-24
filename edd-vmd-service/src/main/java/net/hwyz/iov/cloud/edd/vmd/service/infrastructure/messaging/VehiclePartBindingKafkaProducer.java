@@ -6,7 +6,8 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.VehiclePartBindingChangedEvent;
-import org.springframework.beans.factory.annotation.Value;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging.kafka.VmdKafkaLogicalTopic;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging.kafka.VmdKafkaTopicRoutes;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.event.EventListener;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -19,7 +20,7 @@ import java.util.concurrent.CompletableFuture;
  * 车辆-零件绑定变更事件 Kafka 生产者
  * <p>
  * 监听 Spring {@link VehiclePartBindingChangedEvent}（由 {@code VehiclePartBindingPublisher} 发布），
- * 序列化为 JSON 后发送到 Kafka topic {@code vmd-vehicle-binding-changed}，
+ * 序列化为 JSON 后发送到 Kafka topic {@code vmd.vehcile-part-binding.changed}（VMD-DSN-CR-051），
  * 供下游（TSP 等）消费建立只读投影。
  * <p>
  * 消息 key 为 {@code vin}，保证同一车辆的绑定变更按顺序消费。
@@ -34,9 +35,7 @@ public class VehiclePartBindingKafkaProducer {
 
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final ObjectMapper objectMapper;
-
-    @Value("${vmd.binding.kafka.topic:vmd-vehicle-binding-changed}")
-    private String topic;
+    private final VmdKafkaTopicRoutes topicRoutes;
 
     /**
      * 监听绑定变更事件并发送到 Kafka
@@ -45,6 +44,8 @@ public class VehiclePartBindingKafkaProducer {
      */
     @EventListener
     public void onVehiclePartBindingChanged(VehiclePartBindingChangedEvent event) {
+        // 标准 Topic 来自路由注册表（VMD-DSN-CR-051，禁止复制字符串）
+        String topic = topicRoutes.topicName(VmdKafkaLogicalTopic.PART_BINDING_CHANGED);
         String json;
         try {
             json = serializeEvent(event);

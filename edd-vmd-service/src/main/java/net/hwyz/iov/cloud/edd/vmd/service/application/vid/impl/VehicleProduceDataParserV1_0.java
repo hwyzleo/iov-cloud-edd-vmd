@@ -18,6 +18,8 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VmdOutbox;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehicleOptionRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VmdOutboxRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging.kafka.VmdKafkaLogicalTopic;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging.kafka.VmdKafkaTopicRoutes;
 import net.hwyz.iov.cloud.framework.common.util.StrUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
@@ -51,11 +53,7 @@ public class VehicleProduceDataParserV1_0 extends BaseProcessor implements Vehic
     private final VehicleSecurityPresetAppService vehicleSecurityPresetAppService;
     private final VehicleOptionRepository vehicleOptionRepository;
     private final VmdOutboxRepository vmdOutboxRepository;
-
-    /**
-     * Kafka Topic
-     */
-    private static final String KAFKA_TOPIC = "vmd.vehicle.produce.event";
+    private final VmdKafkaTopicRoutes topicRoutes;
 
     /**
      * 事件类型
@@ -221,7 +219,7 @@ public class VehicleProduceDataParserV1_0 extends BaseProcessor implements Vehic
                 .aggregateType(AGGREGATE_TYPE)
                 .aggregateId(vin)
                 .aggregateVersion(envelope.getVersion())
-                .topic(KAFKA_TOPIC)
+                .topic(topicRoutes.topicName(VmdKafkaLogicalTopic.VEHICLE_PRODUCE))
                 .messageKey(vin)
                 .payload(JSONUtil.toJsonStr(envelope))
                 .publishState("PENDING")

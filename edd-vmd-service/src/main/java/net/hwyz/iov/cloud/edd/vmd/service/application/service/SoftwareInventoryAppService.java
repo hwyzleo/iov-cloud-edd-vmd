@@ -15,7 +15,8 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartInfoRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartSoftwareInstallationRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehiclePartRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VmdOutboxRepository;
-import org.springframework.beans.factory.annotation.Value;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging.kafka.VmdKafkaLogicalTopic;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging.kafka.VmdKafkaTopicRoutes;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,12 +48,7 @@ public class SoftwareInventoryAppService {
     private final VmdOutboxRepository vmdOutboxRepository;
     private final PartInfoRepository partInfoRepository;
     private final VehiclePartRepository vehiclePartRepository;
-
-    /**
-     * 软件清单变更事件 Kafka topic（CR-046 起经 Outbox Relay 发布）
-     */
-    @Value("${vmd.software-inventory.changed.kafka.topic:vmd-vehicle-software-inventory-changed}")
-    private String changedEventTopic;
+    private final VmdKafkaTopicRoutes topicRoutes;
 
     /**
      * 来源优先级（数值越小优先级越高）
@@ -317,7 +313,7 @@ public class SoftwareInventoryAppService {
                     .aggregateType("PART_SOFTWARE_INSTALLATION")
                     .aggregateId(vin)
                     .aggregateVersion(inventoryVersion)
-                    .topic(changedEventTopic)
+                    .topic(topicRoutes.topicName(VmdKafkaLogicalTopic.SOFTWARE_INVENTORY_CHANGED))
                     .messageKey(vin)
                     .payload(payload.toString())
                     .publishState("PENDING")

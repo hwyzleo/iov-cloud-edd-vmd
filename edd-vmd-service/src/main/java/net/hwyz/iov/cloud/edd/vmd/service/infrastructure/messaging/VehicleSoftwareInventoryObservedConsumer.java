@@ -77,7 +77,7 @@ public class VehicleSoftwareInventoryObservedConsumer {
      * @param record Kafka 消费者记录
      */
     @KafkaListener(
-            topics = {"${vmd.software-inventory.observed.kafka.topic:ota.vehicle-software-inventory.observed}"},
+            topics = {"${vmd.kafka.topics.inventory-observed:ota.vehicle-software-inventory.observed}"},
             groupId = "${vmd.software-inventory.observed.kafka.group-id:edd-vmd-vehicle-software-inventory}",
             containerFactory = "kafkaListenerContainerFactory"
     )

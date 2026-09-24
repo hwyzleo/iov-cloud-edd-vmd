@@ -4,30 +4,42 @@ mybatis-plus:
 iov:
   kafka:
     topic-provisioning:
-      # 服务启动后检查并创建 VMD 作为生产者输出的 Kafka Topic（vmd-vehicle-binding-changed 等）
+      # 服务启动后检查并创建 VMD 作为生产者输出的三个标准 Kafka Topic
       enabled: true
 
 crypto:
   provisioning:
     enabled: true
 
-# 车辆-零件绑定变更事件 Kafka 生产者配置
+# VMD Kafka Topic 目录（VMD-DSN-CR-051）：Listener 占位符 / Producer / Outbox 统一引用
 vmd:
+  kafka:
+    topics:
+      inventory-observed: ${VMD_KAFKA_TOPIC_INVENTORY_OBSERVED:ota.vehicle-software-inventory.observed}
+      part-binding-changed: ${VMD_KAFKA_TOPIC_PART_BINDING_CHANGED:vmd.vehcile-part-binding.changed}
+      vehicle-produce: ${VMD_KAFKA_TOPIC_VEHICLE_PRODUCE:vmd.vehicle-produce}
+      software-inventory-changed: ${VMD_KAFKA_TOPIC_SOFTWARE_INVENTORY_CHANGED:vmd.vehicle-software-inventory.changed}
+    topic-provisioning:
+      partitions: ${VMD_KAFKA_TOPIC_PARTITIONS:3}
+      replication-factor: ${VMD_KAFKA_TOPIC_REPLICATION_FACTOR:1}
+      cleanup-policy: ${VMD_KAFKA_TOPIC_CLEANUP_POLICY:delete}
+    readiness:
+      # 生产 Topic readiness=DOWN 时暂停 Outbox Relay 发布
+      gate-producer: ${VMD_KAFKA_READINESS_GATE_PRODUCER:true}
   binding:
     kafka:
       enabled: ${VMD_BINDING_KAFKA_ENABLED:true}
-      topic: ${VMD_BINDING_KAFKA_TOPIC:vmd-vehicle-binding-changed}
+      # topic 统一由 vmd.kafka.topics.part-binding-changed 提供
   software-inventory:
     observed:
       kafka:
         enabled: ${VMD_SOFTWARE_INVENTORY_OBSERVED_KAFKA_ENABLED:false}
-        topic: ${VMD_SOFTWARE_INVENTORY_OBSERVED_KAFKA_TOPIC:ota.vehicle-software-inventory.observed}
+        # topic 统一由 vmd.kafka.topics.inventory-observed 提供
         group-id: ${VMD_SOFTWARE_INVENTORY_OBSERVED_KAFKA_GROUP:edd-vmd-vehicle-software-inventory}
         dlq-topic: ${VMD_SOFTWARE_INVENTORY_OBSERVED_KAFKA_DLQ:ota.vehicle-software-inventory.observed.dlq}
     changed:
       kafka:
-        # 软件清单变更事件经 vmd_outbox → OutboxRelay 发布（Key=VIN）
-        topic: ${VMD_SOFTWARE_INVENTORY_CHANGED_KAFKA_TOPIC:vmd-vehicle-software-inventory-changed}
+        # 软件清单变更事件经 vmd_outbox → OutboxRelay 发布（Key=VIN）；topic 由 vmd.kafka.topics.software-inventory-changed 提供
 
 # MDM同步配置
 # 注意：topic名称必须与MDM需求文档US-064保持一致

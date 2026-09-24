@@ -7,6 +7,8 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehImportEventRepl
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VmdOutbox;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehImportEventReplayRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VmdOutboxRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging.kafka.VmdKafkaTopicReadiness;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging.kafka.VmdKafkaTopicRoutes;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -38,6 +40,14 @@ public class OutboxRelay {
     private final VmdOutboxRepository vmdOutboxRepository;
     private final VehImportEventReplayRepository vehImportEventReplayRepository;
     private final KafkaTemplate<String, String> kafkaTemplate;
+    private final VmdKafkaTopicRoutes topicRoutes;
+    private final VmdKafkaTopicReadiness topicReadiness;
+
+    /**
+     * 生产 Topic readiness=DOWN 时是否暂停发布（VMD-DSN-CR-051）
+     */
+    @Value("${vmd.kafka.readiness.gate-producer:true}")
+    private boolean gateProducer;
 
     /**
      * 每次扫描的最大消息数
@@ -64,6 +74,12 @@ public class OutboxRelay {
      */
     @Scheduled(fixedDelayString = "${vmd.outbox.relay.scan-interval-ms:10000}")
     public void relayMessages() {
+        if (gateProducer && topicReadiness.producerTopicsState() == VmdKafkaTopicReadiness.State.DOWN) {
+            log.warn("VMD 生产 Topic readiness=DOWN，暂停 Outbox Relay 发布: reason={}",
+                    topicReadiness.producerReason());
+            return;
+        }
+
         List<VmdOutbox> pendingMessages = vmdOutboxRepository.selectPendingMessages(batchSize);
         if (pendingMessages.isEmpty()) {
             return;
@@ -74,6 +90,11 @@ public class OutboxRelay {
         for (VmdOutbox outbox : pendingMessages) {
             try {
                 publishMessage(outbox);
+            } catch (IllegalArgumentException e) {
+                // 未知逻辑事件类型：fail-fast 置 DEAD，不重试
+                log.error("Outbox Relay 未知逻辑事件类型，置 DEAD: eventId={}, eventType={}, error={}",
+                        outbox.getEventId(), outbox.getEventType(), e.getMessage());
+                markDead(outbox, "未知逻辑事件类型: " + outbox.getEventType());
             } catch (Exception e) {
                 log.error("Outbox Relay 发布消息失败: eventId={}, error={}", outbox.getEventId(), e.getMessage(), e);
                 handlePublishFailure(outbox, e);
@@ -82,15 +103,27 @@ public class OutboxRelay {
     }
 
     /**
-     * 发布单条消息到 Kafka
+     * 发布单条消息到 Kafka（VMD-DSN-CR-051：经路由注册表 fail-fast 路由）
      *
      * @param outbox Outbox 消息
      */
     private void publishMessage(VmdOutbox outbox) {
-        log.debug("发布消息到 Kafka: eventId={}, topic={}, key={}", outbox.getEventId(), outbox.getTopic(), outbox.getMessageKey());
+        // 1. 路由注册表 fail-fast：未知逻辑事件类型拒绝，禁止字符串拼接推导 Topic
+        String resolvedTopic = topicRoutes.resolve(outbox.getEventType());
+
+        // 2. 存量旧名记录与标准路由不一致 → 丢弃（不改写、不发往旧 Topic）
+        if (!resolvedTopic.equals(outbox.getTopic())) {
+            log.warn("Outbox 记录 topic 与标准路由不一致（旧名称存量，丢弃不发）: eventId={}, storedTopic={}, expected={}",
+                    outbox.getEventId(), outbox.getTopic(), resolvedTopic);
+            markDead(outbox, "Outbox 记录 topic 与标准路由不一致: stored=" + outbox.getTopic()
+                    + ", expected=" + resolvedTopic);
+            return;
+        }
+
+        log.debug("发布消息到 Kafka: eventId={}, topic={}, key={}", outbox.getEventId(), resolvedTopic, outbox.getMessageKey());
 
         CompletableFuture<SendResult<String, String>> future = kafkaTemplate.send(
-                outbox.getTopic(),
+                resolvedTopic,
                 outbox.getMessageKey(),
                 outbox.getPayload()
         );
@@ -179,6 +212,19 @@ public class OutboxRelay {
         } catch (Exception e) {
             log.error("更新补发审计记录状态失败: sourceRefId={}, error={}", sourceRefId, e.getMessage(), e);
         }
+    }
+
+    /**
+     * 将消息置为 DEAD（未知事件类型 / 旧名称存量等不可发送场景，终态终止重试）。
+     *
+     * @param outbox Outbox 消息
+     * @param error  置死原因
+     */
+    private void markDead(VmdOutbox outbox, String error) {
+        outbox.setPublishState("DEAD");
+        outbox.setLastError(truncateError(error));
+        vmdOutboxRepository.update(outbox);
+        log.error("Outbox 消息置 DEAD: eventId={}, error={}", outbox.getEventId(), error);
     }
 
     /**
