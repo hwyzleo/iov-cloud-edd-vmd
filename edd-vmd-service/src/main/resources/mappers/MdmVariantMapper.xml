@@ -268,7 +268,7 @@
         SELECT <include refid="baseColumnList"/>
         FROM tb_mdm_variant t
         WHERE t.row_valid = 1
-        AND t.code = #{value}
+        AND t.code = #{code}
         LIMIT 1
     </select>
 
