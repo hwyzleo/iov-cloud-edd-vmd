@@ -27,6 +27,9 @@ import java.time.ZoneId;
 import java.util.Base64;
 import java.util.List;
 import java.util.Optional;
+import java.io.ByteArrayInputStream;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 
 /**
  * 证书签发编排应用服务类
@@ -61,8 +64,11 @@ public class CertificateProvisioningAppService {
         if (existingCert != null) {
             log.info("证书申请已存在，返回现有状态: requestId={}, status={}", 
                     cmd.getRequestId(), existingCert.getCertStatus());
-            return buildApplyResult(existingCert);
+            return buildApplyResult(existingCert, null);
         }
+
+        // 同步签发成功时持有的已签发证书（用于填充响应中的证书本体，不落库）
+        IssuedCertificate issuedCert = null;
 
         // 2. 校验VIN和车辆状态
         validateVin(cmd.getVin());
@@ -110,8 +116,8 @@ public class CertificateProvisioningAppService {
             certificate.setPkiRequestId(frameworkResult.requestId());
             if (frameworkResult.state() == EnrollmentState.ISSUED) {
                 certificate.setCertStatus(CertificateStatus.ISSUING);
-                // 立即获取证书
-                queryAndProcessCertificate(certificate);
+                // 立即获取证书（step-ca 同步签发常态路径），证书本体用于响应回传、不落库
+                issuedCert = queryAndProcessCertificate(certificate);
             } else if (frameworkResult.state() == EnrollmentState.REJECTED || frameworkResult.state() == EnrollmentState.FAILED) {
                 certificate.setCertStatus(CertificateStatus.FAILED);
                 certificate.setFailReason("PKI拒绝或失败: " + frameworkResult.state());
@@ -131,7 +137,7 @@ public class CertificateProvisioningAppService {
             throw e;
         }
 
-        return buildApplyResult(certificate);
+        return buildApplyResult(certificate, issuedCert);
     }
 
     /**
@@ -148,13 +154,16 @@ public class CertificateProvisioningAppService {
             throw new IllegalArgumentException("证书申请不存在: " + requestId);
         }
 
-        // 如果状态是ISSUING，尝试查询PKI状态
+        // 同步签发成功时持有的已签发证书（用于填充响应中的证书本体，不落库）
+        IssuedCertificate issuedCert = null;
+
+        // 如果状态是ISSUING，尝试查询PKI状态并对账推进
         if (CertificateStatus.ISSUING.equals(certificate.getCertStatus()) && certificate.getPkiRequestId() != null) {
             try {
                 net.hwyz.iov.cloud.framework.security.crypto.model.CertApplyResult status = 
                         getCertEnrollmentTemplate().getStatus(certificate.getPkiRequestId());
                 if (status.state() == EnrollmentState.ISSUED) {
-                    IssuedCertificate issuedCert = getCertEnrollmentTemplate().getCertificate(certificate.getPkiRequestId());
+                    issuedCert = getCertEnrollmentTemplate().getCertificate(certificate.getPkiRequestId());
                     updateCertificateFromIssued(certificate, issuedCert);
                 }
             } catch (Exception e) {
@@ -162,7 +171,12 @@ public class CertificateProvisioningAppService {
             }
         }
 
-        return buildStatusResult(certificate);
+        // 已签发但响应未携带证书本体（apply后重查/对账路径），经pki_request_id重取回填
+        if (issuedCert == null && certificate.getPkiRequestId() != null && certificate.getCertSn() != null) {
+            issuedCert = tryReFetchCertificate(certificate);
+        }
+
+        return buildStatusResult(certificate, issuedCert);
     }
 
     /**
@@ -319,32 +333,85 @@ public class CertificateProvisioningAppService {
 
     /**
      * 构建申请结果
+     * <p>
+     * 证书本体不落库（设计约定 VMD 不作证书仓库），优先使用同步签发时内存中的
+     * {@code IssuedCertificate} 填充响应；缺失时经 {@code pki_request_id} 向 PKI 重取回填。
      */
-    private CertificateApplyResult buildApplyResult(VehicleCertificate certificate) {
-        return CertificateApplyResult.builder()
+    private CertificateApplyResult buildApplyResult(VehicleCertificate certificate, IssuedCertificate issuedCert) {
+        CertificateApplyResult.CertificateApplyResultBuilder builder = CertificateApplyResult.builder()
                 .requestId(certificate.getRequestId())
                 .status(certificate.getCertStatus().name())
                 .certSn(certificate.getCertSn())
                 .pkiRequestId(certificate.getPkiRequestId())
-                .failReason(certificate.getFailReason())
-                .build();
+                .issuer(certificate.getIssuer())
+                .fingerprint(certificate.getCertificateFingerprint())
+                .notBefore(certificate.getNotBefore() != null ? certificate.getNotBefore().toString() : null)
+                .notAfter(certificate.getNotAfter() != null ? certificate.getNotAfter().toString() : null)
+                .failReason(certificate.getFailReason());
+
+        IssuedCertificate resolved = issuedCert;
+        if (resolved == null && certificate.getPkiRequestId() != null && certificate.getCertSn() != null) {
+            resolved = tryReFetchCertificate(certificate);
+        }
+        if (resolved != null) {
+            builder.certificateDerBase64(Base64.getEncoder().encodeToString(resolved.leafCertificate()));
+            builder.chainDerBase64(toBase64Array(resolved.certificateChain()));
+        }
+        return builder.build();
     }
 
     /**
      * 构建状态结果
+     * <p>
+     * 证书本体不落库（设计约定 VMD 不作证书仓库），已签发时经 {@code pki_request_id} 重取回填。
      */
-    private CertificateStatusResult buildStatusResult(VehicleCertificate certificate) {
-        return CertificateStatusResult.builder()
+    private CertificateStatusResult buildStatusResult(VehicleCertificate certificate, IssuedCertificate issuedCert) {
+        CertificateStatusResult.CertificateStatusResultBuilder builder = CertificateStatusResult.builder()
                 .requestId(certificate.getRequestId())
                 .status(certificate.getCertStatus().name())
                 .certSn(certificate.getCertSn())
                 .certificateFingerprint(certificate.getCertificateFingerprint())
+                .issuer(certificate.getIssuer())
                 .notBefore(certificate.getNotBefore())
                 .notAfter(certificate.getNotAfter())
                 .issuedAt(certificate.getIssuedAt())
                 .confirmedAt(certificate.getConfirmedAt())
-                .failReason(certificate.getFailReason())
-                .build();
+                .failReason(certificate.getFailReason());
+
+        IssuedCertificate resolved = issuedCert;
+        if (resolved == null && certificate.getPkiRequestId() != null && certificate.getCertSn() != null) {
+            resolved = tryReFetchCertificate(certificate);
+        }
+        if (resolved != null) {
+            builder.certificateDerBase64(Base64.getEncoder().encodeToString(resolved.leafCertificate()));
+            builder.chainDerBase64(toBase64Array(resolved.certificateChain()));
+        }
+        return builder.build();
+    }
+
+    /**
+     * 经 PKI 重取已签发证书，失败仅告警并返回 null（响应回退为仅含元数据）
+     */
+    private IssuedCertificate tryReFetchCertificate(VehicleCertificate certificate) {
+        try {
+            return getCertEnrollmentTemplate().getCertificate(certificate.getPkiRequestId());
+        } catch (Exception e) {
+            log.warn("重取证书失败，仅返回元数据: requestId={}, pkiRequestId={}",
+                    certificate.getRequestId(), certificate.getPkiRequestId(), e);
+            return null;
+        }
+    }
+
+    /**
+     * DER 证书链转 Base64 字符串数组
+     */
+    private String[] toBase64Array(List<byte[]> derList) {
+        if (derList == null || derList.isEmpty()) {
+            return null;
+        }
+        return derList.stream()
+                .map(der -> Base64.getEncoder().encodeToString(der))
+                .toArray(String[]::new);
     }
 
     /**
@@ -357,18 +424,43 @@ public class CertificateProvisioningAppService {
         certificate.setNotAfter(issuedCert.notAfter().atZone(ZoneId.systemDefault()).toLocalDateTime());
         certificate.setIssuedAt(LocalDateTime.now());
         certificate.setCertStatus(CertificateStatus.ISSUED_NOT_CONFIRMED);
+        // 从叶子证书 DER 解析 X.509 subject/issuer（设计要求登记），失败留空
+        String[] issuerSubject = parseIssuerSubject(issuedCert.leafCertificate());
+        certificate.setSubject(issuerSubject[0]);
+        certificate.setIssuer(issuerSubject[1]);
         vehicleCertificateRepository.update(certificate);
     }
 
     /**
-     * 查询并处理证书
+     * 解析叶子证书 DER 的 X.509 subject/issuer（RFC2253 形式），解析失败返回 null
      */
-    private void queryAndProcessCertificate(VehicleCertificate certificate) {
+    private String[] parseIssuerSubject(byte[] leafDer) {
+        String subject = null;
+        String issuer = null;
+        try {
+            CertificateFactory cf = CertificateFactory.getInstance("X.509");
+            X509Certificate x509 = (X509Certificate) cf.generateCertificate(new ByteArrayInputStream(leafDer));
+            subject = x509.getSubjectX500Principal().getName();
+            issuer = x509.getIssuerX500Principal().getName();
+        } catch (Exception e) {
+            log.warn("解析证书X.509信息失败，subject/issuer留空", e);
+        }
+        return new String[]{subject, issuer};
+    }
+
+    /**
+     * 查询并处理证书
+     *
+     * @return 已签发证书（获取失败返回 null），用于填充响应中的证书本体
+     */
+    private IssuedCertificate queryAndProcessCertificate(VehicleCertificate certificate) {
         try {
             IssuedCertificate issuedCert = getCertEnrollmentTemplate().getCertificate(certificate.getPkiRequestId());
             updateCertificateFromIssued(certificate, issuedCert);
+            return issuedCert;
         } catch (Exception e) {
             log.error("获取证书失败: requestId={}", certificate.getRequestId(), e);
+            return null;
         }
     }
 

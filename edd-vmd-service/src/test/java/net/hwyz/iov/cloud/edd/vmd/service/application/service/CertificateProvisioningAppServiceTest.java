@@ -69,7 +69,7 @@ class CertificateProvisioningAppServiceTest {
 
     @BeforeEach
     void setUp() {
-        when(certEnrollmentTemplateProvider.getIfAvailable()).thenReturn(certificateEnrollmentTemplate);
+        lenient().when(certEnrollmentTemplateProvider.getIfAvailable()).thenReturn(certificateEnrollmentTemplate);
 
         applyCmd = CertificateApplyCmd.builder()
                 .requestId("REQ-001")
@@ -153,8 +153,8 @@ class CertificateProvisioningAppServiceTest {
         when(certificateEnrollmentTemplate.apply(any())).thenReturn(frameworkResult);
 
         IssuedCertificate issuedCert = new IssuedCertificate(
-                Base64.getEncoder().encode("MOCK_CERT".getBytes()),
-                List.of(Base64.getEncoder().encode("MOCK_CHAIN".getBytes())),
+                "MOCK_CERT".getBytes(),
+                List.of("MOCK_CHAIN".getBytes()),
                 "CERT-001",
                 Instant.now(),
                 Instant.now().plusSeconds(365 * 24 * 60 * 60),
@@ -168,6 +168,13 @@ class CertificateProvisioningAppServiceTest {
         // Then
         assertNotNull(result);
         assertEquals("REQ-001", result.getRequestId());
+        assertEquals("ISSUED_NOT_CONFIRMED", result.getStatus());
+        // 证书本体必须随响应回传（供产线注入 TBOX，0x31 FF03 写入内容来源）
+        assertEquals(Base64.getEncoder().encodeToString("MOCK_CERT".getBytes()), result.getCertificateDerBase64());
+        assertNotNull(result.getChainDerBase64());
+        assertTrue(result.getChainDerBase64().length >= 1);
+        assertEquals(Base64.getEncoder().encodeToString("MOCK_CHAIN".getBytes()), result.getChainDerBase64()[0]);
+        assertEquals("CERT-001", result.getCertSn());
         verify(vehicleCertificateRepository).insert(any(VehicleCertificate.class));
         verify(vehicleCertificateRepository, times(2)).update(any(VehicleCertificate.class));
         verify(certificateEnrollmentTemplate).apply(any());
@@ -200,6 +207,60 @@ class CertificateProvisioningAppServiceTest {
         assertEquals("ACTIVE", result.getStatus());
         assertEquals("CERT-001", result.getCertSn());
     }
+
+    @Test
+    void queryCertificateStatus_当已签发时_应经PKI重取并回填证书本体() {
+        // Given
+        vehicleCertificate.setCertStatus(CertificateStatus.ISSUED_NOT_CONFIRMED);
+        vehicleCertificate.setCertSn("CERT-001");
+        vehicleCertificate.setPkiRequestId("PKI-001");
+        vehicleCertificate.setCertificateFingerprint("SHA256:xxx");
+        when(vehicleCertificateRepository.selectByRequestId("REQ-001")).thenReturn(vehicleCertificate);
+
+        IssuedCertificate issuedCert = new IssuedCertificate(
+                "MOCK_CERT".getBytes(),
+                List.of("MOCK_CHAIN".getBytes()),
+                "CERT-001",
+                Instant.now(),
+                Instant.now().plusSeconds(365 * 24 * 60 * 60),
+                "SHA256:xxx"
+        );
+        when(certificateEnrollmentTemplate.getCertificate("PKI-001")).thenReturn(issuedCert);
+
+        // When
+        CertificateStatusResult result = certificateProvisioningAppService.queryCertificateStatus("REQ-001");
+
+        // Then
+        assertNotNull(result);
+        assertEquals("ISSUED_NOT_CONFIRMED", result.getStatus());
+        assertEquals("CERT-001", result.getCertSn());
+        assertEquals(Base64.getEncoder().encodeToString("MOCK_CERT".getBytes()), result.getCertificateDerBase64());
+        assertNotNull(result.getChainDerBase64());
+        assertEquals(Base64.getEncoder().encodeToString("MOCK_CHAIN".getBytes()), result.getChainDerBase64()[0]);
+        verify(certificateEnrollmentTemplate).getCertificate("PKI-001");
+    }
+
+    @Test
+    void queryCertificateStatus_当已签发但PKI重取失败时_应仅返回元数据() {
+        // Given
+        vehicleCertificate.setCertStatus(CertificateStatus.ACTIVE);
+        vehicleCertificate.setCertSn("CERT-001");
+        vehicleCertificate.setPkiRequestId("PKI-001");
+        when(vehicleCertificateRepository.selectByRequestId("REQ-001")).thenReturn(vehicleCertificate);
+        when(certificateEnrollmentTemplate.getCertificate("PKI-001"))
+                .thenThrow(new IllegalStateException("PKI不可达"));
+
+        // When
+        CertificateStatusResult result = certificateProvisioningAppService.queryCertificateStatus("REQ-001");
+
+        // Then
+        assertNotNull(result);
+        assertEquals("ACTIVE", result.getStatus());
+        assertEquals("CERT-001", result.getCertSn());
+        assertNull(result.getCertificateDerBase64());
+        assertNull(result.getChainDerBase64());
+    }
+
 
     @Test
     void confirmCertificateInstalled_当状态不是ISSUED_NOT_CONFIRMED时_应抛出异常() {

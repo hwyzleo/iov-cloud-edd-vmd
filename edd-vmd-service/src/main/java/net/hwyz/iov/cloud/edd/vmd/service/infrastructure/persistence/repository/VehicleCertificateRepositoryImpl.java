@@ -83,7 +83,11 @@ public class VehicleCertificateRepositoryImpl implements VehicleCertificateRepos
 
     @Override
     public int insert(VehicleCertificate vehicleCertificate) {
-        return vehicleCertificateMapper.insertPo(VehicleCertificateConverter.INSTANCE.fromDomain(vehicleCertificate));
+        VehicleCertificatePo po = VehicleCertificateConverter.INSTANCE.fromDomain(vehicleCertificate);
+        int rows = vehicleCertificateMapper.insertPo(po);
+        // 回填自增主键到领域对象，保证后续 update(id) 能命中记录
+        vehicleCertificate.setId(po.getId());
+        return rows;
     }
 
     @Override

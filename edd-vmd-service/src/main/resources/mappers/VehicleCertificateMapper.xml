@@ -27,7 +27,6 @@
         <result column="source_system" property="sourceSystem" />
         <result column="facility_no" property="facilityNo" />
         <result column="line_code" property="lineCode" />
-        <result column="description" property="description" />
         <result column="create_time" property="createTime" />
         <result column="create_by" property="createBy" />
         <result column="modify_time" property="modifyTime" />
@@ -40,7 +39,7 @@
     <sql id="baseColumnList">
         id, request_id, pki_request_id, cert_sn, vin, binding_id, part_id, device_category, device_sn, certificate_profile, csr_fingerprint,
         subject, issuer, certificate_fingerprint, not_before, not_after, cert_status, issued_at, confirmed_at, fail_reason,
-        source_system, facility_no, line_code, description, create_time, create_by, modify_time, modify_by, row_version, row_valid
+        source_system, facility_no, line_code, create_time, create_by, modify_time, modify_by, row_version, row_valid
     </sql>
 
     <!-- 插入 -->
@@ -48,12 +47,12 @@
         INSERT INTO tb_veh_certificate (
             id, request_id, pki_request_id, cert_sn, vin, binding_id, part_id, device_category, device_sn, certificate_profile, csr_fingerprint,
             subject, issuer, certificate_fingerprint, not_before, not_after, cert_status, issued_at, confirmed_at, fail_reason,
-            source_system, facility_no, line_code, description, create_time, create_by, modify_time, modify_by, row_version, row_valid
+            source_system, facility_no, line_code, create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
         VALUES (
             #{id}, #{requestId}, #{pkiRequestId}, #{certSn}, #{vin}, #{bindingId}, #{partId}, #{deviceCategory}, #{deviceSn}, #{certificateProfile}, #{csrFingerprint},
             #{subject}, #{issuer}, #{certificateFingerprint}, #{notBefore}, #{notAfter}, #{certStatus}, #{issuedAt}, #{confirmedAt}, #{failReason},
-            #{sourceSystem}, #{facilityNo}, #{lineCode}, #{description}, now(), #{createBy}, now(), #{modifyBy}, 1, 1
+            #{sourceSystem}, #{facilityNo}, #{lineCode}, now(), #{createBy}, now(), #{modifyBy}, 1, 1
         )
     </insert>
 
@@ -126,9 +125,6 @@
         <if test="lineCode != null and lineCode != ''">
             t.line_code = #{lineCode},
         </if>
-        <if test="description != null and description != ''">
-            t.description = #{description},
-        </if>
         <if test="modifyBy != null">
             t.modify_by = #{modifyBy},
         </if>
@@ -173,9 +169,6 @@
         </if>
         <if test="certStatus != null and certStatus != ''">
             AND t.cert_status = #{certStatus}
-        </if>
-        <if test="description != null and description != ''">
-            AND t.description = #{description}
         </if>
         <if test="createTime != null">
             AND t.create_time = #{createTime}

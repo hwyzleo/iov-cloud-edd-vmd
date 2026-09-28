@@ -39,6 +39,21 @@ public class CertificateStatusResponse {
     private String certificateFingerprint;
 
     /**
+     * 证书DER Base64编码（已签发时返回，供产线注入TBOX）
+     */
+    private String certificateDerBase64;
+
+    /**
+     * 证书链DER Base64编码列表（叶子到根）
+     */
+    private String[] chainDerBase64;
+
+    /**
+     * 证书颁发者
+     */
+    private String issuer;
+
+    /**
      * 有效期开始时间
      */
     private LocalDateTime notBefore;
