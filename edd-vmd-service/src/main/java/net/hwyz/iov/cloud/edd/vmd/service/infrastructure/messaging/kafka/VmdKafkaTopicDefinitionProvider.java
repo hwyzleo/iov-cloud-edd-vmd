@@ -17,7 +17,7 @@ import java.util.List;
  * 向 FW-KAFKA 声明 VMD 作为生产者输出的三个标准 Topic（PRODUCER_OWNED），
  * 由框架统一完成 Catalog 合并、存在性检查、幂等创建、后台重试与状态传播：
  * <ul>
- *   <li>{@code vmd.vehcile-part-binding.changed}：车辆-零件绑定变更事件，
+ *   <li>{@code vmd.vehicle-part-binding.changed}：车辆-零件绑定变更事件，
  *       由 {@code VehiclePartBindingKafkaProducer} 直发</li>
  *   <li>{@code vmd.vehicle-produce}：车辆生产事件，经 vmd_outbox → OutboxRelay 发布/补发</li>
  *   <li>{@code vmd.vehicle-software-inventory.changed}：车辆软件清单变更事件，

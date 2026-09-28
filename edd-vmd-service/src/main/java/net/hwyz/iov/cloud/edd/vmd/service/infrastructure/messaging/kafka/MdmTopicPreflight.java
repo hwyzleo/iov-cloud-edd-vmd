@@ -4,8 +4,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.config.MdmConsumerProperties;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.config.VmdKafkaTopicProperties;
+import net.hwyz.iov.cloud.framework.kafka.properties.TopicProvisioningProperties;
+import net.hwyz.iov.cloud.framework.kafka.support.KafkaAdminOperations;
 import org.apache.kafka.clients.admin.Admin;
-import org.apache.kafka.clients.admin.DescribeTopicsResult;
 import org.apache.kafka.clients.admin.ListOffsetsResult;
 import org.apache.kafka.clients.admin.OffsetSpec;
 import org.apache.kafka.clients.admin.TopicDescription;
@@ -23,6 +24,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -58,7 +60,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @RequiredArgsConstructor
 public class MdmTopicPreflight {
 
-    private static final long DESCRIBE_TIMEOUT_MS = 5000;
+    private static final Duration DEFAULT_DESCRIBE_TIMEOUT = Duration.ofSeconds(10);
+    private static final int DEFAULT_WARMUP_ATTEMPTS = 3;
+    private static final Duration DEFAULT_WARMUP_BACKOFF = Duration.ofSeconds(1);
 
     private final Admin admin;
     private final VmdKafkaTopicProperties topicProperties;
@@ -66,6 +70,8 @@ public class MdmTopicPreflight {
     private final MdmConsumerProperties consumerProperties;
     private final ApplicationEventPublisher eventPublisher;
     private final ObjectProvider<MdmConsumerMetrics> metricsProvider;
+    private final KafkaAdminOperations kafkaAdminOperations;
+    private final ObjectProvider<TopicProvisioningProperties> frameworkTopicProvisioningProperties;
 
     /**
      * 消费组（沿用既有稳定业务组名，Topic 更名不通过修改 Group ID 模拟 Offset 迁移）。
@@ -80,6 +86,10 @@ public class MdmTopicPreflight {
      */
     public void preflight() {
         started.set(true);
+        if (!warmUpAdmin()) {
+            log.warn("Kafka Admin 连接预热未达成，本轮跳过 MDM 消费 Topic 预检（后台将按 retry-interval 重试）");
+            return;
+        }
         List<MdmConsumerTopicSpec> specs = buildSpecs();
         Map<MdmProjectionType, MdmPreflightResult> results = new LinkedHashMap<>();
         for (MdmConsumerTopicSpec spec : specs) {
@@ -154,15 +164,36 @@ public class MdmTopicPreflight {
     }
 
     private TopicDescription describeTopic(String topic) {
-        DescribeTopicsResult result = admin.describeTopics(List.of(topic));
         try {
-            return result.values().get(topic).get(DESCRIBE_TIMEOUT_MS, TimeUnit.MILLISECONDS);
-        } catch (ExecutionException | TimeoutException | org.apache.kafka.common.errors.TimeoutException e) {
+            return kafkaAdminOperations.describeTopics(admin, List.of(topic), describeTimeout()).get(topic);
+        } catch (TimeoutException | org.apache.kafka.common.errors.TimeoutException e) {
             throw classify(e);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            throw new MdmPreflightException(MdmPreflightClassification.ERROR, "预检线程被中断");
+        } catch (RuntimeException e) {
+            throw classify(e);
         }
+    }
+
+    /**
+     * describe 共享等待预算：优先取 FW-KAFKA iov.kafka.topic-provisioning.describe-timeout，
+     * 未启用 Provisioning 的上下文回退框架默认 10s。
+     */
+    private Duration describeTimeout() {
+        TopicProvisioningProperties properties = frameworkTopicProvisioningProperties.getIfAvailable();
+        return properties == null ? DEFAULT_DESCRIBE_TIMEOUT : properties.describeTimeout();
+    }
+
+    /**
+     * 启动期 Admin 连接预热（FW-KAFKA KafkaAdminOperations），参数解析同 describeTimeout。
+     */
+    private boolean warmUpAdmin() {
+        TopicProvisioningProperties properties = frameworkTopicProvisioningProperties.getIfAvailable();
+        if (properties == null) {
+            return kafkaAdminOperations.warmUp(admin, DEFAULT_DESCRIBE_TIMEOUT,
+                    DEFAULT_WARMUP_ATTEMPTS, DEFAULT_WARMUP_BACKOFF);
+        }
+        TopicProvisioningProperties.Warmup warmup = properties.warmup();
+        return kafkaAdminOperations.warmUp(admin, properties.describeTimeout(),
+                warmup.attempts(), warmup.initialBackoff());
     }
 
     /**
@@ -178,7 +209,7 @@ public class MdmTopicPreflight {
         TopicPartition partition = new TopicPartition(topic, 0);
         ListOffsetsResult result = admin.listOffsets(Map.of(partition, OffsetSpec.earliest()));
         try {
-            result.partitionResult(partition).get(DESCRIBE_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+            result.partitionResult(partition).get(describeTimeout().toMillis(), TimeUnit.MILLISECONDS);
         } catch (ExecutionException | TimeoutException | org.apache.kafka.common.errors.TimeoutException e) {
             throw classify(e);
         } catch (InterruptedException e) {
@@ -196,7 +227,7 @@ public class MdmTopicPreflight {
         try {
             KafkaFuture<org.apache.kafka.clients.admin.ConsumerGroupDescription> future =
                     admin.describeConsumerGroups(List.of(group)).describedGroups().get(group);
-            future.get(DESCRIBE_TIMEOUT_MS, TimeUnit.MILLISECONDS);
+            future.get(describeTimeout().toMillis(), TimeUnit.MILLISECONDS);
         } catch (ExecutionException e) {
             Throwable cause = unwrap(e);
             if (cause instanceof GroupIdNotFoundException) {

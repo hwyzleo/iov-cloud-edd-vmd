@@ -6,8 +6,8 @@ package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging.kafka;
  * VMD-DSN-CR-051：四个 EDD-VMD 相关 Topic 的逻辑名，与实际 Topic 名称一一对应，
  * 值来自类型化配置 {@link net.hwyz.iov.cloud.edd.vmd.service.infrastructure.config.VmdKafkaTopicProperties}。
  * <p>
- * 注意：{@code part-binding-changed} 对应 {@code vmd.vehcile-part-binding.changed} 中的
- * {@code vehcile} 拼写为 Kafka Topic 目录治理值（RD-051-6），代码内禁止私自纠正。
+ * 注意：{@code part-binding-changed} 对应 {@code vmd.vehicle-part-binding.changed}，
+ * Topic 名称以 Kafka Topic 目录治理值为准（RD-051-6）。
  *
  * @author hwyz_leo
  */

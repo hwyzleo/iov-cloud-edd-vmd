@@ -5,14 +5,13 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.config.VmdKafkaTopicProperties;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.config.VmdKafkaTopicProvisioningProperties;
+import net.hwyz.iov.cloud.framework.kafka.properties.TopicProvisioningProperties;
+import net.hwyz.iov.cloud.framework.kafka.support.KafkaAdminOperations;
 import net.hwyz.iov.cloud.framework.kafka.topic.KafkaTopicsReadyEvent;
 import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.clients.admin.Config;
 import org.apache.kafka.clients.admin.ConfigEntry;
-import org.apache.kafka.clients.admin.DescribeConfigsResult;
-import org.apache.kafka.clients.admin.DescribeTopicsResult;
 import org.apache.kafka.clients.admin.TopicDescription;
-import org.apache.kafka.common.KafkaFuture;
 import org.apache.kafka.common.TopicPartitionInfo;
 import org.apache.kafka.common.config.ConfigResource;
 import org.apache.kafka.common.errors.UnknownTopicOrPartitionException;
@@ -22,19 +21,17 @@ import org.springframework.context.event.EventListener;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.time.Duration;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * VMD Kafka Topic 初始化与既有校验组件（VMD-DSN-CR-051）
  * <p>
- * 复用 FW-KAFKA 的 Provisioning（Catalog 合并 → describe → 缺失幂等创建 → KafkaTopicsReadyEvent），
+ * 复用 FW-KAFKA 的 Provisioning（Catalog 合并 → describe → 缺失幂等创建 → KafkaTopicsReadyEvent）
+ * 与 KafkaAdminOperations（连接预热 / 有界 describe，超时与预热参数见 iov.kafka.topic-provisioning），
  * 在 {@link KafkaTopicsReadyEvent} 后完成：
  * <ol>
  *   <li>对三个 PRODUCER_OWNED 生产 Topic 做既有校验（分区数 / 副本数 / cleanup.policy），
@@ -54,7 +51,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @ConditionalOnProperty(prefix = "iov.kafka.topic-provisioning", name = "enabled", havingValue = "true")
 public class VmdKafkaTopicInitializer {
 
-    private static final long DESCRIBE_TIMEOUT_MS = 5000;
+    private static final Duration DEFAULT_DESCRIBE_TIMEOUT = Duration.ofSeconds(10);
+    private static final int DEFAULT_WARMUP_ATTEMPTS = 3;
+    private static final Duration DEFAULT_WARMUP_BACKOFF = Duration.ofSeconds(1);
 
     private final Admin admin;
     private final VmdKafkaTopicProperties topicProperties;
@@ -62,6 +61,8 @@ public class VmdKafkaTopicInitializer {
     private final VmdKafkaTopicReadiness readiness;
     private final ObjectProvider<VmdKafkaTopicMetrics> metricsProvider;
     private final MdmTopicPreflight mdmTopicPreflight;
+    private final KafkaAdminOperations kafkaAdminOperations;
+    private final ObjectProvider<TopicProvisioningProperties> frameworkTopicProvisioningProperties;
 
     /**
      * KafkaTopicsReadyEvent 是否已触发（未触发前不执行后台重试）。
@@ -92,8 +93,14 @@ public class VmdKafkaTopicInitializer {
     public void onTopicsReady(KafkaTopicsReadyEvent event) {
         started.set(true);
         log.info("KafkaTopicsReadyEvent 触发 VMD 生产 Topic 既有校验、观测 Topic 探测与 MDM 消费 Topic 预检");
-        validateProducerTopics();
-        probeInventoryObserved();
+        if (!warmUpAdmin()) {
+            readiness.markProducerTopicsDown(List.of(), "Kafka Admin 连接预热未达成（瞬态，后台重试中）");
+            readiness.markInventoryObservedDown("连接预热未达成，观测探测推迟");
+            log.warn("Kafka Admin 连接预热未达成，本轮跳过既有校验/探测；MDM 预检按自身节奏重试");
+        } else {
+            validateProducerTopics();
+            probeInventoryObserved();
+        }
         mdmTopicPreflight.preflight();
     }
 
@@ -114,6 +121,10 @@ public class VmdKafkaTopicInitializer {
         boolean producerNotReady = readiness.producerTopicsState() != VmdKafkaTopicReadiness.State.UP;
         boolean observedDown = readiness.inventoryObservedState() == VmdKafkaTopicReadiness.State.DOWN;
         if (!producerNotReady && !observedDown) {
+            return;
+        }
+        if (!warmUpAdmin()) {
+            log.warn("Kafka Admin 连接预热未达成，本轮后台重试跳过（readiness 保持 DOWN）");
             return;
         }
         log.warn("VMD 生产/观测 Topic 就绪未达成，后台重试既有校验与探测（仅校验，不创建/修改 Topic）");
@@ -153,12 +164,13 @@ public class VmdKafkaTopicInitializer {
         Map<String, TopicDescription> descriptions;
         Map<ConfigResource, Config> configs;
         try {
-            descriptions = describe(specs.stream().map(VmdKafkaTopicSpec::topicName).toList());
-            configs = describeConfigs(specs);
+            descriptions = kafkaAdminOperations.describeTopics(admin,
+                    specs.stream().map(VmdKafkaTopicSpec::topicName).toList(), describeTimeout());
+            configs = kafkaAdminOperations.describeConfigs(admin, configResources(specs), describeTimeout());
         } catch (Exception e) {
             readiness.markProducerTopicsDown(List.of(), "生产 Topic 既有校验失败: " + e.getMessage());
             specs.forEach(spec -> recordInit(spec.topicName(), "error"));
-            log.error("VMD 生产 Topic 既有校验失败: {}", e.getMessage(), e);
+            log.warn("VMD 生产 Topic 既有校验失败（瞬态，后台将自动重试）: {}", e.getMessage());
             return;
         }
 
@@ -232,7 +244,7 @@ public class VmdKafkaTopicInitializer {
     private void probeInventoryObserved() {
         String topic = topicProperties.topic(VmdKafkaLogicalTopic.INVENTORY_OBSERVED);
         try {
-            describe(List.of(topic));
+            kafkaAdminOperations.describeTopics(admin, List.of(topic), describeTimeout());
             readiness.markInventoryObservedUp();
             recordInit(topic, "present");
             log.info("VMD 观测 Topic 可访问: topic={}", topic);
@@ -243,34 +255,37 @@ public class VmdKafkaTopicInitializer {
         } catch (Exception e) {
             readiness.markInventoryObservedDown("观测 Topic 探测失败: " + e.getMessage());
             recordInit(topic, "error");
-            log.error("VMD 观测 Topic 探测失败: topic={}, error={}", topic, e.getMessage(), e);
+            log.warn("VMD 观测 Topic 探测失败（瞬态，后台将自动重试）: topic={}, error={}", topic, e.getMessage());
         }
     }
 
-    private Map<String, TopicDescription> describe(List<String> names) throws Exception {
-        DescribeTopicsResult result = admin.describeTopics(names);
-        Map<String, TopicDescription> descriptions = new HashMap<>();
-        for (Map.Entry<String, KafkaFuture<TopicDescription>> entry : result.values().entrySet()) {
-            try {
-                descriptions.put(entry.getKey(),
-                        entry.getValue().get(DESCRIBE_TIMEOUT_MS, TimeUnit.MILLISECONDS));
-            } catch (ExecutionException | TimeoutException e) {
-                throw unwrap(e);
-            }
-        }
-        return descriptions;
+    /**
+     * describe 共享等待预算：优先取 FW-KAFKA iov.kafka.topic-provisioning.describe-timeout，
+     * 未启用 Provisioning 的上下文回退框架默认 10s。
+     */
+    private Duration describeTimeout() {
+        TopicProvisioningProperties properties = frameworkTopicProvisioningProperties.getIfAvailable();
+        return properties == null ? DEFAULT_DESCRIBE_TIMEOUT : properties.describeTimeout();
     }
 
-    private Map<ConfigResource, Config> describeConfigs(List<VmdKafkaTopicSpec> specs) throws Exception {
-        List<ConfigResource> resources = specs.stream()
+    /**
+     * 启动期 Admin 连接预热（FW-KAFKA KafkaAdminOperations），参数解析同 describeTimeout。
+     */
+    private boolean warmUpAdmin() {
+        TopicProvisioningProperties properties = frameworkTopicProvisioningProperties.getIfAvailable();
+        if (properties == null) {
+            return kafkaAdminOperations.warmUp(admin, DEFAULT_DESCRIBE_TIMEOUT,
+                    DEFAULT_WARMUP_ATTEMPTS, DEFAULT_WARMUP_BACKOFF);
+        }
+        TopicProvisioningProperties.Warmup warmup = properties.warmup();
+        return kafkaAdminOperations.warmUp(admin, properties.describeTimeout(),
+                warmup.attempts(), warmup.initialBackoff());
+    }
+
+    private List<ConfigResource> configResources(List<VmdKafkaTopicSpec> specs) {
+        return specs.stream()
                 .map(spec -> new ConfigResource(ConfigResource.Type.TOPIC, spec.topicName()))
                 .toList();
-        DescribeConfigsResult result = admin.describeConfigs(resources);
-        try {
-            return result.all().get(DESCRIBE_TIMEOUT_MS, TimeUnit.MILLISECONDS);
-        } catch (ExecutionException | TimeoutException e) {
-            throw unwrap(e);
-        }
     }
 
     private short replicationFactorOf(TopicDescription description) {
@@ -308,14 +323,4 @@ public class VmdKafkaTopicInitializer {
         }
     }
 
-    private Exception unwrap(Throwable ex) {
-        Throwable t = ex;
-        while ((t instanceof ExecutionException) && t.getCause() != null) {
-            t = t.getCause();
-        }
-        if (t instanceof Exception e) {
-            return e;
-        }
-        return new IllegalStateException("Kafka Admin 调用失败", t);
-    }
 }

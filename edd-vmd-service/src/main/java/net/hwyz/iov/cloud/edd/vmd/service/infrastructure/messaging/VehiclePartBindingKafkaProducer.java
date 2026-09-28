@@ -20,7 +20,7 @@ import java.util.concurrent.CompletableFuture;
  * 车辆-零件绑定变更事件 Kafka 生产者
  * <p>
  * 监听 Spring {@link VehiclePartBindingChangedEvent}（由 {@code VehiclePartBindingPublisher} 发布），
- * 序列化为 JSON 后发送到 Kafka topic {@code vmd.vehcile-part-binding.changed}（VMD-DSN-CR-051），
+ * 序列化为 JSON 后发送到 Kafka topic {@code vmd.vehicle-part-binding.changed}（VMD-DSN-CR-051），
  * 供下游（TSP 等）消费建立只读投影。
  * <p>
  * 消息 key 为 {@code vin}，保证同一车辆的绑定变更按顺序消费。

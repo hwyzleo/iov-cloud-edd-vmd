@@ -2,10 +2,13 @@ package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging.kafka;
 
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.config.VmdKafkaTopicProperties;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.config.VmdKafkaTopicProvisioningProperties;
+import net.hwyz.iov.cloud.framework.kafka.properties.TopicProvisioningProperties;
+import net.hwyz.iov.cloud.framework.kafka.support.KafkaAdminOperations;
 import net.hwyz.iov.cloud.framework.kafka.topic.KafkaTopicsReadyEvent;
 import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.clients.admin.Config;
 import org.apache.kafka.clients.admin.ConfigEntry;
+import org.apache.kafka.clients.admin.DescribeClusterResult;
 import org.apache.kafka.clients.admin.DescribeConfigsResult;
 import org.apache.kafka.clients.admin.DescribeTopicsResult;
 import org.apache.kafka.clients.admin.TopicDescription;
@@ -23,6 +26,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.ObjectProvider;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -53,7 +57,7 @@ import static org.mockito.Mockito.when;
 @DisplayName("VmdKafkaTopicInitializer 测试")
 class VmdKafkaTopicInitializerTest {
 
-    private static final String BINDING = "vmd.vehcile-part-binding.changed";
+    private static final String BINDING = "vmd.vehicle-part-binding.changed";
     private static final String PRODUCE = "vmd.vehicle-produce";
     private static final String SW_INVENTORY = "vmd.vehicle-software-inventory.changed";
     private static final String OBSERVED = "ota.vehicle-software-inventory.observed";
@@ -63,6 +67,9 @@ class VmdKafkaTopicInitializerTest {
 
     @Mock
     private ObjectProvider<VmdKafkaTopicMetrics> metricsProvider;
+
+    @Mock
+    private ObjectProvider<TopicProvisioningProperties> frameworkTopicProvisioningProperties;
 
     @Mock
     private MdmTopicPreflight mdmTopicPreflight;
@@ -82,7 +89,20 @@ class VmdKafkaTopicInitializerTest {
         provisioningProperties.setCleanupPolicy("delete");
         readiness = new VmdKafkaTopicReadiness();
         initializer = new VmdKafkaTopicInitializer(
-                admin, topicProperties, provisioningProperties, readiness, metricsProvider, mdmTopicPreflight);
+                admin, topicProperties, provisioningProperties, readiness, metricsProvider, mdmTopicPreflight,
+                new KafkaAdminOperations(), frameworkTopicProvisioningProperties);
+        lenient().when(frameworkTopicProvisioningProperties.getIfAvailable())
+                .thenReturn(new TopicProvisioningProperties(true, Duration.ZERO, null, null, null, null));
+        stubWarmUp();
+    }
+
+    /**
+     * Admin 连接预热成功（FW-KAFKA KafkaAdminOperations.warmUp 走 describeCluster）。
+     */
+    private void stubWarmUp() {
+        DescribeClusterResult clusterResult = mock(DescribeClusterResult.class);
+        lenient().when(clusterResult.clusterId()).thenReturn(KafkaFuture.completedFuture("test-cluster"));
+        lenient().when(admin.describeCluster()).thenReturn(clusterResult);
     }
 
     private TopicDescription topicDescription(String name, int partitions, int replication) {
@@ -130,16 +150,16 @@ class VmdKafkaTopicInitializerTest {
         KafkaFuture<TopicDescription> produce = KafkaFuture.completedFuture(topicDescription(PRODUCE, 3, 3));
         KafkaFuture<TopicDescription> sw = KafkaFuture.completedFuture(topicDescription(SW_INVENTORY, 3, 3));
         producerDescribeResult = mock(DescribeTopicsResult.class);
-        when(producerDescribeResult.values()).thenReturn(Map.of(
+        when(producerDescribeResult.topicNameValues()).thenReturn(Map.of(
                 BINDING, binding, PRODUCE, produce, SW_INVENTORY, sw));
         when(admin.describeTopics(anyCollection())).thenReturn(producerDescribeResult);
 
-        Map<ConfigResource, Config> configs = Map.of(
-                new ConfigResource(ConfigResource.Type.TOPIC, BINDING), config(cleanupPolicy),
-                new ConfigResource(ConfigResource.Type.TOPIC, PRODUCE), config(cleanupPolicy),
-                new ConfigResource(ConfigResource.Type.TOPIC, SW_INVENTORY), config(cleanupPolicy));
+        Map<ConfigResource, KafkaFuture<Config>> configFutures = Map.of(
+                new ConfigResource(ConfigResource.Type.TOPIC, BINDING), KafkaFuture.completedFuture(config(cleanupPolicy)),
+                new ConfigResource(ConfigResource.Type.TOPIC, PRODUCE), KafkaFuture.completedFuture(config(cleanupPolicy)),
+                new ConfigResource(ConfigResource.Type.TOPIC, SW_INVENTORY), KafkaFuture.completedFuture(config(cleanupPolicy)));
         DescribeConfigsResult configResult = mock(DescribeConfigsResult.class);
-        when(configResult.all()).thenReturn(KafkaFuture.completedFuture(configs));
+        when(configResult.values()).thenReturn(configFutures);
         when(admin.describeConfigs(anyCollection())).thenReturn(configResult);
     }
 
@@ -149,7 +169,7 @@ class VmdKafkaTopicInitializerTest {
     private void stubConsumerPresent() {
         KafkaFuture<TopicDescription> observed = KafkaFuture.completedFuture(topicDescription(OBSERVED, 3, 3));
         DescribeTopicsResult consumerResult = mock(DescribeTopicsResult.class);
-        when(consumerResult.values()).thenReturn(Map.of(OBSERVED, observed));
+        when(consumerResult.topicNameValues()).thenReturn(Map.of(OBSERVED, observed));
         when(admin.describeTopics(anyCollection()))
                 .thenReturn(producerDescribeResult)
                 .thenReturn(consumerResult);
@@ -158,7 +178,7 @@ class VmdKafkaTopicInitializerTest {
     private void stubConsumerMissing() {
         KafkaFuture<TopicDescription> missing = failedFuture(new UnknownTopicOrPartitionException("no such topic"));
         DescribeTopicsResult consumerResult = mock(DescribeTopicsResult.class);
-        when(consumerResult.values()).thenReturn(Map.of(OBSERVED, missing));
+        when(consumerResult.topicNameValues()).thenReturn(Map.of(OBSERVED, missing));
         when(admin.describeTopics(anyCollection()))
                 .thenReturn(producerDescribeResult)
                 .thenReturn(consumerResult);
@@ -184,16 +204,16 @@ class VmdKafkaTopicInitializerTest {
         KafkaFuture<TopicDescription> produce = KafkaFuture.completedFuture(topicDescription(PRODUCE, 3, 3));
         KafkaFuture<TopicDescription> sw = KafkaFuture.completedFuture(topicDescription(SW_INVENTORY, 3, 3));
         producerDescribeResult = mock(DescribeTopicsResult.class);
-        when(producerDescribeResult.values()).thenReturn(Map.of(
+        when(producerDescribeResult.topicNameValues()).thenReturn(Map.of(
                 BINDING, binding, PRODUCE, produce, SW_INVENTORY, sw));
         when(admin.describeTopics(anyCollection())).thenReturn(producerDescribeResult);
 
-        Map<ConfigResource, Config> configs = Map.of(
-                new ConfigResource(ConfigResource.Type.TOPIC, BINDING), config("delete"),
-                new ConfigResource(ConfigResource.Type.TOPIC, PRODUCE), config("delete"),
-                new ConfigResource(ConfigResource.Type.TOPIC, SW_INVENTORY), config("delete"));
+        Map<ConfigResource, KafkaFuture<Config>> configFutures = Map.of(
+                new ConfigResource(ConfigResource.Type.TOPIC, BINDING), KafkaFuture.completedFuture(config("delete")),
+                new ConfigResource(ConfigResource.Type.TOPIC, PRODUCE), KafkaFuture.completedFuture(config("delete")),
+                new ConfigResource(ConfigResource.Type.TOPIC, SW_INVENTORY), KafkaFuture.completedFuture(config("delete")));
         DescribeConfigsResult configResult = mock(DescribeConfigsResult.class);
-        when(configResult.all()).thenReturn(KafkaFuture.completedFuture(configs));
+        when(configResult.values()).thenReturn(configFutures);
         when(admin.describeConfigs(anyCollection())).thenReturn(configResult);
 
         stubConsumerPresent();
@@ -216,16 +236,16 @@ class VmdKafkaTopicInitializerTest {
         KafkaFuture<TopicDescription> produce = KafkaFuture.completedFuture(topicDescription(PRODUCE, 3, 3));
         KafkaFuture<TopicDescription> sw = KafkaFuture.completedFuture(topicDescription(SW_INVENTORY, 3, 3));
         producerDescribeResult = mock(DescribeTopicsResult.class);
-        when(producerDescribeResult.values()).thenReturn(Map.of(
+        when(producerDescribeResult.topicNameValues()).thenReturn(Map.of(
                 BINDING, binding, PRODUCE, produce, SW_INVENTORY, sw));
         when(admin.describeTopics(anyCollection())).thenReturn(producerDescribeResult);
 
-        Map<ConfigResource, Config> configs = Map.of(
-                new ConfigResource(ConfigResource.Type.TOPIC, BINDING), config("compact"),
-                new ConfigResource(ConfigResource.Type.TOPIC, PRODUCE), config("delete"),
-                new ConfigResource(ConfigResource.Type.TOPIC, SW_INVENTORY), config("delete"));
+        Map<ConfigResource, KafkaFuture<Config>> configFutures = Map.of(
+                new ConfigResource(ConfigResource.Type.TOPIC, BINDING), KafkaFuture.completedFuture(config("compact")),
+                new ConfigResource(ConfigResource.Type.TOPIC, PRODUCE), KafkaFuture.completedFuture(config("delete")),
+                new ConfigResource(ConfigResource.Type.TOPIC, SW_INVENTORY), KafkaFuture.completedFuture(config("delete")));
         DescribeConfigsResult configResult = mock(DescribeConfigsResult.class);
-        when(configResult.all()).thenReturn(KafkaFuture.completedFuture(configs));
+        when(configResult.values()).thenReturn(configFutures);
         when(admin.describeConfigs(anyCollection())).thenReturn(configResult);
 
         stubConsumerPresent();
@@ -263,7 +283,7 @@ class VmdKafkaTopicInitializerTest {
         KafkaFuture<TopicDescription> produce = failedFuture(new TimeoutException("timeout"));
         KafkaFuture<TopicDescription> sw = failedFuture(new TimeoutException("timeout"));
         DescribeTopicsResult result = mock(DescribeTopicsResult.class);
-        when(result.values()).thenReturn(Map.of(BINDING, binding, PRODUCE, produce, SW_INVENTORY, sw));
+        when(result.topicNameValues()).thenReturn(Map.of(BINDING, binding, PRODUCE, produce, SW_INVENTORY, sw));
         when(admin.describeTopics(anyCollection())).thenReturn(result);
 
         initializer.onTopicsReady(new KafkaTopicsReadyEvent());
@@ -280,7 +300,7 @@ class VmdKafkaTopicInitializerTest {
         KafkaFuture<TopicDescription> produce = failedFuture(new TimeoutException("timeout"));
         KafkaFuture<TopicDescription> sw = failedFuture(new TimeoutException("timeout"));
         DescribeTopicsResult result = mock(DescribeTopicsResult.class);
-        when(result.values()).thenReturn(Map.of(BINDING, binding, PRODUCE, produce, SW_INVENTORY, sw));
+        when(result.topicNameValues()).thenReturn(Map.of(BINDING, binding, PRODUCE, produce, SW_INVENTORY, sw));
         when(admin.describeTopics(anyCollection())).thenReturn(result);
 
         initializer.onTopicsReady(new KafkaTopicsReadyEvent());

@@ -56,8 +56,8 @@ class VmdKafkaTopicProvisioningBrokerDownTest {
         assertNotNull(kafkaTopicCatalog);
 
         // Catalog 合并了 VMD 声明的三个标准生产 Topic（VMD-DSN-CR-051）
-        assertTrue(kafkaTopicCatalog.contains("vmd.vehcile-part-binding.changed"),
-                "Catalog 应包含 vmd.vehcile-part-binding.changed");
+        assertTrue(kafkaTopicCatalog.contains("vmd.vehicle-part-binding.changed"),
+                "Catalog 应包含 vmd.vehicle-part-binding.changed");
         assertTrue(kafkaTopicCatalog.contains("vmd.vehicle-produce"),
                 "Catalog 应包含 vmd.vehicle-produce");
         assertTrue(kafkaTopicCatalog.contains("vmd.vehicle-software-inventory.changed"),

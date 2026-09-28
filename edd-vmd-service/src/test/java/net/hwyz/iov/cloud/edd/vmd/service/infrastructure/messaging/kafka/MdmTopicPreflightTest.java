@@ -2,8 +2,11 @@ package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging.kafka;
 
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.config.MdmConsumerProperties;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.config.VmdKafkaTopicProperties;
+import net.hwyz.iov.cloud.framework.kafka.properties.TopicProvisioningProperties;
+import net.hwyz.iov.cloud.framework.kafka.support.KafkaAdminOperations;
 import org.apache.kafka.clients.admin.Admin;
 import org.apache.kafka.clients.admin.ConsumerGroupDescription;
+import org.apache.kafka.clients.admin.DescribeClusterResult;
 import org.apache.kafka.clients.admin.DescribeConsumerGroupsResult;
 import org.apache.kafka.clients.admin.DescribeTopicsResult;
 import org.apache.kafka.clients.admin.ListOffsetsResult;
@@ -25,6 +28,7 @@ import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -69,6 +73,9 @@ class MdmTopicPreflightTest {
     private ObjectProvider<MdmConsumerMetrics> metricsProvider;
 
     @Mock
+    private ObjectProvider<TopicProvisioningProperties> frameworkTopicProvisioningProperties;
+
+    @Mock
     private ApplicationEventPublisher eventPublisher;
 
     private VmdKafkaTopicProperties topicProperties;
@@ -83,8 +90,21 @@ class MdmTopicPreflightTest {
         consumerProperties = new MdmConsumerProperties();
         readiness = new MdmProjectionReadiness();
         preflight = new MdmTopicPreflight(admin, topicProperties, readiness, consumerProperties,
-                eventPublisher, metricsProvider);
+                eventPublisher, metricsProvider,
+                new KafkaAdminOperations(), frameworkTopicProvisioningProperties);
         ReflectionTestUtils.setField(preflight, "consumerGroup", GROUP);
+        lenient().when(frameworkTopicProvisioningProperties.getIfAvailable())
+                .thenReturn(new TopicProvisioningProperties(true, Duration.ZERO, null, null, null, null));
+        stubWarmUp();
+    }
+
+    /**
+     * Admin 连接预热成功（FW-KAFKA KafkaAdminOperations.warmUp 走 describeCluster）。
+     */
+    private void stubWarmUp() {
+        DescribeClusterResult clusterResult = mock(DescribeClusterResult.class);
+        lenient().when(clusterResult.clusterId()).thenReturn(KafkaFuture.completedFuture("test-cluster"));
+        lenient().when(admin.describeCluster()).thenReturn(clusterResult);
     }
 
     private TopicDescription topicDescription(String name) {
@@ -122,7 +142,7 @@ class MdmTopicPreflightTest {
             futures.put(p.directoryTopic(), KafkaFuture.completedFuture(topicDescription(p.directoryTopic())));
         }
         DescribeTopicsResult describeResult = mock(DescribeTopicsResult.class);
-        when(describeResult.values()).thenReturn(futures);
+        when(describeResult.topicNameValues()).thenReturn(futures);
         when(admin.describeTopics(anyCollection())).thenReturn(describeResult);
 
         ListOffsetsResult offsetsResult = mock(ListOffsetsResult.class);
@@ -149,7 +169,7 @@ class MdmTopicPreflightTest {
             }
         }
         DescribeTopicsResult describeResult = mock(DescribeTopicsResult.class);
-        when(describeResult.values()).thenReturn(futures);
+        when(describeResult.topicNameValues()).thenReturn(futures);
         when(admin.describeTopics(anyCollection())).thenReturn(describeResult);
     }
 

@@ -39,10 +39,10 @@ public class VmdKafkaTopicProperties {
 
     /**
      * 车辆-零件绑定变更事件 Topic（Producer，VMD 幂等创建）
-     * <p>目录治理值，保留 vehcile 拼写（RD-051-6）
+     * <p>Topic 名称以 Kafka Topic 目录治理值为准（RD-051-6）
      */
     @NotBlank
-    private String partBindingChanged = "vmd.vehcile-part-binding.changed";
+    private String partBindingChanged = "vmd.vehicle-part-binding.changed";
 
     /**
      * 车辆生产事件 Topic（Producer，VMD 幂等创建，经 Outbox→Relay 发布/补发）

@@ -36,7 +36,7 @@ class VmdKafkaTopicRoutesTest {
     void resolveRegisteredEventTypes() {
         assertEquals("vmd.vehicle-produce",
                 routes.resolve("VehicleProduceEvent"));
-        assertEquals("vmd.vehcile-part-binding.changed",
+        assertEquals("vmd.vehicle-part-binding.changed",
                 routes.resolve("VehiclePartBindingChangedEvent"));
         assertEquals("vmd.vehicle-software-inventory.changed",
                 routes.resolve("VehicleSoftwareInventoryChangedEvent"));
@@ -67,7 +67,7 @@ class VmdKafkaTopicRoutesTest {
     void topicNameByLogical() {
         assertEquals("ota.vehicle-software-inventory.observed",
                 routes.topicName(VmdKafkaLogicalTopic.INVENTORY_OBSERVED));
-        assertEquals("vmd.vehcile-part-binding.changed",
+        assertEquals("vmd.vehicle-part-binding.changed",
                 routes.topicName(VmdKafkaLogicalTopic.PART_BINDING_CHANGED));
     }
 }

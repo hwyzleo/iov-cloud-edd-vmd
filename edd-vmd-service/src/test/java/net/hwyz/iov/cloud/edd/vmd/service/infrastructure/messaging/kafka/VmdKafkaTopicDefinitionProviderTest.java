@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * VMD Kafka Topic 定义提供者单元测试（VMD-DSN-CR-051）
  * <p>
  * 验证 VMD 作为生产者输出的三个标准 Topic 声明：
- * vmd.vehcile-part-binding.changed（绑定变更事件直发）、
+ * vmd.vehicle-part-binding.changed（绑定变更事件直发）、
  * vmd.vehicle-produce（车辆生产事件 Outbox）、
  * vmd.vehicle-software-inventory.changed（软件清单变更事件 Outbox）；
  * 不声明 upstream.*（mdm.* / ota.* 消费 Topic）与 DLQ Topic。
@@ -39,7 +39,7 @@ class VmdKafkaTopicDefinitionProviderTest {
         provisioningProperties.setCleanupPolicy("delete");
 
         VmdKafkaTopicProperties topicProperties = new VmdKafkaTopicProperties();
-        topicProperties.setPartBindingChanged("vmd.vehcile-part-binding.changed");
+        topicProperties.setPartBindingChanged("vmd.vehicle-part-binding.changed");
         topicProperties.setVehicleProduce("vmd.vehicle-produce");
         topicProperties.setSoftwareInventoryChanged("vmd.vehicle-software-inventory.changed");
 
@@ -55,8 +55,8 @@ class VmdKafkaTopicDefinitionProviderTest {
     @DisplayName("声明 VMD 作为生产者输出的全部标准 Topic")
     void declaresAllVmdProducedTopics() {
         Set<String> topics = declaredTopics();
-        assertTrue(topics.contains("vmd.vehcile-part-binding.changed"),
-                "缺少 Topic: vmd.vehcile-part-binding.changed");
+        assertTrue(topics.contains("vmd.vehicle-part-binding.changed"),
+                "缺少 Topic: vmd.vehicle-part-binding.changed");
         assertTrue(topics.contains("vmd.vehicle-produce"),
                 "缺少 Topic: vmd.vehicle-produce");
         assertTrue(topics.contains("vmd.vehicle-software-inventory.changed"),

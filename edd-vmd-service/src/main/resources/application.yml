@@ -16,7 +16,7 @@ vmd:
   kafka:
     topics:
       inventory-observed: ${VMD_KAFKA_TOPIC_INVENTORY_OBSERVED:ota.vehicle-software-inventory.observed}
-      part-binding-changed: ${VMD_KAFKA_TOPIC_PART_BINDING_CHANGED:vmd.vehcile-part-binding.changed}
+      part-binding-changed: ${VMD_KAFKA_TOPIC_PART_BINDING_CHANGED:vmd.vehicle-part-binding.changed}
       vehicle-produce: ${VMD_KAFKA_TOPIC_VEHICLE_PRODUCE:vmd.vehicle-produce}
       software-inventory-changed: ${VMD_KAFKA_TOPIC_SOFTWARE_INVENTORY_CHANGED:vmd.vehicle-software-inventory.changed}
       # 11 个 EDD-MDM 消费 Topic（VMD-DSN-CR-052，全部 CONSUMER_ONLY，归 EDD-MDM 管理，VMD 只预检不创建）
@@ -40,7 +40,7 @@ vmd:
       # 预检失败后的后台重试探测间隔（毫秒）
       retry-interval-ms: ${VMD_KAFKA_MDM_CONSUMER_RETRY_INTERVAL_MS:60000}
     topic-provisioning:
-      partitions: ${VMD_KAFKA_TOPIC_PARTITIONS:3}
+      partitions: ${VMD_KAFKA_TOPIC_PARTITIONS:1}
       replication-factor: ${VMD_KAFKA_TOPIC_REPLICATION_FACTOR:1}
       cleanup-policy: ${VMD_KAFKA_TOPIC_CLEANUP_POLICY:delete}
       # 生产 Topic 既有校验 / 观测 Topic 探测未达成（启动期 Broker 连接预热、瞬断等）时，后台重试间隔（毫秒）

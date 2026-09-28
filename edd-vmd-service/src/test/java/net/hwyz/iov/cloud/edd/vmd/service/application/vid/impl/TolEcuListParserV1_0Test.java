@@ -108,7 +108,7 @@ class TolEcuListParserV1_0Test {
         assertEquals(0, result.getInvalidCount());
 
         verify(partInfoAppService).upsertPartInfo(any(PartInfo.class));
-        verify(vehiclePartAppService).bindVehiclePart(any(VehiclePart.class));
+        verify(vehiclePartAppService).bindVehiclePartIdempotent(any(VehiclePart.class));
     }
 
     @Test
@@ -136,7 +136,7 @@ class TolEcuListParserV1_0Test {
 
         verify(vehicleNodeAppService, never()).getVehicleNodeByCode(any());
         verify(partInfoAppService, never()).upsertPartInfo(any());
-        verify(vehiclePartAppService, never()).bindVehiclePart(any());
+        verify(vehiclePartAppService, never()).bindVehiclePartIdempotent(any());
     }
 
     @Test
@@ -166,7 +166,7 @@ class TolEcuListParserV1_0Test {
         assertTrue(result.getDescription().contains("车载节点[" + deviceCode + "]不存在"));
 
         verify(partInfoAppService, never()).upsertPartInfo(any());
-        verify(vehiclePartAppService, never()).bindVehiclePart(any());
+        verify(vehiclePartAppService, never()).bindVehiclePartIdempotent(any());
     }
 
     @Test
