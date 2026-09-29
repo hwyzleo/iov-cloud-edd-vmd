@@ -62,6 +62,26 @@ public interface VehicleCertificateMapper extends BaseDao<VehicleCertificatePo, 
     VehicleCertificatePo selectActiveByDeviceSnAndProfile(@Param("deviceSn") String deviceSn, @Param("certificateProfile") String certificateProfile);
 
     /**
+     * 根据设备SN、证书Profile与CSR指纹查询证书（幂等复用，F15）
+     *
+     * @param deviceSn           设备SN
+     * @param certificateProfile 证书Profile
+     * @param csrFingerprint     CSR SHA-256指纹
+     * @return 证书
+     */
+    VehicleCertificatePo selectByDeviceSnAndProfileAndCsrFingerprint(@Param("deviceSn") String deviceSn, @Param("certificateProfile") String certificateProfile, @Param("csrFingerprint") String csrFingerprint);
+
+    /**
+     * 将同设备同Profile的其它 ACTIVE 证书置为 SUPERSEDED（落实“最多一条 ACTIVE”，§3.1）
+     *
+     * @param deviceSn           设备SN
+     * @param certificateProfile 证书Profile
+     * @param excludeRequestId   排除的当前请求ID（避免误伤自身）
+     * @return 影响行数
+     */
+    int supersedeActiveByDeviceSnAndProfile(@Param("deviceSn") String deviceSn, @Param("certificateProfile") String certificateProfile, @Param("excludeRequestId") String excludeRequestId);
+
+    /**
      * 根据设备SN查询证书列表
      *
      * @param deviceSn 设备SN

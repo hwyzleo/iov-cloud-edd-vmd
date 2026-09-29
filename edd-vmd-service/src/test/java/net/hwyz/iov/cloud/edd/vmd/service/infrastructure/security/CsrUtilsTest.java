@@ -124,4 +124,15 @@ class CsrUtilsTest {
         assertTrue(CsrUtils.verifySignature(standard));
     }
 
+    @Test
+    void extractPublicKeyAlgorithm_ECDSA_应返回EC() {
+        assertEquals("EC", CsrUtils.extractPublicKeyAlgorithm(buildCsr("TBOX-UID-000001")));
+    }
+
+    @Test
+    void extractPublicKeyAlgorithm_畸形输入_应抛异常() {
+        String plain = Base64.getEncoder().encodeToString("NOT_A_CSR".getBytes());
+        assertThrows(IllegalArgumentException.class, () -> CsrUtils.extractPublicKeyAlgorithm(plain));
+    }
+
 }

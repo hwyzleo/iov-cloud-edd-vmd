@@ -18,6 +18,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.security.CsrUtils;
 import net.hwyz.iov.cloud.framework.security.crypto.CertEnrollmentTemplate;
 import net.hwyz.iov.cloud.framework.security.crypto.model.*;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -50,11 +51,14 @@ public class CertificateProvisioningAppService {
 
     /**
      * 申请设备证书
+     * <p>
+     * 本方法不开启数据库事务：先落 REQUESTED 占位行（幂等/防并发重复签发，承 F15），
+     * 再在事务外同步调用 PKI 签发——避免数据库事务横跨慢网络 I/O，且 PKI 已出证后
+     * 本地提交失败也不至于回滚丢行（孤儿证书最小化），失败留痕可查、同 requestId 重试幂等。
      *
      * @param cmd 申请命令
      * @return 申请结果
      */
-    @Transactional(rollbackFor = Exception.class)
     public CertificateApplyResult applyDeviceCertificate(CertificateApplyCmd cmd) {
         log.info("申请设备证书: requestId={}, vin={}, deviceSn={}, profile={}", 
                 cmd.getRequestId(), cmd.getVin(), cmd.getDeviceSn(), cmd.getCertificateProfile());
@@ -82,6 +86,15 @@ public class CertificateProvisioningAppService {
         // 5. 计算CSR指纹
         String csrFingerprint = CsrUtils.calculateFingerprint(cmd.getCsrDerBase64());
 
+        // 5.1 幂等复用：不同 request_id 但相同 (device_sn, profile, csr_fingerprint) 命中有效结果则复用（F15）
+        VehicleCertificate reused = vehicleCertificateRepository
+                .selectByDeviceSnAndProfileAndCsrFingerprint(cmd.getDeviceSn(), cmd.getCertificateProfile(), csrFingerprint);
+        if (reused != null && isReusableStatus(reused.getCertStatus())) {
+            log.info("相同CSR的证书申请已存在，幂等复用: requestId={}, reusedRequestId={}, status={}",
+                    cmd.getRequestId(), reused.getRequestId(), reused.getCertStatus());
+            return buildApplyResult(reused, null);
+        }
+
         // 6. 创建证书记录（REQUESTED状态）
         VehicleCertificate certificate = VehicleCertificate.builder()
                 .requestId(cmd.getRequestId())
@@ -97,13 +110,26 @@ public class CertificateProvisioningAppService {
                 .facilityNo(cmd.getFacilityNo())
                 .lineCode(cmd.getLineCode())
                 .build();
-        vehicleCertificateRepository.insert(certificate);
+        try {
+            vehicleCertificateRepository.insert(certificate);
+        } catch (DuplicateKeyException e) {
+            // 并发同 request_id 已插入占位行（uk_request_id 兜底），回读返回既有记录，防重复签发
+            VehicleCertificate raced = vehicleCertificateRepository.selectByRequestId(cmd.getRequestId());
+            if (raced != null) {
+                log.info("并发重复申请命中占位行，返回既有记录: requestId={}", cmd.getRequestId());
+                return buildApplyResult(raced, null);
+            }
+            throw e;
+        }
 
         // 7. 调用framework-security CertificateEnrollmentTemplate.apply()提交申请
         try {
+            // 密钥算法从 CSR 实际公钥推导（TBOX 为 ECDSA P-256），不硬编码 RSA
+            String keyAlgorithm = CsrUtils.extractPublicKeyAlgorithm(cmd.getCsrDerBase64());
             CertApplyRequest frameworkRequest = new CertApplyRequest(
-                    new CertificateProfile(cmd.getCertificateProfile(), cmd.getCertificateProfile(), CertificateProfile.SubjectType.DEVICE_IDENTITY, "RSA", "DIGITAL_SIGNATURE"),
-                    Base64.getUrlDecoder().decode(cmd.getCsrDerBase64()),
+                    new CertificateProfile(cmd.getCertificateProfile(), cmd.getCertificateProfile(), CertificateProfile.SubjectType.DEVICE_IDENTITY, keyAlgorithm, "DIGITAL_SIGNATURE"),
+                    // 与校验处共用同一解码入口，兼容 URL-safe 与标准 Base64
+                    CsrUtils.decodeBase64(cmd.getCsrDerBase64()),
                     new SubjectRef(SubjectRef.SubjectType.DEVICE_SN, cmd.getDeviceSn()),
                     cmd.getRequestId(),
                     null
@@ -203,6 +229,10 @@ public class CertificateProvisioningAppService {
 
         // 更新状态
         if ("SUCCESS".equals(cmd.getResult())) {
+            // 落实 §3.1「同一 device_sn+certificate_profile 最多一条 ACTIVE」：
+            // 先作废同设备同 Profile 的既有 ACTIVE，再激活新证书（同一事务，避免并行有效证书）
+            vehicleCertificateRepository.supersedeActiveByDeviceSnAndProfile(
+                    certificate.getDeviceSn(), certificate.getCertificateProfile(), certificate.getRequestId());
             certificate.setCertStatus(CertificateStatus.ACTIVE);
             certificate.setConfirmedAt(LocalDateTime.now());
         } else {
@@ -258,6 +288,20 @@ public class CertificateProvisioningAppService {
      */
     public List<VehicleCertificate> listCertificateBindings(Instant updatedAfter, int limit) {
         return vehicleCertificateRepository.selectUpdatedAfter(updatedAfter, limit);
+    }
+
+    /**
+     * 判断证书状态是否可作为幂等复用的有效结果（F15：命中有效结果则复用）
+     * <p>
+     * 终态失败（FAILED / INSTALL_FAILED / SUPERSEDED / REVOKED / EXPIRED）不参与复用，
+     * 允许以新 request_id 重新签发。
+     */
+    private boolean isReusableStatus(CertificateStatus status) {
+        return status == CertificateStatus.REQUESTED
+                || status == CertificateStatus.ISSUING
+                || status == CertificateStatus.PENDING_RECONCILE
+                || status == CertificateStatus.ISSUED_NOT_CONFIRMED
+                || status == CertificateStatus.ACTIVE;
     }
 
     /**

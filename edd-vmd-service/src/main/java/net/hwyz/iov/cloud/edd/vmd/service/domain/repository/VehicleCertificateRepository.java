@@ -73,6 +73,26 @@ public interface VehicleCertificateRepository {
     VehicleCertificate selectActiveByDeviceSnAndProfile(String deviceSn, String certificateProfile);
 
     /**
+     * 根据设备SN、证书Profile与CSR指纹查询证书（幂等复用，F15）
+     *
+     * @param deviceSn           设备SN
+     * @param certificateProfile 证书Profile
+     * @param csrFingerprint     CSR SHA-256指纹
+     * @return 证书，不存在返回 null
+     */
+    VehicleCertificate selectByDeviceSnAndProfileAndCsrFingerprint(String deviceSn, String certificateProfile, String csrFingerprint);
+
+    /**
+     * 将同设备同Profile的其它 ACTIVE 证书置为 SUPERSEDED（落实“最多一条 ACTIVE”，§3.1）
+     *
+     * @param deviceSn           设备SN
+     * @param certificateProfile 证书Profile
+     * @param excludeRequestId   排除的当前请求ID（避免误伤自身）
+     * @return 影响行数
+     */
+    int supersedeActiveByDeviceSnAndProfile(String deviceSn, String certificateProfile, String excludeRequestId);
+
+    /**
      * 根据设备SN查询证书列表
      *
      * @param deviceSn 设备SN

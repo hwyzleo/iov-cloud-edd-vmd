@@ -157,7 +157,8 @@ class CertificateProvisioningAppServiceTest {
         when(vehiclePartRepository.selectActiveByVinAndPartId("HWYZTEST900000001", 1L)).thenReturn(vehiclePart);
 
         // 使用包含正确设备SN的CSR（真实 PKCS#10 自签名，CN=deviceSn）
-        applyCmd.setCsrDerBase64(buildValidCsrBase64("TBOX-UID-000001"));
+        // 改用标准 Base64 编码（含 +/ 字符），验证校验/签发两处解码口径一致（不硬编码 URL-safe）
+        applyCmd.setCsrDerBase64(toStandardBase64(buildValidCsrBase64("TBOX-UID-000001")));
 
         // Mock PKI调用
         net.hwyz.iov.cloud.framework.security.crypto.model.CertApplyResult frameworkResult = 
@@ -296,6 +297,94 @@ class CertificateProvisioningAppServiceTest {
     }
 
     @Test
+    void applyDeviceCertificate_相同CSR已有有效证书时_应幂等复用不重复签发() {
+        // Given：requestId 不存在，但同 (device_sn, profile, csr_fingerprint) 已有 ACTIVE 证书（F15 幂等复用）
+        when(vehicleCertificateRepository.selectByRequestId("REQ-001")).thenReturn(null);
+        net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleBasicInfo basicInfo =
+                net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleBasicInfo.builder()
+                        .vin("HWYZTEST900000001")
+                        .eolTime(Instant.now())
+                        .build();
+        when(vehBasicInfoRepository.selectByVin("HWYZTEST900000001")).thenReturn(basicInfo);
+        net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartInfo partInfo =
+                net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartInfo.builder()
+                        .id(1L)
+                        .sn("TBOX-UID-000001")
+                        .build();
+        when(partInfoRepository.selectBySn("TBOX-UID-000001")).thenReturn(partInfo);
+        when(vehiclePartRepository.selectActiveByVinAndPartId("HWYZTEST900000001", 1L)).thenReturn(vehiclePart);
+        applyCmd.setCsrDerBase64(buildValidCsrBase64("TBOX-UID-000001"));
+
+        VehicleCertificate existingActive = VehicleCertificate.builder()
+                .id(9L)
+                .requestId("REQ-OLD")
+                .vin("HWYZTEST900000001")
+                .bindingId(1L)
+                .partId(1L)
+                .deviceCategory("TBOX")
+                .deviceSn("TBOX-UID-000001")
+                .certificateProfile("TBOX_TSP_CLIENT")
+                .certStatus(CertificateStatus.ACTIVE)
+                .build();
+        when(vehicleCertificateRepository.selectByDeviceSnAndProfileAndCsrFingerprint(any(), any(), any()))
+                .thenReturn(existingActive);
+
+        // When
+        CertificateApplyResult result = certificateProvisioningAppService.applyDeviceCertificate(applyCmd);
+
+        // Then：命中有效结果直接复用，不再调 PKI、不再插入新记录
+        assertEquals("REQ-OLD", result.getRequestId());
+        assertEquals("ACTIVE", result.getStatus());
+        verify(certificateEnrollmentTemplate, never()).apply(any());
+        verify(vehicleCertificateRepository, never()).insert(any());
+    }
+
+    @Test
+    void applyDeviceCertificate_同requestId并发重复申请_应回读占位行不重复签发() {
+        // Given
+        net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleBasicInfo basicInfo =
+                net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleBasicInfo.builder()
+                        .vin("HWYZTEST900000001")
+                        .eolTime(Instant.now())
+                        .build();
+        when(vehBasicInfoRepository.selectByVin("HWYZTEST900000001")).thenReturn(basicInfo);
+        net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartInfo partInfo =
+                net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartInfo.builder()
+                        .id(1L)
+                        .sn("TBOX-UID-000001")
+                        .build();
+        when(partInfoRepository.selectBySn("TBOX-UID-000001")).thenReturn(partInfo);
+        when(vehiclePartRepository.selectActiveByVinAndPartId("HWYZTEST900000001", 1L)).thenReturn(vehiclePart);
+        applyCmd.setCsrDerBase64(buildValidCsrBase64("TBOX-UID-000001"));
+        // 幂等复用查询未命中
+        when(vehicleCertificateRepository.selectByDeviceSnAndProfileAndCsrFingerprint(any(), any(), any()))
+                .thenReturn(null);
+        // 插入命中 uk_request_id 唯一键（并发另一线程已插），回读返回既有占位行
+        VehicleCertificate raced = VehicleCertificate.builder()
+                .id(9L)
+                .requestId("REQ-001")
+                .vin("HWYZTEST900000001")
+                .bindingId(1L)
+                .partId(1L)
+                .deviceCategory("TBOX")
+                .deviceSn("TBOX-UID-000001")
+                .certificateProfile("TBOX_TSP_CLIENT")
+                .certStatus(CertificateStatus.ISSUING)
+                .build();
+        // 首次 selectByRequestId 返回 null（走到 insert），并发冲突后回读返回占位行
+        when(vehicleCertificateRepository.selectByRequestId("REQ-001")).thenReturn(null).thenReturn(raced);
+        doThrow(new org.springframework.dao.DuplicateKeyException("uk_request_id"))
+                .when(vehicleCertificateRepository).insert(any(VehicleCertificate.class));
+
+        // When
+        CertificateApplyResult result = certificateProvisioningAppService.applyDeviceCertificate(applyCmd);
+
+        // Then：回读既有占位行返回，不重复签发
+        assertEquals("ISSUING", result.getStatus());
+        verify(certificateEnrollmentTemplate, never()).apply(any());
+    }
+
+    @Test
     void confirmCertificateInstalled_当安装成功时_应更新状态为ACTIVE() {
         // Given
         vehicleCertificate.setCertStatus(CertificateStatus.ISSUED_NOT_CONFIRMED);
@@ -312,6 +401,9 @@ class CertificateProvisioningAppServiceTest {
         certificateProvisioningAppService.confirmCertificateInstalled(confirmCmd);
 
         // Then
+        // 激活新证书前先作废同设备同Profile的旧ACTIVE（落实“最多一条ACTIVE”，§3.1）
+        verify(vehicleCertificateRepository).supersedeActiveByDeviceSnAndProfile(
+                "TBOX-UID-000001", "TBOX_TSP_CLIENT", "REQ-001");
         verify(vehicleCertificateRepository).update(argThat(cert -> 
                 CertificateStatus.ACTIVE.equals(cert.getCertStatus()) && cert.getConfirmedAt() != null));
         verify(vehicleDeviceCertificatePublisher).publishCertificateChanged(any());
@@ -441,6 +533,16 @@ class CertificateProvisioningAppServiceTest {
         assertThrows(RuntimeException.class,
                 () -> certificateProvisioningAppService.applyDeviceCertificate(applyCmd));
         verify(certificateEnrollmentTemplate, never()).apply(any());
+    }
+
+    /**
+     * 将 URL-safe（无 padding）Base64 转换为标准 Base64（含 +/ 与 padding），
+     * 用于验证校验/签发两处解码口径对标准 Base64 一致（不硬编码 URL-safe）。
+     */
+    private static String toStandardBase64(String urlSafe) {
+        String standard = urlSafe.replace('-', '+').replace('_', '/');
+        int pad = (4 - standard.length() % 4) % 4;
+        return pad == 0 ? standard : standard + "=".repeat(pad);
     }
 
     /**

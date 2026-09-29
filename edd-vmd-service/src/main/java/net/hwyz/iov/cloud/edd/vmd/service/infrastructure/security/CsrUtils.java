@@ -112,6 +112,30 @@ public class CsrUtils {
     }
 
     /**
+     * 提取CSR内嵌公钥的算法名（如 EC / RSA）
+     * <p>
+     * 用于构造 framework CertificateProfile 时不硬编码算法，避免与设备实际
+     * 密钥算法（TBOX 为 ECDSA P-256，见 TBOX-SEC-DSN-CR-015 §4）错配。
+     *
+     * @param csrDerBase64 CSR DER编码的Base64字符串
+     * @return 公钥算法名，如 "EC" / "RSA"
+     */
+    public static String extractPublicKeyAlgorithm(String csrDerBase64) {
+        try {
+            PKCS10CertificationRequest req = parseCsr(csrDerBase64);
+            java.security.PublicKey publicKey =
+                    new org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter()
+                            .setProvider(BouncyCastleProvider.PROVIDER_NAME)
+                            .getPublicKey(req.getSubjectPublicKeyInfo());
+            String algorithm = publicKey.getAlgorithm();
+            // BC 转换器对椭圆曲线密钥返回 "ECDSA"，归一化为 JCA 标准名 "EC"
+            return "ECDSA".equals(algorithm) ? "EC" : algorithm;
+        } catch (Exception e) {
+            throw new IllegalArgumentException("提取CSR公钥算法失败", e);
+        }
+    }
+
+    /**
      * 计算CSR指纹（SHA-256，整份DER）
      *
      * @param csrDerBase64 CSR DER编码的Base64字符串
@@ -142,8 +166,14 @@ public class CsrUtils {
 
     /**
      * Base64解码，兼容 URL 安全 与 标准 两种编码（TBOX 侧可能用标准 Base64）
+     * <p>
+     * 全链路唯一解码入口：签发编排（framework 请求构造）必须复用本方法，
+     * 避免校验处与签发处解码口径不一致导致标准 Base64 在校验通过后解码抛异常。
+     *
+     * @param base64 CSR DER 的 Base64 字符串（URL安全或标准编码均可）
+     * @return DER 字节数组
      */
-    private static byte[] decodeBase64(String base64) {
+    public static byte[] decodeBase64(String base64) {
         if (base64 == null || base64.isEmpty()) {
             throw new IllegalArgumentException("CSR Base64为空");
         }

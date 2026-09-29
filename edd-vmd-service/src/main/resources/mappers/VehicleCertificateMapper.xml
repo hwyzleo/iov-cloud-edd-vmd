@@ -269,6 +269,31 @@
         LIMIT 1
     </select>
 
+    <!-- 根据设备SN、证书Profile与CSR指纹查询证书（幂等复用，F15） -->
+    <select id="selectByDeviceSnAndProfileAndCsrFingerprint" parameterType="java.util.Map" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList"/>
+        FROM tb_veh_certificate t
+        WHERE t.row_valid = 1
+        AND t.device_sn = #{deviceSn}
+        AND t.certificate_profile = #{certificateProfile}
+        AND t.csr_fingerprint = #{csrFingerprint}
+        ORDER BY t.id DESC
+        LIMIT 1
+    </select>
+
+    <!-- 将同设备同Profile的其它 ACTIVE 证书置为 SUPERSEDED（落实“最多一条 ACTIVE”，§3.1） -->
+    <update id="supersedeActiveByDeviceSnAndProfile" parameterType="java.util.Map">
+        UPDATE tb_veh_certificate t SET
+        t.cert_status = 'SUPERSEDED',
+        t.row_version = t.row_version + 1,
+        t.modify_time = now()
+        WHERE t.row_valid = 1
+        AND t.device_sn = #{deviceSn}
+        AND t.certificate_profile = #{certificateProfile}
+        AND t.cert_status = 'ACTIVE'
+        AND t.request_id != #{excludeRequestId}
+    </update>
+
     <!-- 根据设备SN查询证书列表 -->
     <select id="selectByDeviceSn" parameterType="String" resultMap="baseResultMap">
         SELECT <include refid="baseColumnList"/>

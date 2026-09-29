@@ -64,6 +64,17 @@ public class VehicleCertificateRepositoryImpl implements VehicleCertificateRepos
     }
 
     @Override
+    public VehicleCertificate selectByDeviceSnAndProfileAndCsrFingerprint(String deviceSn, String certificateProfile, String csrFingerprint) {
+        return VehicleCertificateConverter.INSTANCE.toDomain(
+                vehicleCertificateMapper.selectByDeviceSnAndProfileAndCsrFingerprint(deviceSn, certificateProfile, csrFingerprint));
+    }
+
+    @Override
+    public int supersedeActiveByDeviceSnAndProfile(String deviceSn, String certificateProfile, String excludeRequestId) {
+        return vehicleCertificateMapper.supersedeActiveByDeviceSnAndProfile(deviceSn, certificateProfile, excludeRequestId);
+    }
+
+    @Override
     public List<VehicleCertificate> selectByDeviceSn(String deviceSn) {
         List<VehicleCertificatePo> poList = vehicleCertificateMapper.selectByDeviceSn(deviceSn);
         return PageUtil.convert(poList, VehicleCertificateConverter.INSTANCE::toDomain);

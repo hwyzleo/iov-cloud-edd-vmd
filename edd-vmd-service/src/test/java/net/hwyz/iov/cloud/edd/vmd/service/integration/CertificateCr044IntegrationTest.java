@@ -2,6 +2,7 @@ package net.hwyz.iov.cloud.edd.vmd.service.integration;
 
 import net.hwyz.iov.cloud.edd.vmd.service.BaseTest;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.CertificateApplyCmd;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.CertificateConfirmCmd;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.CertificateApplyResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.CertificateStatusResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.CertificateProvisioningAppService;
@@ -72,7 +73,8 @@ class CertificateCr044IntegrationTest extends BaseTest {
 
     @BeforeEach
     void setUp() {
-        jdbcTemplate.execute("DELETE FROM tb_veh_certificate WHERE request_id = '" + REQUEST_ID + "'");
+        // BaseTest 仅 @Rollback 未开启测试事务（数据真实提交），清理必须覆盖全部变体以保证重跑幂等
+        jdbcTemplate.execute("DELETE FROM tb_veh_certificate WHERE request_id LIKE 'CR044_REQ_001%'");
         jdbcTemplate.execute("DELETE FROM tb_vehicle_part WHERE vin = '" + VIN + "'");
         jdbcTemplate.execute("DELETE FROM tb_part_info WHERE sn = '" + DEVICE_SN + "'");
         jdbcTemplate.execute("DELETE FROM tb_veh_basic_info WHERE vin = '" + VIN + "'");
@@ -163,6 +165,59 @@ class CertificateCr044IntegrationTest extends BaseTest {
         assertEquals(CERT_DER_BASE64, result.getCertificateDerBase64());
         assertNotNull(result.getChainDerBase64());
         assertEquals(CERT_DER_BASE64, result.getChainDerBase64()[0]);
+    }
+
+    @Test
+    @DisplayName("重签换钥：同设备新证书确认安装后，旧ACTIVE证书应置SUPERSEDED，同一设备仅一条ACTIVE")
+    void reissue_同设备新证书确认后_旧证书应被取代() {
+        // Given：两次签发使用不同 CSR（新密钥 → 不同 csr_fingerprint），同设备同 Profile
+        String req1 = REQUEST_ID + "_A";
+        String req2 = REQUEST_ID + "_B";
+        String pki1 = PKI_REQUEST_ID + "_A";
+        String pki2 = PKI_REQUEST_ID + "_B";
+        String sn1 = CERT_SN + "-A";
+        String sn2 = CERT_SN + "-B";
+
+        byte[] leafDer = Base64.getDecoder().decode(CERT_DER_BASE64);
+        when(certificateEnrollmentTemplate.apply(any())).thenReturn(
+                new CertApplyResult(pki1, EnrollmentState.ISSUED, Instant.now()));
+        when(certificateEnrollmentTemplate.getCertificate(pki1)).thenReturn(
+                new IssuedCertificate(leafDer, List.of(leafDer), sn1,
+                        Instant.now(), Instant.now().plusSeconds(365L * 24 * 3600), "SHA256:FINGERPRINT"));
+
+        CertificateApplyCmd cmd1 = CertificateApplyCmd.builder()
+                .requestId(req1).vin(VIN).deviceCategory("TBOX").deviceSn(DEVICE_SN)
+                .certificateProfile("TBOX_TSP_CLIENT").csrDerBase64(buildValidCsrBase64(DEVICE_SN))
+                .sourceSystem("MES").build();
+        certificateProvisioningAppService.applyDeviceCertificate(cmd1);
+        certificateProvisioningAppService.confirmCertificateInstalled(CertificateConfirmCmd.builder()
+                .requestId(req1).result("SUCCESS").vin(VIN).deviceSn(DEVICE_SN).build());
+
+        when(certificateEnrollmentTemplate.apply(any())).thenReturn(
+                new CertApplyResult(pki2, EnrollmentState.ISSUED, Instant.now()));
+        when(certificateEnrollmentTemplate.getCertificate(pki2)).thenReturn(
+                new IssuedCertificate(leafDer, List.of(leafDer), sn2,
+                        Instant.now(), Instant.now().plusSeconds(365L * 24 * 3600), "SHA256:FINGERPRINT"));
+
+        CertificateApplyCmd cmd2 = CertificateApplyCmd.builder()
+                .requestId(req2).vin(VIN).deviceCategory("TBOX").deviceSn(DEVICE_SN)
+                .certificateProfile("TBOX_TSP_CLIENT").csrDerBase64(buildValidCsrBase64(DEVICE_SN))
+                .sourceSystem("MES").build();
+        certificateProvisioningAppService.applyDeviceCertificate(cmd2);
+        certificateProvisioningAppService.confirmCertificateInstalled(CertificateConfirmCmd.builder()
+                .requestId(req2).result("SUCCESS").vin(VIN).deviceSn(DEVICE_SN).build());
+
+        // Then：旧证书 SUPERSEDED、新证书 ACTIVE、同设备同Profile仅一条 ACTIVE（§3.1 不变式 + V52 部分唯一索引）
+        String oldStatus = jdbcTemplate.queryForObject(
+                "SELECT cert_status FROM tb_veh_certificate WHERE request_id = ?", String.class, req1);
+        assertEquals("SUPERSEDED", oldStatus);
+        String newStatus = jdbcTemplate.queryForObject(
+                "SELECT cert_status FROM tb_veh_certificate WHERE request_id = ?", String.class, req2);
+        assertEquals("ACTIVE", newStatus);
+        Integer activeCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM tb_veh_certificate WHERE device_sn = ? AND certificate_profile = 'TBOX_TSP_CLIENT' AND cert_status = 'ACTIVE'",
+                Integer.class, DEVICE_SN);
+        assertEquals(1, activeCount);
     }
 
     /**
