@@ -22,6 +22,22 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.ObjectProvider;
 
+import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers;
+import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.asn1.x509.ExtendedKeyUsage;
+import org.bouncycastle.asn1.x509.Extension;
+import org.bouncycastle.asn1.x509.ExtensionsGenerator;
+import org.bouncycastle.asn1.x509.KeyPurposeId;
+import org.bouncycastle.asn1.x509.KeyUsage;
+import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
+import org.bouncycastle.operator.ContentSigner;
+import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
+import org.bouncycastle.pkcs.PKCS10CertificationRequest;
+import org.bouncycastle.pkcs.PKCS10CertificationRequestBuilder;
+
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.spec.ECGenParameterSpec;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Base64;
@@ -77,7 +93,7 @@ class CertificateProvisioningAppServiceTest {
                 .deviceCategory("TBOX")
                 .deviceSn("TBOX-UID-000001")
                 .certificateProfile("TBOX_TSP_CLIENT")
-                .csrDerBase64(Base64.getEncoder().encodeToString("MOCK_CSR_DATA".getBytes()))
+                .csrDerBase64(buildValidCsrBase64("TBOX-UID-000001"))
                 .sourceSystem("MES")
                 .facilityNo("FA-01")
                 .lineCode("LINE-A")
@@ -140,8 +156,8 @@ class CertificateProvisioningAppServiceTest {
         when(partInfoRepository.selectBySn("TBOX-UID-000001")).thenReturn(partInfo);
         when(vehiclePartRepository.selectActiveByVinAndPartId("HWYZTEST900000001", 1L)).thenReturn(vehiclePart);
 
-        // 使用包含正确设备SN的CSR（以TBOX-开头，以便CsrUtils.parseCommonName能正确解析）
-        applyCmd.setCsrDerBase64(Base64.getEncoder().encodeToString("TBOX-UID-000001".getBytes()));
+        // 使用包含正确设备SN的CSR（真实 PKCS#10 自签名，CN=deviceSn）
+        applyCmd.setCsrDerBase64(buildValidCsrBase64("TBOX-UID-000001"));
 
         // Mock PKI调用
         net.hwyz.iov.cloud.framework.security.crypto.model.CertApplyResult frameworkResult = 
@@ -364,6 +380,112 @@ class CertificateProvisioningAppServiceTest {
         // Then
         assertNotNull(result);
         assertEquals("CERT-001", result.getCertSn());
+    }
+
+    // =====================================================================
+    // CSR 强校验（TBOX-SEC-DSN-CR-015 §9.1）：真实解析/验签，非法 CSR 拒签
+    // =====================================================================
+
+    @Test
+    void applyDeviceCertificate_CSR签名无效时_应拒签() {
+        // Given
+        when(vehicleCertificateRepository.selectByRequestId("REQ-001")).thenReturn(null);
+        net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleBasicInfo basicInfo =
+                net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleBasicInfo.builder()
+                        .vin("HWYZTEST900000001")
+                        .eolTime(Instant.now())
+                        .build();
+        when(vehBasicInfoRepository.selectByVin("HWYZTEST900000001")).thenReturn(basicInfo);
+        net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartInfo partInfo =
+                net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartInfo.builder()
+                        .id(1L)
+                        .sn("TBOX-UID-000001")
+                        .build();
+        when(partInfoRepository.selectBySn("TBOX-UID-000001")).thenReturn(partInfo);
+        when(vehiclePartRepository.selectActiveByVinAndPartId("HWYZTEST900000001", 1L))
+                .thenReturn(vehiclePart);
+
+        // CN 正确但签名被篡改：用另一密钥生成 CN 相同但密钥不同的 CSR，再用篡改后的签名验证
+        applyCmd.setCsrDerBase64(buildTamperedSignatureCsrBase64("TBOX-UID-000001"));
+
+        // When & Then：签名无效必须拒签（不得继续走 PKI）
+        IllegalStateException ex = assertThrows(IllegalStateException.class,
+                () -> certificateProvisioningAppService.applyDeviceCertificate(applyCmd));
+        assertTrue(ex.getMessage().contains("CSR签名无效"));
+        verify(certificateEnrollmentTemplate, never()).apply(any());
+    }
+
+    @Test
+    void applyDeviceCertificate_CSR畸形时_应拒签() {
+        // Given
+        when(vehicleCertificateRepository.selectByRequestId("REQ-001")).thenReturn(null);
+        net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleBasicInfo basicInfo =
+                net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleBasicInfo.builder()
+                        .vin("HWYZTEST900000001")
+                        .eolTime(Instant.now())
+                        .build();
+        when(vehBasicInfoRepository.selectByVin("HWYZTEST900000001")).thenReturn(basicInfo);
+        net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartInfo partInfo =
+                net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartInfo.builder()
+                        .id(1L)
+                        .sn("TBOX-UID-000001")
+                        .build();
+        when(partInfoRepository.selectBySn("TBOX-UID-000001")).thenReturn(partInfo);
+        when(vehiclePartRepository.selectActiveByVinAndPartId("HWYZTEST900000001", 1L))
+                .thenReturn(vehiclePart);
+
+        // 畸形 ASN.1（非 CSR）
+        applyCmd.setCsrDerBase64(Base64.getEncoder().encodeToString("NOT_A_REAL_CSR".getBytes()));
+
+        // When & Then：解析失败必须拒签（fail-closed）
+        assertThrows(RuntimeException.class,
+                () -> certificateProvisioningAppService.applyDeviceCertificate(applyCmd));
+        verify(certificateEnrollmentTemplate, never()).apply(any());
+    }
+
+    /**
+     * 生成真实 PKCS#10 自签名 CSR（ECDSA P-256，CN=指定设备身份）
+     */
+    private static String buildValidCsrBase64(String cn) {
+        try {
+            KeyPairGenerator kpg = KeyPairGenerator.getInstance("EC");
+            kpg.initialize(new ECGenParameterSpec("secp256r1"));
+            KeyPair kp = kpg.generateKeyPair();
+            X500Name subject = new X500Name("CN=" + cn + ",OU=TBOX-TSP,O=OpenIOV,C=CN");
+            PKCS10CertificationRequestBuilder builder = new PKCS10CertificationRequestBuilder(
+                    subject, SubjectPublicKeyInfo.getInstance(kp.getPublic().getEncoded()));
+            ExtensionsGenerator extGen = new ExtensionsGenerator();
+            extGen.addExtension(Extension.keyUsage, true, new KeyUsage(KeyUsage.digitalSignature));
+            extGen.addExtension(Extension.extendedKeyUsage, false,
+                    new ExtendedKeyUsage(KeyPurposeId.id_kp_clientAuth));
+            builder.addAttribute(PKCSObjectIdentifiers.pkcs_9_at_extensionRequest, extGen.generate());
+            ContentSigner signer = new JcaContentSignerBuilder("SHA256withECDSA").build(kp.getPrivate());
+            PKCS10CertificationRequest req = builder.build(signer);
+            return Base64.getUrlEncoder().withoutPadding().encodeToString(req.getEncoded());
+        } catch (Exception e) {
+            throw new RuntimeException("生成测试CSR失败", e);
+        }
+    }
+
+    /**
+     * 生成签名无效的 CSR：用另一把私钥重新签名（同一公钥、不同私钥不可能产生，
+     * 故这里构造“公钥与签名不匹配”的 CSR：用 keyA 的公钥、keyB 的私钥签名）
+     */
+    private static String buildTamperedSignatureCsrBase64(String cn) {
+        try {
+            KeyPairGenerator kpg = KeyPairGenerator.getInstance("EC");
+            kpg.initialize(new ECGenParameterSpec("secp256r1"));
+            KeyPair pubKeyPair = kpg.generateKeyPair();   // 公钥来源 A
+            KeyPair signKeyPair = kpg.generateKeyPair();  // 签名来源 B（不同私钥）
+            X500Name subject = new X500Name("CN=" + cn + ",OU=TBOX-TSP,O=OpenIOV,C=CN");
+            PKCS10CertificationRequestBuilder builder = new PKCS10CertificationRequestBuilder(
+                    subject, SubjectPublicKeyInfo.getInstance(pubKeyPair.getPublic().getEncoded()));
+            ContentSigner signer = new JcaContentSignerBuilder("SHA256withECDSA").build(signKeyPair.getPrivate());
+            PKCS10CertificationRequest req = builder.build(signer);
+            return Base64.getUrlEncoder().withoutPadding().encodeToString(req.getEncoded());
+        } catch (Exception e) {
+            throw new RuntimeException("生成篡改CSR失败", e);
+        }
     }
 
 }

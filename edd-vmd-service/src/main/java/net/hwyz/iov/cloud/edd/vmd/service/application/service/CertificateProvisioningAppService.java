@@ -76,8 +76,8 @@ public class CertificateProvisioningAppService {
         // 3. 校验设备实例及active vehicle_part绑定
         VehiclePart activeBinding = validateActiveBinding(cmd.getVin(), cmd.getDeviceSn(), cmd.getDeviceCategory());
 
-        // 4. 解析CSR，校验CN=device_sn、签名有效性、Profile白名单及CSR不含VIN
-        validateCsr(cmd.getCsrDerBase64(), cmd.getDeviceSn(), cmd.getVin(), cmd.getCertificateProfile());
+        // 4. 解析CSR，校验CN=device_sn、签名有效性（PoP）及Profile白名单
+        validateCsr(cmd.getCsrDerBase64(), cmd.getDeviceSn(), cmd.getCertificateProfile());
 
         // 5. 计算CSR指纹
         String csrFingerprint = CsrUtils.calculateFingerprint(cmd.getCsrDerBase64());
@@ -291,18 +291,18 @@ public class CertificateProvisioningAppService {
     }
 
     /**
-     * 解析CSR，校验CN=device_sn、签名有效性、Profile白名单及CSR不含VIN
+     * 解析CSR，校验CN=device_sn、签名有效性（PoP）及Profile白名单。
+     * <p>证书/CSR 设计上不含 VIN（TBOX-SEC Identity Contract），故不再用 containsVin 作门禁；
+     * VIN ↔ 设备绑定已由 {@link #validateActiveBinding} 完成（TBOX-SEC-DSN-CR-015 §1.1/§9.1）。
      */
-    private void validateCsr(String csrDerBase64, String deviceSn, String vin, String certificateProfile) {
+    private void validateCsr(String csrDerBase64, String deviceSn, String certificateProfile) {
+        // CN 一致性：CSR Subject CN 必须与设备身份一致（真实解析，不再返回 MOCK 值）
         String cn = CsrUtils.parseCommonName(csrDerBase64);
         if (!deviceSn.equals(cn)) {
             throw new IllegalStateException("CSR Subject CN与device_sn不一致: CN=" + cn + ", deviceSn=" + deviceSn);
         }
 
-        if (CsrUtils.containsVin(csrDerBase64, vin)) {
-            throw new IllegalStateException("CSR不应包含VIN");
-        }
-
+        // 持有性证明 PoP：验证 PKCS#10 自签名（使用 CSR 内嵌公钥），失败拒签
         if (!CsrUtils.verifySignature(csrDerBase64)) {
             throw new IllegalStateException("CSR签名无效");
         }

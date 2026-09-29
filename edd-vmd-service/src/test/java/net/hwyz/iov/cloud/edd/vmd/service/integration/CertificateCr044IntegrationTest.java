@@ -17,6 +17,19 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.annotation.Rollback;
 
+import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers;
+import org.bouncycastle.asn1.x500.X500Name;
+import org.bouncycastle.asn1.x509.Extension;
+import org.bouncycastle.asn1.x509.ExtensionsGenerator;
+import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
+import org.bouncycastle.operator.ContentSigner;
+import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
+import org.bouncycastle.pkcs.PKCS10CertificationRequest;
+import org.bouncycastle.pkcs.PKCS10CertificationRequestBuilder;
+
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.spec.ECGenParameterSpec;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.List;
@@ -93,7 +106,7 @@ class CertificateCr044IntegrationTest extends BaseTest {
                 .deviceCategory("TBOX")
                 .deviceSn(DEVICE_SN)
                 .certificateProfile("TBOX_TSP_CLIENT")
-                .csrDerBase64(Base64.getEncoder().encodeToString(DEVICE_SN.getBytes()))
+                .csrDerBase64(buildValidCsrBase64(DEVICE_SN))
                 .sourceSystem("MES")
                 .facilityNo("FA-01")
                 .lineCode("LINE-A")
@@ -150,5 +163,33 @@ class CertificateCr044IntegrationTest extends BaseTest {
         assertEquals(CERT_DER_BASE64, result.getCertificateDerBase64());
         assertNotNull(result.getChainDerBase64());
         assertEquals(CERT_DER_BASE64, result.getChainDerBase64()[0]);
+    }
+
+    /**
+     * 生成真实 PKCS#10 自签名 CSR（ECDSA P-256，CN=指定设备身份），
+     * 替代旧的“明文设备SN冒充CSR”测试桩（TBOX-SEC-DSN-CR-015 §9.1）
+     */
+    private static String buildValidCsrBase64(String cn) {
+        try {
+            KeyPairGenerator kpg = KeyPairGenerator.getInstance("EC");
+            kpg.initialize(new ECGenParameterSpec("secp256r1"));
+            KeyPair kp = kpg.generateKeyPair();
+            X500Name subject = new X500Name("CN=" + cn + ",OU=TBOX-TSP,O=OpenIOV,C=CN");
+            PKCS10CertificationRequestBuilder builder = new PKCS10CertificationRequestBuilder(
+                    subject, SubjectPublicKeyInfo.getInstance(kp.getPublic().getEncoded()));
+            ExtensionsGenerator extGen = new ExtensionsGenerator();
+            extGen.addExtension(Extension.keyUsage, true,
+                    new org.bouncycastle.asn1.x509.KeyUsage(
+                            org.bouncycastle.asn1.x509.KeyUsage.digitalSignature));
+            extGen.addExtension(Extension.extendedKeyUsage, false,
+                    new org.bouncycastle.asn1.x509.ExtendedKeyUsage(
+                            org.bouncycastle.asn1.x509.KeyPurposeId.id_kp_clientAuth));
+            builder.addAttribute(PKCSObjectIdentifiers.pkcs_9_at_extensionRequest, extGen.generate());
+            ContentSigner signer = new JcaContentSignerBuilder("SHA256withECDSA").build(kp.getPrivate());
+            PKCS10CertificationRequest req = builder.build(signer);
+            return Base64.getUrlEncoder().withoutPadding().encodeToString(req.getEncoded());
+        } catch (Exception e) {
+            throw new RuntimeException("生成测试CSR失败", e);
+        }
     }
 }
