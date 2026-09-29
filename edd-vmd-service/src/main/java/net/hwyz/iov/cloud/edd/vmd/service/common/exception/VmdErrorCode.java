@@ -43,7 +43,7 @@ public enum VmdErrorCode implements ErrorCode {
     CERTIFICATE_DEVICE_NOT_BOUND("806041", "设备与车辆未建立active绑定"),
     CERTIFICATE_DEVICE_CATEGORY_MISMATCH("806042", "设备类别不匹配"),
     CERTIFICATE_CSR_INVALID("806043", "CSR格式或签名无效"),
-    CERTIFICATE_CSR_SUBJECT_MISMATCH("806044", "CSR Subject与device_sn不一致"),
+    CERTIFICATE_CSR_SUBJECT_MISMATCH("806044", "CSR Subject CN缺失、重复或与hsm_uid/ecu_uid不一致"),
     CERTIFICATE_CSR_CONTAINS_VIN("806045", "CSR不应包含VIN"),
     CERTIFICATE_PROFILE_NOT_ALLOWED("806046", "证书Profile不允许"),
     CERTIFICATE_PKI_UNAVAILABLE("806047", "PKI服务不可用"),
@@ -58,7 +58,13 @@ public enum VmdErrorCode implements ErrorCode {
     SOFTWARE_SOURCE_VERSION_MISSING("806056", "缺少软件实装来源版本或时刻"),
     SOFTWARE_IDEMPOTENCY_CONFLICT("806057", "软件实装幂等键冲突"),
     SECURITY_PRESET_INVALID_CAPABILITY("806058", "器件HSM能力值非法或不受支持"),
-    SECURITY_PRESET_BIZ_TYPE_UNRESOLVED("806059", "安全常量预置业务类型不可解析");
+    SECURITY_PRESET_BIZ_TYPE_UNRESOLVED("806059", "安全常量预置业务类型不可解析"),
+    CERTIFICATE_COMPENSATION_NOT_ALLOWED("806060", "当前证书申请状态不允许补偿"),
+    CERTIFICATE_REQUEST_IDEMPOTENCY_CONFLICT("806061", "证书申请幂等键冲突"),
+    CERTIFICATE_ISSUANCE_CONFLICT("806062", "设备已存在有效或处理中证书申请，不能重复补偿"),
+    CERTIFICATE_COMPENSATION_REASON_REQUIRED("806063", "请填写证书补偿原因和工单信息"),
+    CERTIFICATE_KEY_CONFLICT("806064", "同设备身份已存在不同公钥的有效/处理中证书，需授权换钥（rekey/reissue）"),
+    CERTIFICATE_DEVICE_UID_UNAVAILABLE("806065", "设备HSM UID缺失或来源冲突，无法完成证书身份校验");
 
     private final String code;
     private final String message;

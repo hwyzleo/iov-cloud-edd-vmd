@@ -40,6 +40,11 @@ public class CertificateConfirmRequest {
     private String deviceSn;
 
     /**
+     * 证书序列号（共享确认内核校验 requestId + certSn + deviceSn，CR-053）
+     */
+    private String certSn;
+
+    /**
      * 来源系统
      */
     private String sourceSystem;

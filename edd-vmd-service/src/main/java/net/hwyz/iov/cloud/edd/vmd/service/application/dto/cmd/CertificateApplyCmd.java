@@ -37,6 +37,11 @@ public class CertificateApplyCmd {
     private String deviceSn;
 
     /**
+     * 调用方声明 ecu_uid（CR-054：OAPI 可传、非权威；MPT 补偿可省略，由 VMD 从绑定解析）
+     */
+    private String declaredEcuUid;
+
+    /**
      * 证书Profile
      */
     private String certificateProfile;
@@ -47,9 +52,34 @@ public class CertificateApplyCmd {
     private String csrDerBase64;
 
     /**
-     * 来源系统
+     * 来源系统（MES / MPT_COMPENSATION）
      */
     private String sourceSystem;
+
+    /**
+     * MES原请求号（人工补偿关联，MPT_COMPENSATION 来源可空）
+     */
+    private String originalRequestId;
+
+    /**
+     * 人工补偿原因（MPT 写操作必填，不保存 CSR 全文）
+     */
+    private String compensationReason;
+
+    /**
+     * 关联工单号
+     */
+    private String ticketNo;
+
+    /**
+     * 操作人ID（MPT 人工操作审计）
+     */
+    private String operatorId;
+
+    /**
+     * 操作人姓名（MPT 人工操作审计）
+     */
+    private String operatorName;
 
     /**
      * 工厂编号

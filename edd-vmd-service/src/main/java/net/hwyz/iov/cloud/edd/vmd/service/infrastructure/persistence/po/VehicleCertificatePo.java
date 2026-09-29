@@ -77,10 +77,22 @@ public class VehicleCertificatePo extends BasePo {
     private String deviceCategory;
 
     /**
-     * 证书CN对应的稳定设备身份/芯片UID
+     * TBOX物理实例序列号（定位active绑定/安装确认，非证书CN期望值）
      */
     @TableField("device_sn")
     private String deviceSn;
+
+    /**
+     * 签发时权威HSM UID快照（CSR/证书 Subject CN，CR-054）
+     */
+    @TableField("hsm_uid")
+    private String hsmUid;
+
+    /**
+     * 规范化SubjectPublicKeyInfo SHA-256（幂等/换钥判定，CR-054）
+     */
+    @TableField("public_key_sha256")
+    private String publicKeySha256;
 
     /**
      * 受治理证书模板
@@ -149,10 +161,40 @@ public class VehicleCertificatePo extends BasePo {
     private String failReason;
 
     /**
-     * 来源系统
+     * 来源系统（MES / MPT_COMPENSATION）
      */
     @TableField("source_system")
     private String sourceSystem;
+
+    /**
+     * MES原请求号（人工补偿关联，MPT_COMPENSATION 来源可空）
+     */
+    @TableField("original_request_id")
+    private String originalRequestId;
+
+    /**
+     * 人工补偿原因（不保存 CSR 全文）
+     */
+    @TableField("compensation_reason")
+    private String compensationReason;
+
+    /**
+     * 关联工单号
+     */
+    @TableField("ticket_no")
+    private String ticketNo;
+
+    /**
+     * 最后人工操作人
+     */
+    @TableField("last_operator")
+    private String lastOperator;
+
+    /**
+     * 最后人工操作时间
+     */
+    @TableField("last_operation_at")
+    private LocalDateTime lastOperationAt;
 
     /**
      * 工厂编号

@@ -42,6 +42,31 @@ public class CertificateConfirmCmd {
     private String deviceSn;
 
     /**
+     * 证书序列号（共享确认内核校验 requestId + certSn + deviceSn，CR-053）
+     */
+    private String certSn;
+
+    /**
+     * 人工原因（MPT 安装结果补录必填，不保存 CSR 全文）
+     */
+    private String reason;
+
+    /**
+     * 关联工单号（MPT 安装结果补录必填）
+     */
+    private String ticketNo;
+
+    /**
+     * 操作人ID（MPT 人工操作审计）
+     */
+    private String operatorId;
+
+    /**
+     * 操作人姓名（MPT 人工操作审计）
+     */
+    private String operatorName;
+
+    /**
      * 来源系统
      */
     private String sourceSystem;

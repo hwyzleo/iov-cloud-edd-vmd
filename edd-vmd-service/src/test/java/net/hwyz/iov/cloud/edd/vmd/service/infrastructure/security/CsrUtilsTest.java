@@ -135,4 +135,92 @@ class CsrUtilsTest {
         assertThrows(IllegalArgumentException.class, () -> CsrUtils.extractPublicKeyAlgorithm(plain));
     }
 
+    // =====================================================================
+    // CR-054：normalizeUid + Subject/SAN 禁止项扫描
+    // =====================================================================
+
+    @Test
+    void normalizeUid_去除空白与前缀_应统一大写() {
+        assertEquals("00000000000000000000000000000001",
+                CsrUtils.normalizeUid("00000000000000000000000000000001"));
+        assertEquals("00000000000000000000000000000001",
+                CsrUtils.normalizeUid(" 0x00000000000000000000000000000001 "));
+        assertEquals("ABCDEF0123456789", CsrUtils.normalizeUid("0Xabcdef0123456789"));
+        assertEquals("ABCDEF0123456789", CsrUtils.normalizeUid("abcdef0123456789"));
+    }
+
+    @Test
+    void normalizeUid_空值_应返回null() {
+        assertEquals(null, CsrUtils.normalizeUid(null));
+        assertEquals(null, CsrUtils.normalizeUid("   "));
+    }
+
+    @Test
+    void subjectOrSanContains_Subject含禁止值_应命中() {
+        // CN 正确但 OU 属性携带 device_sn（CR-054 §7 禁止项扫描）
+        String csr = buildCsrWithCustomSubject("CN=HSM-UID-001,OU=DEV-SN-999,O=OpenIOV,C=CN");
+        assertTrue(CsrUtils.subjectOrSanContains(csr, java.util.List.of("DEV-SN-999")));
+        assertTrue(CsrUtils.subjectOrSanContains(csr, java.util.List.of("HSM-UID-001")));
+        assertFalse(CsrUtils.subjectOrSanContains(csr, java.util.List.of("NOT-PRESENT")));
+    }
+
+    @Test
+    void subjectOrSanContains_SAN含VIN_应命中() {
+        String csr = buildCsrWithSan("HWYZTEST900000001.invalid");
+        assertTrue(CsrUtils.subjectOrSanContains(csr, java.util.List.of("HWYZTEST900000001")));
+        assertFalse(CsrUtils.subjectOrSanContains(csr, java.util.List.of("OTHER-VIN")));
+    }
+
+    @Test
+    void subjectOrSanContains_合法CSR无禁止值_应不命中() {
+        String csr = buildCsr("TBOX-UID-000001");
+        assertFalse(CsrUtils.subjectOrSanContains(csr, java.util.List.of("HWYZTEST900000001", "DEV-SN-999")));
+        // 空禁止列表/畸形输入不抛异常
+        assertFalse(CsrUtils.subjectOrSanContains(csr, java.util.List.of()));
+        assertFalse(CsrUtils.subjectOrSanContains(
+                Base64.getEncoder().encodeToString("NOT_A_CSR".getBytes()),
+                java.util.List.of("X")));
+    }
+
+    private static String buildCsrWithCustomSubject(String subject) {
+        try {
+            KeyPairGenerator kpg = KeyPairGenerator.getInstance("EC");
+            kpg.initialize(new ECGenParameterSpec("secp256r1"));
+            KeyPair kp = kpg.generateKeyPair();
+            PKCS10CertificationRequestBuilder builder = new PKCS10CertificationRequestBuilder(
+                    new X500Name(subject), SubjectPublicKeyInfo.getInstance(kp.getPublic().getEncoded()));
+            ExtensionsGenerator extGen = new ExtensionsGenerator();
+            extGen.addExtension(Extension.keyUsage, true, new KeyUsage(KeyUsage.digitalSignature));
+            builder.addAttribute(PKCSObjectIdentifiers.pkcs_9_at_extensionRequest, extGen.generate());
+            ContentSigner signer = new JcaContentSignerBuilder("SHA256withECDSA").build(kp.getPrivate());
+            PKCS10CertificationRequest req = builder.build(signer);
+            return Base64.getUrlEncoder().withoutPadding().encodeToString(req.getEncoded());
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    private static String buildCsrWithSan(String sanDns) {
+        try {
+            KeyPairGenerator kpg = KeyPairGenerator.getInstance("EC");
+            kpg.initialize(new ECGenParameterSpec("secp256r1"));
+            KeyPair kp = kpg.generateKeyPair();
+            PKCS10CertificationRequestBuilder builder = new PKCS10CertificationRequestBuilder(
+                    new X500Name("CN=TBOX-UID-000001,OU=TBOX-TSP,O=OpenIOV,C=CN"),
+                    SubjectPublicKeyInfo.getInstance(kp.getPublic().getEncoded()));
+            ExtensionsGenerator extGen = new ExtensionsGenerator();
+            extGen.addExtension(Extension.keyUsage, true, new KeyUsage(KeyUsage.digitalSignature));
+            extGen.addExtension(Extension.subjectAlternativeName, false,
+                    new org.bouncycastle.asn1.x509.GeneralNames(
+                            new org.bouncycastle.asn1.x509.GeneralName(
+                                    org.bouncycastle.asn1.x509.GeneralName.dNSName, sanDns)));
+            builder.addAttribute(PKCSObjectIdentifiers.pkcs_9_at_extensionRequest, extGen.generate());
+            ContentSigner signer = new JcaContentSignerBuilder("SHA256withECDSA").build(kp.getPrivate());
+            PKCS10CertificationRequest req = builder.build(signer);
+            return Base64.getUrlEncoder().withoutPadding().encodeToString(req.getEncoded());
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
 }

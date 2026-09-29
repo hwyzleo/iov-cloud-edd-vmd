@@ -70,6 +70,34 @@ public class VehicleCertificateRepositoryImpl implements VehicleCertificateRepos
     }
 
     @Override
+    public VehicleCertificate selectByVinAndUidAndSpkiAndProfile(String vin, String hsmUid, String publicKeySha256, String certificateProfile) {
+        return VehicleCertificateConverter.INSTANCE.toDomain(
+                vehicleCertificateMapper.selectByVinAndUidAndSpkiAndProfile(vin, hsmUid, publicKeySha256, certificateProfile));
+    }
+
+    @Override
+    public VehicleCertificate selectKeyConflictByVinAndUidAndProfile(String vin, String hsmUid, String publicKeySha256, String certificateProfile) {
+        return VehicleCertificateConverter.INSTANCE.toDomain(
+                vehicleCertificateMapper.selectKeyConflictByVinAndUidAndProfile(vin, hsmUid, publicKeySha256, certificateProfile));
+    }
+
+    @Override
+    public VehicleCertificate selectByIdForUpdate(Long id) {
+        return VehicleCertificateConverter.INSTANCE.toDomain(vehicleCertificateMapper.selectByIdForUpdate(id));
+    }
+
+    @Override
+    public VehicleCertificate selectByOriginalRequestId(String originalRequestId) {
+        return VehicleCertificateConverter.INSTANCE.toDomain(vehicleCertificateMapper.selectByOriginalRequestId(originalRequestId));
+    }
+
+    @Override
+    public VehicleCertificate selectActiveOrInProgressByDeviceSnAndProfile(String deviceSn, String certificateProfile) {
+        return VehicleCertificateConverter.INSTANCE.toDomain(
+                vehicleCertificateMapper.selectActiveOrInProgressByDeviceSnAndProfile(deviceSn, certificateProfile));
+    }
+
+    @Override
     public int supersedeActiveByDeviceSnAndProfile(String deviceSn, String certificateProfile, String excludeRequestId) {
         return vehicleCertificateMapper.supersedeActiveByDeviceSnAndProfile(deviceSn, certificateProfile, excludeRequestId);
     }

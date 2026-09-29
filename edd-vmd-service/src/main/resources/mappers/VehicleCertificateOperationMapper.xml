@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehicleCertificateOperationMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="baseResultMap" type="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehicleCertificateOperationPo">
+        <id column="id" property="id" />
+        <result column="operation_id" property="operationId" />
+        <result column="request_id" property="requestId" />
+        <result column="action" property="action" />
+        <result column="operator_id" property="operatorId" />
+        <result column="operator_name" property="operatorName" />
+        <result column="reason" property="reason" />
+        <result column="ticket_no" property="ticketNo" />
+        <result column="original_request_id" property="originalRequestId" />
+        <result column="before_status" property="beforeStatus" />
+        <result column="after_status" property="afterStatus" />
+        <result column="request_digest" property="requestDigest" />
+        <result column="result" property="result" />
+        <result column="error_code" property="errorCode" />
+        <result column="source_ip" property="sourceIp" />
+        <result column="user_agent" property="userAgent" />
+        <result column="occurred_at" property="occurredAt" />
+        <result column="create_time" property="createTime" />
+        <result column="create_by" property="createBy" />
+        <result column="modify_time" property="modifyTime" />
+        <result column="modify_by" property="modifyBy" />
+        <result column="row_version" property="rowVersion" />
+        <result column="row_valid" property="rowValid" />
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="baseColumnList">
+        id, operation_id, request_id, action,
+        operator_id, operator_name, reason, ticket_no, original_request_id,
+        before_status, after_status, request_digest, result, error_code,
+        source_ip, user_agent, occurred_at,
+        create_time, create_by, modify_time, modify_by, row_version, row_valid
+    </sql>
+
+    <!-- 插入 -->
+    <insert id="insertPo" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO tb_veh_certificate_operation (
+            id, operation_id, request_id, action,
+            operator_id, operator_name, reason, ticket_no, original_request_id,
+            before_status, after_status, request_digest, result, error_code,
+            source_ip, user_agent, occurred_at,
+            create_time, create_by, modify_time, modify_by, row_version, row_valid
+        )
+        VALUES (
+            #{id}, #{operationId}, #{requestId}, #{action},
+            #{operatorId}, #{operatorName}, #{reason}, #{ticketNo}, #{originalRequestId},
+            #{beforeStatus}, #{afterStatus}, #{requestDigest}, #{result}, #{errorCode},
+            #{sourceIp}, #{userAgent}, #{occurredAt},
+            now(), #{createBy}, now(), #{modifyBy}, 1, 1
+        )
+    </insert>
+
+    <!-- 更新 -->
+    <update id="updatePo" parameterType="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehicleCertificateOperationPo">
+        UPDATE tb_veh_certificate_operation t SET
+        <if test="result != null and result != ''">
+            t.result = #{result},
+        </if>
+        <if test="errorCode != null and errorCode != ''">
+            t.error_code = #{errorCode},
+        </if>
+        <if test="modifyBy != null">
+            t.modify_by = #{modifyBy},
+        </if>
+        t.row_version = t.row_version + 1,
+        t.modify_time = now()
+        WHERE id = #{id}
+    </update>
+
+    <!-- 物理删除 -->
+    <delete id="physicalDeletePo" parameterType="Long">
+        DELETE FROM tb_veh_certificate_operation t
+        WHERE t.id = #{value}
+    </delete>
+
+    <!-- 批量物理删除 -->
+    <delete id="batchPhysicalDeletePo" parameterType="Long">
+        DELETE FROM tb_veh_certificate_operation t
+        WHERE t.id IN
+        <foreach collection="array" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+    <!-- 根据主键获取对应数据 -->
+    <select id="selectPoById" parameterType="Long" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList"/>
+        FROM tb_veh_certificate_operation t
+        WHERE t.id = #{value}
+        AND t.row_valid = 1
+    </select>
+
+    <!-- 根据数据对象获取对应数据列表 -->
+    <select id="selectPoByExample" parameterType="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehicleCertificateOperationPo" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList"/>
+        FROM tb_veh_certificate_operation t
+        WHERE t.row_valid = 1
+        <if test="id != null">
+            AND t.id = #{id}
+        </if>
+        <if test="operationId != null and operationId != ''">
+            AND t.operation_id = #{operationId}
+        </if>
+        <if test="requestId != null and requestId != ''">
+            AND t.request_id = #{requestId}
+        </if>
+        <if test="action != null and action != ''">
+            AND t.action = #{action}
+        </if>
+        <if test="operatorId != null and operatorId != ''">
+            AND t.operator_id = #{operatorId}
+        </if>
+        <if test="occurredAt != null">
+            AND t.occurred_at = #{occurredAt}
+        </if>
+        ORDER BY t.id DESC
+    </select>
+
+    <!-- 根据Map对象获取对应数据列表 -->
+    <select id="selectPoByMap" parameterType="java.util.Map" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList"/>
+        FROM tb_veh_certificate_operation t
+        WHERE t.row_valid = 1
+        <!-- 添加自定义条件 -->
+        <if test="requestId != null and requestId != ''">
+            AND t.request_id = #{requestId}
+        </if>
+        <if test="action != null and action != ''">
+            AND t.action = #{action}
+        </if>
+        <if test="operatorId != null and operatorId != ''">
+            AND t.operator_id = #{operatorId}
+        </if>
+        <if test="beginId != null">
+            AND t.id &lt; #{beginId}
+        </if>
+        ORDER BY t.id DESC
+        <if test="pageSize != null">
+            LIMIT #{pageSize}
+        </if>
+    </select>
+
+    <!-- 根据requestId查询操作审计列表（状态时间线，按发生时间升序） -->
+    <select id="selectByRequestId" parameterType="String" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList"/>
+        FROM tb_veh_certificate_operation t
+        WHERE t.row_valid = 1
+        AND t.request_id = #{requestId}
+        ORDER BY t.occurred_at ASC, t.id ASC
+    </select>
+
+    <!-- 根据操作记录ID查询 -->
+    <select id="selectByOperationId" parameterType="String" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList"/>
+        FROM tb_veh_certificate_operation t
+        WHERE t.row_valid = 1
+        AND t.operation_id = #{operationId}
+        LIMIT 1
+    </select>
+
+    <!-- 根据Map对象统计记录数 -->
+    <select id="countPoByMap" parameterType="java.util.Map" resultType="int">
+        SELECT COUNT(*)
+        FROM tb_veh_certificate_operation t
+        WHERE t.row_valid = 1
+        <!-- 添加自定义条件 -->
+    </select>
+</mapper>

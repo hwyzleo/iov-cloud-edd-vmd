@@ -72,6 +72,43 @@ public interface VehicleCertificateMapper extends BaseDao<VehicleCertificatePo, 
     VehicleCertificatePo selectByDeviceSnAndProfileAndCsrFingerprint(@Param("deviceSn") String deviceSn, @Param("certificateProfile") String certificateProfile, @Param("csrFingerprint") String csrFingerprint);
 
     /**
+     * 业务幂等复用：同 vin + hsm_uid + public_key_sha256 + certificate_profile（CR-054）
+     */
+    VehicleCertificatePo selectByVinAndUidAndSpkiAndProfile(@Param("vin") String vin, @Param("hsmUid") String hsmUid, @Param("publicKeySha256") String publicKeySha256, @Param("certificateProfile") String certificateProfile);
+
+    /**
+     * 换钥冲突检测：同 vin + hsm_uid + certificate_profile 但 SPKI 不同且非终态（CR-054）
+     */
+    VehicleCertificatePo selectKeyConflictByVinAndUidAndProfile(@Param("vin") String vin, @Param("hsmUid") String hsmUid, @Param("publicKeySha256") String publicKeySha256, @Param("certificateProfile") String certificateProfile);
+
+    /**
+     * 根据主键ID查询证书并加行锁（reconcile 并发互斥，FOR UPDATE）
+     *
+     * @param id 主键ID
+     * @return 证书，不存在返回 null
+     */
+    VehicleCertificatePo selectByIdForUpdate(@Param("id") Long id);
+
+    /**
+     * 根据MES原请求号查询证书（人工补偿关联，CR-053）
+     *
+     * @param originalRequestId MES原请求号
+     * @return 证书，不存在返回 null
+     */
+    VehicleCertificatePo selectByOriginalRequestId(@Param("originalRequestId") String originalRequestId);
+
+    /**
+     * 根据设备SN和Profile查询有效/处理中申请（防重复签发，CR-053）
+     * <p>有效或处理中：REQUESTED / ISSUING / PENDING_RECONCILE / ISSUED_NOT_CONFIRMED / ACTIVE，
+     * 排除 INSTALL_FAILED / SUPERSEDED / REVOKED / EXPIRED / FAILED</p>
+     *
+     * @param deviceSn           设备SN
+     * @param certificateProfile 证书Profile
+     * @return 证书，不存在返回 null
+     */
+    VehicleCertificatePo selectActiveOrInProgressByDeviceSnAndProfile(@Param("deviceSn") String deviceSn, @Param("certificateProfile") String certificateProfile);
+
+    /**
      * 将同设备同Profile的其它 ACTIVE 证书置为 SUPERSEDED（落实“最多一条 ACTIVE”，§3.1）
      *
      * @param deviceSn           设备SN

@@ -1,9 +1,15 @@
 package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.security;
 
 import lombok.extern.slf4j.Slf4j;
+import org.bouncycastle.asn1.pkcs.PKCSObjectIdentifiers;
+import org.bouncycastle.asn1.x500.AttributeTypeAndValue;
 import org.bouncycastle.asn1.x500.RDN;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x500.style.BCStyle;
+import org.bouncycastle.asn1.x509.Extension;
+import org.bouncycastle.asn1.x509.Extensions;
+import org.bouncycastle.asn1.x509.GeneralName;
+import org.bouncycastle.asn1.x509.GeneralNames;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.operator.ContentVerifierProvider;
@@ -14,6 +20,8 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.Security;
 import java.util.Base64;
+import java.util.List;
+import java.util.Locale;
 
 /**
  * CSR工具类
@@ -150,6 +158,104 @@ public class CsrUtils {
             log.error("计算CSR指纹失败", e);
             throw new RuntimeException("计算CSR指纹失败", e);
         }
+    }
+
+    /**
+     * 规范化 HSM UID（CR-054 §7）
+     * <p>
+     * 仅允许：去除两端空白、统一十六进制大写、处理可选 0x 前缀。
+     * 不得截断、补零、contains 或忽略内部字符。
+     *
+     * @param uid 原始 UID
+     * @return 规范化 UID；入参 null 返回 null
+     */
+    public static String normalizeUid(String uid) {
+        if (uid == null) {
+            return null;
+        }
+        String v = uid.trim();
+        if (v.isEmpty()) {
+            return null;
+        }
+        if (v.startsWith("0x") || v.startsWith("0X")) {
+            v = v.substring(2);
+        }
+        return v.toUpperCase(Locale.ROOT);
+    }
+
+    /**
+     * 检查 CSR Subject / SAN 是否包含任一禁止值（CR-054 §7：不得含 VIN / device_sn）
+     * <p>
+     * 对 Subject 全部 RDN 属性值与 SAN 全部 GeneralName 做不区分大小写的包含扫描。
+     * SAN 解析失败按无 SAN 处理（不 fail）；Subject 缺失视为不含禁止值。
+     *
+     * @param csrDerBase64  CSR DER Base64
+     * @param forbiddenValues 禁止值列表（如 VIN、device_sn）
+     * @return true 表示命中禁止值
+     */
+    public static boolean subjectOrSanContains(String csrDerBase64, List<String> forbiddenValues) {
+        if (forbiddenValues == null || forbiddenValues.isEmpty()) {
+            return false;
+        }
+        try {
+            PKCS10CertificationRequest req = parseCsr(csrDerBase64);
+            X500Name subject = req.getSubject();
+            if (subject != null) {
+                for (RDN rdn : subject.getRDNs()) {
+                    for (AttributeTypeAndValue atv : rdn.getTypesAndValues()) {
+                        if (containsAnyIgnoreCase(atv.getValue().toString(), forbiddenValues)) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            Extensions exts = extractRequestedExtensions(req);
+            if (exts != null) {
+                Extension sanExt = exts.getExtension(Extension.subjectAlternativeName);
+                if (sanExt != null) {
+                    GeneralNames gns = GeneralNames.getInstance(sanExt.getParsedValue());
+                    for (GeneralName gn : gns.getNames()) {
+                        if (containsAnyIgnoreCase(gn.getName().toString(), forbiddenValues)) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("CSR Subject/SAN 禁止项扫描失败: {}", e.getMessage());
+        }
+        return false;
+    }
+
+    /**
+     * 从 CSR 的 extensionRequest 属性提取 Extensions（兼容 BC 1.69，无 getRequestedExtensions()）
+     */
+    private static Extensions extractRequestedExtensions(PKCS10CertificationRequest req) {
+        try {
+            org.bouncycastle.asn1.pkcs.Attribute[] extReqAttrs =
+                    req.getAttributes(PKCSObjectIdentifiers.pkcs_9_at_extensionRequest);
+            if (extReqAttrs != null && extReqAttrs.length > 0
+                    && extReqAttrs[0].getAttrValues() != null
+                    && extReqAttrs[0].getAttrValues().size() > 0) {
+                return Extensions.getInstance(extReqAttrs[0].getAttrValues().getObjectAt(0));
+            }
+        } catch (Exception e) {
+            log.warn("解析CSR extensionRequest失败: {}", e.getMessage());
+        }
+        return null;
+    }
+
+    private static boolean containsAnyIgnoreCase(String value, List<String> forbiddenValues) {
+        if (value == null) {
+            return false;
+        }
+        String lower = value.toLowerCase(Locale.ROOT);
+        for (String f : forbiddenValues) {
+            if (f != null && lower.contains(f.toLowerCase(Locale.ROOT))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

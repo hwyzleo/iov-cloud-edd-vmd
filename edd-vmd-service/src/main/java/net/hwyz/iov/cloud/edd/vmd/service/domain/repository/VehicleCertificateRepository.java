@@ -83,6 +83,53 @@ public interface VehicleCertificateRepository {
     VehicleCertificate selectByDeviceSnAndProfileAndCsrFingerprint(String deviceSn, String certificateProfile, String csrFingerprint);
 
     /**
+     * 业务幂等复用：同 vin + hsm_uid + public_key_sha256 + certificate_profile（CR-054）
+     *
+     * @param vin                车辆VIN
+     * @param hsmUid             权威HSM UID
+     * @param publicKeySha256    规范化SPKI SHA-256
+     * @param certificateProfile 证书Profile
+     * @return 证书，不存在返回 null
+     */
+    VehicleCertificate selectByVinAndUidAndSpkiAndProfile(String vin, String hsmUid, String publicKeySha256, String certificateProfile);
+
+    /**
+     * 换钥冲突检测：同 vin + hsm_uid + certificate_profile 但 SPKI 不同且非终态（CR-054）
+     *
+     * @param vin                车辆VIN
+     * @param hsmUid             权威HSM UID
+     * @param publicKeySha256    本次CSR规范化SPKI SHA-256（排除用）
+     * @param certificateProfile 证书Profile
+     * @return 冲突证书，不存在返回 null
+     */
+    VehicleCertificate selectKeyConflictByVinAndUidAndProfile(String vin, String hsmUid, String publicKeySha256, String certificateProfile);
+
+    /**
+     * 根据主键ID查询证书并加行锁（reconcile 并发互斥，FOR UPDATE）
+     *
+     * @param id 主键ID
+     * @return 证书，不存在返回 null
+     */
+    VehicleCertificate selectByIdForUpdate(Long id);
+
+    /**
+     * 根据MES原请求号查询证书（人工补偿关联，CR-053）
+     *
+     * @param originalRequestId MES原请求号
+     * @return 证书，不存在返回 null
+     */
+    VehicleCertificate selectByOriginalRequestId(String originalRequestId);
+
+    /**
+     * 根据设备SN和Profile查询有效/处理中申请（防重复签发，CR-053）
+     *
+     * @param deviceSn           设备SN
+     * @param certificateProfile 证书Profile
+     * @return 证书，不存在返回 null
+     */
+    VehicleCertificate selectActiveOrInProgressByDeviceSnAndProfile(String deviceSn, String certificateProfile);
+
+    /**
      * 将同设备同Profile的其它 ACTIVE 证书置为 SUPERSEDED（落实“最多一条 ACTIVE”，§3.1）
      *
      * @param deviceSn           设备SN

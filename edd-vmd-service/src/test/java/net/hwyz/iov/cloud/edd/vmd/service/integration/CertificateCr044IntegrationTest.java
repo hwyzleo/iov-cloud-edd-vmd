@@ -55,6 +55,8 @@ class CertificateCr044IntegrationTest extends BaseTest {
     private static final String REQUEST_ID = "CR044_REQ_001";
     private static final String VIN = "HWYZTESTCR044001";
     private static final String DEVICE_SN = "TBOX-UID-CR044-001";
+    /** 权威 HSM UID（与模拟 PKI 叶子证书 CN=TBOX-UID-000001 一致，CR-054） */
+    private static final String HSM_UID = "TBOX-UID-000001";
     private static final String PART_CODE = "CR044_TBOX";
     private static final String PKI_REQUEST_ID = "PKI-CR044-001";
     private static final String CERT_SN = "CR044-CERT-001";
@@ -84,8 +86,8 @@ class CertificateCr044IntegrationTest extends BaseTest {
                         "VALUES (?, 'BRAND', 'PLAT', 'SER', 'MODEL', NOW())",
                 VIN);
         jdbcTemplate.update(
-                "INSERT INTO tb_part_info (part_code, sn, instance_state) VALUES (?, ?, 1)",
-                PART_CODE, DEVICE_SN);
+                "INSERT INTO tb_part_info (part_code, sn, instance_state, extra) VALUES (?, ?, 1, ?)",
+                PART_CODE, DEVICE_SN, "{\"hsm\":\"" + HSM_UID + "\"}");
         jdbcTemplate.update(
                 "INSERT INTO tb_vehicle_part (vin, part_id, bind_state) SELECT ?, id, 1 FROM tb_part_info WHERE sn = ?",
                 VIN, DEVICE_SN);
@@ -108,7 +110,7 @@ class CertificateCr044IntegrationTest extends BaseTest {
                 .deviceCategory("TBOX")
                 .deviceSn(DEVICE_SN)
                 .certificateProfile("TBOX_TSP_CLIENT")
-                .csrDerBase64(buildValidCsrBase64(DEVICE_SN))
+                .csrDerBase64(buildValidCsrBase64(HSM_UID))
                 .sourceSystem("MES")
                 .facilityNo("FA-01")
                 .lineCode("LINE-A")
@@ -168,15 +170,12 @@ class CertificateCr044IntegrationTest extends BaseTest {
     }
 
     @Test
-    @DisplayName("重签换钥：同设备新证书确认安装后，旧ACTIVE证书应置SUPERSEDED，同一设备仅一条ACTIVE")
-    void reissue_同设备新证书确认后_旧证书应被取代() {
-        // Given：两次签发使用不同 CSR（新密钥 → 不同 csr_fingerprint），同设备同 Profile
+    @DisplayName("换钥冲突：同身份同Profile不同公钥应拒绝签发（806064），旧证书不得被覆盖")
+    void reissue_同身份不同公钥_应抛换钥冲突() {
+        // Given：首次签发（CN=hsm_uid）成功并确认安装 → ACTIVE
         String req1 = REQUEST_ID + "_A";
-        String req2 = REQUEST_ID + "_B";
         String pki1 = PKI_REQUEST_ID + "_A";
-        String pki2 = PKI_REQUEST_ID + "_B";
         String sn1 = CERT_SN + "-A";
-        String sn2 = CERT_SN + "-B";
 
         byte[] leafDer = Base64.getDecoder().decode(CERT_DER_BASE64);
         when(certificateEnrollmentTemplate.apply(any())).thenReturn(
@@ -187,33 +186,28 @@ class CertificateCr044IntegrationTest extends BaseTest {
 
         CertificateApplyCmd cmd1 = CertificateApplyCmd.builder()
                 .requestId(req1).vin(VIN).deviceCategory("TBOX").deviceSn(DEVICE_SN)
-                .certificateProfile("TBOX_TSP_CLIENT").csrDerBase64(buildValidCsrBase64(DEVICE_SN))
+                .certificateProfile("TBOX_TSP_CLIENT").csrDerBase64(buildValidCsrBase64(HSM_UID))
                 .sourceSystem("MES").build();
         certificateProvisioningAppService.applyDeviceCertificate(cmd1);
         certificateProvisioningAppService.confirmCertificateInstalled(CertificateConfirmCmd.builder()
                 .requestId(req1).result("SUCCESS").vin(VIN).deviceSn(DEVICE_SN).build());
 
-        when(certificateEnrollmentTemplate.apply(any())).thenReturn(
-                new CertApplyResult(pki2, EnrollmentState.ISSUED, Instant.now()));
-        when(certificateEnrollmentTemplate.getCertificate(pki2)).thenReturn(
-                new IssuedCertificate(leafDer, List.of(leafDer), sn2,
-                        Instant.now(), Instant.now().plusSeconds(365L * 24 * 3600), "SHA256:FINGERPRINT"));
-
+        // When：同身份（CN=hsm_uid）但新密钥（不同 SPKI）再次申请
+        String req2 = REQUEST_ID + "_B";
         CertificateApplyCmd cmd2 = CertificateApplyCmd.builder()
                 .requestId(req2).vin(VIN).deviceCategory("TBOX").deviceSn(DEVICE_SN)
-                .certificateProfile("TBOX_TSP_CLIENT").csrDerBase64(buildValidCsrBase64(DEVICE_SN))
+                .certificateProfile("TBOX_TSP_CLIENT").csrDerBase64(buildValidCsrBase64(HSM_UID))
                 .sourceSystem("MES").build();
-        certificateProvisioningAppService.applyDeviceCertificate(cmd2);
-        certificateProvisioningAppService.confirmCertificateInstalled(CertificateConfirmCmd.builder()
-                .requestId(req2).result("SUCCESS").vin(VIN).deviceSn(DEVICE_SN).build());
 
-        // Then：旧证书 SUPERSEDED、新证书 ACTIVE、同设备同Profile仅一条 ACTIVE（§3.1 不变式 + V52 部分唯一索引）
-        String oldStatus = jdbcTemplate.queryForObject(
+        // Then：806064，不得返回旧证书、不得调 PKI 覆盖；旧证书保持 ACTIVE
+        net.hwyz.iov.cloud.edd.vmd.service.common.exception.CertificateKeyConflictException ex =
+                assertThrows(net.hwyz.iov.cloud.edd.vmd.service.common.exception.CertificateKeyConflictException.class,
+                        () -> certificateProvisioningAppService.applyDeviceCertificate(cmd2));
+        assertEquals("806064", ex.getErrorCode().getCode());
+
+        String status1 = jdbcTemplate.queryForObject(
                 "SELECT cert_status FROM tb_veh_certificate WHERE request_id = ?", String.class, req1);
-        assertEquals("SUPERSEDED", oldStatus);
-        String newStatus = jdbcTemplate.queryForObject(
-                "SELECT cert_status FROM tb_veh_certificate WHERE request_id = ?", String.class, req2);
-        assertEquals("ACTIVE", newStatus);
+        assertEquals("ACTIVE", status1);
         Integer activeCount = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM tb_veh_certificate WHERE device_sn = ? AND certificate_profile = 'TBOX_TSP_CLIENT' AND cert_status = 'ACTIVE'",
                 Integer.class, DEVICE_SN);

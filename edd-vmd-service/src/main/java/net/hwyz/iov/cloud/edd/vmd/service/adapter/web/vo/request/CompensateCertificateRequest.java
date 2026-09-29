@@ -1,22 +1,32 @@
 package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request;
 
-import lombok.Data;
-
 import jakarta.validation.constraints.NotBlank;
+import lombok.*;
+import net.hwyz.iov.cloud.framework.common.bean.BaseRequest;
 
 /**
- * 证书申请请求
+ * 证书人工补偿申请请求（MPT，CR-053）
+ * <p>
+ * 后台不生成设备密钥或 CSR；CSR 必须来自目标 TBOX/安全芯片对应的受信工位回读结果。
  *
  * @author hwyz_leo
  */
 @Data
-public class CertificateApplyRequest {
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@EqualsAndHashCode(callSuper = true)
+public class CompensateCertificateRequest extends BaseRequest {
 
     /**
-     * MES/OAPI业务请求幂等键
+     * 原 MES 请求号或人工补申请号（可选，已存在时进入幂等比对）
      */
-    @NotBlank(message = "requestId不能为空")
     private String requestId;
+
+    /**
+     * MES原请求号（可选，命中既有记录时引导对账）
+     */
+    private String originalMesRequestId;
 
     /**
      * 车辆VIN
@@ -37,26 +47,16 @@ public class CertificateApplyRequest {
     private String deviceSn;
 
     /**
-     * 调用方声明 ecu_uid（可选，CR-054：非权威，VMD 以 active 绑定解析的 hsm_uid 为准）
-     */
-    private String ecuUid;
-
-    /**
      * 证书Profile
      */
     @NotBlank(message = "certificateProfile不能为空")
     private String certificateProfile;
 
     /**
-     * CSR DER Base64编码
+     * CSR DER Base64编码（必填，来自受信工位回读）
      */
     @NotBlank(message = "csrDerBase64不能为空")
     private String csrDerBase64;
-
-    /**
-     * 来源系统
-     */
-    private String sourceSystem;
 
     /**
      * 工厂编号
@@ -67,5 +67,16 @@ public class CertificateApplyRequest {
      * 产线代码
      */
     private String lineCode;
+
+    /**
+     * 工单号
+     */
+    private String ticketNo;
+
+    /**
+     * 人工补偿原因（必填）
+     */
+    @NotBlank(message = "reason不能为空")
+    private String reason;
 
 }

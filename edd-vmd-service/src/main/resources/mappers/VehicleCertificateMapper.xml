@@ -13,6 +13,8 @@
         <result column="part_id" property="partId" />
         <result column="device_category" property="deviceCategory" />
         <result column="device_sn" property="deviceSn" />
+        <result column="hsm_uid" property="hsmUid" />
+        <result column="public_key_sha256" property="publicKeySha256" />
         <result column="certificate_profile" property="certificateProfile" />
         <result column="csr_fingerprint" property="csrFingerprint" />
         <result column="subject" property="subject" />
@@ -25,6 +27,11 @@
         <result column="confirmed_at" property="confirmedAt" />
         <result column="fail_reason" property="failReason" />
         <result column="source_system" property="sourceSystem" />
+        <result column="original_request_id" property="originalRequestId" />
+        <result column="compensation_reason" property="compensationReason" />
+        <result column="ticket_no" property="ticketNo" />
+        <result column="last_operator" property="lastOperator" />
+        <result column="last_operation_at" property="lastOperationAt" />
         <result column="facility_no" property="facilityNo" />
         <result column="line_code" property="lineCode" />
         <result column="create_time" property="createTime" />
@@ -37,22 +44,25 @@
 
     <!-- 通用查询结果列 -->
     <sql id="baseColumnList">
-        id, request_id, pki_request_id, cert_sn, vin, binding_id, part_id, device_category, device_sn, certificate_profile, csr_fingerprint,
+        id, request_id, pki_request_id, cert_sn, vin, binding_id, part_id, device_category, device_sn, hsm_uid, public_key_sha256, certificate_profile, csr_fingerprint,
         subject, issuer, certificate_fingerprint, not_before, not_after, cert_status, issued_at, confirmed_at, fail_reason,
-        source_system, facility_no, line_code, create_time, create_by, modify_time, modify_by, row_version, row_valid
+        source_system, original_request_id, compensation_reason, ticket_no, last_operator, last_operation_at, facility_no, line_code,
+        create_time, create_by, modify_time, modify_by, row_version, row_valid
     </sql>
 
     <!-- 插入 -->
     <insert id="insertPo" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO tb_veh_certificate (
-            id, request_id, pki_request_id, cert_sn, vin, binding_id, part_id, device_category, device_sn, certificate_profile, csr_fingerprint,
+            id, request_id, pki_request_id, cert_sn, vin, binding_id, part_id, device_category, device_sn, hsm_uid, public_key_sha256, certificate_profile, csr_fingerprint,
             subject, issuer, certificate_fingerprint, not_before, not_after, cert_status, issued_at, confirmed_at, fail_reason,
-            source_system, facility_no, line_code, create_time, create_by, modify_time, modify_by, row_version, row_valid
+            source_system, original_request_id, compensation_reason, ticket_no, last_operator, last_operation_at, facility_no, line_code,
+            create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
         VALUES (
-            #{id}, #{requestId}, #{pkiRequestId}, #{certSn}, #{vin}, #{bindingId}, #{partId}, #{deviceCategory}, #{deviceSn}, #{certificateProfile}, #{csrFingerprint},
+            #{id}, #{requestId}, #{pkiRequestId}, #{certSn}, #{vin}, #{bindingId}, #{partId}, #{deviceCategory}, #{deviceSn}, #{hsmUid}, #{publicKeySha256}, #{certificateProfile}, #{csrFingerprint},
             #{subject}, #{issuer}, #{certificateFingerprint}, #{notBefore}, #{notAfter}, #{certStatus}, #{issuedAt}, #{confirmedAt}, #{failReason},
-            #{sourceSystem}, #{facilityNo}, #{lineCode}, now(), #{createBy}, now(), #{modifyBy}, 1, 1
+            #{sourceSystem}, #{originalRequestId}, #{compensationReason}, #{ticketNo}, #{lastOperator}, #{lastOperationAt}, #{facilityNo}, #{lineCode},
+            now(), #{createBy}, now(), #{modifyBy}, 1, 1
         )
     </insert>
 
@@ -82,6 +92,12 @@
         </if>
         <if test="deviceSn != null and deviceSn != ''">
             t.device_sn = #{deviceSn},
+        </if>
+        <if test="hsmUid != null and hsmUid != ''">
+            t.hsm_uid = #{hsmUid},
+        </if>
+        <if test="publicKeySha256 != null and publicKeySha256 != ''">
+            t.public_key_sha256 = #{publicKeySha256},
         </if>
         <if test="certificateProfile != null and certificateProfile != ''">
             t.certificate_profile = #{certificateProfile},
@@ -118,6 +134,21 @@
         </if>
         <if test="sourceSystem != null and sourceSystem != ''">
             t.source_system = #{sourceSystem},
+        </if>
+        <if test="originalRequestId != null and originalRequestId != ''">
+            t.original_request_id = #{originalRequestId},
+        </if>
+        <if test="compensationReason != null and compensationReason != ''">
+            t.compensation_reason = #{compensationReason},
+        </if>
+        <if test="ticketNo != null and ticketNo != ''">
+            t.ticket_no = #{ticketNo},
+        </if>
+        <if test="lastOperator != null and lastOperator != ''">
+            t.last_operator = #{lastOperator},
+        </if>
+        <if test="lastOperationAt != null">
+            t.last_operation_at = #{lastOperationAt},
         </if>
         <if test="facilityNo != null and facilityNo != ''">
             t.facility_no = #{facilityNo},
@@ -209,6 +240,15 @@
         <if test="certStatus != null and certStatus != ''">
             AND t.cert_status = #{certStatus}
         </if>
+        <if test="sourceSystem != null and sourceSystem != ''">
+            AND t.source_system = #{sourceSystem}
+        </if>
+        <if test="beginTime != null">
+            AND t.modify_time &gt;= #{beginTime}
+        </if>
+        <if test="endTime != null">
+            AND t.modify_time &lt;= #{endTime}
+        </if>
         <if test="beginId != null">
             AND t.id &lt; #{beginId}
         </if>
@@ -277,6 +317,65 @@
         AND t.device_sn = #{deviceSn}
         AND t.certificate_profile = #{certificateProfile}
         AND t.csr_fingerprint = #{csrFingerprint}
+        ORDER BY t.id DESC
+        LIMIT 1
+    </select>
+
+    <!-- 业务幂等复用：同 vin + hsm_uid + public_key_sha256 + certificate_profile 有效/处理中申请（CR-054/CR-015 §5） -->
+    <select id="selectByVinAndUidAndSpkiAndProfile" parameterType="java.util.Map" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList"/>
+        FROM tb_veh_certificate t
+        WHERE t.row_valid = 1
+        AND t.vin = #{vin}
+        AND t.hsm_uid = #{hsmUid}
+        AND t.public_key_sha256 = #{publicKeySha256}
+        AND t.certificate_profile = #{certificateProfile}
+        ORDER BY t.id DESC
+        LIMIT 1
+    </select>
+
+    <!-- 换钥冲突检测：同 vin + hsm_uid + certificate_profile 但 SPKI 不同且非终态（CR-054，不同 SPKI 不得返回旧证书） -->
+    <select id="selectKeyConflictByVinAndUidAndProfile" parameterType="java.util.Map" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList"/>
+        FROM tb_veh_certificate t
+        WHERE t.row_valid = 1
+        AND t.vin = #{vin}
+        AND t.hsm_uid = #{hsmUid}
+        AND t.certificate_profile = #{certificateProfile}
+        AND t.public_key_sha256 IS NOT NULL
+        AND t.public_key_sha256 != #{publicKeySha256}
+        AND t.cert_status IN ('REQUESTED', 'ISSUING', 'PENDING_RECONCILE', 'ISSUED_NOT_CONFIRMED', 'ACTIVE')
+        ORDER BY t.id DESC
+        LIMIT 1
+    </select>
+
+    <!-- 根据主键ID查询证书并加行锁（reconcile 并发互斥，FOR UPDATE） -->
+    <select id="selectByIdForUpdate" parameterType="Long" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList"/>
+        FROM tb_veh_certificate t
+        WHERE t.id = #{id}
+        AND t.row_valid = 1
+        FOR UPDATE
+    </select>
+
+    <!-- 根据MES原请求号查询证书（人工补偿关联，CR-053） -->
+    <select id="selectByOriginalRequestId" parameterType="String" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList"/>
+        FROM tb_veh_certificate t
+        WHERE t.row_valid = 1
+        AND t.original_request_id = #{originalRequestId}
+        ORDER BY t.id DESC
+        LIMIT 1
+    </select>
+
+    <!-- 根据设备SN和Profile查询有效/处理中申请（防重复签发，CR-053） -->
+    <select id="selectActiveOrInProgressByDeviceSnAndProfile" parameterType="java.util.Map" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList"/>
+        FROM tb_veh_certificate t
+        WHERE t.row_valid = 1
+        AND t.device_sn = #{deviceSn}
+        AND t.certificate_profile = #{certificateProfile}
+        AND t.cert_status IN ('REQUESTED', 'ISSUING', 'PENDING_RECONCILE', 'ISSUED_NOT_CONFIRMED', 'ACTIVE')
         ORDER BY t.id DESC
         LIMIT 1
     </select>

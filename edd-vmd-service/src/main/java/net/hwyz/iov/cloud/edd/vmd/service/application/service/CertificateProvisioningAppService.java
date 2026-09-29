@@ -7,15 +7,16 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.CertificateConfirm
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.CertificateApplyResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.CertificateStatusResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.publish.VehicleDeviceCertificatePublisher;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.CertificateCompensationNotAllowedException;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.CertificateKeyConflictException;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleCertificate;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehiclePart;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.CertificateStatus;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehicleCertificateRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehiclePartRepository;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartInfoRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.security.CsrUtils;
+import cn.hutool.core.util.StrUtil;
 import net.hwyz.iov.cloud.framework.security.crypto.CertEnrollmentTemplate;
+import net.hwyz.iov.cloud.framework.security.crypto.exception.PkiOutcomeUnknownException;
 import net.hwyz.iov.cloud.framework.security.crypto.model.*;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.dao.DuplicateKeyException;
@@ -43,9 +44,9 @@ import java.security.cert.X509Certificate;
 public class CertificateProvisioningAppService {
 
     private final VehicleCertificateRepository vehicleCertificateRepository;
-    private final VehiclePartRepository vehiclePartRepository;
-    private final PartInfoRepository partInfoRepository;
     private final VehBasicInfoRepository vehBasicInfoRepository;
+    private final BoundDeviceIdentityResolver boundDeviceIdentityResolver;
+    private final CertificateIdentityValidator certificateIdentityValidator;
     private final VehicleDeviceCertificatePublisher vehicleDeviceCertificatePublisher;
     private final ObjectProvider<CertEnrollmentTemplate> certEnrollmentTemplateProvider;
 
@@ -77,36 +78,52 @@ public class CertificateProvisioningAppService {
         // 2. 校验VIN和车辆状态
         validateVin(cmd.getVin());
 
-        // 3. 校验设备实例及active vehicle_part绑定
-        VehiclePart activeBinding = validateActiveBinding(cmd.getVin(), cmd.getDeviceSn(), cmd.getDeviceCategory());
+        // 3. 解析active TBOX绑定及权威HSM UID（VIN↔deviceSn active 绑定 + 芯片UID，CR-054）
+        BoundDeviceIdentity identity = boundDeviceIdentityResolver.resolve(
+                cmd.getVin(), cmd.getDeviceSn(), cmd.getDeviceCategory());
 
-        // 4. 解析CSR，校验CN=device_sn、签名有效性（PoP）及Profile白名单
-        validateCsr(cmd.getCsrDerBase64(), cmd.getDeviceSn(), cmd.getCertificateProfile());
+        // 4. 统一身份校验：CSR解析/验签(PoP)、CN==hsm_uid、声明ecu_uid一致性、
+        //    Subject/SAN 禁止项、Profile 白名单（CR-054，承 TBOX-SEC-DSN-CR-015 §3 固定顺序）
+        ParsedCsr parsedCsr = certificateIdentityValidator.validate(
+                cmd.getCsrDerBase64(), identity, cmd.getDeclaredEcuUid(), cmd.getCertificateProfile());
 
-        // 5. 计算CSR指纹
-        String csrFingerprint = CsrUtils.calculateFingerprint(cmd.getCsrDerBase64());
-
-        // 5.1 幂等复用：不同 request_id 但相同 (device_sn, profile, csr_fingerprint) 命中有效结果则复用（F15）
+        // 5. 业务幂等复用：不同 request_id 但相同 (vin, hsm_uid, public_key_sha256, profile) 命中有效结果则复用（CR-015 §5）
         VehicleCertificate reused = vehicleCertificateRepository
-                .selectByDeviceSnAndProfileAndCsrFingerprint(cmd.getDeviceSn(), cmd.getCertificateProfile(), csrFingerprint);
+                .selectByVinAndUidAndSpkiAndProfile(cmd.getVin(), identity.hsmUid(), parsedCsr.spkiSha256(), cmd.getCertificateProfile());
         if (reused != null && isReusableStatus(reused.getCertStatus())) {
-            log.info("相同CSR的证书申请已存在，幂等复用: requestId={}, reusedRequestId={}, status={}",
+            log.info("同身份同公钥的证书申请已存在，幂等复用: requestId={}, reusedRequestId={}, status={}",
                     cmd.getRequestId(), reused.getRequestId(), reused.getCertStatus());
             return buildApplyResult(reused, null);
+        }
+
+        // 5.1 换钥冲突：同 (vin, hsm_uid, profile) 已绑定其他公钥，须授权换钥，不得返回旧证书（CR-054 RD-054-5）
+        VehicleCertificate keyConflict = vehicleCertificateRepository
+                .selectKeyConflictByVinAndUidAndProfile(cmd.getVin(), identity.hsmUid(), parsedCsr.spkiSha256(), cmd.getCertificateProfile());
+        if (keyConflict != null) {
+            log.warn("同身份不同公钥，拒绝签发需授权换钥: requestId={}, vin={}, hsmUid={}, profile={}",
+                    cmd.getRequestId(), cmd.getVin(), identity.hsmUid(), cmd.getCertificateProfile());
+            throw new CertificateKeyConflictException(cmd.getVin(), identity.hsmUid(), cmd.getCertificateProfile());
         }
 
         // 6. 创建证书记录（REQUESTED状态）
         VehicleCertificate certificate = VehicleCertificate.builder()
                 .requestId(cmd.getRequestId())
                 .vin(cmd.getVin())
-                .bindingId(activeBinding.getId())
-                .partId(activeBinding.getPartId())
+                .bindingId(identity.bindingId())
+                .partId(identity.partId())
                 .deviceCategory(cmd.getDeviceCategory())
                 .deviceSn(cmd.getDeviceSn())
+                .hsmUid(identity.hsmUid())
+                .publicKeySha256(parsedCsr.spkiSha256())
                 .certificateProfile(cmd.getCertificateProfile())
-                .csrFingerprint(csrFingerprint)
+                .csrFingerprint(parsedCsr.csrFingerprint())
                 .certStatus(CertificateStatus.REQUESTED)
                 .sourceSystem(cmd.getSourceSystem())
+                .originalRequestId(cmd.getOriginalRequestId())
+                .compensationReason(cmd.getCompensationReason())
+                .ticketNo(cmd.getTicketNo())
+                .lastOperator(cmd.getOperatorId())
+                .lastOperationAt(cmd.getOperatorId() != null ? LocalDateTime.now() : null)
                 .facilityNo(cmd.getFacilityNo())
                 .lineCode(cmd.getLineCode())
                 .build();
@@ -124,37 +141,12 @@ public class CertificateProvisioningAppService {
 
         // 7. 调用framework-security CertificateEnrollmentTemplate.apply()提交申请
         try {
-            // 密钥算法从 CSR 实际公钥推导（TBOX 为 ECDSA P-256），不硬编码 RSA
-            String keyAlgorithm = CsrUtils.extractPublicKeyAlgorithm(cmd.getCsrDerBase64());
-            CertApplyRequest frameworkRequest = new CertApplyRequest(
-                    new CertificateProfile(cmd.getCertificateProfile(), cmd.getCertificateProfile(), CertificateProfile.SubjectType.DEVICE_IDENTITY, keyAlgorithm, "DIGITAL_SIGNATURE"),
-                    // 与校验处共用同一解码入口，兼容 URL-safe 与标准 Base64
-                    CsrUtils.decodeBase64(cmd.getCsrDerBase64()),
-                    new SubjectRef(SubjectRef.SubjectType.DEVICE_SN, cmd.getDeviceSn()),
-                    cmd.getRequestId(),
-                    null
-            );
-
-            net.hwyz.iov.cloud.framework.security.crypto.model.CertApplyResult frameworkResult = 
-                    getCertEnrollmentTemplate().apply(frameworkRequest);
-
-            // 8. 保存pki_request_id并映射状态
-            certificate.setPkiRequestId(frameworkResult.requestId());
-            if (frameworkResult.state() == EnrollmentState.ISSUED) {
-                certificate.setCertStatus(CertificateStatus.ISSUING);
-                // 立即获取证书（step-ca 同步签发常态路径），证书本体用于响应回传、不落库
-                issuedCert = queryAndProcessCertificate(certificate);
-            } else if (frameworkResult.state() == EnrollmentState.REJECTED || frameworkResult.state() == EnrollmentState.FAILED) {
-                certificate.setCertStatus(CertificateStatus.FAILED);
-                certificate.setFailReason("PKI拒绝或失败: " + frameworkResult.state());
-            } else {
-                certificate.setCertStatus(CertificateStatus.ISSUING);
+            IssuedCertificate issued = applyWithUnknownHandling(certificate, cmd.getCsrDerBase64());
+            if (issued != null) {
+                issuedCert = issued;
             }
-            vehicleCertificateRepository.update(certificate);
-
-            log.info("证书申请已提交: requestId={}, pkiRequestId={}, state={}", 
-                    cmd.getRequestId(), certificate.getPkiRequestId(), frameworkResult.state());
-
+            log.info("证书申请已提交: requestId={}, pkiRequestId={}, status={}",
+                    cmd.getRequestId(), certificate.getPkiRequestId(), certificate.getCertStatus());
         } catch (Exception e) {
             log.error("证书申请失败: requestId={}", cmd.getRequestId(), e);
             certificate.setCertStatus(CertificateStatus.FAILED);
@@ -206,7 +198,131 @@ public class CertificateProvisioningAppService {
     }
 
     /**
+     * 继续/对账已有证书申请（CR-053 / US-060）
+     * <p>
+     * 允许 REQUESTED / ISSUING / PENDING_RECONCILE / FAILED（FAILED 为失败重试）：
+     * - FAILED 且提供 CSR（失败重试场景）：优先按原 request_id/idempotencyKey 重新 apply，
+     *   旧 pki_request_id 已指向失败/拒绝的申请，重发覆盖之（不换键规避重复签发控制）；
+     * - 已取得 pki_request_id（非 FAILED）：经 getStatus/getCertificate 对账推进（PKI 超时/结果未知场景）；
+     * - 未取得 pki_request_id 且提供 CSR（人工补偿场景，操作员携带受信工位回读 CSR）：
+     *   以原 request_id/idempotencyKey 重新 apply（不生成新键）；
+     * - 无 CSR（CSR 全文不落库）：转 PENDING_RECONCILE，引导人工补申请。
+     * <p>
+     * 行锁（FOR UPDATE）互斥并发 reconcile；状态单调推进，终态禁止回退；重复操作幂等返回。
+     *
+     * @param requestId   业务请求ID（原幂等键）
+     * @param csrDerBase64 CSR DER Base64（可选；无 pki_request_id 时用于按原键重发）
+     * @param operatorId   操作人ID
+     * @param operatorName 操作人姓名
+     * @return 申请结果
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public CertificateApplyResult reconcile(String requestId, String csrDerBase64, String operatorId, String operatorName) {
+        log.info("对账证书申请: requestId={}, operatorId={}", requestId, operatorId);
+
+        VehicleCertificate origin = vehicleCertificateRepository.selectByRequestId(requestId);
+        if (origin == null) {
+            throw new IllegalArgumentException("证书申请不存在: " + requestId);
+        }
+
+        // 行锁并发互斥
+        VehicleCertificate certificate = vehicleCertificateRepository.selectByIdForUpdate(origin.getId());
+        if (certificate == null) {
+            throw new IllegalArgumentException("证书申请不存在: " + requestId);
+        }
+
+        // 状态门禁：REQUESTED / ISSUING / PENDING_RECONCILE 可对账，FAILED 可失败重试，其余终态禁止回退
+        if (!isReconcileStatus(certificate.getCertStatus())) {
+            throw new CertificateCompensationNotAllowedException(requestId, certificate.getCertStatus().name());
+        }
+
+        IssuedCertificate issuedCert = null;
+        if (certificate.getCertStatus() == CertificateStatus.FAILED && StrUtil.isNotBlank(csrDerBase64)) {
+            // FAILED 终态失败重试：操作员携带 CSR 时优先按原 requestId/idempotencyKey 重新 apply
+            // （旧 pki_request_id 已指向失败/拒绝的申请，重发覆盖之，不换键规避重复签发控制）
+            BoundDeviceIdentity identity = boundDeviceIdentityResolver.resolve(
+                    certificate.getVin(), certificate.getDeviceSn(), certificate.getDeviceCategory());
+            ParsedCsr parsedCsr = certificateIdentityValidator.validate(
+                    csrDerBase64, identity, null, certificate.getCertificateProfile());
+            // 回填身份快照（存量行可能缺失）
+            if (StrUtil.isBlank(certificate.getHsmUid())) {
+                certificate.setHsmUid(identity.hsmUid());
+            }
+            if (StrUtil.isBlank(certificate.getPublicKeySha256())) {
+                certificate.setPublicKeySha256(parsedCsr.spkiSha256());
+            }
+            issuedCert = applyWithUnknownHandling(certificate, csrDerBase64);
+        } else if (StrUtil.isNotBlank(certificate.getPkiRequestId())) {
+            // 有 pki_request_id：getStatus/getCertificate 对账推进
+            try {
+                net.hwyz.iov.cloud.framework.security.crypto.model.CertApplyResult status =
+                        getCertEnrollmentTemplate().getStatus(certificate.getPkiRequestId());
+                if (status.state() == EnrollmentState.ISSUED) {
+                    issuedCert = getCertEnrollmentTemplate().getCertificate(certificate.getPkiRequestId());
+                    updateCertificateFromIssued(certificate, issuedCert);
+                } else if (status.state() == EnrollmentState.REJECTED || status.state() == EnrollmentState.FAILED) {
+                    certificate.setCertStatus(CertificateStatus.FAILED);
+                    certificate.setFailReason("PKI拒绝或失败: " + status.state());
+                    vehicleCertificateRepository.update(certificate);
+                } else if (status.state() == EnrollmentState.UNKNOWN) {
+                    // 结果未知（请求已发送、响应丢失）：禁止自动重签，转待对账（FW-SEC-DSN-CR-008 §6）
+                    certificate.setCertStatus(CertificateStatus.PENDING_RECONCILE);
+                    certificate.setFailReason("PKI结果未知: " + status.state());
+                    vehicleCertificateRepository.update(certificate);
+                } else {
+                    certificate.setCertStatus(CertificateStatus.ISSUING);
+                    vehicleCertificateRepository.update(certificate);
+                }
+            } catch (Exception e) {
+                log.warn("对账查询PKI状态失败: requestId={}", requestId, e);
+                certificate.setCertStatus(CertificateStatus.PENDING_RECONCILE);
+                vehicleCertificateRepository.update(certificate);
+            }
+        } else if (StrUtil.isNotBlank(csrDerBase64)) {
+            // 无 pki_request_id 且操作员提供 CSR：复用原 requestId/idempotencyKey 重新 apply
+            BoundDeviceIdentity identity = boundDeviceIdentityResolver.resolve(
+                    certificate.getVin(), certificate.getDeviceSn(), certificate.getDeviceCategory());
+            ParsedCsr parsedCsr = certificateIdentityValidator.validate(
+                    csrDerBase64, identity, null, certificate.getCertificateProfile());
+            // 回填身份快照（存量行可能缺失）
+            if (StrUtil.isBlank(certificate.getHsmUid())) {
+                certificate.setHsmUid(identity.hsmUid());
+            }
+            if (StrUtil.isBlank(certificate.getPublicKeySha256())) {
+                certificate.setPublicKeySha256(parsedCsr.spkiSha256());
+            }
+            issuedCert = applyWithUnknownHandling(certificate, csrDerBase64);
+        } else {
+            // 无 pki_request_id 且无 CSR（CSR 全文不落库）：转待对账，引导人工补申请
+            certificate.setCertStatus(CertificateStatus.PENDING_RECONCILE);
+            vehicleCertificateRepository.update(certificate);
+        }
+
+        // 人工操作审计上下文（CR-053）
+        certificate.setLastOperator(operatorId);
+        certificate.setLastOperationAt(operatorId != null ? LocalDateTime.now() : null);
+        vehicleCertificateRepository.update(certificate);
+
+        log.info("证书申请对账完成: requestId={}, status={}", requestId, certificate.getCertStatus());
+        return buildApplyResult(certificate, issuedCert);
+    }
+
+    /**
+     * 判断证书状态是否允许对账/失败重试（CR-053：REQUESTED / ISSUING / PENDING_RECONCILE；BUG 修复：+FAILED）
+     */
+    private boolean isReconcileStatus(CertificateStatus status) {
+        return status == CertificateStatus.REQUESTED
+                || status == CertificateStatus.ISSUING
+                || status == CertificateStatus.PENDING_RECONCILE
+                || status == CertificateStatus.FAILED;
+    }
+
+    /**
      * 确认证书安装
+     * <p>
+     * CR-053（RD-053-6）扩展共享内核：OAPI 与 MPT 使用同一状态门禁和对象校验。
+     * 允许 ISSUED_NOT_CONFIRMED / INSTALL_FAILED 进入确认；INSTALL_FAILED 仅允许在重新注入/校验后重试确认，
+     * 终态不得回退。校验 requestId + certSn + deviceSn。
      *
      * @param cmd 确认命令
      */
@@ -219,12 +335,13 @@ public class CertificateProvisioningAppService {
             throw new IllegalArgumentException("证书申请不存在: " + cmd.getRequestId());
         }
 
-        // 校验状态：只有ISSUED_NOT_CONFIRMED状态才能确认
-        if (!CertificateStatus.ISSUED_NOT_CONFIRMED.equals(certificate.getCertStatus())) {
+        // 校验状态：仅 ISSUED_NOT_CONFIRMED / INSTALL_FAILED 可进入补录（终态不得回退）
+        if (!CertificateStatus.ISSUED_NOT_CONFIRMED.equals(certificate.getCertStatus())
+                && !CertificateStatus.INSTALL_FAILED.equals(certificate.getCertStatus())) {
             throw new IllegalStateException("证书状态不允许确认安装: " + certificate.getCertStatus());
         }
 
-        // 校验安装对象是否匹配
+        // 校验安装对象是否匹配（requestId + certSn + deviceSn，CR-053）
         validateInstallConfirmation(certificate, cmd);
 
         // 更新状态
@@ -239,6 +356,12 @@ public class CertificateProvisioningAppService {
             certificate.setCertStatus(CertificateStatus.INSTALL_FAILED);
             certificate.setFailReason(cmd.getFailReason());
         }
+
+        // 人工补录审计上下文（MPT 写操作，CR-053）
+        certificate.setCompensationReason(cmd.getReason());
+        certificate.setTicketNo(cmd.getTicketNo());
+        certificate.setLastOperator(cmd.getOperatorId());
+        certificate.setLastOperationAt(cmd.getOperatorId() != null ? LocalDateTime.now() : null);
 
         vehicleCertificateRepository.update(certificate);
 
@@ -318,53 +441,7 @@ public class CertificateProvisioningAppService {
     }
 
     /**
-     * 校验设备实例及active vehicle_part绑定
-     */
-    private VehiclePart validateActiveBinding(String vin, String deviceSn, String deviceCategory) {
-        net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartInfo partInfo = partInfoRepository.selectBySn(deviceSn);
-        if (partInfo == null) {
-            throw new IllegalArgumentException("设备不存在: " + deviceSn);
-        }
-
-        VehiclePart activeBinding = vehiclePartRepository.selectActiveByVinAndPartId(vin, partInfo.getId());
-        if (activeBinding == null) {
-            throw new IllegalStateException("设备与车辆未建立active绑定: vin=" + vin + ", deviceSn=" + deviceSn);
-        }
-
-        return activeBinding;
-    }
-
-    /**
-     * 解析CSR，校验CN=device_sn、签名有效性（PoP）及Profile白名单。
-     * <p>证书/CSR 设计上不含 VIN（TBOX-SEC Identity Contract），故不再用 containsVin 作门禁；
-     * VIN ↔ 设备绑定已由 {@link #validateActiveBinding} 完成（TBOX-SEC-DSN-CR-015 §1.1/§9.1）。
-     */
-    private void validateCsr(String csrDerBase64, String deviceSn, String certificateProfile) {
-        // CN 一致性：CSR Subject CN 必须与设备身份一致（真实解析，不再返回 MOCK 值）
-        String cn = CsrUtils.parseCommonName(csrDerBase64);
-        if (!deviceSn.equals(cn)) {
-            throw new IllegalStateException("CSR Subject CN与device_sn不一致: CN=" + cn + ", deviceSn=" + deviceSn);
-        }
-
-        // 持有性证明 PoP：验证 PKCS#10 自签名（使用 CSR 内嵌公钥），失败拒签
-        if (!CsrUtils.verifySignature(csrDerBase64)) {
-            throw new IllegalStateException("CSR签名无效");
-        }
-
-        validateCertificateProfile(certificateProfile);
-    }
-
-    /**
-     * 校验证书Profile白名单
-     */
-    private void validateCertificateProfile(String certificateProfile) {
-        if (!"TBOX_TSP_CLIENT".equals(certificateProfile)) {
-            throw new IllegalStateException("证书Profile不允许: " + certificateProfile);
-        }
-    }
-
-    /**
-     * 校验安装确认对象是否匹配
+     * 校验安装确认对象是否匹配（CR-053：requestId + certSn + deviceSn）
      */
     private void validateInstallConfirmation(VehicleCertificate certificate, CertificateConfirmCmd cmd) {
         if (cmd.getVin() != null && !cmd.getVin().equals(certificate.getVin())) {
@@ -372,6 +449,9 @@ public class CertificateProvisioningAppService {
         }
         if (cmd.getDeviceSn() != null && !cmd.getDeviceSn().equals(certificate.getDeviceSn())) {
             throw new IllegalStateException("安装确认设备SN不匹配");
+        }
+        if (cmd.getCertSn() != null && !cmd.getCertSn().equals(certificate.getCertSn())) {
+            throw new IllegalStateException("安装确认证书序列号不匹配");
         }
     }
 
@@ -490,6 +570,71 @@ public class CertificateProvisioningAppService {
             log.warn("解析证书X.509信息失败，subject/issuer留空", e);
         }
         return new String[]{subject, issuer};
+    }
+
+    /**
+     * 调用framework CertificateEnrollmentTemplate.apply()并推进状态（CR-053 提取，供申请/对账复用）
+     * <p>
+     * 保存 pki_request_id 并映射状态；ISSUED（step-ca 同步签发常态路径）立即取证回传（不落库）。
+     *
+     * @param certificate  证书记录（须已落库）
+     * @param csrDerBase64 CSR DER Base64
+     * @return 已签发证书（获取失败返回 null），用于填充响应中的证书本体
+     */
+    private IssuedCertificate doFrameworkApply(VehicleCertificate certificate, String csrDerBase64) {
+        // 密钥算法从 CSR 实际公钥推导（TBOX 为 ECDSA P-256），不硬编码 RSA
+        String keyAlgorithm = CsrUtils.extractPublicKeyAlgorithm(csrDerBase64);
+        CertApplyRequest frameworkRequest = new CertApplyRequest(
+                new CertificateProfile(certificate.getCertificateProfile(), certificate.getCertificateProfile(),
+                        CertificateProfile.SubjectType.DEVICE_IDENTITY, keyAlgorithm, "DIGITAL_SIGNATURE"),
+                // 与校验处共用同一解码入口，兼容 URL-safe 与标准 Base64
+                CsrUtils.decodeBase64(csrDerBase64),
+                new SubjectRef(SubjectRef.SubjectType.DEVICE_UID, certificate.getHsmUid()),
+                certificate.getRequestId(),
+                null
+        );
+
+        net.hwyz.iov.cloud.framework.security.crypto.model.CertApplyResult frameworkResult =
+                getCertEnrollmentTemplate().apply(frameworkRequest);
+
+        // 保存pki_request_id并映射状态
+        certificate.setPkiRequestId(frameworkResult.requestId());
+        IssuedCertificate issuedCert = null;
+        if (frameworkResult.state() == EnrollmentState.ISSUED) {
+            certificate.setCertStatus(CertificateStatus.ISSUING);
+            // 立即获取证书（step-ca 同步签发常态路径），证书本体用于响应回传、不落库
+            issuedCert = queryAndProcessCertificate(certificate);
+        } else if (frameworkResult.state() == EnrollmentState.REJECTED || frameworkResult.state() == EnrollmentState.FAILED) {
+            certificate.setCertStatus(CertificateStatus.FAILED);
+            certificate.setFailReason("PKI拒绝或失败: " + frameworkResult.state());
+        } else if (frameworkResult.state() == EnrollmentState.UNKNOWN) {
+            // 结果未知（请求已发送、响应丢失）：禁止自动重签，转待对账（FW-SEC-DSN-CR-008 §6）
+            certificate.setCertStatus(CertificateStatus.PENDING_RECONCILE);
+            certificate.setFailReason("PKI结果未知: " + frameworkResult.state());
+        } else {
+            certificate.setCertStatus(CertificateStatus.ISSUING);
+        }
+        vehicleCertificateRepository.update(certificate);
+        return issuedCert;
+    }
+
+    /**
+     * 统一处理证书申请中的「结果未知」：framework 抛 {@link PkiOutcomeUnknownException}
+     * 或 apply 返回 UNKNOWN 状态时（请求已发送但响应丢失，FW-SEC-DSN-CR-008 §6），
+     * 禁止自动重签，转 PENDING_RECONCILE 引导运维受控恢复；不向上抛出（避免事务回滚丢状态）。
+     *
+     * @return 已签发证书（结果未知返回 null），用于填充响应中的证书本体
+     */
+    private IssuedCertificate applyWithUnknownHandling(VehicleCertificate certificate, String csrDerBase64) {
+        try {
+            return doFrameworkApply(certificate, csrDerBase64);
+        } catch (PkiOutcomeUnknownException e) {
+            log.warn("证书申请结果未知，转待对账: requestId={}", certificate.getRequestId(), e);
+            certificate.setCertStatus(CertificateStatus.PENDING_RECONCILE);
+            certificate.setFailReason(e.getMessage());
+            vehicleCertificateRepository.update(certificate);
+            return null;
+        }
     }
 
     /**
