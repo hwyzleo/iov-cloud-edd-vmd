@@ -168,6 +168,32 @@ public class MptVehicleCertificateController extends BaseController {
     }
 
     /**
+     * 获取已签发证书本体（只读）
+     * <p>
+     * 证书本体不落库，仅在 framework 结果存储 TTL 内可经 pki_request_id 重取；仅 ISSUED_NOT_CONFIRMED /
+     * ACTIVE 可获取，不做状态变更。供签发后再次获取证书本体手动注入设备（设计 nextAction=QUERY）。
+     *
+     * @param id             证书记录主键
+     * @param servletRequest HTTP请求（来源IP/UA审计）
+     * @return 含证书本体的结果
+     */
+    @Log(title = "证书本体获取", businessType = BusinessType.OTHER)
+    @RequiresPermissions("vmd:security:vehicleCertificate:query")
+    @GetMapping("/{id}/certificate")
+    public ApiResponse<CertificateCompensateResponse> queryCertificate(@PathVariable Long id,
+                                                                       HttpServletRequest servletRequest) {
+        log.info("管理后台用户[{}]获取证书本体[id={}]", SecurityContextHolder.getUserName(), id);
+        CertificateCompensateResult result = certificateCompensationAppService.queryCertificate(
+                id,
+                SecurityUtils.getUserId() != null ? SecurityUtils.getUserId().toString() : null,
+                SecurityContextHolder.getUserName(),
+                getRemoteIp(servletRequest),
+                servletRequest.getHeader("User-Agent")
+        );
+        return ApiResponse.ok(MptVehicleCertificateAssembler.INSTANCE.toCompensateResponse(result));
+    }
+
+    /**
      * 获取客户端IP（带代理头回退）
      */
     private String getRemoteIp(HttpServletRequest request) {

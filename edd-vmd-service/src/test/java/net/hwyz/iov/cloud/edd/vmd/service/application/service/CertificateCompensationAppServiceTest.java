@@ -351,6 +351,48 @@ class CertificateCompensationAppServiceTest {
         assertEquals("Mozilla/5.0", opCaptor.getValue().getUserAgent());
     }
 
+    // ---------- queryCertificate（只读获取证书本体） ----------
+
+    @Test
+    @DisplayName("获取证书本体：已签发未确认应复用只读查询回填本体并写QUERY审计")
+    void queryCertificate_已签发_应回填本体() {
+        // Given
+        VehicleCertificate cert = cert(CertificateStatus.ISSUED_NOT_CONFIRMED, "MES-REQ-Q1");
+        cert.setPkiRequestId("PKI-Q-001");
+        cert.setCertSn("SN-Q-001");
+        when(vehicleCertificateRepository.selectById(1L)).thenReturn(cert);
+        when(certificateProvisioningAppService.queryCertificateStatus("MES-REQ-Q1"))
+                .thenReturn(net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.CertificateStatusResult.builder()
+                        .requestId("MES-REQ-Q1")
+                        .status("ISSUED_NOT_CONFIRMED")
+                        .certificateDerBase64("LEAF_DER_B64")
+                        .chainDerBase64(new String[]{"CHAIN0_B64"})
+                        .build());
+
+        // When
+        CertificateCompensateResult result = certificateCompensationAppService.queryCertificate(
+                1L, "OP-001", "张三", "10.1.1.1", "UA");
+
+        // Then：只读回填本体，写 QUERY 审计，不改状态
+        assertEquals("LEAF_DER_B64", result.getCertificateDerBase64());
+        assertArrayEquals(new String[]{"CHAIN0_B64"}, result.getChainDerBase64());
+        ArgumentCaptor<VehicleCertificateOperation> opCaptor = ArgumentCaptor.forClass(VehicleCertificateOperation.class);
+        verify(vehicleCertificateOperationRepository).insert(opCaptor.capture());
+        assertEquals("QUERY", opCaptor.getValue().getAction());
+        assertEquals("ISSUED_NOT_CONFIRMED", opCaptor.getValue().getBeforeStatus());
+        assertEquals("ISSUED_NOT_CONFIRMED", opCaptor.getValue().getAfterStatus());
+    }
+
+    @Test
+    @DisplayName("获取证书本体：非签发/激活状态应拒绝且不查询本体")
+    void queryCertificate_未签发状态_应拒绝() {
+        when(vehicleCertificateRepository.selectById(1L))
+                .thenReturn(cert(CertificateStatus.REQUESTED, "MES-REQ-Q2"));
+        assertThrows(IllegalStateException.class,
+                () -> certificateCompensationAppService.queryCertificate(1L, "OP-001", "张三", "10.1.1.1", "UA"));
+        verify(certificateProvisioningAppService, never()).queryCertificateStatus(any());
+    }
+
     // ---------- confirmInstalled ----------
 
     @Test

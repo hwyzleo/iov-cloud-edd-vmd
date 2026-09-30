@@ -12,6 +12,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.CertificateComp
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.CertificateDetailResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.CertificateListResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.CertificateOperationResult;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.CertificateStatusResult;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.CertificateCompensationReasonRequiredException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.CertificateIssuanceConflictException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.CertificateKeyConflictException;
@@ -299,6 +300,49 @@ public class CertificateCompensationAppService {
      */
     private LocalDateTime instantToLocalDateTime(Instant instant) {
         return instant != null ? LocalDateTime.ofInstant(instant, ZoneId.systemDefault()) : null;
+    }
+
+    /**
+     * 获取已签发证书本体（MPT，只读，按记录ID）
+     * <p>
+     * 证书本体（DER/证书链）VMD 不落库，仅在 framework 结果存储 TTL 内可经 {@code pki_request_id} 重取。
+     * 本方法只读：仅 ISSUED_NOT_CONFIRMED / ACTIVE 可获取，复用
+     * {@link CertificateProvisioningAppService#queryCertificateStatus} 重取本体，不做任何状态变更。
+     * 供产线/售后在签发后再次获取证书本体手动注入设备（设计 nextAction=QUERY）。
+     *
+     * @param id           证书记录主键
+     * @param operatorId   操作人ID
+     * @param operatorName 操作人姓名
+     * @param sourceIp     来源IP
+     * @param userAgent    终端User-Agent
+     * @return 补偿结果（含证书本体 DER/链）
+     */
+    public CertificateCompensateResult queryCertificate(Long id, String operatorId, String operatorName,
+                                                        String sourceIp, String userAgent) {
+        VehicleCertificate certificate = vehicleCertificateRepository.selectById(id);
+        if (certificate == null) {
+            throw new IllegalArgumentException("证书申请不存在: " + id);
+        }
+        // 只读门禁：仅已签发未确认/已激活可获取证书本体，其余状态无本体可取
+        if (certificate.getCertStatus() != CertificateStatus.ISSUED_NOT_CONFIRMED
+                && certificate.getCertStatus() != CertificateStatus.ACTIVE) {
+            throw new IllegalStateException("证书状态不支持获取证书本体: "
+                    + (certificate.getCertStatus() != null ? certificate.getCertStatus().name() : null));
+        }
+
+        CertificateStatusResult status = certificateProvisioningAppService.queryCertificateStatus(certificate.getRequestId());
+        CertificateCompensateResult result = buildCompensateResult(certificate, true, nextActionFor(certificate));
+        if (status != null) {
+            result.setCertificateDerBase64(status.getCertificateDerBase64());
+            result.setChainDerBase64(status.getChainDerBase64());
+        }
+        appendAudit(cmdOf(null, operatorId, operatorName, sourceIp, userAgent, certificate, null),
+                "QUERY", certificate.getCertStatus(), certificate.getCertStatus(),
+                "SUCCESS", null, certificate.getOriginalRequestId(), certificate.getRequestId());
+        boolean hasBody = status != null && status.getCertificateDerBase64() != null;
+        log.info("获取证书本体: requestId={}, status={}, hasBody={}",
+                certificate.getRequestId(), certificate.getCertStatus(), hasBody);
+        return result;
     }
 
     /**
