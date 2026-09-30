@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.MptVehicleCertificateAssembler;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.CertificateConfirmInstalledRequest;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.CertificateReconcileRequest;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.CertificateReissueRequest;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.CompensateCertificateRequest;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.VehicleCertificateQueryRequest;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.CertificateCompensateResponse;
@@ -185,6 +186,37 @@ public class MptVehicleCertificateController extends BaseController {
         log.info("管理后台用户[{}]获取证书本体[id={}]", SecurityContextHolder.getUserName(), id);
         CertificateCompensateResult result = certificateCompensationAppService.queryCertificate(
                 id,
+                SecurityUtils.getUserId() != null ? SecurityUtils.getUserId().toString() : null,
+                SecurityContextHolder.getUserName(),
+                getRemoteIp(servletRequest),
+                servletRequest.getHeader("User-Agent")
+        );
+        return ApiResponse.ok(MptVehicleCertificateAssembler.INSTANCE.toCompensateResponse(result));
+    }
+
+    /**
+     * 重新签发/续期已有证书（授权，原因与工单必填）
+     * <p>
+     * 作废旧证书后以新有效期重签；CSR 由设备侧重新提供（同公钥续期 / 新公钥换钥）。
+     * 仅已定案态（ISSUED_NOT_CONFIRMED / ACTIVE / INSTALL_FAILED / EXPIRED）可重签。
+     *
+     * @param id             旧证书记录主键
+     * @param request        重签请求（CSR / 原因 / 工单必填）
+     * @param servletRequest HTTP请求（来源IP/UA审计）
+     * @return 含新证书本体的结果
+     */
+    @Log(title = "证书重新签发", businessType = BusinessType.INSERT)
+    @RequiresPermissions("vmd:security:vehicleCertificate:compensate")
+    @PostMapping("/{id}/reissue")
+    public ApiResponse<CertificateCompensateResponse> reissue(@PathVariable Long id,
+                                                              @RequestBody @Validated CertificateReissueRequest request,
+                                                              HttpServletRequest servletRequest) {
+        log.info("管理后台用户[{}]重新签发证书[id={}]", SecurityContextHolder.getUserName(), id);
+        CertificateCompensateResult result = certificateCompensationAppService.reissue(
+                id,
+                request.getCsrDerBase64(),
+                request.getReason(),
+                request.getTicketNo(),
                 SecurityUtils.getUserId() != null ? SecurityUtils.getUserId().toString() : null,
                 SecurityContextHolder.getUserName(),
                 getRemoteIp(servletRequest),

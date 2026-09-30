@@ -42,6 +42,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 
@@ -393,8 +394,60 @@ class CertificateCompensationAppServiceTest {
         verify(certificateProvisioningAppService, never()).queryCertificateStatus(any());
     }
 
-    // ---------- confirmInstalled ----------
+    // ---------- reissue（重新签发/续期） ----------
 
+    @Test
+    @DisplayName("重新签发：作废旧证书后以新requestId重签并写REISSUE审计")
+    void reissue_应作废旧证书并重签() {
+        // Given：旧记录已签发未确认
+        VehicleCertificate old = cert(CertificateStatus.ISSUED_NOT_CONFIRMED, "MES-REQ-OLD");
+        when(vehicleCertificateRepository.selectById(1L)).thenReturn(old);
+        when(certificateProvisioningAppService.applyDeviceCertificate(any()))
+                .thenReturn(CertificateApplyResult.builder()
+                        .requestId("MPT-CERT-NEW")
+                        .status("ISSUED_NOT_CONFIRMED")
+                        .certificateDerBase64("NEW_LEAF_B64")
+                        .build());
+        VehicleCertificate saved = cert(CertificateStatus.ISSUED_NOT_CONFIRMED, "MPT-CERT-NEW");
+        when(vehicleCertificateRepository.selectByRequestId(anyString())).thenReturn(saved);
+
+        // When
+        CertificateCompensateResult result = certificateCompensationAppService.reissue(
+                1L, csrBase64, "有效期过短续期", "TICKET-RE-001", "OP-001", "张三", "10.1.1.1", "UA");
+
+        // Then：先作废旧证书，再调用签发内核；结果带新证书本体
+        verify(certificateProvisioningAppService).supersedeForReissue(eq("MES-REQ-OLD"), eq("OP-001"), any());
+        verify(certificateProvisioningAppService).applyDeviceCertificate(any());
+        assertEquals("NEW_LEAF_B64", result.getCertificateDerBase64());
+        ArgumentCaptor<VehicleCertificateOperation> opCaptor = ArgumentCaptor.forClass(VehicleCertificateOperation.class);
+        verify(vehicleCertificateOperationRepository).insert(opCaptor.capture());
+        assertEquals("REISSUE", opCaptor.getValue().getAction());
+        assertEquals("ISSUED_NOT_CONFIRMED", opCaptor.getValue().getBeforeStatus());
+    }
+
+    @Test
+    @DisplayName("重新签发：缺reason或ticketNo应拒绝且不作废旧证书")
+    void reissue_缺原因或工单_应拒绝() {
+        assertThrows(CertificateCompensationReasonRequiredException.class,
+                () -> certificateCompensationAppService.reissue(
+                        1L, csrBase64, null, "TICKET-RE-001", "OP-001", "张三", "10.1.1.1", "UA"));
+        assertThrows(CertificateCompensationReasonRequiredException.class,
+                () -> certificateCompensationAppService.reissue(
+                        1L, csrBase64, "原因", null, "OP-001", "张三", "10.1.1.1", "UA"));
+        verify(certificateProvisioningAppService, never()).supersedeForReissue(any(), any(), any());
+        verify(certificateProvisioningAppService, never()).applyDeviceCertificate(any());
+    }
+
+    @Test
+    @DisplayName("重新签发：缺CSR应拒绝（CSR不落库须重新提供）")
+    void reissue_缺CSR_应拒绝() {
+        assertThrows(IllegalArgumentException.class,
+                () -> certificateCompensationAppService.reissue(
+                        1L, null, "续期", "TICKET-RE-001", "OP-001", "张三", "10.1.1.1", "UA"));
+        verify(certificateProvisioningAppService, never()).supersedeForReissue(any(), any(), any());
+    }
+
+    // ---------- confirmInstalled ----------
     @Test
     @DisplayName("安装补录：缺reason或ticketNo应拒绝（806063）")
     void confirmInstalled_缺原因或工单_应拒绝() {

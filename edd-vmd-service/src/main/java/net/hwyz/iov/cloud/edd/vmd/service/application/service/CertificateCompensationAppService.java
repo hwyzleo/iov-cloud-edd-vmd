@@ -379,6 +379,74 @@ public class CertificateCompensationAppService {
     }
 
     /**
+     * 重新签发/续期已有证书（MPT，按记录ID，授权操作）
+     * <p>
+     * 用于原证书有效期过短、密钥轮换或注入失败后需要一张全新证书的场景：
+     * 先作废旧证书（置 SUPERSEDED，退出幂等复用/换钥冲突判定），再以新 requestId 复用签发内核重签，
+     * 新有效期由 step-ca claims + profile max-validity 决定。CSR 全文不落库，须由调用方（设备侧）重新提供；
+     * 同 CSR/公钥即续期，新公钥即换钥。必填 reason + ticketNo。
+     * <p>
+     * 仅已定案态（ISSUED_NOT_CONFIRMED / ACTIVE / INSTALL_FAILED / EXPIRED）可重签；在途态请用对账。
+     * 注意：作废与重签非同一事务，若重签失败，旧记录已 SUPERSEDED、新记录置 FAILED，
+     * 可对新记录携 CSR 走对账重试（失败重试内核）。
+     *
+     * @param id           旧证书记录主键
+     * @param csrDerBase64 CSR DER Base64（设备侧重新提供，同公钥续期/新公钥换钥）
+     * @param reason       人工原因（必填）
+     * @param ticketNo     工单号（必填）
+     * @param operatorId   操作人ID
+     * @param operatorName 操作人姓名
+     * @param sourceIp     来源IP
+     * @param userAgent    终端User-Agent
+     * @return 补偿结果（含新证书本体）
+     */
+    public CertificateCompensateResult reissue(Long id, String csrDerBase64, String reason, String ticketNo,
+                                               String operatorId, String operatorName, String sourceIp, String userAgent) {
+        if (StrUtil.isBlank(reason) || StrUtil.isBlank(ticketNo)) {
+            throw new CertificateCompensationReasonRequiredException();
+        }
+        if (StrUtil.isBlank(csrDerBase64)) {
+            throw new IllegalArgumentException("重新签发需提供 CSR（CSR 全文不落库，须由设备侧重新提供）");
+        }
+        VehicleCertificate old = vehicleCertificateRepository.selectById(id);
+        if (old == null) {
+            throw new IllegalArgumentException("证书申请不存在: " + id);
+        }
+        CertificateStatus before = old.getCertStatus();
+
+        // 1. 作废旧证书（含已定案态门禁与行锁；不可重签态在此抛出）
+        certificateProvisioningAppService.supersedeForReissue(old.getRequestId(), operatorId, operatorName);
+
+        // 2. 新 requestId，复用签发内核重签（新有效期由 step-ca claims + max-validity 决定）
+        String newRequestId = generateMptRequestId();
+        CertificateApplyCmd applyCmd = CertificateApplyCmd.builder()
+                .requestId(newRequestId)
+                .vin(old.getVin())
+                .deviceCategory(old.getDeviceCategory())
+                .deviceSn(old.getDeviceSn())
+                .certificateProfile(old.getCertificateProfile())
+                .csrDerBase64(csrDerBase64)
+                .sourceSystem(SOURCE_MPT_COMPENSATION)
+                .originalRequestId(old.getRequestId())
+                .compensationReason(reason)
+                .ticketNo(ticketNo)
+                .operatorId(operatorId)
+                .operatorName(operatorName)
+                .build();
+        CertificateApplyResult applyResult = certificateProvisioningAppService.applyDeviceCertificate(applyCmd);
+
+        VehicleCertificate saved = vehicleCertificateRepository.selectByRequestId(newRequestId);
+        CertificateCompensateResult result = buildCompensateResult(saved, false, nextActionFor(saved));
+        fillCertificateBody(result, applyResult);
+        appendAudit(cmdOf(reason, operatorId, operatorName, sourceIp, userAgent, old, ticketNo),
+                "REISSUE", before, saved != null ? saved.getCertStatus() : null, "SUCCESS", null,
+                old.getRequestId(), newRequestId);
+        log.info("证书重新签发完成: oldRequestId={}, newRequestId={}, status={}",
+                old.getRequestId(), newRequestId, saved != null ? saved.getCertStatus() : null);
+        return result;
+    }
+
+    /**
      * 安装结果补录（MPT，按记录ID）
      * <p>
      * 必填 reason + ticketNo；校验 requestId + certSn + deviceSn 后复用共享确认内核；

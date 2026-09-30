@@ -318,6 +318,49 @@ public class CertificateProvisioningAppService {
     }
 
     /**
+     * 为重新签发作废旧证书记录（置 SUPERSEDED），行锁互斥（CR-053 扩展：重新签发/续期）。
+     * <p>
+     * 仅已定案态（ISSUED_NOT_CONFIRMED / ACTIVE / INSTALL_FAILED / EXPIRED）可作废后重签；
+     * 在途态（REQUESTED / ISSUING / PENDING_RECONCILE）应走对账，不走重签。
+     * 作废后旧记录退出幂等复用与换钥冲突判定，使内核可用同/新公钥以新有效期重签。
+     *
+     * @param requestId    旧证书业务请求ID
+     * @param operatorId   操作人ID
+     * @param operatorName 操作人姓名
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void supersedeForReissue(String requestId, String operatorId, String operatorName) {
+        VehicleCertificate origin = vehicleCertificateRepository.selectByRequestId(requestId);
+        if (origin == null) {
+            throw new IllegalArgumentException("证书申请不存在: " + requestId);
+        }
+        VehicleCertificate certificate = vehicleCertificateRepository.selectByIdForUpdate(origin.getId());
+        if (certificate == null) {
+            throw new IllegalArgumentException("证书申请不存在: " + requestId);
+        }
+        if (!isReissuableStatus(certificate.getCertStatus())) {
+            throw new CertificateCompensationNotAllowedException(requestId, certificate.getCertStatus().name());
+        }
+        certificate.setCertStatus(CertificateStatus.SUPERSEDED);
+        certificate.setLastOperator(operatorId);
+        certificate.setLastOperationAt(operatorId != null ? LocalDateTime.now() : null);
+        vehicleCertificateRepository.update(certificate);
+        log.info("重新签发：旧证书已作废(SUPERSEDED): requestId={}, operatorId={}", requestId, operatorId);
+    }
+
+    /**
+     * 判断证书状态是否允许重新签发/续期（已定案态：ISSUED_NOT_CONFIRMED / ACTIVE / INSTALL_FAILED / EXPIRED）。
+     * <p>
+     * 在途态请用对账；SUPERSEDED / REVOKED 已退役、不再重签。
+     */
+    private boolean isReissuableStatus(CertificateStatus status) {
+        return status == CertificateStatus.ISSUED_NOT_CONFIRMED
+                || status == CertificateStatus.ACTIVE
+                || status == CertificateStatus.INSTALL_FAILED
+                || status == CertificateStatus.EXPIRED;
+    }
+
+    /**
      * 确认证书安装
      * <p>
      * CR-053（RD-053-6）扩展共享内核：OAPI 与 MPT 使用同一状态门禁和对象校验。
