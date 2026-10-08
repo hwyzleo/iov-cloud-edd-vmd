@@ -64,7 +64,21 @@ public enum VmdErrorCode implements ErrorCode {
     CERTIFICATE_ISSUANCE_CONFLICT("806062", "设备已存在有效或处理中证书申请，不能重复补偿"),
     CERTIFICATE_COMPENSATION_REASON_REQUIRED("806063", "请填写证书补偿原因和工单信息"),
     CERTIFICATE_KEY_CONFLICT("806064", "同设备身份已存在不同公钥的有效/处理中证书，需授权换钥（rekey/reissue）"),
-    CERTIFICATE_DEVICE_UID_UNAVAILABLE("806065", "设备HSM UID缺失或来源冲突，无法完成证书身份校验");
+    CERTIFICATE_DEVICE_UID_UNAVAILABLE("806065", "设备HSM UID缺失或来源冲突，无法完成证书身份校验"),
+
+    // ================= CR-055 业务密钥域（806066～806077） =================
+    BUSINESS_KEY_DEVICE_SESSION_MISMATCH("806066", "设备会话身份与请求deviceSn不一致"),
+    BUSINESS_KEY_DOMAIN_NOT_AUTHORIZED("806067", "业务域或用途未授权"),
+    BUSINESS_KEY_NOT_EXIST("806068", "业务密钥不存在或当前无ACTIVE"),
+    BUSINESS_KEY_MULTIPLE_ACTIVE("806069", "业务密钥目录存在多个ACTIVE，数据异常需对账"),
+    BUSINESS_KEY_STATE_NOT_ALLOWED("806070", "业务密钥状态不允许此操作"),
+    BUSINESS_KEY_IDEMPOTENCY_CONFLICT("806071", "业务密钥申请幂等键冲突"),
+    BUSINESS_KEY_ROTATION_CONFLICT("806072", "业务密钥轮换并发冲突"),
+    BUSINESS_KEY_DEVICE_CERT_NOT_FOUND("806073", "有效设备证书不存在"),
+    BUSINESS_KEY_KMS_UNAVAILABLE("806074", "KMS/HSM或framework安全服务不可用"),
+    BUSINESS_KEY_WRAP_FAILED("806075", "业务密钥设备封装失败"),
+    BUSINESS_KEY_REVOCATION_FAILED("806076", "业务密钥吊销失败"),
+    BUSINESS_KEY_OUTCOME_UNKNOWN("806077", "密钥操作结果未知，需以原幂等键对账");
 
     private final String code;
     private final String message;

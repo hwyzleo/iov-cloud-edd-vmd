@@ -1,0 +1,343 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.DeviceBusinessKeyMapper">
+
+    <!-- 通用查询映射结果（active_flag 为生成列，不参与读写映射） -->
+    <resultMap id="baseResultMap" type="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.DeviceBusinessKeyPo">
+        <id column="id" property="id" />
+        <result column="device_sn" property="deviceSn" />
+        <result column="binding_id" property="bindingId" />
+        <result column="part_id" property="partId" />
+        <result column="hsm_uid" property="hsmUid" />
+        <result column="business_domain" property="businessDomain" />
+        <result column="purpose" property="purpose" />
+        <result column="key_id" property="keyId" />
+        <result column="business_key_version" property="businessKeyVersion" />
+        <result column="kms_key_ref" property="kmsKeyRef" />
+        <result column="kms_key_version" property="kmsKeyVersion" />
+        <result column="kms_provider" property="kmsProvider" />
+        <result column="algorithm" property="algorithm" />
+        <result column="key_spec" property="keySpec" />
+        <result column="key_state" property="keyState" />
+        <result column="valid_from" property="validFrom" />
+        <result column="valid_to" property="validTo" />
+        <result column="decrypt_until" property="decryptUntil" />
+        <result column="wrap_mode" property="wrapMode" />
+        <result column="last_recipient_cert_sn" property="lastRecipientCertSn" />
+        <result column="request_id" property="requestId" />
+        <result column="request_digest" property="requestDigest" />
+        <result column="policy_version" property="policyVersion" />
+        <result column="fail_reason" property="failReason" />
+        <result column="last_attempt_time" property="lastAttemptTime" />
+        <result column="create_time" property="createTime" />
+        <result column="modify_time" property="modifyTime" />
+        <result column="create_by" property="createBy" />
+        <result column="modify_by" property="modifyBy" />
+        <result column="row_version" property="rowVersion" />
+        <result column="row_valid" property="rowValid" />
+    </resultMap>
+
+    <!-- 通用查询结果列（不含生成列 active_flag） -->
+    <sql id="baseColumnList">
+        id, device_sn, binding_id, part_id, hsm_uid, business_domain, purpose, key_id, business_key_version,
+        kms_key_ref, kms_key_version, kms_provider, algorithm, key_spec, key_state,
+        valid_from, valid_to, decrypt_until, wrap_mode, last_recipient_cert_sn,
+        request_id, request_digest, policy_version, fail_reason, last_attempt_time,
+        create_time, create_by, modify_time, modify_by, row_version, row_valid
+    </sql>
+
+    <!-- 插入 -->
+    <insert id="insertPo" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO tb_device_business_key (
+            device_sn, binding_id, part_id, hsm_uid, business_domain, purpose, key_id, business_key_version,
+            kms_key_ref, kms_key_version, kms_provider, algorithm, key_spec, key_state,
+            valid_from, valid_to, decrypt_until, wrap_mode, last_recipient_cert_sn,
+            request_id, request_digest, policy_version, fail_reason, last_attempt_time,
+            create_time, create_by, modify_time, modify_by, row_version, row_valid
+        )
+        VALUES (
+            #{deviceSn}, #{bindingId}, #{partId}, #{hsmUid}, #{businessDomain}, #{purpose}, #{keyId}, #{businessKeyVersion},
+            #{kmsKeyRef}, #{kmsKeyVersion}, #{kmsProvider}, #{algorithm}, #{keySpec}, #{keyState},
+            #{validFrom}, #{validTo}, #{decryptUntil}, #{wrapMode}, #{lastRecipientCertSn},
+            #{requestId}, #{requestDigest}, #{policyVersion}, #{failReason}, #{lastAttemptTime},
+            now(), #{createBy}, now(), #{modifyBy}, 1, 1
+        )
+    </insert>
+
+    <!-- 更新（乐观锁由外层 WHERE row_version 控制，避免生成列参与写入） -->
+    <update id="updatePo" parameterType="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.DeviceBusinessKeyPo">
+        UPDATE tb_device_business_key t SET
+        <if test="deviceSn != null and deviceSn != ''">
+            t.device_sn = #{deviceSn},
+        </if>
+        <if test="bindingId != null">
+            t.binding_id = #{bindingId},
+        </if>
+        <if test="partId != null">
+            t.part_id = #{partId},
+        </if>
+        <if test="hsmUid != null and hsmUid != ''">
+            t.hsm_uid = #{hsmUid},
+        </if>
+        <if test="businessDomain != null and businessDomain != ''">
+            t.business_domain = #{businessDomain},
+        </if>
+        <if test="purpose != null and purpose != ''">
+            t.purpose = #{purpose},
+        </if>
+        <if test="keyId != null and keyId != ''">
+            t.key_id = #{keyId},
+        </if>
+        <if test="businessKeyVersion != null">
+            t.business_key_version = #{businessKeyVersion},
+        </if>
+        <if test="kmsKeyRef != null and kmsKeyRef != ''">
+            t.kms_key_ref = #{kmsKeyRef},
+        </if>
+        <if test="kmsKeyVersion != null">
+            t.kms_key_version = #{kmsKeyVersion},
+        </if>
+        <if test="kmsProvider != null and kmsProvider != ''">
+            t.kms_provider = #{kmsProvider},
+        </if>
+        <if test="algorithm != null and algorithm != ''">
+            t.algorithm = #{algorithm},
+        </if>
+        <if test="keySpec != null and keySpec != ''">
+            t.key_spec = #{keySpec},
+        </if>
+        <if test="keyState != null and keyState != ''">
+            t.key_state = #{keyState},
+        </if>
+        <if test="validFrom != null">
+            t.valid_from = #{validFrom},
+        </if>
+        <if test="validTo != null">
+            t.valid_to = #{validTo},
+        </if>
+        <if test="decryptUntil != null">
+            t.decrypt_until = #{decryptUntil},
+        </if>
+        <if test="wrapMode != null and wrapMode != ''">
+            t.wrap_mode = #{wrapMode},
+        </if>
+        <if test="lastRecipientCertSn != null and lastRecipientCertSn != ''">
+            t.last_recipient_cert_sn = #{lastRecipientCertSn},
+        </if>
+        <if test="requestId != null and requestId != ''">
+            t.request_id = #{requestId},
+        </if>
+        <if test="requestDigest != null and requestDigest != ''">
+            t.request_digest = #{requestDigest},
+        </if>
+        <if test="policyVersion != null and policyVersion != ''">
+            t.policy_version = #{policyVersion},
+        </if>
+        <if test="failReason != null and failReason != ''">
+            t.fail_reason = #{failReason},
+        </if>
+        <if test="lastAttemptTime != null">
+            t.last_attempt_time = #{lastAttemptTime},
+        </if>
+        <if test="createTime != null">
+            t.create_time = #{createTime},
+        </if>
+        <if test="modifyTime != null">
+            t.modify_time = #{modifyTime},
+        </if>
+        <if test="createBy != null and createBy != ''">
+            t.create_by = #{createBy},
+        </if>
+        <if test="modifyBy != null and modifyBy != ''">
+            t.modify_by = #{modifyBy},
+        </if>
+        <if test="rowValid != null">
+            t.row_valid = #{rowValid},
+        </if>
+        t.modify_time = now(),
+        t.row_version = t.row_version + 1
+        WHERE t.id = #{id} AND t.row_valid = 1
+        <if test="rowVersion != null">
+            AND t.row_version = #{rowVersion}
+        </if>
+    </update>
+
+    <!-- 按 keyId 查询 -->
+    <select id="selectPoByKeyId" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList" />
+        FROM tb_device_business_key
+        WHERE key_id = #{keyId} AND row_valid = 1
+        LIMIT 1
+    </select>
+
+    <!-- 按 requestId 查询 -->
+    <select id="selectPoByRequestId" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList" />
+        FROM tb_device_business_key
+        WHERE request_id = #{requestId} AND row_valid = 1
+        LIMIT 1
+    </select>
+
+    <!-- 查询唯一 ACTIVE -->
+    <select id="selectActivePoByContext" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList" />
+        FROM tb_device_business_key
+        WHERE device_sn = #{deviceSn}
+          AND business_domain = #{businessDomain}
+          AND purpose = #{purpose}
+          AND key_state = 'ACTIVE'
+          AND row_valid = 1
+        LIMIT 1
+    </select>
+
+    <!-- 查询唯一 ACTIVE 并加行锁（轮换/吊销互斥，须在事务内调用） -->
+    <select id="selectActivePoByContextForUpdate" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList" />
+        FROM tb_device_business_key
+        WHERE device_sn = #{deviceSn}
+          AND business_domain = #{businessDomain}
+          AND purpose = #{purpose}
+          AND key_state = 'ACTIVE'
+          AND row_valid = 1
+        LIMIT 1
+        FOR UPDATE
+    </select>
+
+    <!-- 按上下文查询全部历史版本 -->
+    <select id="selectPoListByContext" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList" />
+        FROM tb_device_business_key
+        WHERE device_sn = #{deviceSn}
+          AND business_domain = #{businessDomain}
+          AND purpose = #{purpose}
+          AND row_valid = 1
+        ORDER BY business_key_version ASC
+    </select>
+
+    <!-- 按上下文与业务版本查询 -->
+    <select id="selectPoByContextAndVersion" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList" />
+        FROM tb_device_business_key
+        WHERE device_sn = #{deviceSn}
+          AND business_domain = #{businessDomain}
+          AND purpose = #{purpose}
+          AND business_key_version = #{businessKeyVersion}
+          AND row_valid = 1
+        LIMIT 1
+    </select>
+
+    <!-- 查询上下文的当前最大业务版本 -->
+    <select id="selectMaxBusinessKeyVersion" resultType="java.lang.Long">
+        SELECT MAX(business_key_version)
+        FROM tb_device_business_key
+        WHERE device_sn = #{deviceSn}
+          AND business_domain = #{businessDomain}
+          AND purpose = #{purpose}
+          AND row_valid = 1
+    </select>
+
+    <!-- 统计上下文 ACTIVE 数量 -->
+    <select id="countActivePoByContext" resultType="java.lang.Integer">
+        SELECT COUNT(1)
+        FROM tb_device_business_key
+        WHERE device_sn = #{deviceSn}
+          AND business_domain = #{businessDomain}
+          AND purpose = #{purpose}
+          AND key_state = 'ACTIVE'
+          AND row_valid = 1
+    </select>
+
+    <!-- 按设备查询全部业务密钥 -->
+    <select id="selectPoListByDeviceSn" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList" />
+        FROM tb_device_business_key
+        WHERE device_sn = #{deviceSn}
+          AND row_valid = 1
+        ORDER BY business_key_version ASC
+    </select>
+
+    <!-- 查询超过解密窗口的 DEPRECATED 行（EXPIRED 扫批） -->
+    <select id="selectDeprecatedExpiredPo" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList" />
+        FROM tb_device_business_key
+        WHERE key_state = 'DEPRECATED'
+          AND decrypt_until IS NOT NULL
+          AND decrypt_until &lt;= #{now}
+          AND row_valid = 1
+        ORDER BY decrypt_until ASC
+        LIMIT #{limit}
+    </select>
+
+    <!-- 根据主键获取对应数据 -->
+    <select id="selectPoById" parameterType="Long" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList"/>
+        FROM tb_device_business_key t
+        WHERE t.id = #{value}
+        AND t.row_valid = 1
+    </select>
+
+    <!-- 根据数据对象获取对应数据列表 -->
+    <select id="selectPoByExample" parameterType="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.DeviceBusinessKeyPo" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList"/>
+        FROM tb_device_business_key t
+        WHERE t.row_valid = 1
+        <if test="id != null">
+            AND t.id = #{id}
+        </if>
+        <if test="deviceSn != null and deviceSn != ''">
+            AND t.device_sn = #{deviceSn}
+        </if>
+        <if test="businessDomain != null and businessDomain != ''">
+            AND t.business_domain = #{businessDomain}
+        </if>
+        <if test="purpose != null and purpose != ''">
+            AND t.purpose = #{purpose}
+        </if>
+        <if test="keyState != null and keyState != ''">
+            AND t.key_state = #{keyState}
+        </if>
+        ORDER BY t.id DESC
+    </select>
+
+    <!-- 根据Map对象获取对应数据列表 -->
+    <select id="selectPoByMap" parameterType="java.util.Map" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList"/>
+        FROM tb_device_business_key t
+        WHERE t.row_valid = 1
+        <!-- 添加自定义条件 -->
+        ORDER BY t.id DESC
+    </select>
+
+    <!-- 根据Map对象统计记录数 -->
+    <select id="countPoByMap" parameterType="java.util.Map" resultType="int">
+        SELECT COUNT(*)
+        FROM tb_device_business_key t
+        WHERE t.row_valid = 1
+        <!-- 添加自定义条件 -->
+    </select>
+
+    <!-- 逻辑删除 -->
+    <update id="logicalDeletePo" parameterType="Long">
+        UPDATE tb_device_business_key t SET
+        t.row_version = t.row_version + 1,
+        t.modify_time = now(),
+        t.row_valid = 0
+        WHERE t.id = #{value}
+    </update>
+
+    <!-- 物理删除 -->
+    <delete id="physicalDeletePo" parameterType="Long">
+        DELETE FROM tb_device_business_key t
+        WHERE t.id = #{value}
+    </delete>
+
+    <!-- 批量物理删除 -->
+    <delete id="batchPhysicalDeletePo" parameterType="Long">
+        DELETE FROM tb_device_business_key t
+        WHERE t.id IN
+        <foreach collection="array" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+</mapper>

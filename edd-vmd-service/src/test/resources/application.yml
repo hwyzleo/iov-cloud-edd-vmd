@@ -1,3 +1,24 @@
 crypto:
   provisioning:
     enabled: true
+
+# CR-055 业务密钥域测试策略（真实授权策略 + BizType 映射，供集成测试使用）
+vmd:
+  business-key:
+    policy:
+      version: v1
+      entries:
+        - business-domain: SECURE_CHANNEL
+          purpose: SESSION_ENC
+          device-categories: [TBOX]
+          allowed-actions: [PROVISION, RESOLVE_ACTIVE, DECRYPT, ROTATE, REVOKE]
+          algorithm: AES
+          key-spec: AES-256-GCM
+          validity: 365d
+          decrypt-window: 7d
+          default-purpose: SESSION_ENC
+    mapping:
+      biz-type-domain:
+        TBOX_DEVICE_ROOT: SECURE_CHANNEL
+      domain-biz-type:
+        SECURE_CHANNEL: TBOX_DEVICE_ROOT

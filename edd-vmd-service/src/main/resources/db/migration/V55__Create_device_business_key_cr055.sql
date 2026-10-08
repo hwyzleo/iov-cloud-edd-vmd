@@ -1,0 +1,47 @@
+-- CR-055: 创建设备业务密钥目录表（业务密钥域）
+-- VMD 是设备业务密钥关系、授权、businessKeyVersion 与 ACTIVE 状态的 SSOT；
+-- framework-security/KMS 仅管理密钥材料和密码学状态。
+-- 禁止保存明文密钥、解封密钥、设备私钥与完整 Wrapped Key（仅存 KMS 引用）。
+
+CREATE TABLE IF NOT EXISTS `tb_device_business_key` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `device_sn` varchar(64) NOT NULL COMMENT '设备实例序列号快照',
+  `binding_id` bigint NOT NULL COMMENT '创建时active vehicle_part.id',
+  `part_id` bigint NOT NULL COMMENT '设备物理实例，关联part_info.id',
+  `hsm_uid` varchar(128) DEFAULT NULL COMMENT '创建时权威安全芯片UID快照',
+  `business_domain` varchar(64) NOT NULL COMMENT '受治理业务域代码',
+  `purpose` varchar(64) NOT NULL COMMENT '受治理用途代码',
+  `key_id` varchar(128) DEFAULT NULL COMMENT 'framework/KMS返回的不透明标识，唯一（PENDING/FAILED 占位行允许为空）',
+  `business_key_version` bigint NOT NULL COMMENT 'VMD业务版本，同上下文单调递增',
+  `kms_key_ref` varchar(255) DEFAULT NULL COMMENT 'KMS引用，不是密钥本体',
+  `kms_key_version` int DEFAULT NULL COMMENT 'KMS/provider内部版本，仅审计与对账',
+  `kms_provider` varchar(32) DEFAULT NULL COMMENT 'KMS提供方',
+  `algorithm` varchar(32) DEFAULT NULL COMMENT '算法快照',
+  `key_spec` varchar(64) DEFAULT NULL COMMENT '密钥规格快照',
+  `key_state` varchar(32) NOT NULL DEFAULT 'PENDING' COMMENT '密钥状态：PENDING/ACTIVE/DEPRECATED/REVOKING/REVOKED/EXPIRED/FAILED/RECONCILE_REQUIRED',
+  `active_flag` tinyint GENERATED ALWAYS AS (CASE WHEN key_state = 'ACTIVE' THEN 1 ELSE NULL END) STORED COMMENT '单ACTIVE生成列（配合uk_context_active）',
+  `valid_from` datetime DEFAULT NULL COMMENT '有效窗口开始',
+  `valid_to` datetime DEFAULT NULL COMMENT '有效窗口结束',
+  `decrypt_until` datetime DEFAULT NULL COMMENT 'DEPRECATED仅解密截止时间',
+  `wrap_mode` varchar(32) NOT NULL DEFAULT 'DEVICE_CERT_PUBLIC_KEY' COMMENT '首期固定DEVICE_CERT_PUBLIC_KEY',
+  `last_recipient_cert_sn` varchar(128) DEFAULT NULL COMMENT '最近设备封装使用的证书序列号，仅审计',
+  `request_id` varchar(64) NOT NULL COMMENT '调用幂等键',
+  `request_digest` varchar(512) DEFAULT NULL COMMENT '规范化请求摘要（同requestId不同digest报幂等冲突）',
+  `policy_version` varchar(32) DEFAULT NULL COMMENT '创建时授权/密码学策略版本',
+  `fail_reason` varchar(512) DEFAULT NULL COMMENT '最近失败原因，失败重试与诊断',
+  `last_attempt_time` datetime DEFAULT NULL COMMENT '最近尝试时间',
+  `create_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `create_by` varchar(64) DEFAULT NULL COMMENT '创建者',
+  `modify_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '修改时间',
+  `modify_by` varchar(64) DEFAULT NULL COMMENT '修改者',
+  `row_version` int DEFAULT '1' COMMENT '记录版本',
+  `row_valid` tinyint DEFAULT '1' COMMENT '记录是否有效',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_key_id` (`key_id`),
+  UNIQUE KEY `uk_context_version` (`device_sn`, `business_domain`, `purpose`, `business_key_version`),
+  UNIQUE KEY `uk_request_id` (`request_id`),
+  UNIQUE KEY `uk_context_active` (`device_sn`, `business_domain`, `purpose`, `active_flag`),
+  KEY `idx_device_sn` (`device_sn`),
+  KEY `idx_key_state` (`key_state`),
+  KEY `idx_modify_time` (`modify_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci COMMENT='设备业务密钥目录表';

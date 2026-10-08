@@ -15,9 +15,9 @@ import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.security.CsrUtils;
 import org.springframework.stereotype.Service;
 
 /**
- * active TBOX 绑定设备身份解析器（CR-054）
+ * active TBOX 绑定设备身份解析器（CR-054 / CR-055）
  * <p>
- * 按 VIN + deviceSn 定位唯一 active 物理绑定，并解析权威 HSM UID：
+ * 定位唯一 active 物理绑定，并解析权威 HSM UID：
  * <ol>
  *   <li>优先取 active 绑定关联 part_info.extra.HSM（字段名由 HsmUidFieldResolver 统一）；</li>
  *   <li>part_security_constant.chip_uid 用作一致性核对与存量受控兜底；</li>
@@ -42,7 +42,7 @@ public class BoundDeviceIdentityResolver {
     private final PartSecurityConstantRepository partSecurityConstantRepository;
 
     /**
-     * 解析 active 绑定及权威 HSM UID
+     * 解析 active 绑定及权威 HSM UID（按 VIN + deviceSn）
      *
      * @param vin            车辆VIN
      * @param deviceSn       TBOX 物理实例序列号
@@ -59,7 +59,34 @@ public class BoundDeviceIdentityResolver {
         if (activeBinding == null) {
             throw new IllegalStateException("设备与车辆未建立active绑定: vin=" + vin + ", deviceSn=" + deviceSn);
         }
+        return resolveIdentity(partInfo, activeBinding, deviceSn, deviceCategory);
+    }
 
+    /**
+     * 解析 active 绑定及权威 HSM UID（仅按 deviceSn，CR-055 keyprov 入站无 VIN）
+     * <p>
+     * 设备（part_info）同一时刻至多一个 active 绑定（vehicle_part active 绑定唯一），
+     * 故按 part_id 取唯一 active 绑定即可定位 VIN 与绑定锚点。
+     *
+     * @param deviceSn       TBOX 物理实例序列号
+     * @param deviceCategory 设备类别
+     * @return 绑定设备身份
+     */
+    public BoundDeviceIdentity resolveByDeviceSn(String deviceSn, String deviceCategory) {
+        PartInfo partInfo = partInfoRepository.selectBySn(deviceSn);
+        if (partInfo == null) {
+            throw new IllegalArgumentException("设备不存在: " + deviceSn);
+        }
+
+        VehiclePart activeBinding = vehiclePartRepository.selectActiveByPartId(partInfo.getId());
+        if (activeBinding == null) {
+            throw new IllegalStateException("设备未建立active绑定: deviceSn=" + deviceSn);
+        }
+        return resolveIdentity(partInfo, activeBinding, deviceSn, deviceCategory);
+    }
+
+    private BoundDeviceIdentity resolveIdentity(PartInfo partInfo, VehiclePart activeBinding,
+                                                String deviceSn, String deviceCategory) {
         String extraHsm = resolveFromPartInfoExtra(partInfo);
         PartSecurityConstant secConstant = partSecurityConstantRepository.selectByPartCodeAndSn(partInfo.getPartCode(), deviceSn);
         String chipUid = secConstant != null ? secConstant.getChipUid() : null;
@@ -87,7 +114,7 @@ public class BoundDeviceIdentityResolver {
         }
 
         return new BoundDeviceIdentity(
-                vin, activeBinding.getId(), partInfo.getId(), deviceSn, deviceCategory, hsmUid, uidSource);
+                activeBinding.getVin(), activeBinding.getId(), partInfo.getId(), deviceSn, deviceCategory, hsmUid, uidSource);
     }
 
     /**

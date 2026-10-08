@@ -35,7 +35,8 @@ public class VmdKafkaTopicRoutes {
     private static final Map<String, VmdKafkaLogicalTopic> EVENT_TYPE_ROUTES = Map.of(
             "VehicleProduceEvent", VmdKafkaLogicalTopic.VEHICLE_PRODUCE,
             "VehiclePartBindingChangedEvent", VmdKafkaLogicalTopic.PART_BINDING_CHANGED,
-            "VehicleSoftwareInventoryChangedEvent", VmdKafkaLogicalTopic.SOFTWARE_INVENTORY_CHANGED
+            "VehicleSoftwareInventoryChangedEvent", VmdKafkaLogicalTopic.SOFTWARE_INVENTORY_CHANGED,
+            "BusinessKeyChangedEvent", VmdKafkaLogicalTopic.BUSINESS_KEY_CHANGED
     );
 
     /**

@@ -31,7 +31,12 @@ public enum VmdKafkaLogicalTopic {
     /**
      * 车辆软件清单变更事件（Producer，VMD 幂等创建，经 Outbox→Relay 发布）
      */
-    SOFTWARE_INVENTORY_CHANGED("software-inventory-changed", VmdKafkaTopicRole.PRODUCER_OWNED);
+    SOFTWARE_INVENTORY_CHANGED("software-inventory-changed", VmdKafkaTopicRole.PRODUCER_OWNED),
+
+    /**
+     * 设备业务密钥变更事件（Producer，VMD 幂等创建，经 Outbox→Relay 发布；CR-055）
+     */
+    BUSINESS_KEY_CHANGED("business-key-changed", VmdKafkaTopicRole.PRODUCER_OWNED);
 
     private final String configKey;
     private final VmdKafkaTopicRole role;

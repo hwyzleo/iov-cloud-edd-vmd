@@ -10,6 +10,11 @@ iov:
 crypto:
   provisioning:
     enabled: true
+  # 业务密钥域（CR-055）：VMD 作为目录 SSOT，framework 仅管密钥材料
+  business-key:
+    enabled: true
+    directory:
+      enabled: true
 
 # VMD Kafka Topic 目录（VMD-DSN-CR-051 / VMD-DSN-CR-052）：Listener 占位符 / Producer / Outbox 统一引用
 vmd:
@@ -19,6 +24,8 @@ vmd:
       part-binding-changed: ${VMD_KAFKA_TOPIC_PART_BINDING_CHANGED:vmd.vehicle-part-binding.changed}
       vehicle-produce: ${VMD_KAFKA_TOPIC_VEHICLE_PRODUCE:vmd.vehicle-produce}
       software-inventory-changed: ${VMD_KAFKA_TOPIC_SOFTWARE_INVENTORY_CHANGED:vmd.vehicle-software-inventory.changed}
+      # 设备业务密钥变更事件（CR-055，VMD 幂等创建，经 Outbox→Relay 发布）
+      business-key-changed: ${VMD_KAFKA_TOPIC_BUSINESS_KEY_CHANGED:vmd.business-key.changed}
       # 11 个 EDD-MDM 消费 Topic（VMD-DSN-CR-052，全部 CONSUMER_ONLY，归 EDD-MDM 管理，VMD 只预检不创建）
       mdm:
         brand: ${VMD_KAFKA_TOPIC_MDM_BRAND:mdm.brand}
@@ -48,6 +55,26 @@ vmd:
     readiness:
       # 生产 Topic readiness=DOWN 时暂停 Outbox Relay 发布
       gate-producer: ${VMD_KAFKA_READINESS_GATE_PRODUCER:true}
+  business-key:
+    policy:
+      # 版本化授权策略（fail-closed：未登记域/用途一律拒绝）。生产经 Nacos 下发受治理条目。
+      # version: v1
+      # entries:
+      #   - business-domain: SECURE_CHANNEL
+      #     purpose: SESSION_ENC
+      #     device-categories: [TBOX]
+      #     allowed-actions: [PROVISION, RESOLVE_ACTIVE, DECRYPT, ROTATE, REVOKE]
+      #     algorithm: AES
+      #     key-spec: AES-256-GCM
+      #     validity: 365d
+      #     decrypt-window: 7d
+      #     default-purpose: SESSION_ENC
+    mapping:
+      # framework BizType 名 → 业务域代码（缺省 identity）；域 → BizType 名（缺省 identity）
+      # biz-type-domain:
+      #   TBOX_DEVICE_ROOT: SECURE_CHANNEL
+      # domain-biz-type:
+      #   SECURE_CHANNEL: TBOX_DEVICE_ROOT
   binding:
     kafka:
       enabled: ${VMD_BINDING_KAFKA_ENABLED:true}
