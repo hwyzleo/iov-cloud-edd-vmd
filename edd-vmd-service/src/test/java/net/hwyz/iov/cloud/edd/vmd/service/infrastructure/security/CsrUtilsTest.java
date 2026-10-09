@@ -200,6 +200,18 @@ class CsrUtilsTest {
         }
     }
 
+    /**
+     * 将纯 Base64 包装成 openssl 默认输出的完整 PEM 块（BEGIN/END + 每 64 字符换行）
+     */
+    private static String wrapAsPem(String base64) {
+        StringBuilder sb = new StringBuilder("-----BEGIN CERTIFICATE REQUEST-----\n");
+        for (int i = 0; i < base64.length(); i += 64) {
+            sb.append(base64, i, Math.min(i + 64, base64.length())).append('\n');
+        }
+        sb.append("-----END CERTIFICATE REQUEST-----\n");
+        return sb.toString();
+    }
+
     private static String buildCsrWithSan(String sanDns) {
         try {
             KeyPairGenerator kpg = KeyPairGenerator.getInstance("EC");

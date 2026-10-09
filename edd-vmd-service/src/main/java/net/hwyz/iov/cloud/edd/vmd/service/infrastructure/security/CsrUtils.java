@@ -275,23 +275,37 @@ public class CsrUtils {
      * <p>
      * 全链路唯一解码入口：签发编排（framework 请求构造）必须复用本方法，
      * 避免校验处与签发处解码口径不一致导致标准 Base64 在校验通过后解码抛异常。
+     * <p>
+     * BUG 修复（CSR PEM 头尾兼容）：解码前先剥离 PEM 头尾标记（BEGIN/END 行）
+     * 与全部空白字符，兼容 openssl 默认输出的完整 PEM 块（每 64 字符换行）。
+     * 仍为 fail-closed：剥离后依旧非法 Base64 时抛同样异常。
      *
-     * @param base64 CSR DER 的 Base64 字符串（URL安全或标准编码均可）
+     * @param base64 CSR DER 的 Base64 字符串（URL安全或标准编码均可，可带 PEM 头尾/换行）
      * @return DER 字节数组
      */
     public static byte[] decodeBase64(String base64) {
         if (base64 == null || base64.isEmpty()) {
             throw new IllegalArgumentException("CSR Base64为空");
         }
+        String normalized = normalizePem(base64);
         try {
-            return Base64.getUrlDecoder().decode(base64);
+            return Base64.getUrlDecoder().decode(normalized);
         } catch (IllegalArgumentException e) {
             try {
-                return Base64.getDecoder().decode(base64);
+                return Base64.getDecoder().decode(normalized);
             } catch (IllegalArgumentException e2) {
                 throw new IllegalArgumentException("CSR Base64解码失败", e2);
             }
         }
+    }
+
+    /**
+     * 剥离 PEM 头尾标记（-----BEGIN xxx----- / -----END xxx----- 行）与全部空白字符。
+     * 仅做字符清洗，不改变内容语义；清洗后内容仍需满足 Base64 字母表（非法输入继续抛异常）。
+     */
+    private static String normalizePem(String input) {
+        return input.replaceAll("-----BEGIN[^-]*-----|-----END[^-]*-----", "")
+                .replaceAll("\\s", "");
     }
 
     /**
