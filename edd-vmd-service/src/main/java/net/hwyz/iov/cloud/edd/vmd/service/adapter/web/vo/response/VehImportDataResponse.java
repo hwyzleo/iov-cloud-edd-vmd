@@ -41,4 +41,11 @@ public class VehImportDataResponse {
      * VMD-DSN-CR-039: 车辆导入成功事件人工补发
      */
     private String eventReplayReason;
+
+    /**
+     * 允许补发的动作类型列表
+     * <p>
+     * VMD-DSN-CR-057: 车辆导入补发扩展为按 ImportType 路由的动作补偿
+     */
+    private java.util.List<String> replayActionTypes;
 }

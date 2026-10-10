@@ -83,7 +83,11 @@ public enum VmdErrorCode implements ErrorCode {
     // ================= CR-056 零件导入后置处理重放域（806078～806080） =================
     PART_IMPORT_POST_PROCESS_REPLAY_NOT_ALLOWED("806078", "当前零件导入记录不允许重放后置处理"),
     PART_IMPORT_POST_PROCESS_REPLAY_IN_PROGRESS("806079", "该零件导入记录正在重放后置处理"),
-    PART_IMPORT_POST_PROCESS_REPLAY_ACTION_NOT_FOUND("806080", "不支持的零件导入后置处理动作");
+    PART_IMPORT_POST_PROCESS_REPLAY_ACTION_NOT_FOUND("806080", "不支持的零件导入后置处理动作"),
+
+    // ================= CR-057 车辆导入补发动作注册表域（806081～806082） =================
+    VEHICLE_IMPORT_REPLAY_ACTION_NOT_REGISTERED("806081", "车辆导入补发动作未登记，不允许执行"),
+    VEHICLE_IMPORT_REPLAY_TOPIC_NOT_REGISTERED("806082", "车辆导入补发目标Topic未登记，不允许发布");
 
     private final String code;
     private final String message;

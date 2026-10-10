@@ -296,6 +296,8 @@ public class VehImportDataAppService {
         // 计算是否允许补发事件
         Boolean eventReplayable = isEventReplayable(entity);
         String eventReplayReason = getEventReplayReason(entity, eventReplayable);
+        java.util.List<String> replayActionTypes = eventReplayable
+                ? resolveReplayActionTypes(entity.getType()) : null;
 
         return VehImportDataDto.builder()
                 .id(entity.getId())
@@ -308,13 +310,14 @@ public class VehImportDataAppService {
                 .createTime(entity.getCreateTime())
                 .eventReplayable(eventReplayable)
                 .eventReplayReason(eventReplayReason)
+                .replayActionTypes(replayActionTypes)
                 .build();
     }
 
     /**
      * 判断是否允许补发事件
      * <p>
-     * 仅 type=PRODUCE、处理成功、原始数据存在时允许补发
+     * VMD-DSN-CR-057: 类型判断由 PRODUCE 扩为 PRODUCE/TOL/EOL；处理成功、原始数据存在时允许补发
      *
      * @param entity 车辆导入数据实体
      * @return 是否允许补发
@@ -323,8 +326,8 @@ public class VehImportDataAppService {
         if (entity == null) {
             return false;
         }
-        // 仅支持PRODUCE类型
-        if (!"PRODUCE".equals(entity.getType())) {
+        // 仅支持 PRODUCE/TOL/EOL 类型
+        if (!java.util.List.of("PRODUCE", "TOL", "EOL").contains(entity.getType())) {
             return false;
         }
         // 必须处理成功
@@ -336,6 +339,20 @@ public class VehImportDataAppService {
             return false;
         }
         return true;
+    }
+
+    /**
+     * 解析该导入类型允许补发的动作类型列表（CR-057）
+     */
+    private java.util.List<String> resolveReplayActionTypes(String importType) {
+        java.util.List<String> result = new java.util.ArrayList<>();
+        for (net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.VehicleImportReplayActionType type
+                : net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.VehicleImportReplayActionType.values()) {
+            if (type.applicableTo(importType)) {
+                result.add(type.getValue());
+            }
+        }
+        return result;
     }
 
     /**
@@ -352,8 +369,8 @@ public class VehImportDataAppService {
         if (entity == null) {
             return "记录不存在";
         }
-        if (!"PRODUCE".equals(entity.getType())) {
-            return "仅支持PRODUCE类型";
+        if (!java.util.List.of("PRODUCE", "TOL", "EOL").contains(entity.getType())) {
+            return "仅支持PRODUCE/TOL/EOL类型";
         }
         if (!Boolean.TRUE.equals(entity.getHandle())) {
             return "导入记录未处理成功";

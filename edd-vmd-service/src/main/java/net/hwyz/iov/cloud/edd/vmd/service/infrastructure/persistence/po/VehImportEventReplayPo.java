@@ -11,9 +11,10 @@ import lombok.experimental.SuperBuilder;
 import java.time.LocalDateTime;
 
 /**
- * 车辆导入成功事件补发审计表 持久化对象
+ * 车辆导入事件补发主任务审计表 持久化对象
  * <p>
  * VMD-DSN-CR-039: 车辆导入成功事件人工补发
+ * VMD-DSN-CR-057: 扩展为按 ImportType 路由的动作补偿主任务
  *
  * @author hwyz_leo
  * @since 2026-07-17
@@ -53,10 +54,16 @@ public class VehImportEventReplayPo extends BasePo {
     private String batchNum;
 
     /**
-     * 事件类型（本轮仅PRODUCE）
+     * 导入类型（PRODUCE/TOL/EOL，动作路由依据；原 event_type 更名）
      */
-    @TableField("event_type")
-    private String eventType;
+    @TableField("import_type")
+    private String importType;
+
+    /**
+     * 请求动作范围：逗号分隔的动作类型子集，空表示全部适用动作
+     */
+    @TableField("requested_actions")
+    private String requestedActions;
 
     /**
      * 操作人ID
@@ -77,7 +84,7 @@ public class VehImportEventReplayPo extends BasePo {
     private String reason;
 
     /**
-     * 状态：PENDING/RUNNING/SUCCESS/PARTIAL_FAILED/FAILED
+     * 状态：PENDING/RUNNING/QUEUED/SUCCESS/SUCCEEDED_WITH_SKIPS/PARTIAL_FAILED/FAILED
      */
     @TableField("status")
     private String status;
@@ -93,6 +100,18 @@ public class VehImportEventReplayPo extends BasePo {
      */
     @TableField("queued_count")
     private Integer queuedCount;
+
+    /**
+     * 成功动作数
+     */
+    @TableField("success_count")
+    private Integer successCount;
+
+    /**
+     * 跳过动作数
+     */
+    @TableField("skip_count")
+    private Integer skipCount;
 
     /**
      * 失败数

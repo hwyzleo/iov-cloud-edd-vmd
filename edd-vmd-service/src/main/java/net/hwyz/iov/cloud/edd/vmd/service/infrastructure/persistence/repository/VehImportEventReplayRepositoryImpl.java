@@ -15,9 +15,10 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * 车辆导入成功事件补发审计仓储实现
+ * 车辆导入事件补发主任务审计仓储实现
  * <p>
  * VMD-DSN-CR-039: 车辆导入成功事件人工补发
+ * VMD-DSN-CR-057: 扩展为按 ImportType 路由的动作补偿主任务
  *
  * @author hwyz_leo
  * @since 2026-07-17
@@ -70,8 +71,8 @@ public class VehImportEventReplayRepositoryImpl implements VehImportEventReplayR
         if (vehImportEventReplay.getBatchNum() != null) {
             map.put("batchNum", vehImportEventReplay.getBatchNum());
         }
-        if (vehImportEventReplay.getEventType() != null) {
-            map.put("eventType", vehImportEventReplay.getEventType());
+        if (vehImportEventReplay.getImportType() != null) {
+            map.put("importType", vehImportEventReplay.getImportType());
         }
         if (vehImportEventReplay.getStatus() != null) {
             map.put("status", vehImportEventReplay.getStatus());
@@ -83,8 +84,8 @@ public class VehImportEventReplayRepositoryImpl implements VehImportEventReplayR
     }
 
     @Override
-    public long countRunningByVehImportDataIdAndEventType(Long vehImportDataId, String eventType) {
-        return vehImportEventReplayMapper.countRunningByVehImportDataIdAndEventType(vehImportDataId, eventType);
+    public long countRunningByVehImportDataId(Long vehImportDataId) {
+        return vehImportEventReplayMapper.countRunningByVehImportDataId(vehImportDataId);
     }
 
     @Override

@@ -6,13 +6,17 @@ import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.ReplayVehicleImportEventRequest;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.VehImportDataRequest;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.ImportResultResponse;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.ReplayActionResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.ReplayEventResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.VehImportDataResponse;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.VehicleImportReplayPreviewResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.MptVehImportDataAssembler;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.ReplayVehicleImportEventCmd;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.VehImportDataCmd;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ImportResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ReplayEventResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.VehImportDataDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.VehicleImportReplayPreview;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.VehImportDataQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehImportDataAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehImportEventReplayAppService;
@@ -140,9 +144,26 @@ public class MptVehImportDataController extends BaseController {
     }
 
     /**
-     * 补发车辆导入成功事件
+     * 车辆导入事件补发预检
+     * <p>
+     * VMD-DSN-CR-057: 返回可执行动作及可执行/跳过统计，供前端选择动作范围
+     *
+     * @param vehImportDataId 车辆导入数据ID
+     * @return 预检结果
+     */
+    @RequiresPermissions("completeVehicle:vehicle:importData:replay")
+    @GetMapping("/{vehImportDataId}/replayEvent/preview")
+    public ApiResponse<VehicleImportReplayPreviewResponse> previewReplayEvent(@PathVariable Long vehImportDataId) {
+        log.info("管理后台用户[{}]预检车辆导入数据[id={}]事件补发", SecurityContextHolder.getUserName(), vehImportDataId);
+        VehicleImportReplayPreview preview = vehImportEventReplayAppService.preview(vehImportDataId);
+        return ApiResponse.ok(MptVehImportDataAssembler.INSTANCE.fromPreview(preview));
+    }
+
+    /**
+     * 补发车辆导入成功事件（按 ImportType 路由动作补偿）
      * <p>
      * VMD-DSN-CR-039: 车辆导入成功事件人工补发
+     * VMD-DSN-CR-057: 扩展 PRODUCE/TOL/EOL 多类型动作补偿
      *
      * @param vehImportDataId 车辆导入数据ID
      * @param request 补发请求
@@ -157,18 +178,35 @@ public class MptVehImportDataController extends BaseController {
         if (request == null) {
             request = new ReplayVehicleImportEventRequest();
         }
+        ReplayVehicleImportEventCmd cmd = ReplayVehicleImportEventCmd.builder()
+                .requestId(request.getRequestId())
+                .reason(request.getReason())
+                .actionTypes(request.getActionTypes())
+                .build();
         ReplayEventResult result = vehImportEventReplayAppService.replay(
                 vehImportDataId,
-                request.getRequestId(),
+                cmd,
                 SecurityUtils.getUserId().toString(),
-                SecurityContextHolder.getUserName(),
-                request.getReason()
+                SecurityContextHolder.getUserName()
         );
         ReplayEventResponse response = ReplayEventResponse.builder()
                 .replayId(result.getReplayId())
+                .importType(result.getImportType())
                 .totalCount(result.getTotalCount())
                 .queuedCount(result.getQueuedCount())
+                .successCount(result.getSuccessCount())
+                .skipCount(result.getSkipCount())
                 .failureCount(result.getFailureCount())
+                .actionResults(result.getActionResults() == null ? null : result.getActionResults().stream()
+                        .map(a -> ReplayActionResponse.builder()
+                                .actionType(a.getActionType())
+                                .totalCount(a.getTotalCount())
+                                .queuedCount(a.getQueuedCount())
+                                .successCount(a.getSuccessCount())
+                                .skipCount(a.getSkipCount())
+                                .failureCount(a.getFailureCount())
+                                .build())
+                        .collect(java.util.stream.Collectors.toList()))
                 .failures(result.getFailures())
                 .build();
         return ApiResponse.ok(response);

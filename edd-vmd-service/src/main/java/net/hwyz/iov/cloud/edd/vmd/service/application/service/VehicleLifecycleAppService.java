@@ -147,6 +147,40 @@ public class VehicleLifecycleAppService {
     }
 
     /**
+     * 幂等补齐生命周期节点（VMD-DSN-CR-057：车辆导入补发生命周期动作）
+     * <p>
+     * 节点已存在时不覆盖原时间并返回 false；首次写入胜出，并发唯一键冲突且节点已存在时视为已补齐返回 false。
+     *
+     * @param vin       车架号
+     * @param node      生命周期节点
+     * @param reachTime 节点到达时间（可空）
+     * @return true=本次补齐写入；false=节点已存在（无需/不允许覆盖）
+     */
+    public boolean ensureNode(String vin, VehicleLifecycleNodeEnum node, Instant reachTime) {
+        if (vehicleLifecycleNodeRepository.existsByVinAndNode(vin, node)) {
+            log.debug("车辆生命周期节点已存在，跳过补齐: vin={}, node={}", vin, node);
+            return false;
+        }
+        VehicleLifecycleNode lifecycleNode = VehicleLifecycleNode.builder()
+                .vin(vin)
+                .node(node)
+                .reachTime(reachTime)
+                .build();
+        lifecycleNode.init();
+        try {
+            vehicleLifecycleNodeRepository.save(lifecycleNode);
+            return true;
+        } catch (DuplicateKeyException ex) {
+            // 并发竞态兜底：唯一键冲突但目标节点已存在，视为已补齐
+            if (vehicleLifecycleNodeRepository.existsByVinAndNode(vin, node)) {
+                log.debug("并发补齐生命周期节点冲突，回查已存在，视为已补齐: vin={}, node={}", vin, node);
+                return false;
+            }
+            throw ex;
+        }
+    }
+
+    /**
      * 记录车辆合格证节点（幂等：首次写入胜出，重复调用忽略）
      *
      * @param vin             车架号

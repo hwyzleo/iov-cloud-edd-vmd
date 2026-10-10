@@ -10,9 +10,10 @@ import org.apache.ibatis.annotations.Update;
 import java.util.List;
 
 /**
- * 车辆导入成功事件补发审计表 DAO
+ * 车辆导入事件补发主任务审计表 DAO
  * <p>
  * VMD-DSN-CR-039: 车辆导入成功事件人工补发
+ * VMD-DSN-CR-057: 扩展为按 ImportType 路由的动作补偿主任务
  *
  * @author hwyz_leo
  * @since 2026-07-17
@@ -30,14 +31,13 @@ public interface VehImportEventReplayMapper extends BaseDao<VehImportEventReplay
     VehImportEventReplayPo selectPoByReplayId(@Param("replayId") String replayId);
 
     /**
-     * 查询指定车辆导入数据ID和事件类型下执行中的任务数量
+     * 查询指定车辆导入数据ID下执行中的主任务数量（CR-057 不再按 eventType 区分）
      *
      * @param vehImportDataId 车辆导入数据ID
-     * @param eventType 事件类型
      * @return 执行中的任务数量
      */
-    @Select("SELECT COUNT(*) FROM tb_veh_import_event_replay WHERE veh_import_data_id = #{vehImportDataId} AND event_type = #{eventType} AND status = 'RUNNING' AND row_valid = 1")
-    long countRunningByVehImportDataIdAndEventType(@Param("vehImportDataId") Long vehImportDataId, @Param("eventType") String eventType);
+    @Select("SELECT COUNT(*) FROM tb_veh_import_event_replay WHERE veh_import_data_id = #{vehImportDataId} AND status = 'RUNNING' AND row_valid = 1")
+    long countRunningByVehImportDataId(@Param("vehImportDataId") Long vehImportDataId);
 
     /**
      * 查询超时的RUNNING状态记录

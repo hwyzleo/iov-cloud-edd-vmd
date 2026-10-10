@@ -8,13 +8,16 @@
         <result column="replay_id" property="replayId" />
         <result column="veh_import_data_id" property="vehImportDataId" />
         <result column="batch_num" property="batchNum" />
-        <result column="event_type" property="eventType" />
+        <result column="import_type" property="importType" />
+        <result column="requested_actions" property="requestedActions" />
         <result column="operator_id" property="operatorId" />
         <result column="operator_name" property="operatorName" />
         <result column="reason" property="reason" />
         <result column="status" property="status" />
         <result column="total_count" property="totalCount" />
         <result column="queued_count" property="queuedCount" />
+        <result column="success_count" property="successCount" />
+        <result column="skip_count" property="skipCount" />
         <result column="failure_count" property="failureCount" />
         <result column="failure_detail" property="failureDetail" />
         <result column="started_at" property="startedAt" />
@@ -29,9 +32,9 @@
 
     <!-- 通用查询结果列 -->
     <sql id="baseColumnList">
-        id, replay_id, veh_import_data_id, batch_num, event_type,
+        id, replay_id, veh_import_data_id, batch_num, import_type, requested_actions,
         operator_id, operator_name, reason, status,
-        total_count, queued_count, failure_count, failure_detail,
+        total_count, queued_count, success_count, skip_count, failure_count, failure_detail,
         started_at, finished_at,
         create_time, create_by, modify_time, modify_by, row_version, row_valid
     </sql>
@@ -39,16 +42,16 @@
     <!-- 插入 -->
     <insert id="insertPo" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO tb_veh_import_event_replay (
-            id, replay_id, veh_import_data_id, batch_num, event_type,
+            id, replay_id, veh_import_data_id, batch_num, import_type, requested_actions,
             operator_id, operator_name, reason, status,
-            total_count, queued_count, failure_count, failure_detail,
+            total_count, queued_count, success_count, skip_count, failure_count, failure_detail,
             started_at, finished_at,
             create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
         VALUES (
-            #{id}, #{replayId}, #{vehImportDataId}, #{batchNum}, #{eventType},
+            #{id}, #{replayId}, #{vehImportDataId}, #{batchNum}, #{importType}, #{requestedActions},
             #{operatorId}, #{operatorName}, #{reason}, #{status},
-            #{totalCount}, #{queuedCount}, #{failureCount}, #{failureDetail},
+            #{totalCount}, #{queuedCount}, #{successCount}, #{skipCount}, #{failureCount}, #{failureDetail},
             #{startedAt}, #{finishedAt},
             now(), #{createBy}, now(), #{modifyBy}, 1, 1
         )
@@ -65,6 +68,12 @@
         </if>
         <if test="queuedCount != null">
             t.queued_count = #{queuedCount},
+        </if>
+        <if test="successCount != null">
+            t.success_count = #{successCount},
+        </if>
+        <if test="skipCount != null">
+            t.skip_count = #{skipCount},
         </if>
         <if test="failureCount != null">
             t.failure_count = #{failureCount},
@@ -135,8 +144,8 @@
         <if test="batchNum != null and batchNum != ''">
             AND t.batch_num = #{batchNum}
         </if>
-        <if test="eventType != null and eventType != ''">
-            AND t.event_type = #{eventType}
+        <if test="importType != null and importType != ''">
+            AND t.import_type = #{importType}
         </if>
         <if test="operatorId != null and operatorId != ''">
             AND t.operator_id = #{operatorId}
@@ -158,7 +167,21 @@
         SELECT <include refid="baseColumnList"/>
         FROM tb_veh_import_event_replay t
         WHERE t.row_valid = 1
-        <!-- 添加自定义条件 -->
+        <if test="replayId != null and replayId != ''">
+            AND t.replay_id = #{replayId}
+        </if>
+        <if test="vehImportDataId != null">
+            AND t.veh_import_data_id = #{vehImportDataId}
+        </if>
+        <if test="batchNum != null and batchNum != ''">
+            AND t.batch_num = #{batchNum}
+        </if>
+        <if test="importType != null and importType != ''">
+            AND t.import_type = #{importType}
+        </if>
+        <if test="status != null and status != ''">
+            AND t.status = #{status}
+        </if>
         ORDER BY t.id DESC
     </select>
 
