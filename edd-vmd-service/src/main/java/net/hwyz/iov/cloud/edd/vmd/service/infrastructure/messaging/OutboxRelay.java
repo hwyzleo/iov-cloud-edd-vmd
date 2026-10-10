@@ -171,6 +171,12 @@ public class OutboxRelay {
             return;
         }
 
+        // CR-056：仅车辆导入事件补发（veh_import_event_replay）关联状态回写；
+        // 零件导入后置处理重放（PART_POST_PROCESS_REPLAY）的主任务状态由动作执行结果聚合，不随 Kafka 投递状态变化。
+        if (!"IMPORT_EVENT_REPLAY".equals(outbox.getSourceType())) {
+            return;
+        }
+
         try {
             // 查询关联的补发审计记录
             VehImportEventReplay replay = vehImportEventReplayRepository.selectByReplayId(sourceRefId);

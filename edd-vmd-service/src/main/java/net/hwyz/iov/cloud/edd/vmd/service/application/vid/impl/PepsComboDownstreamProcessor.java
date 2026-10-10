@@ -98,4 +98,9 @@ public class PepsComboDownstreamProcessor extends BaseProcessor implements Downs
     public String getSupportedVehicleNodeCode() {
         return "PEPS_COMBO";
     }
+
+    @Override
+    public String downstreamSystem() {
+        return "IDK";
+    }
 }

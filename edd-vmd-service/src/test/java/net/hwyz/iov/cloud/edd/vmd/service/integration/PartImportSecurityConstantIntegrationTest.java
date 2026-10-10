@@ -8,6 +8,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartSecurityPreset
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.SecurityBizTypeResolver;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.SecurityPresetPolicy;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.DownstreamProcessorRegistry;
+import net.hwyz.iov.cloud.edd.vmd.service.application.vid.impl.PartImportPostProcessReplayExtractor;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Part;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartImportData;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartSecurityConstant;
@@ -17,6 +18,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.VehicleNodeSc
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmPartRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmVehicleNodeRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartImportDataRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartImportPostProcessReplayRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartSecurityConstantRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.monitoring.SecurityPresetMetrics;
 import net.hwyz.iov.cloud.framework.security.crypto.KeyProvisioningTemplate;
@@ -142,7 +144,8 @@ class PartImportSecurityConstantIntegrationTest {
         partImportDataAppService = new PartImportDataAppService(
                 partImportDataRepository, mdmPartRepository, mdmVehicleNodeRepository, partInboundAppService,
                 downstreamProcessorRegistry, partSecurityPresetAppService,
-                securityPresetPolicy, hsmUidFieldResolver, securityBizTypeResolver);
+                securityPresetPolicy, hsmUidFieldResolver, securityBizTypeResolver,
+                mock(PartImportPostProcessReplayRepository.class), new PartImportPostProcessReplayExtractor());
     }
 
     @Test

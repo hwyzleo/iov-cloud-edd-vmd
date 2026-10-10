@@ -107,4 +107,9 @@ public class Tbox5gDownstreamProcessor extends BaseProcessor implements Downstre
     public String getSupportedVehicleNodeCode() {
         return "TBOX_5G";
     }
+
+    @Override
+    public String downstreamSystem() {
+        return "TSP";
+    }
 }

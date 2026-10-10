@@ -34,6 +34,10 @@ class VmdErrorCodeRegistryTest {
         // CR-055 新增业务密钥域错误码
         assertTrue(ErrorCodeRegistry.getAllCodes().contains("806066"));
         assertTrue(ErrorCodeRegistry.getAllCodes().contains("806077"));
+        // CR-056 新增零件导入后置处理重放域错误码
+        assertTrue(ErrorCodeRegistry.getAllCodes().contains("806078"));
+        assertTrue(ErrorCodeRegistry.getAllCodes().contains("806079"));
+        assertTrue(ErrorCodeRegistry.getAllCodes().contains("806080"));
     }
 
     @Test
@@ -50,6 +54,13 @@ class VmdErrorCodeRegistryTest {
         assertEquals("806075", VmdErrorCode.BUSINESS_KEY_WRAP_FAILED.getCode());
         assertEquals("806076", VmdErrorCode.BUSINESS_KEY_REVOCATION_FAILED.getCode());
         assertEquals("806077", VmdErrorCode.BUSINESS_KEY_OUTCOME_UNKNOWN.getCode());
+    }
+
+    @Test
+    void partReplayErrorCodes_present() {
+        assertEquals("806078", VmdErrorCode.PART_IMPORT_POST_PROCESS_REPLAY_NOT_ALLOWED.getCode());
+        assertEquals("806079", VmdErrorCode.PART_IMPORT_POST_PROCESS_REPLAY_IN_PROGRESS.getCode());
+        assertEquals("806080", VmdErrorCode.PART_IMPORT_POST_PROCESS_REPLAY_ACTION_NOT_FOUND.getCode());
     }
 
     @Test

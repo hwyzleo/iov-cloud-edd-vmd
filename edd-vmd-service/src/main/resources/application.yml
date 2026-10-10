@@ -26,6 +26,8 @@ vmd:
       software-inventory-changed: ${VMD_KAFKA_TOPIC_SOFTWARE_INVENTORY_CHANGED:vmd.vehicle-software-inventory.changed}
       # 设备业务密钥变更事件（CR-055，VMD 幂等创建，经 Outbox→Relay 发布）
       business-key-changed: ${VMD_KAFKA_TOPIC_BUSINESS_KEY_CHANGED:vmd.business-key.changed}
+      # 零件实例入站事件（CR-056，VMD 幂等创建，经 Outbox→Relay 发布；重放场景）
+      part-inbound-changed: ${VMD_KAFKA_TOPIC_PART_INBOUND_CHANGED:vmd.part-inbound.changed}
       # 11 个 EDD-MDM 消费 Topic（VMD-DSN-CR-052，全部 CONSUMER_ONLY，归 EDD-MDM 管理，VMD 只预检不创建）
       mdm:
         brand: ${VMD_KAFKA_TOPIC_MDM_BRAND:mdm.brand}

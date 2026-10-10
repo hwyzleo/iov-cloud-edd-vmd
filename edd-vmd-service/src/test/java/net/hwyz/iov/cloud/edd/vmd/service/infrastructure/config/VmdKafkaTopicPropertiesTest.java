@@ -27,6 +27,7 @@ class VmdKafkaTopicPropertiesTest {
         assertEquals("vmd.vehicle-part-binding.changed", properties.getPartBindingChanged());
         assertEquals("vmd.vehicle-produce", properties.getVehicleProduce());
         assertEquals("vmd.vehicle-software-inventory.changed", properties.getSoftwareInventoryChanged());
+        assertEquals("vmd.part-inbound.changed", properties.getPartInboundChanged());
     }
 
     @Test
@@ -41,6 +42,8 @@ class VmdKafkaTopicPropertiesTest {
                 properties.topic(VmdKafkaLogicalTopic.VEHICLE_PRODUCE));
         assertEquals("vmd.vehicle-software-inventory.changed",
                 properties.topic(VmdKafkaLogicalTopic.SOFTWARE_INVENTORY_CHANGED));
+        assertEquals("vmd.part-inbound.changed",
+                properties.topic(VmdKafkaLogicalTopic.PART_INBOUND_CHANGED));
     }
 
     @Test

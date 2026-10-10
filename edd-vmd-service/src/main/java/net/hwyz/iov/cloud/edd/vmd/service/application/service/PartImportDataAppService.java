@@ -9,16 +9,20 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.PartImportDataCmd;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.PartImportDataQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ImportResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.PartImportDataDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.PostProcessActionPreview;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.DownstreamProcessor;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.DownstreamProcessorRegistry;
+import net.hwyz.iov.cloud.edd.vmd.service.application.vid.impl.PartImportPostProcessReplayExtractor;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Part;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartImportData;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleNode;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.PartPostProcessActionType;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SecurityPresetDecision;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmPartRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmVehicleNodeRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartImportDataRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartImportPostProcessReplayRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.InboundSourceType;
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SecurityPresetDecision;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.SecurityPresetBizTypeUnresolvedException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.SecurityPresetInvalidCapabilityException;
 import net.hwyz.iov.cloud.framework.security.crypto.model.BizType;
@@ -53,6 +57,8 @@ public class PartImportDataAppService {
     private final SecurityPresetPolicy securityPresetPolicy;
     private final HsmUidFieldResolver hsmUidFieldResolver;
     private final SecurityBizTypeResolver securityBizTypeResolver;
+    private final PartImportPostProcessReplayRepository partImportPostProcessReplayRepository;
+    private final PartImportPostProcessReplayExtractor partImportPostProcessReplayExtractor;
 
     /**
      * description 字段最大长度（与数据库列定义一致，见 V49 迁移）
@@ -601,6 +607,7 @@ public class PartImportDataAppService {
         String partName = null;
         String vehicleNodeCode = null;
         String vehicleNodeName = null;
+        VehicleNode vehicleNode = null;
         
         Part part = mdmPartRepository.selectByCode(entity.getPartCode());
         if (part != null) {
@@ -609,11 +616,25 @@ public class PartImportDataAppService {
             
             // 关联查询车载节点名称
             if (StrUtil.isNotBlank(vehicleNodeCode)) {
-                VehicleNode vehicleNode = mdmVehicleNodeRepository.selectByCode(vehicleNodeCode);
+                vehicleNode = mdmVehicleNodeRepository.selectByCode(vehicleNodeCode);
                 if (vehicleNode != null) {
                     vehicleNodeName = vehicleNode.getName();
                 }
             }
+        }
+
+        // CR-056：重放可用性 + 动作预览
+        List<PartImportPostProcessReplayExtractor.Candidate> candidates =
+                partImportPostProcessReplayExtractor.extractDistinctCandidates(entity.getData());
+        boolean replayable = !candidates.isEmpty()
+                && partImportPostProcessReplayRepository.countRunningByPartImportDataId(entity.getId()) == 0;
+        String replayReason = null;
+        if (StrUtil.isBlank(entity.getData())) {
+            replayReason = "原始数据不存在";
+        } else if (candidates.isEmpty()) {
+            replayReason = "无法识别候选实例";
+        } else if (partImportPostProcessReplayRepository.countRunningByPartImportDataId(entity.getId()) > 0) {
+            replayReason = "存在执行中的重放任务";
         }
         
         return PartImportDataDto.builder()
@@ -628,6 +649,72 @@ public class PartImportDataAppService {
                 .handle(entity.getHandle())
                 .description(entity.getDescription())
                 .createTime(entity.getCreateTime())
+                .postProcessReplayable(replayable)
+                .postProcessReplayReason(replayReason)
+                .postProcessActionPreview(buildActionPreview(part, vehicleNode))
                 .build();
+    }
+
+    /**
+     * 构建零件导入后置处理动作预览（基于当前 Part / VehicleNode 投影的静态判定，供前端二次确认）
+     * <p>
+     * CR-056：动作适用性静态判定；实际以重放执行时的当前快照与 Handler supports/execute 为准。
+     */
+    private List<PostProcessActionPreview> buildActionPreview(Part mdmPart, VehicleNode vehicleNode) {
+        List<PostProcessActionPreview> previews = new ArrayList<>();
+        String nodeCode = mdmPart != null ? mdmPart.getVehicleNodeCode() : null;
+
+        boolean securityCapable = false;
+        if (StrUtil.isNotBlank(nodeCode) && vehicleNode != null) {
+            SecurityPresetDecision decision = securityPresetPolicy.decide(vehicleNode.getHsmCapability(), nodeCode);
+            securityCapable = decision == SecurityPresetDecision.PRESET_REQUIRED;
+        }
+        DownstreamProcessor processor = StrUtil.isNotBlank(nodeCode)
+                ? downstreamProcessorRegistry.getProcessor(nodeCode) : null;
+
+        for (PartPostProcessActionType type : PartPostProcessActionType.values()) {
+            boolean applicable = true;
+            String reason = null;
+            switch (type) {
+                case PART_INBOUND_EVENT, BINDING_FACT_EVENT -> {
+                    // 事件动作候选存在即适用（绑定事实视当前 active 绑定，重放执行时收敛）
+                }
+                case SECURITY_PRESET -> {
+                    applicable = securityCapable;
+                    if (!applicable) {
+                        reason = "POLICY_NOT_APPLICABLE";
+                    }
+                }
+                case TSP_SYNC, OTA_SYNC, IDK_SYNC -> {
+                    applicable = processor != null && targetSystem(type).equals(processor.downstreamSystem());
+                    if (!applicable) {
+                        reason = "NO_DOWNSTREAM_PROCESSOR";
+                    }
+                }
+                default -> {
+                    applicable = false;
+                    reason = "UNKNOWN_ACTION";
+                }
+            }
+            previews.add(PostProcessActionPreview.builder()
+                    .actionType(type.getValue())
+                    .label(type.getLabel())
+                    .applicable(applicable)
+                    .reason(reason)
+                    .build());
+        }
+        return previews;
+    }
+
+    /**
+     * 下游联动动作类型 → 下游系统标识
+     */
+    private String targetSystem(PartPostProcessActionType type) {
+        return switch (type) {
+            case TSP_SYNC -> "TSP";
+            case OTA_SYNC -> "OTA";
+            case IDK_SYNC -> "IDK";
+            default -> "UNKNOWN";
+        };
     }
 }

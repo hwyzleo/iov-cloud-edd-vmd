@@ -78,7 +78,12 @@ public enum VmdErrorCode implements ErrorCode {
     BUSINESS_KEY_KMS_UNAVAILABLE("806074", "KMS/HSM或framework安全服务不可用"),
     BUSINESS_KEY_WRAP_FAILED("806075", "业务密钥设备封装失败"),
     BUSINESS_KEY_REVOCATION_FAILED("806076", "业务密钥吊销失败"),
-    BUSINESS_KEY_OUTCOME_UNKNOWN("806077", "密钥操作结果未知，需以原幂等键对账");
+    BUSINESS_KEY_OUTCOME_UNKNOWN("806077", "密钥操作结果未知，需以原幂等键对账"),
+
+    // ================= CR-056 零件导入后置处理重放域（806078～806080） =================
+    PART_IMPORT_POST_PROCESS_REPLAY_NOT_ALLOWED("806078", "当前零件导入记录不允许重放后置处理"),
+    PART_IMPORT_POST_PROCESS_REPLAY_IN_PROGRESS("806079", "该零件导入记录正在重放后置处理"),
+    PART_IMPORT_POST_PROCESS_REPLAY_ACTION_NOT_FOUND("806080", "不支持的零件导入后置处理动作");
 
     private final String code;
     private final String message;

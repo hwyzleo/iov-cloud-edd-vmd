@@ -69,4 +69,9 @@ public class OtaDownstreamProcessor implements DownstreamProcessor {
     public String getSupportedVehicleNodeCode() {
         return "OTA";
     }
+
+    @Override
+    public String downstreamSystem() {
+        return "OTA";
+    }
 }

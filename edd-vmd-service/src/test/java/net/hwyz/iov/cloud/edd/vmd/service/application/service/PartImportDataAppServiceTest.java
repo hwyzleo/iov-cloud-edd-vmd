@@ -5,11 +5,13 @@ import cn.hutool.json.JSONUtil;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ImportResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.DownstreamProcessor;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.DownstreamProcessorRegistry;
+import net.hwyz.iov.cloud.edd.vmd.service.application.vid.impl.PartImportPostProcessReplayExtractor;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Part;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartImportData;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmPartRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmVehicleNodeRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartImportDataRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartImportPostProcessReplayRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleNode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SecurityPresetDecision;
 import net.hwyz.iov.cloud.framework.security.crypto.model.BizType;
@@ -64,6 +66,12 @@ class PartImportDataAppServiceTest {
     @Mock
     private SecurityBizTypeResolver securityBizTypeResolver;
 
+    @Mock
+    private PartImportPostProcessReplayRepository partImportPostProcessReplayRepository;
+
+    @Mock
+    private PartImportPostProcessReplayExtractor partImportPostProcessReplayExtractor;
+
     private PartImportDataAppService partImportDataAppService;
 
     @BeforeEach
@@ -71,7 +79,8 @@ class PartImportDataAppServiceTest {
         partImportDataAppService = new PartImportDataAppService(
                 partImportDataRepository, mdmPartRepository, mdmVehicleNodeRepository, partInboundAppService,
                 downstreamProcessorRegistry, partSecurityPresetAppService,
-                securityPresetPolicy, hsmUidFieldResolver, securityBizTypeResolver);
+                securityPresetPolicy, hsmUidFieldResolver, securityBizTypeResolver,
+                partImportPostProcessReplayRepository, partImportPostProcessReplayExtractor);
         // 默认不触发预置；具体能力/类别场景由各测试以更具体的 stub 覆盖
         lenient().when(securityPresetPolicy.decide(any(), any())).thenReturn(SecurityPresetDecision.PRESET_NOT_REQUIRED);
     }

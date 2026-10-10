@@ -32,7 +32,7 @@ class VmdKafkaTopicRoutesTest {
     }
 
     @Test
-    @DisplayName("三类领域事件解析到目录标准 Topic（Key/payload 语义不变）")
+    @DisplayName("已登记领域事件解析到目录标准 Topic（Key/payload 语义不变）")
     void resolveRegisteredEventTypes() {
         assertEquals("vmd.vehicle-produce",
                 routes.resolve("VehicleProduceEvent"));
@@ -40,6 +40,8 @@ class VmdKafkaTopicRoutesTest {
                 routes.resolve("VehiclePartBindingChangedEvent"));
         assertEquals("vmd.vehicle-software-inventory.changed",
                 routes.resolve("VehicleSoftwareInventoryChangedEvent"));
+        assertEquals("vmd.part-inbound.changed",
+                routes.resolve("PartInboundEvent"));
     }
 
     @Test
@@ -60,6 +62,7 @@ class VmdKafkaTopicRoutesTest {
         assertEquals(VmdKafkaLogicalTopic.VEHICLE_PRODUCE, routes.logicalTopic("VehicleProduceEvent"));
         assertEquals(VmdKafkaLogicalTopic.PART_BINDING_CHANGED, routes.logicalTopic("VehiclePartBindingChangedEvent"));
         assertEquals(VmdKafkaLogicalTopic.SOFTWARE_INVENTORY_CHANGED, routes.logicalTopic("VehicleSoftwareInventoryChangedEvent"));
+        assertEquals(VmdKafkaLogicalTopic.PART_INBOUND_CHANGED, routes.logicalTopic("PartInboundEvent"));
     }
 
     @Test

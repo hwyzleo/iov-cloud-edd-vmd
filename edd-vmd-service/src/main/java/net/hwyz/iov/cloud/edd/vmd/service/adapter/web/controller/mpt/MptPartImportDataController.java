@@ -4,14 +4,21 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.PartImportDataRequest;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.ReplayPartImportPostProcessRequest;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.ImportResultResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.PartImportDataResponse;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.PartImportPostProcessReplayResponse;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.ReplayPostProcessResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.MptPartImportDataAssembler;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.assembler.MptPartImportPostProcessReplayAssembler;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.PartImportDataCmd;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ImportResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.PartImportDataDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.PartImportDataQuery;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.PartImportPostProcessReplayDto;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ReplayPostProcessResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartImportDataAppService;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartImportPostProcessReplayAppService;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
 import net.hwyz.iov.cloud.framework.audit.enums.BusinessType;
 import net.hwyz.iov.cloud.framework.common.bean.ApiResponse;
@@ -38,6 +45,7 @@ import java.util.List;
 public class MptPartImportDataController extends BaseController {
 
     private final PartImportDataAppService partImportDataAppService;
+    private final PartImportPostProcessReplayAppService partImportPostProcessReplayAppService;
 
     @RequiresPermissions("vmd:vehicle:importData:list")
     @GetMapping(value = "/list")
@@ -131,5 +139,60 @@ public class MptPartImportDataController extends BaseController {
     public ApiResponse<Void> remove(@PathVariable Long[] partImportDataIds) {
         log.info("管理后台用户[{}]删除零件导入数据[{}]", SecurityContextHolder.getUserName(), partImportDataIds);
         return partImportDataAppService.deletePartImportDataByIds(partImportDataIds) > 0 ? ApiResponse.ok() : ApiResponse.fail("操作失败");
+    }
+
+    /**
+     * 零件导入后置处理人工重放
+     * <p>
+     * VMD-DSN-CR-056: 从历史导入批次识别候选实例，读取当前权威状态，
+     * 逐项执行适用的事件发布、下游联动、绑定事实发布与安全常量补偿；
+     * 不重入零件入站解析器，不改写零件主体或绑定关系。
+     *
+     * @param partImportDataId 零件导入数据ID
+     * @param request          重放请求
+     * @return 重放结果
+     */
+    @Log(title = "零件导入后置处理重放", businessType = BusinessType.OTHER)
+    @RequiresPermissions("vmd:partImportData:replayPostProcess")
+    @PostMapping("/{partImportDataId}/replayPostProcess")
+    public ApiResponse<ReplayPostProcessResponse> replayPostProcess(@PathVariable Long partImportDataId,
+                                                                     @RequestBody(required = false) ReplayPartImportPostProcessRequest request) {
+        log.info("管理后台用户[{}]重放零件导入数据[id={}]后置处理", SecurityContextHolder.getUserName(), partImportDataId);
+        if (request == null) {
+            request = new ReplayPartImportPostProcessRequest();
+        }
+        ReplayPostProcessResult result = partImportPostProcessReplayAppService.replay(
+                partImportDataId,
+                MptPartImportPostProcessReplayAssembler.INSTANCE.toCmd(request),
+                SecurityUtils.getUserId().toString(),
+                SecurityContextHolder.getUserName()
+        );
+        ReplayPostProcessResponse response = ReplayPostProcessResponse.builder()
+                .replayId(result.getReplayId())
+                .itemCount(result.getItemCount())
+                .actionCount(result.getActionCount())
+                .queuedCount(result.getQueuedCount())
+                .successCount(result.getSuccessCount())
+                .skippedCount(result.getSkippedCount())
+                .failureCount(result.getFailureCount())
+                .failures(result.getFailures())
+                .build();
+        return ApiResponse.ok(response);
+    }
+
+    /**
+     * 查询零件导入后置处理重放主任务及逐项动作明细
+     * <p>
+     * VMD-DSN-CR-056: 供前端查看重放进度 / 对失败项发起 retryFailedOnly=true 重试
+     *
+     * @param replayId 重放请求ID
+     * @return 主任务 + 动作明细
+     */
+    @RequiresPermissions("vmd:partImportData:replayPostProcess")
+    @GetMapping("/replays/{replayId}")
+    public ApiResponse<PartImportPostProcessReplayResponse> getReplay(@PathVariable String replayId) {
+        log.info("管理后台用户[{}]查询零件导入后置处理重放[{}]", SecurityContextHolder.getUserName(), replayId);
+        PartImportPostProcessReplayDto dto = partImportPostProcessReplayAppService.getReplayByReplayId(replayId);
+        return ApiResponse.ok(MptPartImportPostProcessReplayAssembler.INSTANCE.fromDto(dto));
     }
 }

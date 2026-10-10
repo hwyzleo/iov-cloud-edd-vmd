@@ -63,6 +63,12 @@ public class VmdKafkaTopicProperties {
     private String businessKeyChanged = "vmd.business-key.changed";
 
     /**
+     * 零件实例入站事件 Topic（Producer，VMD 幂等创建，经 Outbox→Relay 发布；CR-056，重放场景）
+     */
+    @NotBlank
+    private String partInboundChanged = "vmd.part-inbound.changed";
+
+    /**
      * 11 个 EDD-MDM 消费 Topic 分组（VMD-DSN-CR-052，全部 CONSUMER_ONLY）
      */
     private MdmConsumerTopics mdm = new MdmConsumerTopics();
@@ -125,6 +131,7 @@ public class VmdKafkaTopicProperties {
         values.put("vehicle-produce", vehicleProduce);
         values.put("software-inventory-changed", softwareInventoryChanged);
         values.put("business-key-changed", businessKeyChanged);
+        values.put("part-inbound-changed", partInboundChanged);
         for (MdmProjectionType projection : MdmProjectionType.values()) {
             values.put("mdm." + projection.configKey(), topic(projection));
         }
@@ -155,6 +162,7 @@ public class VmdKafkaTopicProperties {
             case VEHICLE_PRODUCE -> vehicleProduce;
             case SOFTWARE_INVENTORY_CHANGED -> softwareInventoryChanged;
             case BUSINESS_KEY_CHANGED -> businessKeyChanged;
+            case PART_INBOUND_CHANGED -> partInboundChanged;
         };
     }
 

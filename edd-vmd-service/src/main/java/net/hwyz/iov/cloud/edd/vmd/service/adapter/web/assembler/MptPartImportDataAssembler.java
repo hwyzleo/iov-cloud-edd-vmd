@@ -7,6 +7,8 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.PartImportDataD
 import org.mapstruct.Mapper;
 import org.mapstruct.factory.Mappers;
 
+import java.util.List;
+
 /**
  * 零件导入数据装配器
  *
@@ -20,4 +22,6 @@ public interface MptPartImportDataAssembler {
     PartImportDataResponse fromDto(PartImportDataDto dto);
 
     PartImportDataCmd toCmd(PartImportDataRequest request);
+
+    List<PartImportDataResponse> fromDtoList(List<PartImportDataDto> dtoList);
 }
