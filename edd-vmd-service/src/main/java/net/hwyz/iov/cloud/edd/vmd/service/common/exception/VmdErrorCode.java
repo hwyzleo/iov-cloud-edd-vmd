@@ -87,7 +87,16 @@ public enum VmdErrorCode implements ErrorCode {
 
     // ================= CR-057 车辆导入补发动作注册表域（806081～806082） =================
     VEHICLE_IMPORT_REPLAY_ACTION_NOT_REGISTERED("806081", "车辆导入补发动作未登记，不允许执行"),
-    VEHICLE_IMPORT_REPLAY_TOPIC_NOT_REGISTERED("806082", "车辆导入补发目标Topic未登记，不允许发布");
+    VEHICLE_IMPORT_REPLAY_TOPIC_NOT_REGISTERED("806082", "车辆导入补发目标Topic未登记，不允许发布"),
+
+    // ================= CR-058 业务密钥多用途开通批次/设备导入ACK域（806083～806089） =================
+    BUSINESS_KEY_PROVISIONING_NOT_FOUND("806083", "业务密钥开通批次不存在"),
+    BUSINESS_KEY_PROVISIONING_PURPOSE_INCOMPLETE("806084", "业务密钥用途集合不完整或非法"),
+    BUSINESS_KEY_PROVISIONING_ACK_CONFLICT("806085", "设备导入ACK摘要冲突，已记录安全告警"),
+    BUSINESS_KEY_PROVISIONING_STATE_NOT_ALLOWED("806086", "业务密钥开通批次状态不允许此操作"),
+    BUSINESS_KEY_PROVISIONING_ITEM_MISMATCH("806087", "设备导入ACK item与开通批次不匹配"),
+    BUSINESS_KEY_PROVISIONING_DEVICE_NOT_ELIGIBLE("806088", "设备绑定或证书失效，不允许完成开通"),
+    BUSINESS_KEY_PROVISIONING_EXPIRED("806089", "业务密钥开通批次已过期");
 
     private final String code;
     private final String message;

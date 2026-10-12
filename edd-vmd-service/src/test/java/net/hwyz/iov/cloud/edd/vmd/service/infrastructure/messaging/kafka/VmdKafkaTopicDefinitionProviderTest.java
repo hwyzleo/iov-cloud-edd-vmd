@@ -61,6 +61,8 @@ class VmdKafkaTopicDefinitionProviderTest {
                 "缺少 Topic: vmd.vehicle-produce");
         assertTrue(topics.contains("vmd.vehicle-software-inventory.changed"),
                 "缺少 Topic: vmd.vehicle-software-inventory.changed");
+        assertTrue(topics.contains("vmd.tbox-v2c-key-provisioned"),
+                "缺少 Topic: vmd.tbox-v2c-key-provisioned");
     }
 
     @Test
@@ -76,11 +78,11 @@ class VmdKafkaTopicDefinitionProviderTest {
     }
 
     @Test
-    @DisplayName("总计 3 个 topic，无重复")
+    @DisplayName("总计 4 个 topic，无重复")
     void declaresExpectedTotalWithNoDuplicates() {
         Collection<KafkaTopicDefinition> definitions = provider.topicDefinitions();
         Set<String> names = declaredTopics();
-        assertEquals(3, names.size(), "VMD 应声明 3 个生产 topic");
+        assertEquals(4, names.size(), "VMD 应声明 4 个生产 topic");
         assertEquals(definitions.size(), names.size(), "声明不应包含重复 topic");
     }
 

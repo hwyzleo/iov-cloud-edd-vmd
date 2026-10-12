@@ -7,10 +7,12 @@ import java.util.Set;
  * 业务密钥策略条目（版本化，不可变）
  * <p>
  * CR-055 §3.3：管理调用方、设备类别、业务域、用途、允许操作、算法、有效期和重叠窗口。
+ * CR-058：同一域可声明多用途集合（{@code purposes}），单 purpose 域保持兼容。
  * 同一 (businessDomain, purpose) 唯一对应一条策略；未登记的域/用途一律视为未授权（fail-closed）。
  *
  * @param businessDomain       受治理业务域代码
- * @param purpose              受治理用途代码
+ * @param purpose              受治理用途代码（多用途域下为集合代表，实际以 purposes 为准）
+ * @param purposes             受治理用途集合（多用途域完整集合；单用途域为单元素）
  * @param deviceCategories     允许的设备类别（如 TBOX）
  * @param allowedActions       允许的操作集合
  * @param algorithm            密钥算法（透传 KMS，如 AES）
@@ -24,6 +26,7 @@ import java.util.Set;
 public record BusinessKeyPolicyEntry(
         String businessDomain,
         String purpose,
+        Set<String> purposes,
         Set<String> deviceCategories,
         Set<BusinessKeyAction> allowedActions,
         String algorithm,
@@ -32,6 +35,23 @@ public record BusinessKeyPolicyEntry(
         Duration decryptWindow,
         String policyVersion
 ) {
+
+    /**
+     * 兼容构造（CR-055 单用途条目）
+     */
+    public BusinessKeyPolicyEntry(String businessDomain,
+                                  String purpose,
+                                  Set<String> deviceCategories,
+                                  Set<BusinessKeyAction> allowedActions,
+                                  String algorithm,
+                                  String keySpec,
+                                  Duration validity,
+                                  Duration decryptWindow,
+                                  String policyVersion) {
+        this(businessDomain, purpose,
+                purpose == null ? Set.of() : Set.of(purpose),
+                deviceCategories, allowedActions, algorithm, keySpec, validity, decryptWindow, policyVersion);
+    }
 
     public boolean allowsAction(BusinessKeyAction action) {
         return allowedActions != null && allowedActions.contains(action);
@@ -46,5 +66,12 @@ public record BusinessKeyPolicyEntry(
             return true;
         }
         return deviceCategories.contains(deviceCategory);
+    }
+
+    /**
+     * 是否为多用途域
+     */
+    public boolean isMultiPurpose() {
+        return purposes != null && purposes.size() > 1;
     }
 }

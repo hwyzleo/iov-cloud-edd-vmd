@@ -1,0 +1,164 @@
+package net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.BusinessKeyProvisioningState;
+import net.hwyz.iov.cloud.framework.common.domain.BaseDo;
+
+import java.time.LocalDateTime;
+
+/**
+ * 业务密钥多用途开通批次领域实体（CR-058 D35）
+ * <p>
+ * 以 TBOX 稳定 requestId 聚合同一次请求中的 UPLINK_AEAD、DOWNLINK_AEAD 两用途；
+ * 目录 ACTIVE 与“设备已完成件内导入”分离，由本批次状态与 ACK 明细表达。
+ * 仅保存非敏感摘要与审计时间，禁止明文密钥、完整 Wrapped Key、设备私钥、可恢复密钥材料。
+ *
+ * @author hwyz_leo
+ * @since 2026-10-12
+ */
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+public class BusinessKeyProvisioning extends BaseDo<Long> {
+
+    /**
+     * 主键
+     */
+    private Long id;
+
+    /**
+     * TBOX 稳定 requestId（批次幂等键）
+     */
+    private String requestId;
+
+    /**
+     * 规范化请求摘要（幂等冲突识别）
+     */
+    private String requestDigest;
+
+    /**
+     * 规范化 ACK 摘要；未确认时为空
+     */
+    private String ackDigest;
+
+    /**
+     * TBOX 序列号
+     */
+    private String deviceSn;
+
+    /**
+     * 发起时 active vehicle_part.id 快照
+     */
+    private Long bindingId;
+
+    /**
+     * 设备物理实例，关联 part_info.id
+     */
+    private Long partId;
+
+    /**
+     * HSM UID 摘要，仅用于一致性校验和审计
+     */
+    private String hsmUidDigest;
+
+    /**
+     * 设备证书序列号摘要
+     */
+    private String certificateSnDigest;
+
+    /**
+     * 业务域；首期固定 V2C_COMM
+     */
+    private String businessDomain;
+
+    /**
+     * 批次状态
+     */
+    private BusinessKeyProvisioningState status;
+
+    /**
+     * 非敏感失败原因
+     */
+    private String failReason;
+
+    /**
+     * 开通开始时间
+     */
+    private LocalDateTime startedAt;
+
+    /**
+     * 首次完整 ACK 时间
+     */
+    private LocalDateTime acknowledgedAt;
+
+    /**
+     * 完成时间
+     */
+    private LocalDateTime completedAt;
+
+    /**
+     * 创建时间
+     */
+    private LocalDateTime createTime;
+
+    /**
+     * 更新时间
+     */
+    private LocalDateTime modifyTime;
+
+    /**
+     * 记录版本（乐观锁）
+     */
+    private Integer rowVersion;
+
+    /**
+     * 初始化实体状态
+     */
+    public void init() {
+        stateInit();
+    }
+
+    /**
+     * 推进到等待设备导入确认（两用途创建/解析并完成 Wrap）
+     */
+    public void markWaitDeviceAck() {
+        this.status = BusinessKeyProvisioningState.WAIT_DEVICE_ACK;
+    }
+
+    /**
+     * 置为已完成（完整 ACK 均 SUCCEEDED，两目标版本已原子切换 ACTIVE）
+     */
+    public void markCompleted() {
+        this.status = BusinessKeyProvisioningState.COMPLETED;
+        this.completedAt = LocalDateTime.now();
+        this.acknowledgedAt = this.acknowledgedAt != null ? this.acknowledgedAt : this.completedAt;
+    }
+
+    /**
+     * 置为明确不可恢复失败
+     */
+    public void markFailed(String reason) {
+        this.status = BusinessKeyProvisioningState.FAILED;
+        this.failReason = reason;
+    }
+
+    /**
+     * 置为待对账（ACK/依赖结果未知）
+     */
+    public void markReconcileRequired(String reason) {
+        this.status = BusinessKeyProvisioningState.RECONCILE_REQUIRED;
+        this.failReason = reason;
+    }
+
+    /**
+     * 置为已过期（超过策略时限且无有效确认）
+     */
+    public void markExpired(String reason) {
+        this.status = BusinessKeyProvisioningState.EXPIRED;
+        this.failReason = reason;
+    }
+}

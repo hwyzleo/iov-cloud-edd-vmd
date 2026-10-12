@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.BusinessKeyProvisioningItemMapper">
+
+    <resultMap id="baseResultMap" type="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.BusinessKeyProvisioningItemPo">
+        <id column="id" property="id" />
+        <result column="provisioning_id" property="provisioningId" />
+        <result column="purpose" property="purpose" />
+        <result column="key_id" property="keyId" />
+        <result column="business_key_version" property="businessKeyVersion" />
+        <result column="directory_key_id" property="directoryKeyId" />
+        <result column="device_result" property="deviceResult" />
+        <result column="import_proof_digest" property="importProofDigest" />
+        <result column="confirmed_at" property="confirmedAt" />
+        <result column="create_time" property="createTime" />
+        <result column="modify_time" property="modifyTime" />
+        <result column="create_by" property="createBy" />
+        <result column="modify_by" property="modifyBy" />
+        <result column="row_version" property="rowVersion" />
+        <result column="row_valid" property="rowValid" />
+    </resultMap>
+
+    <sql id="baseColumnList">
+        id, provisioning_id, purpose, key_id, business_key_version, directory_key_id, device_result,
+        import_proof_digest, confirmed_at, create_time, create_by, modify_time, modify_by, row_version, row_valid
+    </sql>
+
+    <insert id="insertPo" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO tb_business_key_provisioning_item (
+            provisioning_id, purpose, key_id, business_key_version, directory_key_id, device_result,
+            import_proof_digest, confirmed_at, create_time, create_by, modify_time, modify_by, row_version, row_valid
+        )
+        VALUES (
+            #{provisioningId}, #{purpose}, #{keyId}, #{businessKeyVersion}, #{directoryKeyId}, #{deviceResult},
+            #{importProofDigest}, #{confirmedAt}, now(), #{createBy}, now(), #{modifyBy}, 1, 1
+        )
+    </insert>
+
+    <insert id="batchInsertPo">
+        INSERT INTO tb_business_key_provisioning_item (
+            provisioning_id, purpose, key_id, business_key_version, directory_key_id, device_result,
+            import_proof_digest, confirmed_at, create_time, create_by, modify_time, modify_by, row_version, row_valid
+        )
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.provisioningId}, #{item.purpose}, #{item.keyId}, #{item.businessKeyVersion}, #{item.directoryKeyId}, #{item.deviceResult},
+             #{item.importProofDigest}, #{item.confirmedAt}, now(), #{item.createBy}, now(), #{item.modifyBy}, 1, 1)
+        </foreach>
+    </insert>
+
+    <update id="updatePo" parameterType="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.BusinessKeyProvisioningItemPo">
+        UPDATE tb_business_key_provisioning_item t SET
+        <if test="purpose != null and purpose != ''">
+            t.purpose = #{purpose},
+        </if>
+        <if test="keyId != null and keyId != ''">
+            t.key_id = #{keyId},
+        </if>
+        <if test="businessKeyVersion != null">
+            t.business_key_version = #{businessKeyVersion},
+        </if>
+        <if test="directoryKeyId != null">
+            t.directory_key_id = #{directoryKeyId},
+        </if>
+        <if test="deviceResult != null and deviceResult != ''">
+            t.device_result = #{deviceResult},
+        </if>
+        <if test="importProofDigest != null and importProofDigest != ''">
+            t.import_proof_digest = #{importProofDigest},
+        </if>
+        <if test="confirmedAt != null">
+            t.confirmed_at = #{confirmedAt},
+        </if>
+        <if test="createTime != null">
+            t.create_time = #{createTime},
+        </if>
+        <if test="modifyTime != null">
+            t.modify_time = #{modifyTime},
+        </if>
+        <if test="createBy != null and createBy != ''">
+            t.create_by = #{createBy},
+        </if>
+        <if test="modifyBy != null and modifyBy != ''">
+            t.modify_by = #{modifyBy},
+        </if>
+        <if test="rowValid != null">
+            t.row_valid = #{rowValid},
+        </if>
+        t.modify_time = now(),
+        t.row_version = t.row_version + 1
+        WHERE t.id = #{id} AND t.row_valid = 1
+        <if test="rowVersion != null">
+            AND t.row_version = #{rowVersion}
+        </if>
+    </update>
+
+    <select id="selectPoListByProvisioningId" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList" />
+        FROM tb_business_key_provisioning_item
+        WHERE provisioning_id = #{provisioningId} AND row_valid = 1
+        ORDER BY purpose ASC
+    </select>
+
+    <select id="selectPoByProvisioningIdAndPurpose" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList" />
+        FROM tb_business_key_provisioning_item
+        WHERE provisioning_id = #{provisioningId}
+          AND purpose = #{purpose}
+          AND row_valid = 1
+        LIMIT 1
+    </select>
+
+    <select id="selectPoById" parameterType="Long" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList"/>
+        FROM tb_business_key_provisioning_item t
+        WHERE t.id = #{value}
+        AND t.row_valid = 1
+    </select>
+
+    <select id="selectPoByExample" parameterType="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.BusinessKeyProvisioningItemPo" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList"/>
+        FROM tb_business_key_provisioning_item t
+        WHERE t.row_valid = 1
+        <if test="provisioningId != null">
+            AND t.provisioning_id = #{provisioningId}
+        </if>
+        <if test="purpose != null and purpose != ''">
+            AND t.purpose = #{purpose}
+        </if>
+        ORDER BY t.id DESC
+    </select>
+
+    <select id="selectPoByMap" parameterType="java.util.Map" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList"/>
+        FROM tb_business_key_provisioning_item t
+        WHERE t.row_valid = 1
+        ORDER BY t.id DESC
+    </select>
+
+    <select id="countPoByMap" parameterType="java.util.Map" resultType="int">
+        SELECT COUNT(*)
+        FROM tb_business_key_provisioning_item t
+        WHERE t.row_valid = 1
+    </select>
+
+    <update id="logicalDeletePo" parameterType="Long">
+        UPDATE tb_business_key_provisioning_item t SET
+        t.row_version = t.row_version + 1,
+        t.modify_time = now(),
+        t.row_valid = 0
+        WHERE t.id = #{value}
+    </update>
+
+    <delete id="physicalDeletePo" parameterType="Long">
+        DELETE FROM tb_business_key_provisioning_item t
+        WHERE t.id = #{value}
+    </delete>
+
+    <delete id="batchPhysicalDeletePo" parameterType="Long">
+        DELETE FROM tb_business_key_provisioning_item t
+        WHERE t.id IN
+        <foreach collection="array" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+</mapper>

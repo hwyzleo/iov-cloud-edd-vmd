@@ -45,6 +45,18 @@ public class DeviceBusinessKeyRepositoryImpl implements DeviceBusinessKeyReposit
     }
 
     @Override
+    public DeviceBusinessKey selectByRequestIdAndPurpose(String requestId, String purpose) {
+        DeviceBusinessKeyPo po = deviceBusinessKeyMapper.selectPoByRequestIdAndPurpose(requestId, purpose);
+        return po != null ? DeviceBusinessKeyConverter.INSTANCE.toDomain(po) : null;
+    }
+
+    @Override
+    public DeviceBusinessKey selectByIdForUpdate(Long id) {
+        DeviceBusinessKeyPo po = deviceBusinessKeyMapper.selectPoByIdForUpdate(id);
+        return po != null ? DeviceBusinessKeyConverter.INSTANCE.toDomain(po) : null;
+    }
+
+    @Override
     public DeviceBusinessKey selectActiveByContext(String deviceSn, String businessDomain, String purpose) {
         DeviceBusinessKeyPo po = deviceBusinessKeyMapper.selectActivePoByContext(deviceSn, businessDomain, purpose);
         return po != null ? DeviceBusinessKeyConverter.INSTANCE.toDomain(po) : null;

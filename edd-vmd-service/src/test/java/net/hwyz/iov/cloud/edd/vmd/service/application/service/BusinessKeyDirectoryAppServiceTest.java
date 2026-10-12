@@ -37,6 +37,10 @@ class BusinessKeyDirectoryAppServiceTest {
 
     @Mock
     private DeviceBusinessKeyRepository repository;
+    @Mock
+    private net.hwyz.iov.cloud.edd.vmd.service.domain.repository.BusinessKeyProvisioningRepository provisioningRepository;
+    @Mock
+    private net.hwyz.iov.cloud.edd.vmd.service.domain.repository.BusinessKeyProvisioningItemRepository provisioningItemRepository;
 
     private BusinessKeyDirectoryAppService directoryService;
 
@@ -59,7 +63,8 @@ class BusinessKeyDirectoryAppServiceTest {
         BusinessKeyMappingProperties mappingProps = new BusinessKeyMappingProperties();
         mappingProps.getBizTypeDomain().put("TBOX_DEVICE_ROOT", DOMAIN);
         BusinessKeyBizTypeMapper bizTypeMapper = new BusinessKeyBizTypeMapper(mappingProps, authPolicy);
-        directoryService = new BusinessKeyDirectoryAppService(repository, authPolicy, bizTypeMapper);
+        directoryService = new BusinessKeyDirectoryAppService(repository, provisioningRepository,
+                provisioningItemRepository, authPolicy, bizTypeMapper);
     }
 
     private DeviceBusinessKey activeKey() {

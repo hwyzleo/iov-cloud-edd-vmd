@@ -1,0 +1,226 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.BusinessKeyProvisioningMapper">
+
+    <!-- 通用查询映射结果（open_flag 为生成列，不参与读写映射） -->
+    <resultMap id="baseResultMap" type="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.BusinessKeyProvisioningPo">
+        <id column="id" property="id" />
+        <result column="request_id" property="requestId" />
+        <result column="request_digest" property="requestDigest" />
+        <result column="ack_digest" property="ackDigest" />
+        <result column="device_sn" property="deviceSn" />
+        <result column="binding_id" property="bindingId" />
+        <result column="part_id" property="partId" />
+        <result column="hsm_uid_digest" property="hsmUidDigest" />
+        <result column="certificate_sn_digest" property="certificateSnDigest" />
+        <result column="business_domain" property="businessDomain" />
+        <result column="status" property="status" />
+        <result column="fail_reason" property="failReason" />
+        <result column="started_at" property="startedAt" />
+        <result column="acknowledged_at" property="acknowledgedAt" />
+        <result column="completed_at" property="completedAt" />
+        <result column="create_time" property="createTime" />
+        <result column="modify_time" property="modifyTime" />
+        <result column="create_by" property="createBy" />
+        <result column="modify_by" property="modifyBy" />
+        <result column="row_version" property="rowVersion" />
+        <result column="row_valid" property="rowValid" />
+    </resultMap>
+
+    <sql id="baseColumnList">
+        id, request_id, request_digest, ack_digest, device_sn, binding_id, part_id, hsm_uid_digest,
+        certificate_sn_digest, business_domain, status, fail_reason, started_at, acknowledged_at, completed_at,
+        create_time, create_by, modify_time, modify_by, row_version, row_valid
+    </sql>
+
+    <insert id="insertPo" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO tb_business_key_provisioning (
+            request_id, request_digest, ack_digest, device_sn, binding_id, part_id, hsm_uid_digest,
+            certificate_sn_digest, business_domain, status, fail_reason, started_at, acknowledged_at, completed_at,
+            create_time, create_by, modify_time, modify_by, row_version, row_valid
+        )
+        VALUES (
+            #{requestId}, #{requestDigest}, #{ackDigest}, #{deviceSn}, #{bindingId}, #{partId}, #{hsmUidDigest},
+            #{certificateSnDigest}, #{businessDomain}, #{status}, #{failReason}, #{startedAt}, #{acknowledgedAt}, #{completedAt},
+            now(), #{createBy}, now(), #{modifyBy}, 1, 1
+        )
+    </insert>
+
+    <insert id="batchInsertPo">
+        INSERT INTO tb_business_key_provisioning (
+            request_id, request_digest, ack_digest, device_sn, binding_id, part_id, hsm_uid_digest,
+            certificate_sn_digest, business_domain, status, fail_reason, started_at, acknowledged_at, completed_at,
+            create_time, create_by, modify_time, modify_by, row_version, row_valid
+        )
+        VALUES
+        <foreach collection="list" item="item" separator=",">
+            (#{item.requestId}, #{item.requestDigest}, #{item.ackDigest}, #{item.deviceSn}, #{item.bindingId}, #{item.partId}, #{item.hsmUidDigest},
+             #{item.certificateSnDigest}, #{item.businessDomain}, #{item.status}, #{item.failReason}, #{item.startedAt}, #{item.acknowledgedAt}, #{item.completedAt},
+             now(), #{item.createBy}, now(), #{item.modifyBy}, 1, 1)
+        </foreach>
+    </insert>
+
+    <update id="updatePo" parameterType="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.BusinessKeyProvisioningPo">
+        UPDATE tb_business_key_provisioning t SET
+        <if test="requestDigest != null and requestDigest != ''">
+            t.request_digest = #{requestDigest},
+        </if>
+        <if test="ackDigest != null and ackDigest != ''">
+            t.ack_digest = #{ackDigest},
+        </if>
+        <if test="deviceSn != null and deviceSn != ''">
+            t.device_sn = #{deviceSn},
+        </if>
+        <if test="bindingId != null">
+            t.binding_id = #{bindingId},
+        </if>
+        <if test="partId != null">
+            t.part_id = #{partId},
+        </if>
+        <if test="hsmUidDigest != null and hsmUidDigest != ''">
+            t.hsm_uid_digest = #{hsmUidDigest},
+        </if>
+        <if test="certificateSnDigest != null and certificateSnDigest != ''">
+            t.certificate_sn_digest = #{certificateSnDigest},
+        </if>
+        <if test="businessDomain != null and businessDomain != ''">
+            t.business_domain = #{businessDomain},
+        </if>
+        <if test="status != null and status != ''">
+            t.status = #{status},
+        </if>
+        <if test="failReason != null and failReason != ''">
+            t.fail_reason = #{failReason},
+        </if>
+        <if test="startedAt != null">
+            t.started_at = #{startedAt},
+        </if>
+        <if test="acknowledgedAt != null">
+            t.acknowledged_at = #{acknowledgedAt},
+        </if>
+        <if test="completedAt != null">
+            t.completed_at = #{completedAt},
+        </if>
+        <if test="createTime != null">
+            t.create_time = #{createTime},
+        </if>
+        <if test="modifyTime != null">
+            t.modify_time = #{modifyTime},
+        </if>
+        <if test="createBy != null and createBy != ''">
+            t.create_by = #{createBy},
+        </if>
+        <if test="modifyBy != null and modifyBy != ''">
+            t.modify_by = #{modifyBy},
+        </if>
+        <if test="rowValid != null">
+            t.row_valid = #{rowValid},
+        </if>
+        t.modify_time = now(),
+        t.row_version = t.row_version + 1
+        WHERE t.id = #{id} AND t.row_valid = 1
+        <if test="rowVersion != null">
+            AND t.row_version = #{rowVersion}
+        </if>
+    </update>
+
+    <select id="selectPoByRequestId" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList" />
+        FROM tb_business_key_provisioning
+        WHERE request_id = #{requestId} AND row_valid = 1
+        LIMIT 1
+    </select>
+
+    <select id="selectPoByRequestIdForUpdate" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList" />
+        FROM tb_business_key_provisioning
+        WHERE request_id = #{requestId} AND row_valid = 1
+        LIMIT 1
+        FOR UPDATE
+    </select>
+
+    <select id="selectOpenPoByDeviceAndDomain" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList" />
+        FROM tb_business_key_provisioning
+        WHERE device_sn = #{deviceSn}
+          AND business_domain = #{businessDomain}
+          AND status IN ('PREPARING','WAIT_DEVICE_ACK','RECONCILE_REQUIRED')
+          AND row_valid = 1
+        ORDER BY id DESC
+        LIMIT 1
+    </select>
+
+    <select id="selectPoListByStatusBefore" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList" />
+        FROM tb_business_key_provisioning
+        WHERE status = #{status}
+          AND modify_time &lt;= #{before}
+          AND row_valid = 1
+        ORDER BY modify_time ASC
+        LIMIT #{limit}
+    </select>
+
+    <select id="selectPoById" parameterType="Long" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList"/>
+        FROM tb_business_key_provisioning t
+        WHERE t.id = #{value}
+        AND t.row_valid = 1
+    </select>
+
+    <select id="selectPoByExample" parameterType="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.BusinessKeyProvisioningPo" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList"/>
+        FROM tb_business_key_provisioning t
+        WHERE t.row_valid = 1
+        <if test="id != null">
+            AND t.id = #{id}
+        </if>
+        <if test="requestId != null and requestId != ''">
+            AND t.request_id = #{requestId}
+        </if>
+        <if test="deviceSn != null and deviceSn != ''">
+            AND t.device_sn = #{deviceSn}
+        </if>
+        <if test="businessDomain != null and businessDomain != ''">
+            AND t.business_domain = #{businessDomain}
+        </if>
+        <if test="status != null and status != ''">
+            AND t.status = #{status}
+        </if>
+        ORDER BY t.id DESC
+    </select>
+
+    <select id="selectPoByMap" parameterType="java.util.Map" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList"/>
+        FROM tb_business_key_provisioning t
+        WHERE t.row_valid = 1
+        ORDER BY t.id DESC
+    </select>
+
+    <select id="countPoByMap" parameterType="java.util.Map" resultType="int">
+        SELECT COUNT(*)
+        FROM tb_business_key_provisioning t
+        WHERE t.row_valid = 1
+    </select>
+
+    <update id="logicalDeletePo" parameterType="Long">
+        UPDATE tb_business_key_provisioning t SET
+        t.row_version = t.row_version + 1,
+        t.modify_time = now(),
+        t.row_valid = 0
+        WHERE t.id = #{value}
+    </update>
+
+    <delete id="physicalDeletePo" parameterType="Long">
+        DELETE FROM tb_business_key_provisioning t
+        WHERE t.id = #{value}
+    </delete>
+
+    <delete id="batchPhysicalDeletePo" parameterType="Long">
+        DELETE FROM tb_business_key_provisioning t
+        WHERE t.id IN
+        <foreach collection="array" item="id" open="(" separator="," close=")">
+            #{id}
+        </foreach>
+    </delete>
+
+</mapper>

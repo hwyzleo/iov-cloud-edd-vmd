@@ -27,6 +27,15 @@ public interface PartSecurityConstantMapper extends BaseDao<PartSecurityConstant
     PartSecurityConstantPo selectPoByPartCodeAndSn(@Param("partCode") String partCode, @Param("sn") String sn);
 
     /**
+     * 根据安全芯片 UID 反查器件安全常量（CR-058 keyprov 按已认证 hsmUid 定位设备）
+     *
+     * @param chipUid 安全芯片/HSM 唯一标识
+     * @return PO 列表（同 uid 可能多条，调用方须判定唯一）
+     */
+    @Select("SELECT * FROM tb_part_security_constant WHERE chip_uid = #{chipUid} AND deleted = 0")
+    java.util.List<PartSecurityConstantPo> selectPoListByChipUid(@Param("chipUid") String chipUid);
+
+    /**
      * 根据零件编码和序列号逻辑删除
      *
      * @param partCode 零件编码

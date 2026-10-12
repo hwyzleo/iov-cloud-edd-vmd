@@ -2,6 +2,8 @@ package net.hwyz.iov.cloud.edd.vmd.service.domain.repository;
 
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartSecurityConstant;
 
+import java.util.List;
+
 /**
  * 零件安全常量仓储接口
  *
@@ -18,6 +20,14 @@ public interface PartSecurityConstantRepository {
      * @return 零件安全常量
      */
     PartSecurityConstant selectByPartCodeAndSn(String partCode, String sn);
+
+    /**
+     * 根据安全芯片 UID 反查器件安全常量（CR-058 keyprov 按已认证 hsmUid 定位设备）
+     *
+     * @param chipUid 安全芯片/HSM 唯一标识
+     * @return 器件安全常量列表（同 uid 可能多条，调用方须判定唯一）
+     */
+    List<PartSecurityConstant> selectListByChipUid(String chipUid);
 
     /**
      * 插入记录

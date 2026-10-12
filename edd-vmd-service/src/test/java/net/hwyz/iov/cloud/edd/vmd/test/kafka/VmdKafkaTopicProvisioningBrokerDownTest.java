@@ -62,7 +62,9 @@ class VmdKafkaTopicProvisioningBrokerDownTest {
                 "Catalog 应包含 vmd.vehicle-produce");
         assertTrue(kafkaTopicCatalog.contains("vmd.vehicle-software-inventory.changed"),
                 "Catalog 应包含 vmd.vehicle-software-inventory.changed");
-        assertEquals(3, kafkaTopicCatalog.definitions().size());
+        assertTrue(kafkaTopicCatalog.contains("vmd.tbox-v2c-key-provisioned"),
+                "Catalog 应包含 vmd.tbox-v2c-key-provisioned");
+        assertEquals(4, kafkaTopicCatalog.definitions().size());
 
         // 消费 Topic ota.vehicle-software-inventory.observed 不由 VMD 声明
         assertTrue(!kafkaTopicCatalog.contains("ota.vehicle-software-inventory.observed"),
@@ -81,7 +83,7 @@ class VmdKafkaTopicProvisioningBrokerDownTest {
         }
         assertTrue(provisioningStatus.lastFailure().isPresent(), "后台重试后应记录 broker 失败原因");
         assertEquals(KafkaTopicProvisioningStatus.State.NOT_READY, provisioningStatus.state());
-        assertEquals(3, provisioningStatus.missingTopics().size(),
+        assertEquals(4, provisioningStatus.missingTopics().size(),
                 "缺失 Topic 应为全部声明 Topic");
     }
 }

@@ -37,7 +37,8 @@ public class VmdKafkaTopicRoutes {
             "VehiclePartBindingChangedEvent", VmdKafkaLogicalTopic.PART_BINDING_CHANGED,
             "VehicleSoftwareInventoryChangedEvent", VmdKafkaLogicalTopic.SOFTWARE_INVENTORY_CHANGED,
             "BusinessKeyChangedEvent", VmdKafkaLogicalTopic.BUSINESS_KEY_CHANGED,
-            "PartInboundEvent", VmdKafkaLogicalTopic.PART_INBOUND_CHANGED
+            "PartInboundEvent", VmdKafkaLogicalTopic.PART_INBOUND_CHANGED,
+            "TboxV2cKeyProvisionedEvent", VmdKafkaLogicalTopic.TBOX_V2C_KEY_PROVISIONED
     );
 
     /**

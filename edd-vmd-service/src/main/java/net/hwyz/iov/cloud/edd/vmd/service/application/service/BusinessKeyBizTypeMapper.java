@@ -1,6 +1,7 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 
 import cn.hutool.core.util.StrUtil;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.config.BusinessKeyMappingProperties;
@@ -31,6 +32,31 @@ public class BusinessKeyBizTypeMapper {
 
     private final BusinessKeyMappingProperties mappingProperties;
     private final BusinessKeyAuthorizationPolicy authorizationPolicy;
+
+    /**
+     * 启动期校验 BizType ↔ 业务域映射一一对应；缺失或存在非对称映射 fail-fast（CR-058）。
+     */
+    @PostConstruct
+    public void validateMapping() {
+        mappingProperties.getBizTypeDomain().forEach((bizType, domain) -> {
+            String reverse = mappingProperties.getDomainBizType().get(upper(domain));
+            if (reverse == null || !upper(bizType).equals(upper(reverse))) {
+                throw new IllegalStateException("业务密钥 BizType 映射非对称: " + bizType + " -> " + domain
+                        + "，反向缺失或冲突");
+            }
+        });
+        mappingProperties.getDomainBizType().forEach((domain, bizType) -> {
+            String reverse = mappingProperties.getBizTypeDomain().get(upper(bizType));
+            if (reverse == null || !upper(domain).equals(upper(reverse))) {
+                throw new IllegalStateException("业务密钥 BizType 映射非对称: " + domain + " -> " + bizType
+                        + "，反向缺失或冲突");
+            }
+        });
+    }
+
+    private static String upper(String value) {
+        return value == null ? null : value.trim().toUpperCase(Locale.ROOT);
+    }
 
     /**
      * 归一化目录查询上下文

@@ -178,6 +178,25 @@
         LIMIT 1
     </select>
 
+    <!-- 按 requestId + purpose 查询（CR-058 多用途批次目录行定位） -->
+    <select id="selectPoByRequestIdAndPurpose" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList" />
+        FROM tb_device_business_key
+        WHERE request_id = #{requestId}
+          AND purpose = #{purpose}
+          AND row_valid = 1
+        LIMIT 1
+    </select>
+
+    <!-- 按主键查询并加行锁（CR-058 完成事务原子切换） -->
+    <select id="selectPoByIdForUpdate" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList" />
+        FROM tb_device_business_key
+        WHERE id = #{id} AND row_valid = 1
+        LIMIT 1
+        FOR UPDATE
+    </select>
+
     <!-- 查询唯一 ACTIVE -->
     <select id="selectActivePoByContext" resultMap="baseResultMap">
         SELECT <include refid="baseColumnList" />

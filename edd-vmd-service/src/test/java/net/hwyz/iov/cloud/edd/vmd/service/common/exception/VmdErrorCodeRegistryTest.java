@@ -64,6 +64,20 @@ class VmdErrorCodeRegistryTest {
     }
 
     @Test
+    void businessKeyProvisioningErrorCodes_present() {
+        // CR-058 新增业务密钥多用途开通批次/设备导入ACK域错误码
+        assertEquals("806083", VmdErrorCode.BUSINESS_KEY_PROVISIONING_NOT_FOUND.getCode());
+        assertEquals("806084", VmdErrorCode.BUSINESS_KEY_PROVISIONING_PURPOSE_INCOMPLETE.getCode());
+        assertEquals("806085", VmdErrorCode.BUSINESS_KEY_PROVISIONING_ACK_CONFLICT.getCode());
+        assertEquals("806086", VmdErrorCode.BUSINESS_KEY_PROVISIONING_STATE_NOT_ALLOWED.getCode());
+        assertEquals("806087", VmdErrorCode.BUSINESS_KEY_PROVISIONING_ITEM_MISMATCH.getCode());
+        assertEquals("806088", VmdErrorCode.BUSINESS_KEY_PROVISIONING_DEVICE_NOT_ELIGIBLE.getCode());
+        assertEquals("806089", VmdErrorCode.BUSINESS_KEY_PROVISIONING_EXPIRED.getCode());
+        assertEquals(VmdErrorCode.BUSINESS_KEY_PROVISIONING_NOT_FOUND,
+                ErrorCodeRegistry.findByCode("806083").orElse(null));
+    }
+
+    @Test
     void registry_lookup() {
         assertEquals(VmdErrorCode.BUSINESS_KEY_NOT_EXIST,
                 ErrorCodeRegistry.findByCode("806068").orElse(null));

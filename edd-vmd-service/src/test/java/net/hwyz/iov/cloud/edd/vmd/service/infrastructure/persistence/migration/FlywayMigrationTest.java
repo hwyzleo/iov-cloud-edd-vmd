@@ -20,6 +20,28 @@ class FlywayMigrationTest {
     private static final String MIGRATION_PATH = "src/main/resources/db/migration";
 
     @Test
+    @DisplayName("V58迁移脚本文件应存在（CR-058）")
+    void v58MigrationScript_shouldExist() {
+        Path migrationFile = Paths.get(MIGRATION_PATH, "V58__Create_business_key_provisioning_cr058.sql");
+        assertTrue(Files.exists(migrationFile), "V58迁移脚本文件应该存在");
+    }
+
+    @Test
+    @DisplayName("V58迁移脚本应创建开通批次与ACK明细表并调整目录唯一键（CR-058）")
+    void v58MigrationScript_shouldCreateProvisioningTables() throws IOException {
+        Path migrationFile = Paths.get(MIGRATION_PATH, "V58__Create_business_key_provisioning_cr058.sql");
+        String content = Files.readString(migrationFile);
+        assertTrue(content.contains("tb_business_key_provisioning"), "应创建开通批次表");
+        assertTrue(content.contains("tb_business_key_provisioning_item"), "应创建ACK明细表");
+        assertTrue(content.contains("uk_request_id"), "批次表应有requestId唯一约束");
+        assertTrue(content.contains("open_flag"), "批次表应有未终结生成列");
+        assertTrue(content.contains("uk_device_domain_open"), "批次表应有同设备+域开放唯一约束");
+        assertTrue(content.contains("uk_provisioning_purpose"), "明细表应有批次+用途唯一约束");
+        assertTrue(content.contains("uk_request_purpose"), "目录表应调整requestId+purpose唯一约束");
+        assertTrue(content.contains("DROP INDEX `uk_request_id`"), "目录表应删除旧requestId唯一约束");
+    }
+
+    @Test
     @DisplayName("V5迁移脚本文件应存在")
     void v5MigrationScript_shouldExist() {
         // Given

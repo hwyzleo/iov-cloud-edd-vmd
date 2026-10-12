@@ -17,8 +17,28 @@ vmd:
           validity: 365d
           decrypt-window: 7d
           default-purpose: SESSION_ENC
+        # CR-058 V2C 多用途域
+        - business-domain: V2C_COMM
+          purposes: [UPLINK_AEAD, DOWNLINK_AEAD]
+          device-categories: [TBOX]
+          allowed-actions: [PROVISION, RESOLVE_ACTIVE, DECRYPT, ROTATE, REVOKE]
+          algorithm: AES
+          key-spec: AES-256-GCM
+          validity: 365d
+          decrypt-window: 7d
     mapping:
       biz-type-domain:
         TBOX_DEVICE_ROOT: SECURE_CHANNEL
+        V2C_COMM_ROOT: V2C_COMM
       domain-biz-type:
         SECURE_CHANNEL: TBOX_DEVICE_ROOT
+        V2C_COMM: V2C_COMM_ROOT
+    provisioning:
+      keyprov:
+        enabled: true
+      bundle-ttl-seconds: 3600
+      ack-timeout-seconds: 900
+      reconcile-alert-seconds: 86400
+    maintenance:
+      scheduler:
+        enabled: false

@@ -15,6 +15,9 @@
     <version>0.0.1-SNAPSHOT</version>
 
     <properties>
+        <!-- PAR-PROTO canonical wire（security.keyprov.v1） -->
+        <protobuf.version>3.25.5</protobuf.version>
+        <par-proto.version>0.0.1-SNAPSHOT</par-proto.version>
     </properties>
 
     <dependencies>
@@ -55,6 +58,23 @@
         <dependency>
             <groupId>net.hwyz.iov.cloud.framework</groupId>
             <artifactId>framework-kafka-starter</artifactId>
+        </dependency>
+
+        <!-- PAR-PROTO canonical wire：keyprov 上行/下行不复制 Proto、不手写 JSON codec（CR-058 Q3=B） -->
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
+            <version>${protobuf.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>net.hwyz.iov.cloud.proto</groupId>
+            <artifactId>proto-vehicle-common</artifactId>
+            <version>${par-proto.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>net.hwyz.iov.cloud.proto</groupId>
+            <artifactId>proto-keyprov</artifactId>
+            <version>${par-proto.version}</version>
         </dependency>
     </dependencies>
 

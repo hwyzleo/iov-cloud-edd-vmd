@@ -45,9 +45,15 @@ public class BusinessKeyPolicyProperties {
         private String businessDomain;
 
         /**
-         * 受治理用途代码
+         * 受治理用途代码（单用途域兼容字段；多用途域可用 {@link #purposes}）
          */
         private String purpose;
+
+        /**
+         * 受治理用途集合（CR-058 多用途域，如 V2C_COMM 的 UPLINK_AEAD/DOWNLINK_AEAD）；
+         * 非空时以本集合为准，并忽略单值 {@link #purpose}
+         */
+        private List<String> purposes = new ArrayList<>();
 
         /**
          * 允许的设备类别（如 TBOX；空表示不限制）

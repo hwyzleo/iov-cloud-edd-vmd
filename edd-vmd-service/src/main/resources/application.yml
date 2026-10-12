@@ -28,6 +28,8 @@ vmd:
       business-key-changed: ${VMD_KAFKA_TOPIC_BUSINESS_KEY_CHANGED:vmd.business-key.changed}
       # 零件实例入站事件（CR-056，VMD 幂等创建，经 Outbox→Relay 发布；重放场景）
       part-inbound-changed: ${VMD_KAFKA_TOPIC_PART_INBOUND_CHANGED:vmd.part-inbound.changed}
+      # TBOX V2C 业务密钥导入完成事件（CR-058，VMD 幂等创建，经 Outbox→Relay 发布，Key=deviceSn）
+      tbox-v2c-key-provisioned: ${VMD_KAFKA_TOPIC_TBOX_V2C_KEY_PROVISIONED:vmd.tbox-v2c-key-provisioned}
       # 11 个 EDD-MDM 消费 Topic（VMD-DSN-CR-052，全部 CONSUMER_ONLY，归 EDD-MDM 管理，VMD 只预检不创建）
       mdm:
         brand: ${VMD_KAFKA_TOPIC_MDM_BRAND:mdm.brand}
@@ -60,23 +62,38 @@ vmd:
   business-key:
     policy:
       # 版本化授权策略（fail-closed：未登记域/用途一律拒绝）。生产经 Nacos 下发受治理条目。
-      # version: v1
-      # entries:
-      #   - business-domain: SECURE_CHANNEL
-      #     purpose: SESSION_ENC
-      #     device-categories: [TBOX]
-      #     allowed-actions: [PROVISION, RESOLVE_ACTIVE, DECRYPT, ROTATE, REVOKE]
-      #     algorithm: AES
-      #     key-spec: AES-256-GCM
-      #     validity: 365d
-      #     decrypt-window: 7d
-      #     default-purpose: SESSION_ENC
+      version: v1
+      entries:
+        # CR-058 冻结 V2C 业务域与用途代码（不可按环境改名）；调用方/算法/有效期/重叠窗口使用环境批准值。
+        - business-domain: V2C_COMM
+          purposes: [UPLINK_AEAD, DOWNLINK_AEAD]
+          device-categories: [TBOX]
+          allowed-actions: [PROVISION, RESOLVE_ACTIVE, DECRYPT, ROTATE, REVOKE]
+          algorithm: AES
+          key-spec: AES-256-GCM
+          validity: 365d
+          decrypt-window: 7d
     mapping:
-      # framework BizType 名 → 业务域代码（缺省 identity）；域 → BizType 名（缺省 identity）
-      # biz-type-domain:
-      #   TBOX_DEVICE_ROOT: SECURE_CHANNEL
-      # domain-biz-type:
-      #   SECURE_CHANNEL: TBOX_DEVICE_ROOT
+      # CR-058：V2C_COMM_ROOT 仅为 framework/KMS 材料 BizType，绝不透传到车云协议业务域。
+      # 双向必须一一对应，缺失或冲突启动期 fail-fast。
+      biz-type-domain:
+        V2C_COMM_ROOT: V2C_COMM
+      domain-biz-type:
+        V2C_COMM: V2C_COMM_ROOT
+    provisioning:
+      # keyprov canonical relay 功能开关（默认关闭 fail-closed，release-set 就绪后开启）
+      keyprov:
+        enabled: ${VMD_BUSINESS_KEY_KEYPROV_ENABLED:false}
+      # Wrapped Key bundle 可接受期限（秒）
+      bundle-ttl-seconds: ${VMD_BUSINESS_KEY_BUNDLE_TTL_SECONDS:3600}
+      # WAIT_DEVICE_ACK 超时转 EXPIRED（秒）
+      ack-timeout-seconds: ${VMD_BUSINESS_KEY_ACK_TIMEOUT_SECONDS:900}
+      # RECONCILE_REQUIRED 告警与对账阈值（秒，独立于 ACK 短 TTL，不直接过期）
+      reconcile-alert-seconds: ${VMD_BUSINESS_KEY_RECONCILE_ALERT_SECONDS:86400}
+    maintenance:
+      scheduler:
+        enabled: ${VMD_BUSINESS_KEY_MAINTENANCE_ENABLED:true}
+        batch-size: ${VMD_BUSINESS_KEY_MAINTENANCE_BATCH_SIZE:200}
   binding:
     kafka:
       enabled: ${VMD_BINDING_KAFKA_ENABLED:true}

@@ -34,6 +34,24 @@ public interface DeviceBusinessKeyMapper extends BaseDao<DeviceBusinessKeyPo, Lo
     DeviceBusinessKeyPo selectPoByRequestId(@Param("requestId") String requestId);
 
     /**
+     * 根据 requestId + purpose 查询（CR-058 多用途批次目录行定位）
+     *
+     * @param requestId 调用幂等键
+     * @param purpose   用途
+     * @return PO，不存在返回 null
+     */
+    DeviceBusinessKeyPo selectPoByRequestIdAndPurpose(@Param("requestId") String requestId,
+                                                      @Param("purpose") String purpose);
+
+    /**
+     * 根据主键查询并加行锁（CR-058 完成事务原子切换，须在事务内调用）
+     *
+     * @param id 主键
+     * @return PO，不存在返回 null
+     */
+    DeviceBusinessKeyPo selectPoByIdForUpdate(@Param("id") Long id);
+
+    /**
      * 查询唯一 ACTIVE
      *
      * @param deviceSn       设备实例序列号

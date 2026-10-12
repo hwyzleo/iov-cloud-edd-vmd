@@ -42,6 +42,54 @@ public class BoundDeviceIdentityResolver {
     private final PartSecurityConstantRepository partSecurityConstantRepository;
 
     /**
+     * 解析 active 绑定及权威 HSM UID（仅按已认证 hsmUid，CR-058 keyprov canonical 无 deviceSn）
+     * <p>
+     * canonical {@code security.keyprov.v1.KeyProvisioningRequest} 不携带 deviceSn；
+     * 设备身份由 VAGW 不可伪造的已认证会话上下文提供（hsmUid/ecu_uid）。本方法经
+     * part_security_constant.chip_uid 反查唯一器件实例，再定位其 active 绑定，
+     * 并用 resolveIdentity 交叉校验 part_info.extra.HSM 与 chip_uid。
+     *
+     * @param hsmUid         已认证 HSM UID
+     * @param deviceCategory 设备类别
+     * @return 绑定设备身份
+     */
+    public BoundDeviceIdentity resolveByHsmUid(String hsmUid, String deviceCategory) {
+        String normalized = CsrUtils.normalizeUid(hsmUid);
+        if (StrUtil.isBlank(normalized)) {
+            throw new CertificateDeviceUidUnavailableException(hsmUid, "已认证HSM UID为空");
+        }
+
+        java.util.List<PartSecurityConstant> constants = partSecurityConstantRepository.selectListByChipUid(normalized);
+        java.util.Set<String> matchedKeys = new java.util.LinkedHashSet<>();
+        PartInfo matchedPart = null;
+        for (PartSecurityConstant constant : constants) {
+            if (constant == null || StrUtil.isBlank(constant.getPartCode()) || StrUtil.isBlank(constant.getSn())) {
+                continue;
+            }
+            if (!normalized.equals(CsrUtils.normalizeUid(constant.getChipUid()))) {
+                continue;
+            }
+            matchedKeys.add(constant.getPartCode() + "|" + constant.getSn());
+            if (matchedPart == null) {
+                matchedPart = partInfoRepository.selectByPartCodeAndSn(constant.getPartCode(), constant.getSn());
+            }
+        }
+
+        if (matchedPart == null) {
+            throw new CertificateDeviceUidUnavailableException(hsmUid, "已认证HSM UID未匹配到器件安全常量");
+        }
+        if (matchedKeys.size() > 1) {
+            throw new CertificateDeviceUidUnavailableException(hsmUid, "已认证HSM UID匹配到多个器件，数据冲突");
+        }
+
+        VehiclePart activeBinding = vehiclePartRepository.selectActiveByPartId(matchedPart.getId());
+        if (activeBinding == null) {
+            throw new IllegalStateException("设备未建立active绑定: hsmUid=" + normalized);
+        }
+        return resolveIdentity(matchedPart, activeBinding, matchedPart.getSn(), deviceCategory);
+    }
+
+    /**
      * 解析 active 绑定及权威 HSM UID（按 VIN + deviceSn）
      *
      * @param vin            车辆VIN

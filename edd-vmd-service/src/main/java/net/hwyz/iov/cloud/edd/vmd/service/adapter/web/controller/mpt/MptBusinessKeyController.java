@@ -2,12 +2,14 @@ package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.controller.mpt;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.MptBusinessKeyProvisioningQueryRequest;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.MptBusinessKeyQueryRequest;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.MptBusinessKeyRevokeRequest;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.MptBusinessKeyRotateRequest;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.BusinessKeyRevokeCmd;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.BusinessKeyRotateCmd;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.BusinessKeyMetadataResult;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.BusinessKeyProvisioningStatusResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.BusinessKeyRevokeResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.BusinessKeyRotationResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.BusinessKeyDirectoryAppService;
@@ -100,6 +102,20 @@ public class MptBusinessKeyController extends BaseController {
                 .operatorId(safeUserId())
                 .build();
         return ApiResponse.ok(businessKeyRevocationAppService.revoke(cmd));
+    }
+
+    /**
+     * 查询业务密钥开通批次状态（按 requestId 只读对账，CR-058）
+     *
+     * @param request 查询请求
+     * @return 批次状态结果
+     */
+    @RequiresPermissions("vmd:security:businessKey:query")
+    @PostMapping("/provisioningQuery")
+    public ApiResponse<BusinessKeyProvisioningStatusResult> provisioningQuery(
+            @RequestBody @Validated MptBusinessKeyProvisioningQueryRequest request) {
+        log.info("MPT请求查询业务密钥开通批次: requestId={}", request.getRequestId());
+        return ApiResponse.ok(businessKeyDirectoryAppService.queryProvisioning(request.getRequestId()));
     }
 
     private String safeUserId() {

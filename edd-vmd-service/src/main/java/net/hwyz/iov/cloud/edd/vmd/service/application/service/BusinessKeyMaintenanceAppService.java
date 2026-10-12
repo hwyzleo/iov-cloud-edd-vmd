@@ -3,7 +3,13 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.publish.BusinessKeyChangedPublisher;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.BusinessKeyProvisioning;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.BusinessKeyProvisioningItem;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.DeviceBusinessKey;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.BusinessKeyProvisioningState;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.BusinessKeyState;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.BusinessKeyProvisioningItemRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.BusinessKeyProvisioningRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.DeviceBusinessKeyRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
@@ -30,6 +36,8 @@ public class BusinessKeyMaintenanceAppService {
     private static final String STATE_EXPIRED = "EXPIRED";
 
     private final DeviceBusinessKeyRepository deviceBusinessKeyRepository;
+    private final BusinessKeyProvisioningRepository businessKeyProvisioningRepository;
+    private final BusinessKeyProvisioningItemRepository businessKeyProvisioningItemRepository;
     private final BusinessKeyChangedPublisher businessKeyChangedPublisher;
     private final PlatformTransactionManager transactionManager;
 
@@ -86,5 +94,73 @@ public class BusinessKeyMaintenanceAppService {
             deviceBusinessKeyRepository.update(current);
             businessKeyChangedPublisher.publish(current, STATE_EXPIRED);
         });
+    }
+
+    /**
+     * WAIT_DEVICE_ACK 超时转 EXPIRED（CR-058 §8）。
+     * <p>不生成伪成功事件；本批次新建的 PENDING 目标版本置 FAILED（fail-closed），
+     * 复用 ACTIVE 不受影响。
+     *
+     * @param cutoff 超时截止时间（modified 早于该时间视为超时）
+     * @param limit  批量上限
+     * @return 处理批次数
+     */
+    public int expireStaleAckBatches(LocalDateTime cutoff, int limit) {
+        List<BusinessKeyProvisioning> batches = businessKeyProvisioningRepository.selectListByStatusBefore(
+                BusinessKeyProvisioningState.WAIT_DEVICE_ACK, cutoff, limit);
+        if (batches.isEmpty()) {
+            return 0;
+        }
+        int processed = 0;
+        for (BusinessKeyProvisioning batch : batches) {
+            try {
+                expireAckBatch(batch.getRequestId());
+                processed++;
+            } catch (Exception e) {
+                log.warn("业务密钥开通批次转EXPIRED失败: requestId={}", batch.getRequestId(), e);
+            }
+        }
+        log.info("业务密钥开通批次转EXPIRED扫批完成: processed={}, total={}", processed, batches.size());
+        return processed;
+    }
+
+    private void expireAckBatch(String requestId) {
+        tx().executeWithoutResult(status -> {
+            BusinessKeyProvisioning current = businessKeyProvisioningRepository.selectByRequestIdForUpdate(requestId);
+            if (current == null || current.getStatus() != BusinessKeyProvisioningState.WAIT_DEVICE_ACK) {
+                return;
+            }
+            LocalDateTime now = LocalDateTime.now();
+            for (BusinessKeyProvisioningItem item : businessKeyProvisioningItemRepository.selectByProvisioningId(current.getId())) {
+                DeviceBusinessKey directory = deviceBusinessKeyRepository.selectById(item.getDirectoryKeyId());
+                if (directory != null && directory.getKeyState() == BusinessKeyState.PENDING) {
+                    directory.markFailed("开通批次ACK超时过期");
+                    directory.setModifyTime(now);
+                    deviceBusinessKeyRepository.update(directory);
+                }
+            }
+            current.markExpired("设备导入ACK超时");
+            current.setModifyTime(now);
+            businessKeyProvisioningRepository.update(current);
+            log.error("业务密钥开通批次ACK超时转EXPIRED: requestId={}, deviceSn={}", requestId, current.getDeviceSn());
+        });
+    }
+
+    /**
+     * RECONCILE_REQUIRED 超阈值告警（CR-058 §8）。
+     * <p>对账状态不与普通 ACK 超时共用短 TTL，仅输出结构化告警，不直接过期。
+     *
+     * @param cutoff 告警阈值
+     * @param limit  批量上限
+     * @return 告警批次数
+     */
+    public int alertStaleReconcileBatches(LocalDateTime cutoff, int limit) {
+        List<BusinessKeyProvisioning> batches = businessKeyProvisioningRepository.selectListByStatusBefore(
+                BusinessKeyProvisioningState.RECONCILE_REQUIRED, cutoff, limit);
+        for (BusinessKeyProvisioning batch : batches) {
+            log.error("业务密钥开通批次待对账超阈值告警: requestId={}, deviceSn={}, domain={}, modifyTime={}",
+                    batch.getRequestId(), batch.getDeviceSn(), batch.getBusinessDomain(), batch.getModifyTime());
+        }
+        return batches.size();
     }
 }

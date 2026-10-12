@@ -69,6 +69,12 @@ public class VmdKafkaTopicProperties {
     private String partInboundChanged = "vmd.part-inbound.changed";
 
     /**
+     * TBOX V2C 业务密钥导入完成事件 Topic（Producer，VMD 幂等创建，经 Outbox→Relay 发布；CR-058）
+     */
+    @NotBlank
+    private String tboxV2cKeyProvisioned = "vmd.tbox-v2c-key-provisioned";
+
+    /**
      * 11 个 EDD-MDM 消费 Topic 分组（VMD-DSN-CR-052，全部 CONSUMER_ONLY）
      */
     private MdmConsumerTopics mdm = new MdmConsumerTopics();
@@ -132,6 +138,7 @@ public class VmdKafkaTopicProperties {
         values.put("software-inventory-changed", softwareInventoryChanged);
         values.put("business-key-changed", businessKeyChanged);
         values.put("part-inbound-changed", partInboundChanged);
+        values.put("tbox-v2c-key-provisioned", tboxV2cKeyProvisioned);
         for (MdmProjectionType projection : MdmProjectionType.values()) {
             values.put("mdm." + projection.configKey(), topic(projection));
         }
@@ -163,6 +170,7 @@ public class VmdKafkaTopicProperties {
             case SOFTWARE_INVENTORY_CHANGED -> softwareInventoryChanged;
             case BUSINESS_KEY_CHANGED -> businessKeyChanged;
             case PART_INBOUND_CHANGED -> partInboundChanged;
+            case TBOX_V2C_KEY_PROVISIONED -> tboxV2cKeyProvisioned;
         };
     }
 

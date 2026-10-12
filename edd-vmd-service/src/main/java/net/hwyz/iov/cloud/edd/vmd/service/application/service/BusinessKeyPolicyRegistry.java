@@ -7,17 +7,20 @@ import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.config.BusinessKeyPolic
 import org.springframework.stereotype.Component;
 
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
- * 版本化业务密钥策略注册表（CR-055 §3.3）
+ * 版本化业务密钥策略注册表（CR-055 §3.3 / CR-058 多用途）
  * <p>
  * 管理调用方、设备类别、业务域、用途、允许操作、算法、有效期和重叠窗口。
  * 数据来自 {@link BusinessKeyPolicyProperties}，默认空（fail-closed）；
  * 同 (businessDomain, purpose) 重复登记启动期 fail-fast。
+ * CR-058 支持同一域声明多用途集合（purposes），逐用途登记但共享同一策略条目。
  *
  * @author hwyz_leo
  * @since 2026-10-08
@@ -39,6 +42,11 @@ public class BusinessKeyPolicyRegistry {
      */
     private final Map<String, String> defaultPurposeByDomain = new HashMap<>();
 
+    /**
+     * 域 → 完整用途集合（CR-058 多用途域）
+     */
+    private final Map<String, Set<String>> purposesByDomain = new HashMap<>();
+
     @PostConstruct
     public void init() {
         if (properties.getEntries() == null || properties.getEntries().isEmpty()) {
@@ -47,28 +55,51 @@ public class BusinessKeyPolicyRegistry {
         }
         for (BusinessKeyPolicyProperties.Entry entry : properties.getEntries()) {
             String domain = normalize(entry.getBusinessDomain());
-            String purpose = normalize(entry.getPurpose());
-            String key = contextKey(domain, purpose);
-            if (entries.containsKey(key)) {
-                throw new IllegalStateException("业务密钥策略重复登记: businessDomain=" + entry.getBusinessDomain()
-                        + ", purpose=" + entry.getPurpose());
+            Set<String> purposes = resolveConfiguredPurposes(entry);
+            if (domain == null || purposes.isEmpty()) {
+                throw new IllegalStateException("业务密钥策略条目缺少 businessDomain 或 purpose(s): " + entry);
             }
-            BusinessKeyPolicyEntry policyEntry = new BusinessKeyPolicyEntry(
-                    domain,
-                    purpose,
-                    entry.getDeviceCategories() == null ? java.util.Set.of() : entry.getDeviceCategories().stream().map(String::toUpperCase).collect(Collectors.toSet()),
-                    entry.getAllowedActions() == null ? java.util.Set.of() : java.util.Set.copyOf(entry.getAllowedActions()),
-                    entry.getAlgorithm(),
-                    entry.getKeySpec(),
-                    entry.getValidity(),
-                    entry.getDecryptWindow(),
-                    properties.getVersion());
-            entries.put(key, policyEntry);
+            Set<String> deviceCategories = entry.getDeviceCategories() == null ? Set.of()
+                    : entry.getDeviceCategories().stream().map(s -> s.toUpperCase(Locale.ROOT)).collect(Collectors.toSet());
+            Set<BusinessKeyAction> allowedActions = entry.getAllowedActions() == null ? Set.of()
+                    : Set.copyOf(entry.getAllowedActions());
+
+            for (String purpose : purposes) {
+                String key = contextKey(domain, purpose);
+                if (entries.containsKey(key)) {
+                    throw new IllegalStateException("业务密钥策略重复登记: businessDomain=" + entry.getBusinessDomain()
+                            + ", purpose=" + purpose);
+                }
+                entries.put(key, new BusinessKeyPolicyEntry(
+                        domain, purpose, purposes, deviceCategories, allowedActions,
+                        entry.getAlgorithm(), entry.getKeySpec(), entry.getValidity(), entry.getDecryptWindow(),
+                        properties.getVersion()));
+            }
+            purposesByDomain.merge(domain, new LinkedHashSet<>(purposes), (a, b) -> {
+                a.addAll(b);
+                return a;
+            });
             if (entry.getDefaultPurpose() != null && !entry.getDefaultPurpose().isBlank()) {
-                defaultPurposeByDomain.putIfAbsent(domain, entry.getDefaultPurpose());
+                defaultPurposeByDomain.putIfAbsent(domain, normalize(entry.getDefaultPurpose()));
             }
         }
-        log.info("业务密钥授权策略已加载: version={}, entries={}", properties.getVersion(), entries.size());
+        log.info("业务密钥授权策略已加载: version={}, entries={}, domains={}",
+                properties.getVersion(), entries.size(), purposesByDomain.size());
+    }
+
+    private Set<String> resolveConfiguredPurposes(BusinessKeyPolicyProperties.Entry entry) {
+        if (entry.getPurposes() != null && !entry.getPurposes().isEmpty()) {
+            return entry.getPurposes().stream()
+                    .map(s -> normalize(s))
+                    .collect(Collectors.toCollection(LinkedHashSet::new));
+        }
+        String purpose = normalize(entry.getPurpose());
+        if (purpose == null) {
+            return Set.of();
+        }
+        Set<String> single = new LinkedHashSet<>();
+        single.add(purpose);
+        return single;
     }
 
     /**
@@ -83,6 +114,19 @@ public class BusinessKeyPolicyRegistry {
             return Optional.empty();
         }
         return Optional.ofNullable(entries.get(contextKey(normalize(businessDomain), normalize(purpose))));
+    }
+
+    /**
+     * 解析业务域登记的完整用途集合（CR-058 多用途域）
+     *
+     * @param businessDomain 业务域
+     * @return 用途集合，未登记返回 empty
+     */
+    public Optional<Set<String>> resolvePurposes(String businessDomain) {
+        if (businessDomain == null) {
+            return Optional.empty();
+        }
+        return Optional.ofNullable(purposesByDomain.get(normalize(businessDomain)));
     }
 
     /**

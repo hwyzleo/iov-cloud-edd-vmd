@@ -41,7 +41,12 @@ public enum VmdKafkaLogicalTopic {
     /**
      * 零件实例入站事件（Producer，VMD 幂等创建，经 Outbox→Relay 发布；CR-056，重放场景）
      */
-    PART_INBOUND_CHANGED("part-inbound-changed", VmdKafkaTopicRole.PRODUCER_OWNED);
+    PART_INBOUND_CHANGED("part-inbound-changed", VmdKafkaTopicRole.PRODUCER_OWNED),
+
+    /**
+     * TBOX V2C 业务密钥件内导入完成事件（Producer，VMD 幂等创建，经 Outbox→Relay 发布；CR-058）
+     */
+    TBOX_V2C_KEY_PROVISIONED("tbox-v2c-key-provisioned", VmdKafkaTopicRole.PRODUCER_OWNED);
 
     private final String configKey;
     private final VmdKafkaTopicRole role;

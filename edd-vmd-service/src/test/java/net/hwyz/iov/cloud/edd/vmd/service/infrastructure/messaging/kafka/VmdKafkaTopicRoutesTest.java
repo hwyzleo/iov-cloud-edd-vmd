@@ -42,6 +42,8 @@ class VmdKafkaTopicRoutesTest {
                 routes.resolve("VehicleSoftwareInventoryChangedEvent"));
         assertEquals("vmd.part-inbound.changed",
                 routes.resolve("PartInboundEvent"));
+        assertEquals("vmd.tbox-v2c-key-provisioned",
+                routes.resolve("TboxV2cKeyProvisionedEvent"));
     }
 
     @Test
@@ -63,6 +65,7 @@ class VmdKafkaTopicRoutesTest {
         assertEquals(VmdKafkaLogicalTopic.PART_BINDING_CHANGED, routes.logicalTopic("VehiclePartBindingChangedEvent"));
         assertEquals(VmdKafkaLogicalTopic.SOFTWARE_INVENTORY_CHANGED, routes.logicalTopic("VehicleSoftwareInventoryChangedEvent"));
         assertEquals(VmdKafkaLogicalTopic.PART_INBOUND_CHANGED, routes.logicalTopic("PartInboundEvent"));
+        assertEquals(VmdKafkaLogicalTopic.TBOX_V2C_KEY_PROVISIONED, routes.logicalTopic("TboxV2cKeyProvisionedEvent"));
     }
 
     @Test

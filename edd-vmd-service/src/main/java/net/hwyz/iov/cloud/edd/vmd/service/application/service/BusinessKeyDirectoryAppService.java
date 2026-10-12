@@ -3,11 +3,17 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.BusinessKeyMetadataResult;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.BusinessKeyProvisioningStatusResult;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyMultipleActiveException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyNotExistException;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyProvisioningNotExistException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyStateNotAllowedException;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.BusinessKeyProvisioning;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.BusinessKeyProvisioningItem;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.DeviceBusinessKey;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.BusinessKeyState;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.BusinessKeyProvisioningItemRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.BusinessKeyProvisioningRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.DeviceBusinessKeyRepository;
 import net.hwyz.iov.cloud.framework.security.crypto.model.businesskey.*;
 import org.springframework.stereotype.Service;
@@ -32,6 +38,8 @@ import java.util.List;
 public class BusinessKeyDirectoryAppService {
 
     private final DeviceBusinessKeyRepository deviceBusinessKeyRepository;
+    private final BusinessKeyProvisioningRepository businessKeyProvisioningRepository;
+    private final BusinessKeyProvisioningItemRepository businessKeyProvisioningItemRepository;
     private final BusinessKeyAuthorizationPolicy authorizationPolicy;
     private final BusinessKeyBizTypeMapper bizTypeMapper;
 
@@ -126,6 +134,39 @@ public class BusinessKeyDirectoryAppService {
                 .filter(k -> purpose == null || purpose.isBlank() || purpose.equalsIgnoreCase(k.getPurpose()))
                 .map(this::toMetadata)
                 .toList();
+    }
+
+    /**
+     * 管理查询：按 requestId 查询业务密钥开通批次状态（CR-058 只读对账）
+     *
+     * @param requestId TBOX 稳定 requestId
+     * @return 批次状态结果（非敏感）
+     * @throws BusinessKeyProvisioningNotExistException 批次不存在
+     */
+    public BusinessKeyProvisioningStatusResult queryProvisioning(String requestId) {
+        BusinessKeyProvisioning batch = businessKeyProvisioningRepository.selectByRequestId(requestId);
+        if (batch == null) {
+            throw new BusinessKeyProvisioningNotExistException("requestId=" + requestId);
+        }
+        List<BusinessKeyProvisioningItem> items = businessKeyProvisioningItemRepository.selectByProvisioningId(batch.getId());
+        return BusinessKeyProvisioningStatusResult.builder()
+                .requestId(batch.getRequestId())
+                .deviceSn(batch.getDeviceSn())
+                .businessDomain(batch.getBusinessDomain())
+                .status(batch.getStatus() == null ? null : batch.getStatus().getValue())
+                .failReason(batch.getFailReason())
+                .startedAt(batch.getStartedAt())
+                .acknowledgedAt(batch.getAcknowledgedAt())
+                .completedAt(batch.getCompletedAt())
+                .items(items.stream().map(item -> BusinessKeyProvisioningStatusResult.Item.builder()
+                        .purpose(item.getPurpose())
+                        .keyId(item.getKeyId())
+                        .businessKeyVersion(item.getBusinessKeyVersion())
+                        .directoryKeyId(item.getDirectoryKeyId())
+                        .deviceResult(item.getDeviceResult() == null ? null : item.getDeviceResult().getValue())
+                        .confirmedAt(item.getConfirmedAt())
+                        .build()).toList())
+                .build();
     }
 
     private BusinessKeyMetadataResult toMetadata(DeviceBusinessKey key) {

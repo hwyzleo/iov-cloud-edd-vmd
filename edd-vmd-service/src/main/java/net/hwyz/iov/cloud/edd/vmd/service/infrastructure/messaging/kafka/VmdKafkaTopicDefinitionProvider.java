@@ -43,7 +43,8 @@ public class VmdKafkaTopicDefinitionProvider implements KafkaTopicDefinitionProv
         List<VmdKafkaLogicalTopic> produced = List.of(
                 VmdKafkaLogicalTopic.PART_BINDING_CHANGED,
                 VmdKafkaLogicalTopic.VEHICLE_PRODUCE,
-                VmdKafkaLogicalTopic.SOFTWARE_INVENTORY_CHANGED);
+                VmdKafkaLogicalTopic.SOFTWARE_INVENTORY_CHANGED,
+                VmdKafkaLogicalTopic.TBOX_V2C_KEY_PROVISIONED);
 
         List<KafkaTopicDefinition> definitions = new ArrayList<>(produced.size());
         for (VmdKafkaLogicalTopic logical : produced) {

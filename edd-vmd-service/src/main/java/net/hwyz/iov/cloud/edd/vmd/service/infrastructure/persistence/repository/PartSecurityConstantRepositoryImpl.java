@@ -29,6 +29,15 @@ public class PartSecurityConstantRepositoryImpl implements PartSecurityConstantR
     }
 
     @Override
+    public java.util.List<PartSecurityConstant> selectListByChipUid(String chipUid) {
+        java.util.List<PartSecurityConstantPo> poList = partSecurityConstantMapper.selectPoListByChipUid(chipUid);
+        if (poList == null || poList.isEmpty()) {
+            return java.util.Collections.emptyList();
+        }
+        return PartSecurityConstantConverter.INSTANCE.toDomainList(poList);
+    }
+
+    @Override
     public int insert(PartSecurityConstant entity) {
         PartSecurityConstantPo po = PartSecurityConstantConverter.INSTANCE.fromDomain(entity);
         int rows = partSecurityConstantMapper.insertPo(po);
