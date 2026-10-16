@@ -1,10 +1,12 @@
 package net.hwyz.iov.cloud.edd.vmd.service.integration;
 
 import com.google.protobuf.ByteString;
-import net.hwyz.iov.cloud.edd.vmd.api.vo.request.KeyprovRelayRequest;
-import net.hwyz.iov.cloud.edd.vmd.api.vo.response.KeyprovRelayResponse;
+import net.hwyz.iov.cloud.edd.vmd.api.vo.keyprov.VmdKeyProvisioningOutcome;
 import net.hwyz.iov.cloud.edd.vmd.service.BaseTest;
-import net.hwyz.iov.cloud.edd.vmd.service.application.service.KeyprovRelayAppService;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.KeyProvisioningOperationResult;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.KeyProvisioningApplicationFacade;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.KeyprovAuthenticatedContext;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.KeyprovConstants;
 import net.hwyz.iov.cloud.framework.security.crypto.BusinessKeyMaterialTemplate;
 import net.hwyz.iov.cloud.framework.security.crypto.model.businesskey.BusinessKeyCreateRequest;
 import net.hwyz.iov.cloud.framework.security.crypto.model.businesskey.BusinessKeyMaterial;
@@ -19,6 +21,8 @@ import net.hwyz.iov.security.keyprov.v1.KeyProvisioningAckResult;
 import net.hwyz.iov.security.keyprov.v1.KeyProvisioningRequest;
 import net.hwyz.iov.security.keyprov.v1.KeyProvisioningResponse;
 import net.hwyz.iov.security.keyprov.v1.KeyProvisioningResult;
+import net.hwyz.iov.security.keyprov.v1.KeyProvisioningStatusRequest;
+import net.hwyz.iov.security.keyprov.v1.KeyProvisioningStatusResponse;
 import net.hwyz.iov.security.keyprov.v1.KeyPurpose;
 import net.hwyz.iov.security.keyprov.v1.WrappingSuite;
 import org.junit.jupiter.api.BeforeEach;
@@ -28,8 +32,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.annotation.Rollback;
-import vehicle.common.v1.Envelope;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -40,10 +45,10 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 /**
- * VMD-DSN-CR-058 集成测试。
+ * VMD-DSN-CR-058/CR-059 集成测试。
  * <p>
- * 覆盖 canonical relay Request（多用途批次 + PENDING 目标版本）→ Ack（完整成功完成事务、
- * 目录 ACTIVE 切换、专用 Outbox 事件）→ 幂等 ACK / 缺项待对账，并校验敏感字段不落库。
+ * 通过官方 Keyprov 应用门面覆盖 Request（多用途批次 + PENDING 目标版本）→ Ack（完整成功完成事务、
+ * 目录 ACTIVE 切换、专用 Outbox 事件）→ 幂等 ACK / 缺项待对账 → Status 对账，并校验敏感字段不落库。
  *
  * @author hwyz_leo
  * @since 2026-10-12
@@ -56,12 +61,13 @@ class BusinessKeyCr058IntegrationTest extends BaseTest {
     private static final String DEVICE_SN = "CR058-TBOX-0001";
     private static final String PART_CODE = "CR058_TBOX";
     private static final String CERT_SN = "CR058-CERT-0001";
+    private static final String CALLER = "VAGW";
 
     @MockBean
     private BusinessKeyMaterialTemplate businessKeyMaterialTemplate;
 
     @Autowired
-    private KeyprovRelayAppService relayAppService;
+    private KeyProvisioningApplicationFacade keyProvisioningApplicationFacade;
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -106,30 +112,22 @@ class BusinessKeyCr058IntegrationTest extends BaseTest {
                         Instant.now().plusSeconds(3600), Map.of("iv", "abcd")));
     }
 
-    private byte[] envelope(String requestId, String payloadType, byte[] payload) {
-        return Envelope.VehicleMessageEnvelope.newBuilder()
-                .setRequestId(requestId)
-                .setProtocolVersion("keyprov-v1")
-                .setService("security.keyprov")
-                .setDeviceId(HSM_UID)
-                .setMessageId("MSG-" + requestId)
-                .setMessageKind(Envelope.MessageKind.MESSAGE_KIND_REQUEST)
-                .setPayloadType(payloadType)
-                .setPayload(ByteString.copyFrom(payload))
-                .build()
-                .toByteArray();
+    private KeyprovAuthenticatedContext ctx() {
+        return new KeyprovAuthenticatedContext("VAGW_AUTHENTICATED_CONTEXT", HSM_UID, "client-1",
+                CERT_SN, null, 1, "session-1", System.currentTimeMillis());
     }
 
-    private KeyprovRelayRequest relayOf(String requestId, String payloadType, byte[] payload) {
-        return KeyprovRelayRequest.builder()
-                .source("ACL_SESSION_CORRELATED")
-                .authenticatedHsmUid(HSM_UID)
-                .clientId("client-1")
-                .connectionGeneration(1)
-                .receivedAtMs(System.currentTimeMillis())
-                .envelope(envelope(requestId, payloadType, payload))
-                .canonicalPayload(payload)
-                .build();
+    private String sha256(byte[] data) {
+        try {
+            byte[] hash = MessageDigest.getInstance("SHA-256").digest(data);
+            StringBuilder sb = new StringBuilder();
+            for (byte b : hash) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     private KeyProvisioningRequest request(String requestId) {
@@ -196,6 +194,13 @@ class BusinessKeyCr058IntegrationTest extends BaseTest {
         assertFalse(payload.contains("kmsKeyRef"), "事件不得含 kmsKeyRef");
         assertFalse(payload.contains("wrapped"), "事件不得含 Wrapped Key");
         assertFalse(payload.contains("VIN"), "事件不得含 VIN");
+
+        // Status 对账：原 requestId 收敛为 ACTIVE
+        KeyProvisioningStatusResponse status = statusResponse("CR058_REQ_001");
+        assertEquals("CR058_REQ_001", status.getRequestId());
+        assertEquals(net.hwyz.iov.security.keyprov.v1.KeyProvisioningStatus.KEY_PROVISIONING_STATUS_ACTIVE,
+                status.getStatus(), "Status 应返回 ACTIVE");
+        assertEquals(2, status.getItemsCount(), "Status 应返回两用途非敏感元数据");
     }
 
     @Test
@@ -222,7 +227,10 @@ class BusinessKeyCr058IntegrationTest extends BaseTest {
     @DisplayName("ACK 缺项 → 批次 RECONCILE_REQUIRED，不发布完成事件，版本保持 PENDING")
     void ackMissingPurpose_reconcile() {
         KeyProvisioningResponse response = requestResponse("CR058_REQ_003");
-        ackResponse("CR058_REQ_003", ack("CR058_REQ_003", response, KeyImportResult.KEY_IMPORT_RESULT_IMPORTED, false));
+        KeyProvisioningOperationResult result = ackOperation("CR058_REQ_003",
+                ack("CR058_REQ_003", response, KeyImportResult.KEY_IMPORT_RESULT_IMPORTED, false));
+        assertEquals(VmdKeyProvisioningOutcome.OUTCOME_UNKNOWN, result.getOutcome(),
+                "缺项应映射为结果未知/待对账");
 
         String status = jdbcTemplate.queryForObject(
                 "SELECT status FROM tb_business_key_provisioning WHERE request_id = ?", String.class, "CR058_REQ_003");
@@ -234,28 +242,50 @@ class BusinessKeyCr058IntegrationTest extends BaseTest {
     }
 
     private KeyProvisioningResponse requestResponse(String requestId) {
-        KeyprovRelayResponse relayResponse = relayAppService.relay(relayOf(requestId,
-                "security.keyprov.v1.KeyProvisioningRequest", request(requestId).toByteArray()));
-        assertEquals("SUCCESS", relayResponse.getOutcome(), "relay 应成功返回 canonical Response");
-        return parseResponse(relayResponse);
+        KeyProvisioningOperationResult result = requestOperation(requestId);
+        assertEquals(VmdKeyProvisioningOutcome.SUCCESS, result.getOutcome(), "request 应成功");
+        return parse(result, KeyProvisioningResponse::parseFrom);
     }
 
-    private KeyProvisioningResponse parseResponse(KeyprovRelayResponse relayResponse) {
-        try {
-            return KeyProvisioningResponse.parseFrom(relayResponse.getDownlinkPayload());
-        } catch (Exception e) {
-            throw new IllegalStateException(e);
-        }
+    private KeyProvisioningOperationResult requestOperation(String requestId) {
+        byte[] payload = request(requestId).toByteArray();
+        return keyProvisioningApplicationFacade.request(CALLER, ctx(),
+                KeyprovConstants.PAYLOAD_TYPE_REQUEST, "keyprov-v1", payload, sha256(payload));
     }
 
     private KeyProvisioningAckResult ackResponse(String requestId, KeyProvisioningAck ack) {
-        KeyprovRelayResponse relayResponse = relayAppService.relay(relayOf(requestId,
-                "security.keyprov.v1.KeyProvisioningAck", ack.toByteArray()));
-        assertEquals("SUCCESS", relayResponse.getOutcome());
+        KeyProvisioningOperationResult result = ackOperation(requestId, ack);
+        assertEquals(VmdKeyProvisioningOutcome.SUCCESS, result.getOutcome(), "ack 应成功");
+        return parse(result, KeyProvisioningAckResult::parseFrom);
+    }
+
+    private KeyProvisioningOperationResult ackOperation(String requestId, KeyProvisioningAck ack) {
+        byte[] payload = ack.toByteArray();
+        return keyProvisioningApplicationFacade.ack(CALLER, ctx(),
+                KeyprovConstants.PAYLOAD_TYPE_ACK, "keyprov-v1", payload, sha256(payload));
+    }
+
+    private KeyProvisioningStatusResponse statusResponse(String requestId) {
+        byte[] payload = KeyProvisioningStatusRequest.newBuilder()
+                .setRequestId(requestId)
+                .setTimestampMs(System.currentTimeMillis())
+                .build().toByteArray();
+        KeyProvisioningOperationResult result = keyProvisioningApplicationFacade.status(CALLER, ctx(),
+                KeyprovConstants.PAYLOAD_TYPE_STATUS_REQUEST, "keyprov-v1", payload, sha256(payload));
+        assertEquals(VmdKeyProvisioningOutcome.SUCCESS, result.getOutcome(), "status 应成功");
+        return parse(result, KeyProvisioningStatusResponse::parseFrom);
+    }
+
+    private <T> T parse(KeyProvisioningOperationResult result, ProtoParser<T> parser) {
         try {
-            return KeyProvisioningAckResult.parseFrom(relayResponse.getDownlinkPayload());
+            return parser.parse(result.getDownlinkPayload());
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
+    }
+
+    @FunctionalInterface
+    private interface ProtoParser<T> {
+        T parse(byte[] bytes) throws Exception;
     }
 }

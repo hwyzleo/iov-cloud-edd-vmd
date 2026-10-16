@@ -69,6 +69,7 @@ public final class KeyprovConstants {
     public static final String ERR_STATE_NOT_ALLOWED = "KEYPROV_STATE_NOT_ALLOWED";
     public static final String ERR_ITEM_MISMATCH = "KEYPROV_ACK_ITEM_MISMATCH";
     public static final String ERR_DEVICE_NOT_ELIGIBLE = "KEYPROV_DEVICE_NOT_ELIGIBLE";
+    public static final String ERR_CERTIFICATE_INVALID = "KEYPROV_CERTIFICATE_INVALID";
     public static final String ERR_EXPIRED = "KEYPROV_EXPIRED";
     public static final String ERR_PROTOCOL_INVALID = "KEYPROV_PROTOCOL_INVALID";
     public static final String ERR_UNAVAILABLE = "KEYPROV_VMD_UNAVAILABLE";

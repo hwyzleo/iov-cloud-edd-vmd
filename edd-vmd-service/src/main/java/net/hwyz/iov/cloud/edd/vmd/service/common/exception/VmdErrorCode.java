@@ -96,7 +96,20 @@ public enum VmdErrorCode implements ErrorCode {
     BUSINESS_KEY_PROVISIONING_STATE_NOT_ALLOWED("806086", "业务密钥开通批次状态不允许此操作"),
     BUSINESS_KEY_PROVISIONING_ITEM_MISMATCH("806087", "设备导入ACK item与开通批次不匹配"),
     BUSINESS_KEY_PROVISIONING_DEVICE_NOT_ELIGIBLE("806088", "设备绑定或证书失效，不允许完成开通"),
-    BUSINESS_KEY_PROVISIONING_EXPIRED("806089", "业务密钥开通批次已过期");
+    BUSINESS_KEY_PROVISIONING_EXPIRED("806089", "业务密钥开通批次已过期"),
+
+    // ================= CR-059 官方 Keyprov Service 契约域（806090～806100） =================
+    KEYPROV_CALLER_UNAUTHORIZED("806090", "Keyprov调用方身份未授权"),
+    KEYPROV_DEVICE_CONTEXT_MISMATCH("806091", "Keyprov可信设备上下文与请求不一致"),
+    KEYPROV_BINDING_INVALID("806092", "Keyprov设备绑定失效或不可用"),
+    KEYPROV_CERTIFICATE_INVALID("806093", "Keyprov设备证书失效或不可用"),
+    KEYPROV_REQUEST_INVALID("806094", "Keyprov请求协议或内容非法"),
+    KEYPROV_IDEMPOTENCY_CONFLICT("806095", "Keyprov幂等键冲突，已记录安全告警"),
+    KEYPROV_DIRECTORY_UNAVAILABLE("806096", "Keyprov业务密钥目录或依赖不可用"),
+    KEYPROV_WRAP_FAILED("806097", "Keyprov业务密钥封装失败"),
+    KEYPROV_OUTCOME_UNKNOWN("806098", "Keyprov处理结果未知，请以原requestId对账"),
+    KEYPROV_BATCH_NOT_FOUND("806099", "Keyprov开通批次不存在"),
+    KEYPROV_INTERNAL_UNAVAILABLE("806100", "Keyprov服务内部不可用");
 
     private final String code;
     private final String message;

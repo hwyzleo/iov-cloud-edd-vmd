@@ -36,6 +36,9 @@ vmd:
     provisioning:
       keyprov:
         enabled: true
+        allowed-callers: VAGW
+        schema-version: keyprov-v1
+        max-payload-bytes: 16384
       bundle-ttl-seconds: 3600
       ack-timeout-seconds: 900
       reconcile-alert-seconds: 86400

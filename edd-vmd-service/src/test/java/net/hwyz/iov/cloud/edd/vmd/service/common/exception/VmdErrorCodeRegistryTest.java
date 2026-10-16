@@ -83,4 +83,22 @@ class VmdErrorCodeRegistryTest {
                 ErrorCodeRegistry.findByCode("806068").orElse(null));
         assertTrue(ErrorCodeRegistry.findByCode("999999").isEmpty());
     }
+
+    @Test
+    void keyprovServiceErrorCodes_present() {
+        // CR-059 官方 Keyprov Service 契约域错误码（806090～806100）
+        assertEquals("806090", VmdErrorCode.KEYPROV_CALLER_UNAUTHORIZED.getCode());
+        assertEquals("806091", VmdErrorCode.KEYPROV_DEVICE_CONTEXT_MISMATCH.getCode());
+        assertEquals("806092", VmdErrorCode.KEYPROV_BINDING_INVALID.getCode());
+        assertEquals("806093", VmdErrorCode.KEYPROV_CERTIFICATE_INVALID.getCode());
+        assertEquals("806094", VmdErrorCode.KEYPROV_REQUEST_INVALID.getCode());
+        assertEquals("806095", VmdErrorCode.KEYPROV_IDEMPOTENCY_CONFLICT.getCode());
+        assertEquals("806096", VmdErrorCode.KEYPROV_DIRECTORY_UNAVAILABLE.getCode());
+        assertEquals("806097", VmdErrorCode.KEYPROV_WRAP_FAILED.getCode());
+        assertEquals("806098", VmdErrorCode.KEYPROV_OUTCOME_UNKNOWN.getCode());
+        assertEquals("806099", VmdErrorCode.KEYPROV_BATCH_NOT_FOUND.getCode());
+        assertEquals("806100", VmdErrorCode.KEYPROV_INTERNAL_UNAVAILABLE.getCode());
+        assertEquals(VmdErrorCode.KEYPROV_INTERNAL_UNAVAILABLE,
+                ErrorCodeRegistry.findByCode("806100").orElse(null));
+    }
 }

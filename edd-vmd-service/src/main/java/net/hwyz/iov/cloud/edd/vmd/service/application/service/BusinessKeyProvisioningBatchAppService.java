@@ -148,7 +148,7 @@ public class BusinessKeyProvisioningBatchAppService {
             certSn = activeDeviceCertificateResolver.resolveActiveCertSn(identity);
         } catch (RuntimeException e) {
             log.warn("keyprov 无有效设备证书: requestId={}, deviceSn={}", requestId, identity.deviceSn());
-            return rejected(requestId, KeyprovConstants.ERR_DEVICE_NOT_ELIGIBLE, false, "有效设备证书不存在");
+            return rejected(requestId, KeyprovConstants.ERR_CERTIFICATE_INVALID, false, "有效设备证书不存在");
         }
 
         String suite = domainService.negotiateWrappingSuite(request, KeyprovConstants.DEFAULT_SUPPORTED_SUITES);

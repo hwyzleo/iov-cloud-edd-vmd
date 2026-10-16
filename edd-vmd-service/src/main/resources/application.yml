@@ -7,6 +7,17 @@ iov:
       # 服务启动后检查并创建 VMD 作为生产者输出的三个标准 Kafka Topic
       enabled: true
 
+# Actuator 健康分组（VMD-DSN-CR-059 §7）：Keyprov capability 独立呈现，
+# 从主 readiness/liveness 聚合排除（KeyProvisioningHealthGroupsCustomizer），
+# VAGW 与发布门禁以 /actuator/health/keyprov 决定是否启用 Keyprov 流量。
+management:
+  endpoint:
+    health:
+      group:
+        keyprov:
+          include: keyProvisioningCapability
+          show-details: always
+
 crypto:
   provisioning:
     enabled: true
@@ -81,9 +92,16 @@ vmd:
       domain-biz-type:
         V2C_COMM: V2C_COMM_ROOT
     provisioning:
-      # keyprov canonical relay 功能开关（默认关闭 fail-closed，release-set 就绪后开启）
+      # keyprov capability 功能开关（默认关闭 fail-closed，release-set 就绪后开启）
+      # enabled=false 时不装配官方 Keyprov Controller/Adapter，capability 状态 DISABLED
       keyprov:
         enabled: ${VMD_BUSINESS_KEY_KEYPROV_ENABLED:false}
+        # 受信调用方 allowlist（逗号分隔，默认仅 VAGW workload identity）
+        allowed-callers: ${VMD_BUSINESS_KEY_KEYPROV_ALLOWED_CALLERS:VAGW}
+        # canonical 协议版本 allowlist 值
+        schema-version: ${VMD_BUSINESS_KEY_KEYPROV_SCHEMA_VERSION:keyprov-v1}
+        # canonical payload 大小上限（bytes）
+        max-payload-bytes: ${VMD_BUSINESS_KEY_KEYPROV_MAX_PAYLOAD_BYTES:16384}
       # Wrapped Key bundle 可接受期限（秒）
       bundle-ttl-seconds: ${VMD_BUSINESS_KEY_BUNDLE_TTL_SECONDS:3600}
       # WAIT_DEVICE_ACK 超时转 EXPIRED（秒）
