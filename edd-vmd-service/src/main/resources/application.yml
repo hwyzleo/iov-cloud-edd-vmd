@@ -95,7 +95,7 @@ vmd:
       # keyprov capability 功能开关（默认关闭 fail-closed，release-set 就绪后开启）
       # enabled=false 时不装配官方 Keyprov Controller/Adapter，capability 状态 DISABLED
       keyprov:
-        enabled: ${VMD_BUSINESS_KEY_KEYPROV_ENABLED:false}
+        enabled: ${VMD_BUSINESS_KEY_KEYPROV_ENABLED:true}
         # 受信调用方 allowlist（逗号分隔，默认仅 VAGW workload identity）
         allowed-callers: ${VMD_BUSINESS_KEY_KEYPROV_ALLOWED_CALLERS:VAGW}
         # canonical 协议版本 allowlist 值
