@@ -57,6 +57,7 @@ public class PartImportDataAppService {
     private final SecurityPresetPolicy securityPresetPolicy;
     private final HsmUidFieldResolver hsmUidFieldResolver;
     private final SecurityBizTypeResolver securityBizTypeResolver;
+    private final PartCodeResolver partCodeResolver;
     private final PartImportPostProcessReplayRepository partImportPostProcessReplayRepository;
     private final PartImportPostProcessReplayExtractor partImportPostProcessReplayExtractor;
 
@@ -278,10 +279,8 @@ public class PartImportDataAppService {
             String vehicleNodeCode = itemJson.getStr("vehicleNodeCode");
             String deviceItem = itemJson.getStr("deviceItem");
             
-            // 提取partCode：优先ASSEMBLY_PART_NO，没有则使用HARDWARE_PART_NO
-            String assemblyPartNo = itemJson.getStr("ASSEMBLY_PART_NO");
-            String hardwarePartNo = itemJson.getStr("HARDWARE_PART_NO");
-            String partCode = StrUtil.isNotBlank(assemblyPartNo) ? assemblyPartNo : hardwarePartNo;
+            // 提取partCode：优先ASSEMBLY_PART_NO，没有则使用HARDWARE_PART_NO（统一口径见 PartCodeResolver）
+            String partCode = partCodeResolver.resolve(itemJson);
             
             // 校验必填字段
             if (StrUtil.isBlank(sn)) {
@@ -442,30 +441,40 @@ public class PartImportDataAppService {
                 continue;
             }
 
+            // 器件编码必须与 part_info.part_code 同源（优先 ASSEMBLY_PART_NO，回退 HARDWARE_PART_NO），
+            // 否则 part_security_constant 与 part_info 无法关联（keyprov 按 chipUid 反查将失败）
+            String itemPartCode = partCodeResolver.resolve(itemJson);
+            if (StrUtil.isBlank(itemPartCode)) {
+                presetFailureCount++;
+                presetErrors.add("[" + partCode + ":" + sn + "] 缺少零件编码(ASSEMBLY_PART_NO/HARDWARE_PART_NO均为空)");
+                log.warn("零件[{}:{}]缺少零件编码，计入预置失败", partCode, sn);
+                continue;
+            }
+
             // 提取chipUid（HSM UID字段名默认 HSM）
             String chipUid = itemJson.getStr(hsmUidField);
 
             if (StrUtil.isBlank(chipUid)) {
                 // 需预置但缺少芯片标识：计入失败，不静默跳过
                 presetFailureCount++;
-                presetErrors.add("[" + partCode + ":" + sn + "] 缺少安全芯片标识(hsmUidField=" + hsmUidField + ")");
-                log.warn("零件[{}:{}]缺少安全芯片标识(hsmUidField={})，计入预置失败", partCode, sn, hsmUidField);
+                presetErrors.add("[" + itemPartCode + ":" + sn + "] 缺少安全芯片标识(hsmUidField=" + hsmUidField + ")");
+                log.warn("零件[{}:{}]缺少安全芯片标识(hsmUidField={})，计入预置失败", itemPartCode, sn, hsmUidField);
                 continue;
             }
 
             try {
-                String presetError = partSecurityPresetAppService.preset(partCode, sn, chipUid, batchNum, vehicleNodeCode, bizType);
+                String presetError = partSecurityPresetAppService.preset(itemPartCode, sn, chipUid, batchNum, vehicleNodeCode, bizType);
                 if (presetError != null) {
                     presetFailureCount++;
-                    presetErrors.add("[" + partCode + ":" + sn + "] " + presetError);
-                    log.warn("零件[{}:{}]安全常量预置失败: {}", partCode, sn, presetError);
+                    presetErrors.add("[" + itemPartCode + ":" + sn + "] " + presetError);
+                    log.warn("零件[{}:{}]安全常量预置失败: {}", itemPartCode, sn, presetError);
                 } else {
-                    log.debug("零件[{}:{}]安全常量预置成功", partCode, sn);
+                    log.debug("零件[{}:{}]安全常量预置成功", itemPartCode, sn);
                 }
             } catch (Exception e) {
                 presetFailureCount++;
-                presetErrors.add("安全常量预置失败[" + partCode + ":" + sn + "]: " + e.getMessage());
-                log.warn("零件[{}:{}]安全常量预置异常", partCode, sn, e);
+                presetErrors.add("安全常量预置失败[" + itemPartCode + ":" + sn + "]: " + e.getMessage());
+                log.warn("零件[{}:{}]安全常量预置异常", itemPartCode, sn, e);
             }
         }
 

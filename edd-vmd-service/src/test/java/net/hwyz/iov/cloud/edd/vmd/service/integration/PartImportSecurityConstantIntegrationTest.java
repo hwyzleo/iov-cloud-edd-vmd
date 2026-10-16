@@ -2,6 +2,7 @@ package net.hwyz.iov.cloud.edd.vmd.service.integration;
 
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ImportResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.HsmUidFieldResolver;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartCodeResolver;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartImportDataAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartInboundAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartSecurityPresetAppService;
@@ -145,7 +146,9 @@ class PartImportSecurityConstantIntegrationTest {
                 partImportDataRepository, mdmPartRepository, mdmVehicleNodeRepository, partInboundAppService,
                 downstreamProcessorRegistry, partSecurityPresetAppService,
                 securityPresetPolicy, hsmUidFieldResolver, securityBizTypeResolver,
-                mock(PartImportPostProcessReplayRepository.class), new PartImportPostProcessReplayExtractor());
+                new PartCodeResolver(),
+                mock(PartImportPostProcessReplayRepository.class),
+                new PartImportPostProcessReplayExtractor(new PartCodeResolver()));
     }
 
     @Test
@@ -475,6 +478,39 @@ class PartImportSecurityConstantIntegrationTest {
         assertEquals(0, result.getFailureCount());
         verify(partSecurityConstantRepository).insert(any());
         verify(keyProvisioningTemplate).deriveByUid("HSM_UID_ADAS_002", BizType.AD_DCU_DEVICE_ROOT);
+    }
+
+    @Test
+    @DisplayName("回归：ITEMS 同时携带总成号与硬件号时，安全常量按总成号（ASSEMBLY_PART_NO）落库并与 part_info 同源")
+    void assemblyPartNo_shouldBeUsedForSecurityConstant() throws Exception {
+        String batchNum = "INT_BATCH_ASM_001";
+        PartImportData data = PartImportData.builder()
+                .id(1L)
+                .batchNum(batchNum)
+                .partCode("HW_TBOX_ASM_001")
+                .version("1.0")
+                .data("{\"REQUEST\":{\"HEAD\":{\"ACCOUNT\":\"SUP001\"},\"DATA\":{\"vehicleNodeCode\":\"TBOX_5G\",\"ITEMS\":[{\"SN\":\"SN_ASM_001\",\"ASSEMBLY_PART_NO\":\"ASM_TBOX_ASM_001\",\"HARDWARE_PART_NO\":\"HW_TBOX_ASM_001\",\"HSM\":\"HSM_UID_ASM_001\"}]}}}")
+                .handle(false)
+                .build();
+        stubCommon(data, "ASM_TBOX_ASM_001", "TBOX_5G", "TBOX", "HSM_FULL");
+        // 下游联动使用批次 partCode 做 MDM 查询，需额外 stub
+        when(mdmPartRepository.selectByCode("HW_TBOX_ASM_001")).thenReturn(Part.builder()
+                .code("HW_TBOX_ASM_001").partType("TBOX").vehicleNodeCode("TBOX_5G").build());
+        when(partSecurityConstantRepository.selectByPartCodeAndSn("ASM_TBOX_ASM_001", "SN_ASM_001")).thenReturn(null);
+        when(partSecurityConstantRepository.insert(any())).thenReturn(1);
+        when(keyProvisioningTemplate.deriveByUid("HSM_UID_ASM_001", BizType.TBOX_DEVICE_ROOT))
+                .thenReturn(mockProvisioningResult("dev-root-master:sn:HSM_UID_ASM_001"));
+
+        ImportResult result = partImportDataAppService.parsePartImportData(batchNum);
+
+        assertNotNull(result);
+        assertEquals(0, result.getFailureCount());
+        // part_security_constant.part_code 必须为总成零件号（与 part_info.part_code 一致）
+        verify(partSecurityConstantRepository).insert(argThat(entity ->
+                entity.getPartCode().equals("ASM_TBOX_ASM_001")
+                        && entity.getSn().equals("SN_ASM_001")
+                        && entity.getChipUid().equals("HSM_UID_ASM_001")));
+        verify(keyProvisioningTemplate).deriveByUid("HSM_UID_ASM_001", BizType.TBOX_DEVICE_ROOT);
     }
 
     @Test

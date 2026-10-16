@@ -165,7 +165,7 @@ class PartImportPostProcessReplayAppServiceTest {
 
         appService = new PartImportPostProcessReplayAppService(
                 partImportDataRepository, replayRepository, fakeItemRepository,
-                new PartImportPostProcessReplayExtractor(), actionRegistry,
+                new PartImportPostProcessReplayExtractor(new PartCodeResolver()), actionRegistry,
                 partInfoRepository, vehiclePartRepository, mdmPartRepository, mdmVehicleNodeRepository,
                 vmdOutboxRepository, tx);
 

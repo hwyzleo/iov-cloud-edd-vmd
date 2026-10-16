@@ -3,7 +3,9 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.vid.impl;
 import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartCodeResolver;
 import net.hwyz.iov.cloud.framework.common.util.StrUtil;
 import org.springframework.stereotype.Component;
 
@@ -27,7 +29,10 @@ import java.util.Set;
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class PartImportPostProcessReplayExtractor {
+
+    private final PartCodeResolver partCodeResolver;
 
     /**
      * 候选实例
@@ -64,9 +69,7 @@ public class PartImportPostProcessReplayExtractor {
             for (Object item : items) {
                 JSONObject itemJson = JSONUtil.parseObj(item);
                 String sn = itemJson.getStr("SN");
-                String assemblyPartNo = itemJson.getStr("ASSEMBLY_PART_NO");
-                String hardwarePartNo = itemJson.getStr("HARDWARE_PART_NO");
-                String partCode = StrUtil.isNotBlank(assemblyPartNo) ? assemblyPartNo : hardwarePartNo;
+                String partCode = partCodeResolver.resolve(itemJson);
                 if (StrUtil.isBlank(partCode) || StrUtil.isBlank(sn)) {
                     log.warn("原始报文存在空零件编码或SN的记录，跳过");
                     continue;

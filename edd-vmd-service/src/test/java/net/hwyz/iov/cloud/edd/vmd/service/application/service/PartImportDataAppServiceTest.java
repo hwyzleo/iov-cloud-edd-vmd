@@ -80,6 +80,7 @@ class PartImportDataAppServiceTest {
                 partImportDataRepository, mdmPartRepository, mdmVehicleNodeRepository, partInboundAppService,
                 downstreamProcessorRegistry, partSecurityPresetAppService,
                 securityPresetPolicy, hsmUidFieldResolver, securityBizTypeResolver,
+                new PartCodeResolver(),
                 partImportPostProcessReplayRepository, partImportPostProcessReplayExtractor);
         // 默认不触发预置；具体能力/类别场景由各测试以更具体的 stub 覆盖
         lenient().when(securityPresetPolicy.decide(any(), any())).thenReturn(SecurityPresetDecision.PRESET_NOT_REQUIRED);
@@ -397,6 +398,58 @@ class PartImportDataAppServiceTest {
         
         // 验证下游处理器也被调用（与安全常量预置并列）
         verify(mockProcessor).process(eq(batchNum), eq("TBOX_001"), eq("TBOX_5G"), any(JSONObject.class));
+    }
+
+    @Test
+    @DisplayName("安全常量预置应使用ITEMS级总成零件号（ASSEMBLY_PART_NO），而非批次/硬件零件号")
+    void testPresetUsesItemAssemblyPartNo() throws Exception {
+        // 批次 partCode 与 HARDWARE_PART_NO 为硬件总成号，ITEMS 另携总成零件号
+        String batchNum = "TEST_BATCH_TBOX_ASM";
+        PartImportData importData = PartImportData.builder()
+                .id(1L)
+                .batchNum(batchNum)
+                .partCode("HW_TBOX_001")
+                .version("1.0")
+                .data("{\"REQUEST\":{\"HEAD\":{\"ACCOUNT\":\"SUP001\"},\"DATA\":{\"vehicleNodeCode\":\"TBOX_5G\",\"ITEMS\":[{\"SN\":\"SN001\",\"vehicleNodeCode\":\"TBOX_5G\",\"ASSEMBLY_PART_NO\":\"ASM_TBOX_001\",\"HARDWARE_PART_NO\":\"HW_TBOX_001\",\"HSM\":\"HSM_UID_001\"}]}}}")
+                .handle(false)
+                .build();
+
+        Part mdmPart = Part.builder()
+                .code("HW_TBOX_001")
+                .partType("TBOX")
+                .vehicleNodeCode("TBOX_5G")
+                .build();
+
+        DownstreamProcessor mockProcessor = mock(DownstreamProcessor.class);
+
+        when(partImportDataRepository.selectByBatchNum(batchNum)).thenReturn(importData);
+        when(mdmPartRepository.selectByCode("HW_TBOX_001")).thenReturn(mdmPart);
+        when(partInboundAppService.processInbound(any(), any(), any())).thenReturn(
+                PartInboundAppService.PartInboundResult.builder()
+                        .totalCount(1)
+                        .successCount(1)
+                        .failureCount(0)
+                        .build());
+        VehicleNode tbox5gNode = VehicleNode.builder()
+                .code("TBOX_5G")
+                .deviceCategory("TBOX")
+                .hsmCapability("HSM_FULL")
+                .build();
+        when(mdmVehicleNodeRepository.selectByCode("TBOX_5G")).thenReturn(tbox5gNode);
+        when(securityPresetPolicy.decide("HSM_FULL", "TBOX_5G")).thenReturn(SecurityPresetDecision.PRESET_REQUIRED);
+        when(securityBizTypeResolver.resolve("TBOX", null, "TBOX_5G")).thenReturn(BizType.TBOX_DEVICE_ROOT);
+        when(hsmUidFieldResolver.resolve(any())).thenReturn("HSM");
+        when(downstreamProcessorRegistry.getProcessor("TBOX_5G")).thenReturn(mockProcessor);
+
+        ImportResult result = partImportDataAppService.parsePartImportData(batchNum);
+
+        assertNotNull(result);
+        assertEquals(0, result.getFailureCount());
+        // 安全常量预置必须用 ITEMS 级总成零件号，保证与 part_info.part_code 同源
+        verify(partSecurityPresetAppService).preset(eq("ASM_TBOX_001"), eq("SN001"), eq("HSM_UID_001"),
+                eq(batchNum), eq("TBOX_5G"), eq(BizType.TBOX_DEVICE_ROOT));
+        verify(partSecurityPresetAppService, never()).preset(eq("HW_TBOX_001"), anyString(), anyString(),
+                anyString(), anyString(), any(BizType.class));
     }
 
     @Test

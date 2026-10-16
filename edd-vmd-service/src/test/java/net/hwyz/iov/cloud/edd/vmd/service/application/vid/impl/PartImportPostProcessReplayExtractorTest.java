@@ -1,5 +1,6 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.vid.impl;
 
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartCodeResolver;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -18,7 +19,8 @@ import static org.junit.jupiter.api.Assertions.*;
 @DisplayName("PartImportPostProcessReplayExtractor 测试")
 class PartImportPostProcessReplayExtractorTest {
 
-    private final PartImportPostProcessReplayExtractor extractor = new PartImportPostProcessReplayExtractor();
+    private final PartImportPostProcessReplayExtractor extractor =
+            new PartImportPostProcessReplayExtractor(new PartCodeResolver());
 
     private String buildData(String itemsJson) {
         return "{\"REQUEST\":{\"HEAD\":{\"ACCOUNT\":\"SUP001\"},\"DATA\":{\"ITEMS\":" + itemsJson + "}}}";
