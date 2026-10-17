@@ -186,27 +186,47 @@ public class BusinessKeyProvisioningBatchAppService {
             if (batch == null) {
                 return rejected(requestId, KeyprovConstants.ERR_STATE_NOT_ALLOWED, false, "并发开通冲突，请以原requestId重试");
             }
+            // 唯一未终结批次约束（uk_device_domain_open）：同设备+业务域存在其他 requestId 的未终结批次时，
+            // 不得以新 requestId 推进旧批次——否则 item/版本会聚合到旧批次、响应按新 requestId 取批次为空（fail-closed 拒绝）。
+            if (!requestId.equals(batch.getRequestId())) {
+                log.warn("keyprov 同设备业务域已存在未终结批次，拒绝新requestId: requestId={}, openRequestId={}, deviceSn={}, domain={}",
+                        requestId, batch.getRequestId(), identity.deviceSn(), domain);
+                return rejected(requestId, KeyprovConstants.ERR_STATE_NOT_ALLOWED, false,
+                        "同设备业务域存在未终结批次，请以原requestId继续");
+            }
         }
 
         Map<String, DerivedWrappedKey> derived;
         try {
             derived = prepareAndDerive(batch, request, identity, domain, normalizedVin, activeCert, requestId, fingerprintDigest);
         } catch (CryptoOperationOutcomeUnknownException e) {
+            log.warn("keyprov framework 派生/Wrap 结果未知（转待对账，以原requestId对账）: requestId={}, cause={}: {}",
+                    requestId, e.getClass().getSimpleName(), e.getMessage(), e);
             markBatchReconcile(batch, "framework派生/Wrap结果未知");
             return retryable(requestId, KeyprovConstants.ERR_UNAVAILABLE, "framework结果未知，需以原requestId对账");
         } catch (BusinessKeyDerivedProviderUnavailableException e) {
-            markBatchFailed(batch, truncate(e.getMessage()));
+            log.warn("keyprov 根派生门面未就绪（可同requestId重试）: requestId={}, cause={}: {}",
+                    requestId, e.getClass().getSimpleName(), e.getMessage(), e);
+            recordDependencyBlocked(batch, truncate(e.getMessage()));
             return retryable(requestId, KeyprovConstants.ERR_DERIVED_PROVIDER_NOT_READY, "根派生/Transit根能力未就绪");
         } catch (CryptoDependencyUnavailableException e) {
-            markBatchFailed(batch, truncate(e.getMessage()));
+            log.warn("keyprov 根派生依赖不可用（可同requestId重试）: requestId={}, cause={}: {}",
+                    requestId, e.getClass().getSimpleName(), e.getMessage(), e);
+            recordDependencyBlocked(batch, truncate(e.getMessage()));
             return retryable(requestId, KeyprovConstants.ERR_DERIVED_PROVIDER_NOT_READY, "根派生依赖不可用");
         } catch (BusinessKeyDerivationRejectedException e) {
+            log.warn("keyprov 派生被拒（不可重试）: requestId={}, cause={}: {}",
+                    requestId, e.getClass().getSimpleName(), e.getMessage());
             markBatchFailed(batch, truncate(e.getMessage()));
             return rejected(requestId, KeyprovConstants.ERR_DERIVATION_UNSUPPORTED, false, "派生参数/材料模型/锚不受支持，拒绝派生");
         } catch (KeyMaterialModelMismatchException e) {
+            log.warn("keyprov 材料模型不匹配（不可重试）: requestId={}, cause={}: {}",
+                    requestId, e.getClass().getSimpleName(), e.getMessage());
             markBatchFailed(batch, truncate(e.getMessage()));
             return rejected(requestId, KeyprovConstants.ERR_DERIVATION_UNSUPPORTED, false, "材料模型不匹配，拒绝派生");
         } catch (CryptoException e) {
+            log.warn("keyprov 业务密钥派生或封装失败（不可重试）: requestId={}, cause={}: {}",
+                    requestId, e.getClass().getSimpleName(), e.getMessage());
             markBatchFailed(batch, truncate(e.getMessage()));
             return rejected(requestId, KeyprovConstants.ERR_DERIVATION_UNSUPPORTED, false, "业务密钥派生或封装失败");
         }
@@ -281,22 +301,18 @@ public class BusinessKeyProvisioningBatchAppService {
                 }
                 newItem = false;
             } else {
-                DeviceBusinessKey active = deviceBusinessKeyRepository.selectActiveByContext(identity.deviceSn(), domain, purpose);
-                // 历史 ACTIVE 材料来源未知：禁止自动轮换/重建/迁移（VMD-DSN-CR-061 §7.3）
-                if (active != null && active.getMaterialModel() == null) {
-                    throw new BusinessKeyDerivationRejectedException(
-                            "历史ACTIVE业务密钥材料来源未知（material_model IS NULL），须走专项迁移批次，禁止自动轮换/重建: purpose="
-                                    + purpose);
-                }
-                BusinessKeyProvisioningIntent intent = domainService.deriveIntent(active,
-                        currentVersions.getOrDefault(purpose, 0L));
-                if (intent == BusinessKeyProvisioningIntent.REIMPORT && active != null) {
-                    // 复用既有 ACTIVE（同逻辑材料，收方/封装不同），不新建版本
-                    target = active;
+                // 依赖不可用等原因以原 requestId 重试：复用本请求已占位的 PENDING 目标版本，
+                // 保持 businessKeyVersion/operationId/幂等键稳定（Provider 侧幂等命中同一逻辑材料），
+                // 避免重试遗留孤儿 PENDING 与版本跳号（VMD-DSN-CR-061 RD-061-5）。
+                DeviceBusinessKey reserved = deviceBusinessKeyRepository
+                        .selectByRequestIdAndPurpose(requestId, purpose);
+                if (reserved != null && reserved.getKeyState() == BusinessKeyState.PENDING) {
+                    target = reserved;
+                    newItem = true;
                 } else {
-                    target = createPendingVersion(identity, domain, purpose, requestId);
+                    target = acquireNewTarget(identity, domain, purpose, requestId, currentVersions);
+                    newItem = true;
                 }
-                newItem = true;
             }
 
             // 历史材料来源未知（material_model IS NULL）：禁止自动派生/迁移/轮换
@@ -350,6 +366,29 @@ public class BusinessKeyProvisioningBatchAppService {
         log.info("keyprov 批次进入WAIT_DEVICE_ACK（根派生）: requestId={}, deviceSn={}, domain={}",
                 batch.getRequestId(), identity.deviceSn(), domain);
         return derived;
+    }
+
+    /**
+     * 为新用途解析目标目录版本：复用既有 ACTIVE（REIMPORT）或占位新 PENDING 版本。
+     * <p>
+     * 历史 {@code material_model IS NULL} 的 ACTIVE 禁止自动轮换/重建/迁移（VMD-DSN-CR-061 §7.3）。
+     */
+    private DeviceBusinessKey acquireNewTarget(BoundDeviceIdentity identity, String domain, String purpose,
+                                               String requestId, Map<String, Long> currentVersions) {
+        DeviceBusinessKey active = deviceBusinessKeyRepository.selectActiveByContext(identity.deviceSn(), domain, purpose);
+        // 历史 ACTIVE 材料来源未知：禁止自动轮换/重建/迁移（VMD-DSN-CR-061 §7.3）
+        if (active != null && active.getMaterialModel() == null) {
+            throw new BusinessKeyDerivationRejectedException(
+                    "历史ACTIVE业务密钥材料来源未知（material_model IS NULL），须走专项迁移批次，禁止自动轮换/重建: purpose="
+                            + purpose);
+        }
+        BusinessKeyProvisioningIntent intent = domainService.deriveIntent(active,
+                currentVersions.getOrDefault(purpose, 0L));
+        if (intent == BusinessKeyProvisioningIntent.REIMPORT && active != null) {
+            // 复用既有 ACTIVE（同逻辑材料，收方/封装不同），不新建版本
+            return active;
+        }
+        return createPendingVersion(identity, domain, purpose, requestId);
     }
 
     private DeviceBusinessKey createPendingVersion(BoundDeviceIdentity identity, String domain, String purpose,
@@ -468,6 +507,25 @@ public class BusinessKeyProvisioningBatchAppService {
             builder.setValidToMs(toEpochMs(directory.getValidTo()));
         }
         return builder.build();
+    }
+
+    /**
+     * 记录确定性可重试的依赖不可用原因：批次保持未终结（PREPARING）、目标版本保持 PENDING，
+     * 以便车端按 {@code RETRY_SAME_REQUEST_ID} 以原 requestId 重新派生（VMD-DSN-CR-061 RD-061-5）。
+     * <p>
+     * 不终态化、不置目标版本 FAILED：若终态化，同 requestId 重试将因批次不可推进被拒（806094），
+     * 车端陷入死循环；若置 FAILED，重试复用的目标版本将无法再推进到 ACTIVE。
+     */
+    private void recordDependencyBlocked(BusinessKeyProvisioning batch, String reason) {
+        tx().executeWithoutResult(status -> {
+            BusinessKeyProvisioning current = provisioningRepository.selectById(batch.getId());
+            if (current == null || !current.getStatus().isOpen()) {
+                return;
+            }
+            current.noteDependencyBlocked(reason);
+            current.setModifyTime(LocalDateTime.now());
+            provisioningRepository.update(current);
+        });
     }
 
     private void markBatchReconcile(BusinessKeyProvisioning batch, String reason) {

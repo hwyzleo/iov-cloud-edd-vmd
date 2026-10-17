@@ -7,7 +7,8 @@ import java.util.Arrays;
  * <p>
  * VMD 权威维护多用途 V2C 开通批次生命周期：
  * <ul>
- *   <li>PREPARING：批次已创建，用途版本创建/解析与设备证书 Wrap 进行中</li>
+ *   <li>PREPARING：批次已创建，用途版本创建/解析与设备证书 Wrap 进行中；根派生依赖不可用（806107）
+ *       时可保持未终结，供车端以原 requestId 重试（不因可重试失败终态化）</li>
  *   <li>WAIT_DEVICE_ACK：两用途已下发，等待 TBOX 件内导入 ACK</li>
  *   <li>COMPLETED：完整 ACK 成功，目标版本已原子切换 ACTIVE（终态）</li>
  *   <li>FAILED：明确不可恢复失败（终态，不发成功事件）</li>

@@ -124,9 +124,25 @@ public class BusinessKeyProvisioning extends BaseDo<Long> {
 
     /**
      * 推进到等待设备导入确认（两用途创建/解析并完成 Wrap）
+     * <p>
+     * 批次已成功推进，清除上一次可重试失败留下的原因，避免对账时读到过期原因。
      */
     public void markWaitDeviceAck() {
         this.status = BusinessKeyProvisioningState.WAIT_DEVICE_ACK;
+        this.failReason = null;
+    }
+
+    /**
+     * 记录确定性可重试的依赖不可用原因，批次保持未终结（PREPARING），以便车端按
+     * {@code RETRY_SAME_REQUEST_ID} 以原 requestId 重新派生（VMD-DSN-CR-061 RD-061-5）。
+     * <p>
+     * 与 {@link #markFailed(String)} 的终态语义严格区分：根派生/Transit 根依赖不可用是可恢复失败，
+     * 不得把批次终态化——否则同 requestId 重试会因状态不可推进被拒（806094），车端陷入死循环。
+     *
+     * @param reason 非敏感失败原因（Provider 分类文案，不含密钥材料）
+     */
+    public void noteDependencyBlocked(String reason) {
+        this.failReason = reason;
     }
 
     /**

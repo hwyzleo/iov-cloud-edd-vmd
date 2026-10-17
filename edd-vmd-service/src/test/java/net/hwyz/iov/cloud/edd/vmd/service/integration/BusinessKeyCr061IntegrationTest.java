@@ -9,6 +9,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.service.KeyprovAuthenticat
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.KeyprovConstants;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.VmdErrorCode;
 import net.hwyz.iov.cloud.framework.security.crypto.KeyProvisioningTemplate;
+import net.hwyz.iov.cloud.framework.security.crypto.exception.CryptoDependencyUnavailableException;
 import net.hwyz.iov.cloud.framework.security.crypto.model.DerivedWrappedKey;
 import net.hwyz.iov.security.keyprov.v1.KeyImportItemResult;
 import net.hwyz.iov.security.keyprov.v1.KeyImportResult;
@@ -38,6 +39,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -280,6 +282,61 @@ class BusinessKeyCr061IntegrationTest extends BaseTest {
                 "SELECT COUNT(*) FROM tb_device_business_key WHERE device_sn = ? AND business_domain = ?",
                 Integer.class, DEVICE_SN, DOMAIN);
         assertEquals(2, rows, "同 requestId 只应有两用途各一行");
+    }
+
+    @Test
+    @DisplayName("根派生依赖不可用 → 806107 可重试：批次保持 PREPARING、版本保持 PENDING，同 requestId 重试复用同版本成功")
+    void provision_dependencyUnavailable_retrySameRequestId_reusesReservedVersion() {
+        String requestId = "CR061_REQ_005";
+        when(keyProvisioningTemplate.deriveAndWrap(any(), any(), any(), any(), any(), any(), any()))
+                .thenThrow(new CryptoDependencyUnavailableException(
+                        "derive and wrap derived key unavailable (request not sent)"));
+
+        KeyProvisioningOperationResult first = requestOperation(requestId, HSM_UID);
+        assertEquals(VmdKeyProvisioningOutcome.UNAVAILABLE, first.getOutcome(), "依赖不可用应为 UNAVAILABLE（非结果未知）");
+        assertEquals(VmdErrorCode.KEYPROV_DERIVED_PROVIDER_NOT_READY, first.getErrorCode(), "应映射为 806107");
+        assertTrue(first.isRetryable());
+        assertEquals("RETRY_SAME_REQUEST_ID", first.getAction());
+
+        var batchRow = jdbcTemplate.queryForMap(
+                "SELECT status, fail_reason FROM tb_business_key_provisioning WHERE request_id = ?", requestId);
+        assertEquals("PREPARING", batchRow.get("status"), "可重试依赖失败不得终态化批次（否则同 requestId 重试被拒 806094）");
+        assertNotNull(batchRow.get("fail_reason"), "应记录依赖不可用原因供诊断");
+        assertEquals(0, countKeys("FAILED"), "可重试依赖失败不得把目标版本置 FAILED");
+        Long reservedVersion = jdbcTemplate.queryForObject(
+                "SELECT business_key_version FROM tb_device_business_key WHERE device_sn = ? AND purpose = 'UPLINK_AEAD'",
+                Long.class, DEVICE_SN);
+        assertNotNull(reservedVersion, "应保留本次请求占位的目标版本");
+
+        // 依赖恢复：以原 requestId 重试（当前桩会抛异常，须用 doAnswer 改写行为）
+        doAnswer(inv -> {
+            int n = deriveCount.incrementAndGet();
+            return new DerivedWrappedKey("CR061-KEY-" + n, "kms/ref/CR061-KEY-" + n, ROOT_KEY_VERSION, DERIVATION_VERSION,
+                    new byte[]{1, 2, 3}, "RSA-OAEP-SHA256", new byte[]{9}, inv.getArgument(5));
+        }).when(keyProvisioningTemplate).deriveAndWrap(any(), any(), any(), any(), any(), any(), any());
+        KeyProvisioningResponse retry = requestResponse(requestId, HSM_UID);
+
+        assertEquals(2, retry.getItemsCount(), "重试应完成两用途下发");
+        assertEquals(2, jdbcTemplate.queryForObject(
+                        "SELECT COUNT(*) FROM tb_device_business_key WHERE device_sn = ? AND business_domain = ?",
+                        Integer.class, DEVICE_SN, DOMAIN),
+                "重试应复用预留版本，不新建版本、不遗留孤儿 PENDING");
+        assertEquals(reservedVersion, jdbcTemplate.queryForObject(
+                        "SELECT business_key_version FROM tb_device_business_key WHERE device_sn = ? AND purpose = 'UPLINK_AEAD'",
+                        Long.class, DEVICE_SN),
+                "同 requestId 重试应复用同一 businessKeyVersion（operationId/幂等键稳定）");
+        assertEquals("WAIT_DEVICE_ACK", jdbcTemplate.queryForObject(
+                        "SELECT status FROM tb_business_key_provisioning WHERE request_id = ?", String.class, requestId),
+                "重试成功应推进批次");
+        assertEquals(0, countKeys("FAILED"), "重试成功后不遗留 FAILED 目标版本");
+        assertEquals(KeyProvisioningStatus.KEY_PROVISIONING_STATUS_ACK_PENDING,
+                statusResponse(requestId).getStatus(), "Status 应返回 ACK_PENDING");
+    }
+
+    private int countKeys(String keyState) {
+        return jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM tb_device_business_key WHERE device_sn = ? AND business_domain = ? AND key_state = ?",
+                Integer.class, DEVICE_SN, DOMAIN, keyState);
     }
 
     @Test

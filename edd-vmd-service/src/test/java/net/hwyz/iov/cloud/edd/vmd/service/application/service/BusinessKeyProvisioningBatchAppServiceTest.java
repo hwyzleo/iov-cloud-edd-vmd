@@ -5,11 +5,13 @@ import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyDerivedPro
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.BusinessKeyProvisioning;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.BusinessKeyProvisioningItem;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.DeviceBusinessKey;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.BusinessKeyProvisioningState;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.BusinessKeyState;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.BusinessKeyProvisioningItemRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.BusinessKeyProvisioningRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.DeviceBusinessKeyRepository;
 import net.hwyz.iov.cloud.framework.security.crypto.KeyProvisioningTemplate;
+import net.hwyz.iov.cloud.framework.security.crypto.exception.CryptoDependencyUnavailableException;
 import net.hwyz.iov.cloud.framework.security.crypto.exception.CryptoOperationOutcomeUnknownException;
 import net.hwyz.iov.cloud.framework.security.crypto.model.BizType;
 import net.hwyz.iov.cloud.framework.security.crypto.model.DerivationContext;
@@ -28,6 +30,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionStatus;
@@ -35,9 +38,11 @@ import org.springframework.transaction.TransactionStatus;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -136,7 +141,10 @@ class BusinessKeyProvisioningBatchAppServiceTest {
         });
         lenient().when(provisioningRepository.update(any())).thenReturn(1);
         lenient().when(provisioningRepository.selectById(any())).thenAnswer(inv -> batchRef);
-        lenient().when(provisioningRepository.selectByRequestId(any())).thenAnswer(inv -> batchRef);
+        lenient().when(provisioningRepository.selectByRequestId(any())).thenAnswer(inv -> {
+            String reqId = inv.getArgument(0);
+            return batchRef != null && reqId.equals(batchRef.getRequestId()) ? batchRef : null;
+        });
 
         lenient().when(provisioningItemRepository.insert(any(BusinessKeyProvisioningItem.class))).thenAnswer(inv -> {
             BusinessKeyProvisioningItem item = inv.getArgument(0);
@@ -176,9 +184,13 @@ class BusinessKeyProvisioningBatchAppServiceTest {
     }
 
     private KeyProvisioningRequest request() {
+        return request(REQUEST_ID);
+    }
+
+    private KeyProvisioningRequest request(String requestId) {
         return KeyProvisioningRequest.newBuilder()
-                .setRequestId(REQUEST_ID)
-                .setIdempotencyKey("IK-" + REQUEST_ID)
+                .setRequestId(requestId)
+                .setIdempotencyKey("IK-" + requestId)
                 .setBusinessDomain(DOMAIN)
                 .addPurposes(net.hwyz.iov.security.keyprov.v1.KeyPurpose.KEY_PURPOSE_UPLINK_AEAD)
                 .addPurposes(net.hwyz.iov.security.keyprov.v1.KeyPurpose.KEY_PURPOSE_DOWNLINK_AEAD)
@@ -303,7 +315,7 @@ class BusinessKeyProvisioningBatchAppServiceTest {
     }
 
     @Test
-    @DisplayName("根派生 Provider 未就绪 → 可重试 806107，目标版本置 FAILED，不降级")
+    @DisplayName("根派生 Provider 未就绪 → 可重试 806107，批次保持 PREPARING（不终态化、不降级）")
     void provision_providerNotReady_retryable() {
         when(boundDeviceIdentityResolver.resolveByHsmUid(HSM_UID, null)).thenReturn(identity);
         doThrow(new BusinessKeyDerivedProviderUnavailableException("Transit root 未就绪"))
@@ -315,8 +327,86 @@ class BusinessKeyProvisioningBatchAppServiceTest {
         assertEquals(KeyprovConstants.ERR_DERIVED_PROVIDER_NOT_READY, response.getError().getCode());
         assertTrue(response.getError().getRetryable());
         assertEquals("RETRY_SAME_REQUEST_ID", response.getError().getAction());
-        assertTrue(keyStore.values().stream().anyMatch(k -> k.getKeyState() == BusinessKeyState.FAILED),
-                "目标版本应留痕 FAILED");
+        // 关键：retryable=true 必须与批次状态自洽——批次不可终态化，否则同 requestId 重试被拒（806094）
+        assertEquals(BusinessKeyProvisioningState.PREPARING, batchRef.getStatus());
+        assertNotNull(batchRef.getFailReason(), "应记录依赖不可用原因供诊断/对账");
+        assertEquals(0, itemStore.size(), "派生前失败不落 item");
+        assertEquals(1, keyStore.size(), "应保留本次请求占位的目标版本");
+        assertTrue(keyStore.values().stream().allMatch(k -> k.getKeyState() == BusinessKeyState.PENDING),
+                "可重试依赖失败不得把目标版本置 FAILED（重试仍复用该版本）");
+    }
+
+    @Test
+    @DisplayName("依赖不可用后以原 requestId 重试：复用预留版本 + 同 operationId 重派生并推进 WAIT_DEVICE_ACK")
+    void provision_dependencyUnavailable_thenRetrySameRequestId_succeeds() {
+        when(boundDeviceIdentityResolver.resolveByHsmUid(HSM_UID, null)).thenReturn(identity);
+        AtomicInteger attempts = new AtomicInteger();
+        when(derivedTemplate.deriveAndWrap(any(), any(), any(), any(), any(), any(), any())).thenAnswer(inv -> {
+            if (attempts.getAndIncrement() == 0) {
+                throw new CryptoDependencyUnavailableException(
+                        "derive and wrap derived key unavailable (request not sent)");
+            }
+            KeyPurpose purpose = inv.getArgument(2);
+            return new DerivedWrappedKey("KEY-" + purpose.name(), "kms/ref/" + purpose.name(), 3, "v1",
+                    new byte[]{1, 2, 3}, "RSA-OAEP-SHA256", new byte[]{9}, inv.getArgument(5));
+        });
+
+        KeyProvisioningRequest request = request();
+        KeyProvisioningResponse first = service.provision(request, ctx());
+        assertEquals(KeyProvisioningResult.KEY_PROVISIONING_RESULT_RETRYABLE_FAILURE, first.getResult());
+        assertEquals(BusinessKeyProvisioningState.PREPARING, batchRef.getStatus());
+
+        KeyProvisioningResponse second = service.provision(request, ctx());
+
+        assertEquals(KeyProvisioningResult.KEY_PROVISIONING_RESULT_SUCCEEDED, second.getResult());
+        assertEquals(2, second.getItemsCount(), "重试应完成两用途下发");
+        assertEquals(BusinessKeyProvisioningState.WAIT_DEVICE_ACK, batchRef.getStatus());
+        assertNull(batchRef.getFailReason(), "推进成功后应清除可重试失败原因");
+        assertEquals(2, keyStore.size(), "重试应复用预留版本，不新建版本、不遗留孤儿 PENDING");
+        assertTrue(keyStore.values().stream()
+                        .allMatch(k -> k.getKeyState() == BusinessKeyState.PENDING && k.getKeyId() != null),
+                "重试补全预留版本材料并保持 PENDING");
+        assertEquals(2, itemStore.size());
+
+        // 同 requestId + 同版本 → operationId 必须稳定（Provider 幂等命中同一逻辑材料）
+        ArgumentCaptor<KeyPurpose> purposeCaptor = ArgumentCaptor.forClass(KeyPurpose.class);
+        ArgumentCaptor<String> opIdCaptor = ArgumentCaptor.forClass(String.class);
+        verify(derivedTemplate, times(3)).deriveAndWrap(any(), any(), purposeCaptor.capture(), any(), any(),
+                opIdCaptor.capture(), any());
+        Map<KeyPurpose, Set<String>> opIdsByPurpose = new HashMap<>();
+        for (int i = 0; i < purposeCaptor.getAllValues().size(); i++) {
+            opIdsByPurpose.computeIfAbsent(purposeCaptor.getAllValues().get(i), k -> new HashSet<>())
+                    .add(opIdCaptor.getAllValues().get(i));
+        }
+        assertEquals(1, opIdsByPurpose.get(KeyPurpose.UPLINK_AEAD).size(),
+                "同 requestId 同版本 operationId 必须稳定");
+    }
+
+    @Test
+    @DisplayName("同设备业务域存在其他 requestId 未终结批次 → 拒绝新 requestId，不复用旧批次")
+    void provision_newRequestIdWhileOtherOpenBatchExists_rejected() {
+        when(boundDeviceIdentityResolver.resolveByHsmUid(HSM_UID, null)).thenReturn(identity);
+        doThrow(new CryptoDependencyUnavailableException("derive and wrap derived key unavailable (request not sent)"))
+                .when(derivedTemplate).deriveAndWrap(any(), any(), any(), any(), any(), any(), any());
+        assertEquals(KeyProvisioningResult.KEY_PROVISIONING_RESULT_RETRYABLE_FAILURE,
+                service.provision(request(), ctx()).getResult(), "首次申请依赖不可用，批次保持未终结");
+        BusinessKeyProvisioning open = batchRef;
+        assertEquals(BusinessKeyProvisioningState.PREPARING, open.getStatus());
+
+        // 新 requestId 撞唯一未终结批次约束 uk_device_domain_open：insert 冲突 + 查到旧未终结批次
+        when(provisioningRepository.insert(any(BusinessKeyProvisioning.class)))
+                .thenThrow(new DuplicateKeyException("uk_device_domain_open"));
+        when(provisioningRepository.selectOpenByDeviceAndDomain(DEVICE_SN, DOMAIN)).thenReturn(open);
+
+        KeyProvisioningResponse response = service.provision(request("V2C-REQ-0002"), ctx());
+
+        assertEquals(KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED, response.getResult());
+        assertEquals(KeyprovConstants.ERR_STATE_NOT_ALLOWED, response.getError().getCode());
+        assertFalse(response.getError().getRetryable());
+        assertTrue(response.getError().getMessage().contains("原requestId"), "应引导以原 requestId 继续");
+        assertEquals(1, keyStore.size(), "不得为新 requestId 落任何目录版本");
+        assertEquals(0, itemStore.size(), "不得把新 requestId 的 item 聚合到旧批次");
+        verify(derivedTemplate, times(1)).deriveAndWrap(any(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -330,7 +420,6 @@ class BusinessKeyProvisioningBatchAppServiceTest {
 
         assertEquals(KeyProvisioningResult.KEY_PROVISIONING_RESULT_RETRYABLE_FAILURE, response.getResult());
         assertEquals(KeyprovConstants.ERR_UNAVAILABLE, response.getError().getCode());
-        assertEquals(net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.BusinessKeyProvisioningState.RECONCILE_REQUIRED,
-                batchRef.getStatus());
+        assertEquals(BusinessKeyProvisioningState.RECONCILE_REQUIRED, batchRef.getStatus());
     }
 }

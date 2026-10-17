@@ -138,6 +138,8 @@ vmd:
       ack-timeout-seconds: ${VMD_BUSINESS_KEY_ACK_TIMEOUT_SECONDS:900}
       # RECONCILE_REQUIRED 告警与对账阈值（秒，独立于 ACK 短 TTL，不直接过期）
       reconcile-alert-seconds: ${VMD_BUSINESS_KEY_RECONCILE_ALERT_SECONDS:86400}
+      # PREPARING 滞留告警阈值（秒，根派生依赖不可用待同requestId重试，不直接过期）
+      preparing-alert-seconds: ${VMD_BUSINESS_KEY_PREPARING_ALERT_SECONDS:86400}
     maintenance:
       scheduler:
         enabled: ${VMD_BUSINESS_KEY_MAINTENANCE_ENABLED:true}

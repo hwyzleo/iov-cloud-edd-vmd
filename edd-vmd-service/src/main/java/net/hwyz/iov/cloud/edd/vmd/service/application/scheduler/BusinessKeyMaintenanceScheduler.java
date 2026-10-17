@@ -33,6 +33,9 @@ public class BusinessKeyMaintenanceScheduler {
     @Value("${vmd.business-key.provisioning.reconcile-alert-seconds:86400}")
     private long reconcileAlertSeconds;
 
+    @Value("${vmd.business-key.provisioning.preparing-alert-seconds:86400}")
+    private long preparingAlertSeconds;
+
     /**
      * 每日凌晨 2 点扫批（可配置）
      */
@@ -50,8 +53,8 @@ public class BusinessKeyMaintenanceScheduler {
     }
 
     /**
-     * 周期扫描开通批次：WAIT_DEVICE_ACK 超时转 EXPIRED；RECONCILE_REQUIRED 超阈值告警（CR-058 §8）。
-     * <p>两者使用不同 TTL，对账状态不直接过期；不生成伪成功事件。
+     * 周期扫描开通批次：WAIT_DEVICE_ACK 超时转 EXPIRED；PREPARING / RECONCILE_REQUIRED 超阈值告警（CR-058 §8 / CR-061 §10）。
+     * <p>三者使用不同 TTL，准备中/对账状态不直接过期；不生成伪成功事件。
      */
     @Scheduled(cron = "${vmd.business-key.maintenance.scheduler.provisioning-cron:0 */10 * * * ?}")
     public void scanProvisioningBatches() {
@@ -60,8 +63,11 @@ public class BusinessKeyMaintenanceScheduler {
             int expired = businessKeyMaintenanceAppService.expireStaleAckBatches(ackCutoff, batchSize);
             java.time.LocalDateTime reconcileCutoff = java.time.LocalDateTime.now().minusSeconds(reconcileAlertSeconds);
             int alerted = businessKeyMaintenanceAppService.alertStaleReconcileBatches(reconcileCutoff, batchSize);
-            if (expired > 0 || alerted > 0) {
-                log.info("业务密钥开通批次扫描完成: expired={}, reconcilesAlerted={}", expired, alerted);
+            java.time.LocalDateTime preparingCutoff = java.time.LocalDateTime.now().minusSeconds(preparingAlertSeconds);
+            int preparingAlerted = businessKeyMaintenanceAppService.alertStalePreparingBatches(preparingCutoff, batchSize);
+            if (expired > 0 || alerted > 0 || preparingAlerted > 0) {
+                log.info("业务密钥开通批次扫描完成: expired={}, reconcilesAlerted={}, preparingsAlerted={}",
+                        expired, alerted, preparingAlerted);
             }
         } catch (Exception e) {
             log.error("业务密钥开通批次扫描异常", e);

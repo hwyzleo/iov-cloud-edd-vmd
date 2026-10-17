@@ -147,6 +147,30 @@ public class BusinessKeyMaintenanceAppService {
     }
 
     /**
+     * PREPARING 超阈值告警（CR-061 §10）。
+     * <p>
+     * 依赖不可用（如 Transit 根/KMS 不可用，806107）时批次保持 PREPARING 未终结，供车端以原
+     * requestId 重试；同一「设备+业务域」在批次终结前不接受新的 requestId。因此长期滞留的
+     * PREPARING 必须显式告警供运维介入（依赖恢复/治理清理），与 {@code RECONCILE_REQUIRED}
+     * 一致只告警、不直接过期，不生成伪成功事件。
+     *
+     * @param cutoff 告警阈值
+     * @param limit  批量上限
+     * @return 告警批次数
+     */
+    public int alertStalePreparingBatches(LocalDateTime cutoff, int limit) {
+        List<BusinessKeyProvisioning> batches = businessKeyProvisioningRepository.selectListByStatusBefore(
+                BusinessKeyProvisioningState.PREPARING, cutoff, limit);
+        for (BusinessKeyProvisioning batch : batches) {
+            log.error("业务密钥开通批次准备中滞留超阈值告警（根派生依赖不可用待重试）: requestId={}, deviceSn={}, domain={}, "
+                            + "modifyTime={}, failReason={}",
+                    batch.getRequestId(), batch.getDeviceSn(), batch.getBusinessDomain(), batch.getModifyTime(),
+                    batch.getFailReason());
+        }
+        return batches.size();
+    }
+
+    /**
      * RECONCILE_REQUIRED 超阈值告警（CR-058 §8）。
      * <p>对账状态不与普通 ACK 超时共用短 TTL，仅输出结构化告警，不直接过期。
      *
