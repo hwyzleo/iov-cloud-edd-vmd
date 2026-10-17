@@ -241,6 +241,111 @@ class KeyProvisioningApplicationFacadeTest {
                 VmdErrorCode.KEYPROV_PROVIDER_NOT_READY, VmdKeyProvisioningOutcome.UNAVAILABLE, true);
     }
 
+    @Test
+    @DisplayName("门禁拒绝(806094) 仍返回 canonical Response：requestId 最佳努力回填，车端可据 requestId 收敛")
+    void gateRejectionCarriesCanonicalPayload() throws Exception {
+        byte[] payload = requestPayload("R1");
+        // 摘要不匹配：payloadType/schemaVersion 合法、payload 本身可解析 → 可回填 requestId
+        KeyProvisioningOperationResult result = facade.request(CALLER, ctx(),
+                KeyprovConstants.PAYLOAD_TYPE_REQUEST, "keyprov-v1", payload, "deadbeef");
+        assertEquals(VmdErrorCode.KEYPROV_REQUEST_INVALID, result.getErrorCode());
+        assertEquals(KeyprovConstants.PAYLOAD_TYPE_RESPONSE, result.getDownlinkPayloadType());
+        KeyProvisioningResponse response = decodeResponse(result);
+        assertEquals("R1", response.getRequestId());
+        assertEquals(KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED, response.getResult());
+        assertTrue(response.hasError());
+        assertEquals(KeyprovConstants.ERR_PROTOCOL_INVALID, response.getError().getCode());
+        assertFalse(response.getError().getRetryable());
+        assertEquals("DO_NOT_RETRY", response.getError().getAction());
+    }
+
+    @Test
+    @DisplayName("业务拒绝透传精确协议错误码与 result，不降级为通用 806094 语义")
+    void businessRejectionKeepsPreciseProtocolSemantics() throws Exception {
+        byte[] payload = requestPayload("R1");
+        when(batchAppService.provision(any(KeyProvisioningRequest.class), any(KeyprovAuthenticatedContext.class)))
+                .thenReturn(rejectedResponse("R1", KeyprovConstants.ERR_ITEM_MISMATCH));
+        KeyProvisioningOperationResult result = facade.request(CALLER, ctx(),
+                KeyprovConstants.PAYLOAD_TYPE_REQUEST, "keyprov-v1", payload, digest(payload));
+        // VAGW 侧稳定码：ITEM_MISMATCH 归入 806094
+        assertEquals(VmdErrorCode.KEYPROV_REQUEST_INVALID, result.getErrorCode());
+        KeyProvisioningResponse response = decodeResponse(result);
+        assertEquals("R1", response.getRequestId());
+        assertEquals(KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED, response.getResult());
+        // 车端侧保持业务精确码，不被降级
+        assertEquals(KeyprovConstants.ERR_ITEM_MISMATCH, response.getError().getCode());
+    }
+
+    @Test
+    @DisplayName("依赖类失败返回可重试 canonical payload（result=RETRYABLE_FAILURE, action=RETRY_SAME_REQUEST_ID）")
+    void dependencyFailureCarriesRetryableCanonicalPayload() throws Exception {
+        byte[] payload = requestPayload("R1");
+        when(batchAppService.provision(any(KeyProvisioningRequest.class), any(KeyprovAuthenticatedContext.class)))
+                .thenThrow(new CryptoDependencyUnavailableException("kms down"));
+        KeyProvisioningOperationResult result = facade.request(CALLER, ctx(),
+                KeyprovConstants.PAYLOAD_TYPE_REQUEST, "keyprov-v1", payload, digest(payload));
+        assertEquals(VmdKeyProvisioningOutcome.UNAVAILABLE, result.getOutcome());
+        KeyProvisioningResponse response = decodeResponse(result);
+        assertEquals(KeyProvisioningResult.KEY_PROVISIONING_RESULT_RETRYABLE_FAILURE, response.getResult());
+        assertTrue(response.getError().getRetryable());
+        assertEquals(KeyprovConstants.ERR_UNAVAILABLE, response.getError().getCode());
+        assertEquals("RETRY_SAME_REQUEST_ID", response.getError().getAction());
+    }
+
+    @Test
+    @DisplayName("ACK/Status 拒绝分别返回 AckResult/StatusResponse canonical payload")
+    void ackAndStatusRejectionsCarryCanonicalPayload() throws Exception {
+        byte[] ackPayload = KeyProvisioningAck.newBuilder().setRequestId("R1").build().toByteArray();
+        when(ackAppService.confirmImport(any(KeyProvisioningAck.class), any(KeyprovAuthenticatedContext.class)))
+                .thenReturn(KeyProvisioningAckResult.newBuilder()
+                        .setRequestId("R1")
+                        .setResult(KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED)
+                        .setError(ProtocolError.newBuilder()
+                                .setCode(KeyprovConstants.ERR_ACK_CONFLICT).setMessage("x").build())
+                        .build());
+        KeyProvisioningOperationResult ackResult = facade.ack(CALLER, ctx(),
+                KeyprovConstants.PAYLOAD_TYPE_ACK, "keyprov-v1", ackPayload, digest(ackPayload));
+        assertEquals(KeyprovConstants.PAYLOAD_TYPE_ACK_RESULT, ackResult.getDownlinkPayloadType());
+        KeyProvisioningAckResult ack = KeyProvisioningAckResult.parseFrom(ackResult.getDownlinkPayload());
+        assertEquals("R1", ack.getRequestId());
+        assertEquals(KeyprovConstants.ERR_ACK_CONFLICT, ack.getError().getCode());
+
+        byte[] statusPayload = KeyProvisioningStatusRequest.newBuilder().setRequestId("R1").build().toByteArray();
+        when(statusAppService.queryStatus(any(KeyProvisioningStatusRequest.class), any(KeyprovAuthenticatedContext.class)))
+                .thenReturn(KeyProvisioningStatusResponse.newBuilder()
+                        .setRequestId("R1")
+                        .setError(ProtocolError.newBuilder()
+                                .setCode(KeyprovConstants.ERR_NOT_FOUND).setMessage("x").build())
+                        .build());
+        KeyProvisioningOperationResult statusResult = facade.status(CALLER, ctx(),
+                KeyprovConstants.PAYLOAD_TYPE_STATUS_REQUEST, "keyprov-v1", statusPayload, digest(statusPayload));
+        assertEquals(KeyprovConstants.PAYLOAD_TYPE_STATUS_RESPONSE, statusResult.getDownlinkPayloadType());
+        KeyProvisioningStatusResponse status = KeyProvisioningStatusResponse.parseFrom(statusResult.getDownlinkPayload());
+        assertEquals("R1", status.getRequestId());
+        assertEquals(KeyprovConstants.ERR_NOT_FOUND, status.getError().getCode());
+        // StatusResponse 无 result 字段
+        assertEquals(VmdErrorCode.KEYPROV_BATCH_NOT_FOUND, statusResult.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("无法回填 requestId 时仍返回 canonical payload（request_id 为空，由 VAGW envelope 关联）")
+    void unparseablePayloadStillCarriesCanonicalPayload() throws Exception {
+        byte[] payload = new byte[] {(byte) 0xFF, (byte) 0xFE, 0x01};
+        KeyProvisioningOperationResult result = facade.request(CALLER, ctx(),
+                KeyprovConstants.PAYLOAD_TYPE_REQUEST, "keyprov-v1", payload, digest(payload));
+        assertEquals(VmdErrorCode.KEYPROV_REQUEST_INVALID, result.getErrorCode());
+        KeyProvisioningResponse response = decodeResponse(result);
+        assertEquals("", response.getRequestId());
+        assertEquals(KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED, response.getResult());
+        assertEquals(KeyprovConstants.ERR_PROTOCOL_INVALID, response.getError().getCode());
+    }
+
+    private KeyProvisioningResponse decodeResponse(KeyProvisioningOperationResult result) throws Exception {
+        assertNotNull(result.getDownlinkPayload(), "非成功结果必须携带 canonical 下行 payload");
+        assertEquals(digest(result.getDownlinkPayload()), result.getDownlinkPayloadDigest());
+        return KeyProvisioningResponse.parseFrom(result.getDownlinkPayload());
+    }
+
     private void assertCertificateMapping(byte[] payload, RuntimeException ex, VmdErrorCode expectedCode,
                                           VmdKeyProvisioningOutcome expectedOutcome, boolean expectedRetryable) {
         when(batchAppService.provision(any(KeyProvisioningRequest.class), any(KeyprovAuthenticatedContext.class)))
@@ -252,5 +357,7 @@ class KeyProvisioningApplicationFacadeTest {
         assertEquals(expectedOutcome, result.getOutcome(), label);
         assertEquals(expectedRetryable, result.isRetryable(), label);
         assertEquals("R1", result.getRequestId(), "原 requestId 必须透传: " + label);
+        assertNotNull(result.getDownlinkPayload(), "证书/Provider 失败必须返回 canonical 下行 payload: " + label);
+        assertEquals(KeyprovConstants.PAYLOAD_TYPE_RESPONSE, result.getDownlinkPayloadType(), label);
     }
 }

@@ -5,6 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.service.VmdKeyProvisioningService;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.keyprov.VmdKeyProvisioningAckRequest;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.keyprov.VmdKeyProvisioningAckResult;
+import net.hwyz.iov.cloud.edd.vmd.api.vo.keyprov.VmdKeyProvisioningError;
+import net.hwyz.iov.cloud.edd.vmd.api.vo.keyprov.VmdKeyProvisioningOutcome;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.keyprov.VmdKeyProvisioningRequest;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.keyprov.VmdKeyProvisioningResponse;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.keyprov.VmdKeyProvisioningStatusRequest;
@@ -36,18 +38,49 @@ public class KeyProvisioningServiceController implements VmdKeyProvisioningServi
     @Override
     public VmdKeyProvisioningResponse request(VmdKeyProvisioningRequest request) {
         log.info("Keyprov官方服务请求: hasContext={}", request != null && request.getDeviceContext() != null);
-        return keyProvisioningServiceAdapter.request(request);
+        VmdKeyProvisioningResponse response = keyProvisioningServiceAdapter.request(request);
+        logOutcome("request", response == null ? null : response.getRequestId(),
+                response == null ? null : response.getOutcome(),
+                response == null ? null : response.getError());
+        return response;
     }
 
     @Override
     public VmdKeyProvisioningAckResult ack(VmdKeyProvisioningAckRequest request) {
         log.info("Keyprov官方服务ACK: hasContext={}", request != null && request.getDeviceContext() != null);
-        return keyProvisioningServiceAdapter.ack(request);
+        VmdKeyProvisioningAckResult result = keyProvisioningServiceAdapter.ack(request);
+        logOutcome("ack", result == null ? null : result.getRequestId(),
+                result == null ? null : result.getOutcome(),
+                result == null ? null : result.getError());
+        return result;
     }
 
     @Override
     public VmdKeyProvisioningStatusResponse status(VmdKeyProvisioningStatusRequest request) {
         log.info("Keyprov官方服务状态查询: hasContext={}", request != null && request.getDeviceContext() != null);
-        return keyProvisioningServiceAdapter.status(request);
+        VmdKeyProvisioningStatusResponse response = keyProvisioningServiceAdapter.status(request);
+        logOutcome("status", response == null ? null : response.getRequestId(),
+                response == null ? null : response.getOutcome(),
+                response == null ? null : response.getError());
+        return response;
+    }
+
+    /**
+     * 输出官方端点的稳定结果（806xxx），用于与 VAGW 侧 reason 按 requestId 关联定位。
+     * <p>
+     * 只输出登记后的稳定错误码与已脱敏展示信息，不含 payload / Wrapped Key / 设备身份明文。
+     */
+    private static void logOutcome(String endpoint, String requestId,
+                                   VmdKeyProvisioningOutcome outcome, VmdKeyProvisioningError error) {
+        if (outcome == VmdKeyProvisioningOutcome.SUCCESS) {
+            log.info("Keyprov官方服务 {} 成功: requestId={}", endpoint, requestId);
+            return;
+        }
+        log.warn("Keyprov官方服务 {} 未成功: requestId={}, outcome={}, code={}, retryable={}, action={}, message={}",
+                endpoint, requestId, outcome,
+                error == null ? null : error.getCode(),
+                error == null ? null : error.isRetryable(),
+                error == null ? null : error.getAction(),
+                error == null ? null : error.getMessage());
     }
 }

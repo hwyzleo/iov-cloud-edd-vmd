@@ -28,6 +28,7 @@ import net.hwyz.iov.security.keyprov.v1.KeyProvisioningResponse;
 import net.hwyz.iov.security.keyprov.v1.KeyProvisioningResult;
 import net.hwyz.iov.security.keyprov.v1.KeyProvisioningStatusResponse;
 import net.hwyz.iov.security.keyprov.v1.KeyProvisioningStatusRequest;
+import net.hwyz.iov.security.keyprov.v1.ProtocolError;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -97,6 +98,13 @@ public class KeyProvisioningApplicationFacade {
     public KeyProvisioningOperationResult request(String caller, KeyprovAuthenticatedContext ctx,
                                                   String payloadType, String schemaVersion,
                                                   byte[] payloadBytes, String payloadDigest) {
+        return withCanonicalErrorPayload(KeyprovConstants.PAYLOAD_TYPE_REQUEST, payloadBytes,
+                doRequest(caller, ctx, payloadType, schemaVersion, payloadBytes, payloadDigest));
+    }
+
+    private KeyProvisioningOperationResult doRequest(String caller, KeyprovAuthenticatedContext ctx,
+                                                     String payloadType, String schemaVersion,
+                                                     byte[] payloadBytes, String payloadDigest) {
         KeyProvisioningOperationResult gate = gate(caller, ctx,
                 KeyprovConstants.PAYLOAD_TYPE_REQUEST, payloadType, schemaVersion, payloadBytes, payloadDigest);
         if (gate != null) {
@@ -106,10 +114,10 @@ public class KeyProvisioningApplicationFacade {
         try {
             request = KeyProvisioningRequest.parseFrom(payloadBytes);
         } catch (InvalidProtocolBufferException e) {
-            return protocolReject("canonical KeyProvisioningRequest 解析失败");
+            return protocolReject("request", "canonical KeyProvisioningRequest 解析失败");
         }
         if (request.getRequestId().isBlank()) {
-            return protocolReject("requestId 缺失");
+            return protocolReject("request", "requestId 缺失");
         }
         try {
             KeyProvisioningResponse response = provisioningBatchAppService.provision(request, ctx);
@@ -117,7 +125,7 @@ public class KeyProvisioningApplicationFacade {
                 return success(response.getRequestId(), KeyprovConstants.PAYLOAD_TYPE_RESPONSE,
                         response.toByteArray(), response.getExpireAtMs() > 0 ? response.getExpireAtMs() : null);
             }
-            return failure(response.getRequestId(), response.getResult(),
+            return failure(KeyprovConstants.PAYLOAD_TYPE_REQUEST, response.getRequestId(), response.getResult(),
                     response.hasError() ? response.getError().getCode() : null,
                     response.hasError() ? response.getError().getMessage() : null);
         } catch (CryptoOperationOutcomeUnknownException e) {
@@ -157,6 +165,13 @@ public class KeyProvisioningApplicationFacade {
     public KeyProvisioningOperationResult ack(String caller, KeyprovAuthenticatedContext ctx,
                                               String payloadType, String schemaVersion,
                                               byte[] payloadBytes, String payloadDigest) {
+        return withCanonicalErrorPayload(KeyprovConstants.PAYLOAD_TYPE_ACK, payloadBytes,
+                doAck(caller, ctx, payloadType, schemaVersion, payloadBytes, payloadDigest));
+    }
+
+    private KeyProvisioningOperationResult doAck(String caller, KeyprovAuthenticatedContext ctx,
+                                                 String payloadType, String schemaVersion,
+                                                 byte[] payloadBytes, String payloadDigest) {
         KeyProvisioningOperationResult gate = gate(caller, ctx,
                 KeyprovConstants.PAYLOAD_TYPE_ACK, payloadType, schemaVersion, payloadBytes, payloadDigest);
         if (gate != null) {
@@ -166,10 +181,10 @@ public class KeyProvisioningApplicationFacade {
         try {
             ack = KeyProvisioningAck.parseFrom(payloadBytes);
         } catch (InvalidProtocolBufferException e) {
-            return protocolReject("canonical KeyProvisioningAck 解析失败");
+            return protocolReject("ack", "canonical KeyProvisioningAck 解析失败");
         }
         if (ack.getRequestId().isBlank()) {
-            return protocolReject("requestId 缺失");
+            return protocolReject("ack", "requestId 缺失");
         }
         try {
             KeyProvisioningAckResult result = provisioningAckAppService.confirmImport(ack, ctx);
@@ -177,7 +192,7 @@ public class KeyProvisioningApplicationFacade {
                 return success(result.getRequestId(), KeyprovConstants.PAYLOAD_TYPE_ACK_RESULT,
                         result.toByteArray(), null);
             }
-            return failure(result.getRequestId(), result.getResult(),
+            return failure(KeyprovConstants.PAYLOAD_TYPE_ACK, result.getRequestId(), result.getResult(),
                     result.hasError() ? result.getError().getCode() : null,
                     result.hasError() ? result.getError().getMessage() : null);
         } catch (CryptoOperationOutcomeUnknownException e) {
@@ -217,6 +232,13 @@ public class KeyProvisioningApplicationFacade {
     public KeyProvisioningOperationResult status(String caller, KeyprovAuthenticatedContext ctx,
                                                  String payloadType, String schemaVersion,
                                                  byte[] payloadBytes, String payloadDigest) {
+        return withCanonicalErrorPayload(KeyprovConstants.PAYLOAD_TYPE_STATUS_REQUEST, payloadBytes,
+                doStatus(caller, ctx, payloadType, schemaVersion, payloadBytes, payloadDigest));
+    }
+
+    private KeyProvisioningOperationResult doStatus(String caller, KeyprovAuthenticatedContext ctx,
+                                                    String payloadType, String schemaVersion,
+                                                    byte[] payloadBytes, String payloadDigest) {
         KeyProvisioningOperationResult gate = gate(caller, ctx,
                 KeyprovConstants.PAYLOAD_TYPE_STATUS_REQUEST, payloadType, schemaVersion, payloadBytes, payloadDigest);
         if (gate != null) {
@@ -226,15 +248,16 @@ public class KeyProvisioningApplicationFacade {
         try {
             request = KeyProvisioningStatusRequest.parseFrom(payloadBytes);
         } catch (InvalidProtocolBufferException e) {
-            return protocolReject("canonical KeyProvisioningStatusRequest 解析失败");
+            return protocolReject("status", "canonical KeyProvisioningStatusRequest 解析失败");
         }
         if (request.getRequestId().isBlank()) {
-            return protocolReject("requestId 缺失");
+            return protocolReject("status", "requestId 缺失");
         }
         try {
             KeyProvisioningStatusResponse response = provisioningStatusAppService.queryStatus(request, ctx);
             if (response.hasError()) {
-                return failure(response.getRequestId(), KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED,
+                return failure(KeyprovConstants.PAYLOAD_TYPE_STATUS_REQUEST, response.getRequestId(),
+                        KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED,
                         response.getError().getCode(), response.getError().getMessage());
             }
             return success(response.getRequestId(), KeyprovConstants.PAYLOAD_TYPE_STATUS_RESPONSE,
@@ -305,30 +328,56 @@ public class KeyProvisioningApplicationFacade {
                     VmdKeyProvisioningOutcome.REJECTED, false, "调用方身份未授权");
         }
         if (ctx == null || !ctx.hasIdentity() || ctx.hsmUid() == null || ctx.hsmUid().isBlank()) {
+            // 诊断：只输出布尔与调用方，不输出设备身份明文
+            log.warn("keyprov 请求被拒(806091 设备上下文): caller={}, hasContext={}, hasIdentity={}, hsmUidPresent={}",
+                    caller, ctx != null, ctx != null && ctx.hasIdentity(),
+                    ctx != null && ctx.hsmUid() != null && !ctx.hsmUid().isBlank());
             return error(null, VmdErrorCode.KEYPROV_DEVICE_CONTEXT_MISMATCH,
                     VmdKeyProvisioningOutcome.REJECTED, false, "缺少可信设备上下文");
         }
         if (expectedPayloadType == null || !expectedPayloadType.equals(payloadType)) {
+            log.warn("keyprov 请求被拒(806094 payloadType不匹配): caller={}, expected={}, actual={}",
+                    caller, expectedPayloadType, payloadType);
             return error(null, VmdErrorCode.KEYPROV_REQUEST_INVALID,
                     VmdKeyProvisioningOutcome.REJECTED, false, "端点与payloadType不匹配");
         }
         if (expectedSchemaVersion == null || !expectedSchemaVersion.equals(schemaVersion)) {
+            log.warn("keyprov 请求被拒(806094 schemaVersion不受支持): caller={}, expected={}, actual={}",
+                    caller, expectedSchemaVersion, schemaVersion);
             return error(null, VmdErrorCode.KEYPROV_REQUEST_INVALID,
                     VmdKeyProvisioningOutcome.REJECTED, false, "schemaVersion不受支持");
         }
         if (payloadBytes == null || payloadBytes.length == 0 || payloadBytes.length > maxPayloadBytes) {
+            log.warn("keyprov 请求被拒(806094 payload为空或超限): caller={}, payloadBytes={}, maxPayloadBytes={}",
+                    caller, payloadBytes == null ? -1 : payloadBytes.length, maxPayloadBytes);
             return error(null, VmdErrorCode.KEYPROV_REQUEST_INVALID,
                     VmdKeyProvisioningOutcome.REJECTED, false, "payload为空或超限");
         }
         if (payloadDigest == null || payloadDigest.isBlank()
                 || !payloadDigest.equalsIgnoreCase(sha256Hex(payloadBytes))) {
+            // 诊断：只输出不可逆摘要指纹（前16位）与长度，绝不输出 payload 本体
+            log.warn("keyprov 请求被拒(806094 payload摘要不匹配): caller={}, payloadBytes={}, receivedDigest={}, computedDigest={}",
+                    caller, payloadBytes.length, digestFingerprint(payloadDigest),
+                    digestFingerprint(sha256Hex(payloadBytes)));
             return error(null, VmdErrorCode.KEYPROV_REQUEST_INVALID,
                     VmdKeyProvisioningOutcome.REJECTED, false, "payload摘要缺失或不匹配");
         }
         return null;
     }
 
-    private KeyProvisioningOperationResult protocolReject(String message) {
+    /**
+     * 摘要指纹：仅保留前 16 位便于与端到端比对，属不可逆哈希、非敏感材料本身。
+     */
+    private static String digestFingerprint(String digest) {
+        if (digest == null || digest.isBlank()) {
+            return "<missing>";
+        }
+        String value = digest.trim();
+        return value.length() <= 16 ? value : value.substring(0, 16) + "…(len=" + value.length() + ")";
+    }
+
+    private KeyProvisioningOperationResult protocolReject(String endpoint, String message) {
+        log.warn("keyprov 请求被拒(806094 协议/内容非法): endpoint={}, detail={}", endpoint, message);
         return error(null, VmdErrorCode.KEYPROV_REQUEST_INVALID,
                 VmdKeyProvisioningOutcome.REJECTED, false, message);
     }
@@ -336,7 +385,8 @@ public class KeyProvisioningApplicationFacade {
     /**
      * 将业务应用服务返回的协议结果映射为 806xxx 稳定错误与结果类别。
      */
-    private KeyProvisioningOperationResult failure(String requestId, KeyProvisioningResult result,
+    private KeyProvisioningOperationResult failure(String uplinkPayloadType, String requestId,
+                                                   KeyProvisioningResult result,
                                                    String protocolCode, String message) {
         VmdErrorCode errorCode = mapProtocolCode(protocolCode);
         VmdKeyProvisioningOutcome outcome;
@@ -356,7 +406,177 @@ public class KeyProvisioningApplicationFacade {
                 retryable = false;
             }
         }
-        return error(requestId, errorCode, outcome, retryable, message);
+        KeyProvisioningOperationResult operationResult = error(requestId, errorCode, outcome, retryable, message);
+        // 业务层已给出 canonical 协议结果：下行 payload 直接透传其精确 result 与协议错误码
+        attachCanonicalErrorPayload(operationResult, uplinkPayloadType, requestId, result,
+                protocolCode == null || protocolCode.isBlank() ? mapErrorCodeToProtocolCode(errorCode) : protocolCode,
+                message);
+        return operationResult;
+    }
+
+    /**
+     * 保证「非成功」结果同样返回 canonical 下行 payload（VMD-DSN-CR-059 §5/§6）。
+     * <p>
+     * 门禁/协议/依赖类失败此前只返回 out-of-band 806xxx，VAGW 因「无 canonical payload」不回下行，
+     * 车端只能按超时反复重投同一 requestId。此处统一补一条 canonical 错误响应：车端据
+     * {@code error.retryable} 决定 RETRY_WAIT 或 BLOCKED，可按 requestId 关联并终止盲重试。
+     */
+    private KeyProvisioningOperationResult withCanonicalErrorPayload(String uplinkPayloadType,
+                                                                    byte[] payloadBytes,
+                                                                    KeyProvisioningOperationResult result) {
+        if (result == null || result.getErrorCode() == null || result.getDownlinkPayload() != null) {
+            return result;
+        }
+        String requestId = result.getRequestId() != null && !result.getRequestId().isBlank()
+                ? result.getRequestId() : bestEffortRequestId(payloadBytes);
+        attachCanonicalErrorPayload(result, uplinkPayloadType, requestId,
+                toProtocolResult(result.getOutcome()),
+                mapErrorCodeToProtocolCode(result.getErrorCode()), result.getErrorMessage());
+        return result;
+    }
+
+    /**
+     * 将 canonical 错误 payload 挂到操作结果上；不改变 VAGW 侧 806xxx 稳定码语义。
+     */
+    private void attachCanonicalErrorPayload(KeyProvisioningOperationResult target, String uplinkPayloadType,
+                                             String requestId, KeyProvisioningResult result,
+                                             String protocolCode, String message) {
+        if (target == null || downlinkPayloadTypeFor(uplinkPayloadType) == null) {
+            return;
+        }
+        byte[] payload = buildCanonicalErrorPayload(uplinkPayloadType, requestId, result, protocolCode,
+                target.isRetryable(), target.getAction(), message);
+        if (payload == null) {
+            return;
+        }
+        target.setDownlinkPayloadType(downlinkPayloadTypeFor(uplinkPayloadType));
+        target.setDownlinkPayload(payload);
+        target.setDownlinkPayloadDigest(sha256Hex(payload));
+    }
+
+    private byte[] buildCanonicalErrorPayload(String uplinkPayloadType, String requestId,
+                                              KeyProvisioningResult result, String protocolCode,
+                                              boolean retryable, String action, String message) {
+        ProtocolError error = ProtocolError.newBuilder()
+                .setCode(protocolCode == null || protocolCode.isBlank()
+                        ? KeyprovConstants.ERR_PROTOCOL_INVALID : protocolCode)
+                .setRetryable(retryable)
+                .setAction(action == null ? "" : action)
+                .setMessage(message == null ? "" : truncate(message))
+                .build();
+        String requestIdValue = boundedRequestId(requestId);
+        KeyProvisioningResult resultValue = result == null
+                ? KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED : result;
+        return switch (uplinkPayloadType) {
+            case KeyprovConstants.PAYLOAD_TYPE_REQUEST -> KeyProvisioningResponse.newBuilder()
+                    .setRequestId(requestIdValue)
+                    .setResult(resultValue)
+                    .setError(error)
+                    .build().toByteArray();
+            case KeyprovConstants.PAYLOAD_TYPE_ACK -> KeyProvisioningAckResult.newBuilder()
+                    .setRequestId(requestIdValue)
+                    .setResult(resultValue)
+                    .setError(error)
+                    .build().toByteArray();
+            // StatusResponse 无 result 字段：以 error 表达拒绝，status 保持 UNSPECIFIED
+            case KeyprovConstants.PAYLOAD_TYPE_STATUS_REQUEST -> KeyProvisioningStatusResponse.newBuilder()
+                    .setRequestId(requestIdValue)
+                    .setError(error)
+                    .build().toByteArray();
+            default -> null;
+        };
+    }
+
+    private static String downlinkPayloadTypeFor(String uplinkPayloadType) {
+        if (uplinkPayloadType == null) {
+            return null;
+        }
+        return switch (uplinkPayloadType) {
+            case KeyprovConstants.PAYLOAD_TYPE_REQUEST -> KeyprovConstants.PAYLOAD_TYPE_RESPONSE;
+            case KeyprovConstants.PAYLOAD_TYPE_ACK -> KeyprovConstants.PAYLOAD_TYPE_ACK_RESULT;
+            case KeyprovConstants.PAYLOAD_TYPE_STATUS_REQUEST -> KeyprovConstants.PAYLOAD_TYPE_STATUS_RESPONSE;
+            default -> null;
+        };
+    }
+
+    private static KeyProvisioningResult toProtocolResult(VmdKeyProvisioningOutcome outcome) {
+        if (outcome == null) {
+            return KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED;
+        }
+        return switch (outcome) {
+            case SUCCESS -> KeyProvisioningResult.KEY_PROVISIONING_RESULT_SUCCEEDED;
+            case REJECTED -> KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED;
+            case OUTCOME_UNKNOWN, UNAVAILABLE -> KeyProvisioningResult.KEY_PROVISIONING_RESULT_RETRYABLE_FAILURE;
+        };
+    }
+
+    /**
+     * VMD 稳定 806xxx → canonical ProtocolError.code（VMD-DSN-CR-059 §6）。
+     * <p>
+     * 与 {@link #mapProtocolCode(String)} 互为反向；仅用于门禁/依赖类失败时补齐车端可消费的错误码。
+     */
+    private static String mapErrorCodeToProtocolCode(VmdErrorCode errorCode) {
+        if (errorCode == null) {
+            return KeyprovConstants.ERR_PROTOCOL_INVALID;
+        }
+        return switch (errorCode) {
+            case KEYPROV_REQUEST_INVALID -> KeyprovConstants.ERR_PROTOCOL_INVALID;
+            case KEYPROV_IDEMPOTENCY_CONFLICT -> KeyprovConstants.ERR_IDEMPOTENCY_CONFLICT;
+            case KEYPROV_BATCH_NOT_FOUND -> KeyprovConstants.ERR_NOT_FOUND;
+            case KEYPROV_BINDING_INVALID, KEYPROV_DEVICE_CONTEXT_MISMATCH,
+                 KEYPROV_CALLER_UNAUTHORIZED -> KeyprovConstants.ERR_DEVICE_NOT_ELIGIBLE;
+            case KEYPROV_CERTIFICATE_INVALID, KEYPROV_CERTIFICATE_EVIDENCE_MISMATCH,
+                 KEYPROV_CERTIFICATE_REFERENCE_AMBIGUOUS,
+                 KEYPROV_CERTIFICATE_POLICY_REJECTED -> KeyprovConstants.ERR_CERTIFICATE_INVALID;
+            case KEYPROV_OUTCOME_UNKNOWN -> KeyprovConstants.ERR_RECONCILE_REQUIRED;
+            default -> KeyprovConstants.ERR_UNAVAILABLE;
+        };
+    }
+
+    /**
+     * 仅用于关联的 requestId 最佳努力提取。
+     * <p>
+     * canonical 上行三类消息的 field 1 均为 {@code request_id}。门禁/解析失败时无权威 requestId，
+     * 此值只让车端能把下行错误关联回流程（否则会因 request_id 不匹配而忽略，继续盲重试）；
+     * 不参与任何校验、授权或幂等决策。
+     */
+    private static String bestEffortRequestId(byte[] payloadBytes) {
+        if (payloadBytes == null || payloadBytes.length == 0) {
+            return "";
+        }
+        try {
+            return boundedRequestId(KeyProvisioningRequest.parseFrom(payloadBytes).getRequestId());
+        } catch (InvalidProtocolBufferException e) {
+            return "";
+        }
+    }
+
+    /**
+     * request_id 规范化：canonical 约束为 ≤128 UTF-8 字节且无控制字符。
+     * <p>
+     * 不满足时以空串关联（envelope 仍带 correlation），绝不把非法值写入 canonical 下行 payload。
+     */
+    private static String boundedRequestId(String requestId) {
+        if (requestId == null) {
+            return "";
+        }
+        String candidate = requestId.trim();
+        if (candidate.isEmpty()) {
+            return "";
+        }
+        if (candidate.getBytes(StandardCharsets.UTF_8).length > 128 || containsControlChar(candidate)) {
+            return "";
+        }
+        return candidate;
+    }
+
+    private static boolean containsControlChar(String value) {
+        for (int i = 0; i < value.length(); i++) {
+            if (Character.isISOControl(value.charAt(i))) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
