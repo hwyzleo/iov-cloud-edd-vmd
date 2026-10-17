@@ -69,6 +69,12 @@ public class DeviceBusinessKeyPo extends BasePo {
     private String purpose;
 
     /**
+     * 材料模型：DERIVED_ROOT / RANDOM_MATERIAL（历史记录保持 null）
+     */
+    @TableField("material_model")
+    private String materialModel;
+
+    /**
      * framework/KMS返回的不透明标识，唯一
      */
     @TableField("key_id")
@@ -91,6 +97,18 @@ public class DeviceBusinessKeyPo extends BasePo {
      */
     @TableField("kms_key_version")
     private Integer kmsKeyVersion;
+
+    /**
+     * Transit/HSM根版本（仅根派生型）
+     */
+    @TableField("root_key_version")
+    private Long rootKeyVersion;
+
+    /**
+     * 派生格式版本（首期v1）
+     */
+    @TableField("derivation_version")
+    private String derivationVersion;
 
     /**
      * KMS提供方
@@ -151,6 +169,12 @@ public class DeviceBusinessKeyPo extends BasePo {
      */
     @TableField("request_id")
     private String requestId;
+
+    /**
+     * 根派生操作标识（对账主键，不透明）
+     */
+    @TableField("operation_id")
+    private String operationId;
 
     /**
      * 规范化请求摘要（参数冲突识别）

@@ -7,13 +7,8 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.KeyProvisioning
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.KeyProvisioningApplicationFacade;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.KeyprovAuthenticatedContext;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.KeyprovConstants;
-import net.hwyz.iov.cloud.framework.security.crypto.BusinessKeyMaterialTemplate;
-import net.hwyz.iov.cloud.framework.security.crypto.model.businesskey.BusinessKeyCreateRequest;
-import net.hwyz.iov.cloud.framework.security.crypto.model.businesskey.BusinessKeyMaterial;
-import net.hwyz.iov.cloud.framework.security.crypto.model.businesskey.BusinessKeyRef;
-import net.hwyz.iov.cloud.framework.security.crypto.model.businesskey.RecipientRef;
-import net.hwyz.iov.cloud.framework.security.crypto.model.businesskey.WrapContext;
-import net.hwyz.iov.cloud.framework.security.crypto.model.businesskey.WrappedBusinessKey;
+import net.hwyz.iov.cloud.framework.security.crypto.KeyProvisioningTemplate;
+import net.hwyz.iov.cloud.framework.security.crypto.model.DerivedWrappedKey;
 import net.hwyz.iov.security.keyprov.v1.KeyImportItemResult;
 import net.hwyz.iov.security.keyprov.v1.KeyImportResult;
 import net.hwyz.iov.security.keyprov.v1.KeyProvisioningAck;
@@ -35,9 +30,7 @@ import org.springframework.test.annotation.Rollback;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
-import java.time.Instant;
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -64,7 +57,7 @@ class BusinessKeyCr058IntegrationTest extends BaseTest {
     private static final String CALLER = "VAGW";
 
     @MockBean
-    private BusinessKeyMaterialTemplate businessKeyMaterialTemplate;
+    private KeyProvisioningTemplate keyProvisioningTemplate;
 
     @Autowired
     private KeyProvisioningApplicationFacade keyProvisioningApplicationFacade;
@@ -72,7 +65,7 @@ class BusinessKeyCr058IntegrationTest extends BaseTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    private final AtomicInteger createCount = new AtomicInteger();
+    private final AtomicInteger deriveCount = new AtomicInteger();
 
     @BeforeEach
     void setUp() {
@@ -102,14 +95,12 @@ class BusinessKeyCr058IntegrationTest extends BaseTest {
                         + "FROM tb_vehicle_part vp JOIN tb_part_info pi ON pi.id = vp.part_id WHERE vp.vin = ? AND pi.sn = ?",
                 "CR058_CERT_REQ", CERT_SN, vin, DEVICE_SN, HSM_UID, vin, DEVICE_SN);
 
-        when(businessKeyMaterialTemplate.create(any(BusinessKeyCreateRequest.class))).thenAnswer(inv -> {
-            int n = createCount.incrementAndGet();
-            return new BusinessKeyMaterial("CR058-KEY-" + n, "kms/ref/CR058-KEY-" + n, n, "kms", "AES", "AES-256-GCM",
-                    Instant.now().minusSeconds(1), Instant.now().plusSeconds(365L * 24 * 3600));
+        when(keyProvisioningTemplate.deriveAndWrap(any(), any(), any(), any(), any(), any(), any())).thenAnswer(inv -> {
+            int n = deriveCount.incrementAndGet();
+            // CR-061：根派生逻辑 keyId 每个 purpose 独立（满足 uk_key_id），Wrapped Key 瞬时
+            return new DerivedWrappedKey("CR058-KEY-" + n, "kms/ref/CR058-KEY-" + n, 1, "v1",
+                    new byte[]{1, 2, 3}, "RSA-OAEP-SHA256", new byte[]{9}, inv.getArgument(5));
         });
-        when(businessKeyMaterialTemplate.wrap(any(BusinessKeyRef.class), any(RecipientRef.class), any(WrapContext.class)))
-                .thenReturn(new WrappedBusinessKey(new byte[]{1, 2, 3}, "CR058-KEY", 1, "AES",
-                        Instant.now().plusSeconds(3600), Map.of("iv", "abcd")));
     }
 
     private KeyprovAuthenticatedContext ctx() {

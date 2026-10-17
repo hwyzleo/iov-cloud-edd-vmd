@@ -113,4 +113,14 @@ class VmdErrorCodeRegistryTest {
         assertEquals(VmdErrorCode.KEYPROV_CERTIFICATE_POLICY_REJECTED,
                 ErrorCodeRegistry.findByCode("806104").orElse(null));
     }
+
+    @Test
+    void keyprovDerivedRootErrorCodes_present() {
+        // CR-061 V2C 根派生域错误码（806106～806108）
+        assertEquals("806106", VmdErrorCode.KEYPROV_VIN_BINDING_INVALID.getCode());
+        assertEquals("806107", VmdErrorCode.KEYPROV_DERIVED_PROVIDER_NOT_READY.getCode());
+        assertEquals("806108", VmdErrorCode.KEYPROV_DERIVATION_UNSUPPORTED.getCode());
+        assertEquals(VmdErrorCode.KEYPROV_DERIVED_PROVIDER_NOT_READY,
+                ErrorCodeRegistry.findByCode("806107").orElse(null));
+    }
 }

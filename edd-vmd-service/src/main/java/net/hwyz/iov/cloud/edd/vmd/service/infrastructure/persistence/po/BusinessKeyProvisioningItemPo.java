@@ -47,6 +47,18 @@ public class BusinessKeyProvisioningItemPo extends BasePo {
     @TableField("directory_key_id")
     private Long directoryKeyId;
 
+    @TableField("operation_id")
+    private String operationId;
+
+    @TableField("root_key_version")
+    private Long rootKeyVersion;
+
+    @TableField("derivation_version")
+    private String derivationVersion;
+
+    @TableField("recipient_cert_fingerprint_digest")
+    private String recipientCertFingerprintDigest;
+
     @TableField("device_result")
     private String deviceResult;
 

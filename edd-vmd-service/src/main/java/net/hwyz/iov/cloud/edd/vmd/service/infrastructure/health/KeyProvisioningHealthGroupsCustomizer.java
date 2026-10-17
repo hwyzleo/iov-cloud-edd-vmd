@@ -36,6 +36,11 @@ public class KeyProvisioningHealthGroupsCustomizer implements HealthEndpointGrou
     public static final String CERTIFICATE_RESOLUTION_INDICATOR = "certificateResolution";
 
     /**
+     * 根派生 Provider（Transit/HSM {@code v2c-comm-root}）健康指示器注册名（VMD-DSN-CR-061 §10）
+     */
+    public static final String DERIVED_KEY_PROVIDER_INDICATOR = "derivedKeyProvider";
+
+    /**
      * framework KMS business-key Provider 健康指示器注册名（VMD-DSN-CR-060 §5.1/§7）
      */
     public static final String KMS_BUSINESS_KEY_INDICATOR = "kmsBusinessKey";
@@ -44,7 +49,8 @@ public class KeyProvisioningHealthGroupsCustomizer implements HealthEndpointGrou
      * 需从主聚合排除的 keyprov 域健康指示器
      */
     private static final Set<String> KEYPROV_INDICATORS =
-            Set.of(KEYPROV_INDICATOR, CERTIFICATE_RESOLUTION_INDICATOR, KMS_BUSINESS_KEY_INDICATOR);
+            Set.of(KEYPROV_INDICATOR, DERIVED_KEY_PROVIDER_INDICATOR,
+                    CERTIFICATE_RESOLUTION_INDICATOR, KMS_BUSINESS_KEY_INDICATOR);
 
     @Override
     public HealthEndpointGroups postProcessHealthEndpointGroups(HealthEndpointGroups groups) {

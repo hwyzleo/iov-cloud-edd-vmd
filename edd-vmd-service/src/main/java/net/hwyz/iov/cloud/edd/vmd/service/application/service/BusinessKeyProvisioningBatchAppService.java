@@ -1,9 +1,11 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 
-import cn.hutool.json.JSONUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import net.hwyz.iov.cloud.edd.vmd.service.application.event.publish.BusinessKeyChangedPublisher;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyDerivationRejectedException;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyDerivedProviderUnavailableException;
+import net.hwyz.iov.cloud.edd.vmd.service.common.util.DerivedKeyOperationIds;
+import net.hwyz.iov.cloud.edd.vmd.service.common.util.VinCanonicalizer;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.BusinessKeyProvisioning;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.BusinessKeyProvisioningItem;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.DeviceBusinessKey;
@@ -14,25 +16,23 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.ProvisioningD
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.BusinessKeyProvisioningItemRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.BusinessKeyProvisioningRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.DeviceBusinessKeyRepository;
-import net.hwyz.iov.cloud.framework.security.crypto.BusinessKeyMaterialTemplate;
+import net.hwyz.iov.cloud.framework.security.crypto.KeyProvisioningTemplate;
 import net.hwyz.iov.cloud.framework.security.crypto.exception.CryptoDependencyUnavailableException;
 import net.hwyz.iov.cloud.framework.security.crypto.exception.CryptoException;
 import net.hwyz.iov.cloud.framework.security.crypto.exception.CryptoOperationOutcomeUnknownException;
+import net.hwyz.iov.cloud.framework.security.crypto.exception.KeyMaterialModelMismatchException;
 import net.hwyz.iov.cloud.framework.security.crypto.model.BizType;
-import net.hwyz.iov.cloud.framework.security.crypto.model.businesskey.BusinessKeyCreateRequest;
-import net.hwyz.iov.cloud.framework.security.crypto.model.businesskey.BusinessKeyMaterial;
-import net.hwyz.iov.cloud.framework.security.crypto.model.businesskey.BusinessKeyRef;
-import net.hwyz.iov.cloud.framework.security.crypto.model.businesskey.KeyMaterialPolicy;
+import net.hwyz.iov.cloud.framework.security.crypto.model.DerivationContext;
+import net.hwyz.iov.cloud.framework.security.crypto.model.DerivedWrappedKey;
+import net.hwyz.iov.cloud.framework.security.crypto.model.KeyAnchor;
+import net.hwyz.iov.cloud.framework.security.crypto.model.KeyMaterialModel;
+import net.hwyz.iov.cloud.framework.security.crypto.model.KeyPurpose;
 import net.hwyz.iov.cloud.framework.security.crypto.model.businesskey.RecipientRef;
-import net.hwyz.iov.cloud.framework.security.crypto.model.businesskey.WrapContext;
-import net.hwyz.iov.cloud.framework.security.crypto.model.businesskey.WrapMode;
-import net.hwyz.iov.cloud.framework.security.crypto.model.businesskey.WrappedBusinessKey;
 import net.hwyz.iov.security.keyprov.v1.KeyProvisioningRequest;
 import net.hwyz.iov.security.keyprov.v1.KeyProvisioningResponse;
 import net.hwyz.iov.security.keyprov.v1.KeyProvisioningResult;
 import net.hwyz.iov.security.keyprov.v1.ProtocolError;
 import net.hwyz.iov.security.keyprov.v1.WrappedKeyItem;
-import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
@@ -41,9 +41,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import com.google.protobuf.ByteString;
 
-import java.time.Instant;
 import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -51,11 +49,16 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * 业务密钥多用途 V2C 开通应用服务（CR-058 F20 Request 段）。
+ * 业务密钥多用途 V2C 开通应用服务（CR-058 F20 Request 段，CR-061 根派生改造）。
  * <p>
- * 以已认证 hsmUid 定位 active 绑定，按 canonical Request 完整用途集创建或解析目标目录版本，
- * 完成设备证书公钥 Wrap 后将批次推进 WAIT_DEVICE_ACK；设备导入成功前不发布目录 ACTIVE 事件，
- * 也不发布设备注册激活完成事件。目标版本模式由 VMD 依据 current_versions + ACTIVE + 策略推导。
+ * V2C 材料由随机模型切换为 <strong>Transit/HSM 根派生</strong>（VMD-DSN-CR-061 / FW-SEC-DSN-CR-013）：
+ * 以已认证 hsmUid 定位 active 绑定 → 解析唯一有效 VIN 并规范化 → 对 {@code UPLINK_AEAD}/
+ * {@code DOWNLINK_AEAD} 分别调用 {@link KeyProvisioningTemplate#deriveAndWrap}，Transit/HSM
+ * {@code v2c-comm-root} 按规范化 VIN + purpose + 派生版本确定性派生并在受控边界内封装。
+ * <p>
+ * VMD 只持久化非敏感字段（logicalKeyId/kmsKeyRef/materialModel/rootKeyVersion/derivationVersion/
+ * operationId）；Wrapped Key 仅进当前响应；禁止 VMD 直连 Provider wire 或自行组合 hmac+encryptWith。
+ * 完成设备导入 ACK 前不发布目录 ACTIVE 事件（由 ACK 应用服务承接）。
  *
  * @author hwyz_leo
  * @since 2026-10-12
@@ -66,6 +69,7 @@ import java.util.Set;
 public class BusinessKeyProvisioningBatchAppService {
 
     private static final String WRAP_MODE = "DEVICE_CERT_PUBLIC_KEY";
+    private static final String MATERIAL_MODEL_DERIVED_ROOT = KeyMaterialModel.DERIVED_ROOT.name();
 
     private final DeviceBusinessKeyRepository deviceBusinessKeyRepository;
     private final BusinessKeyProvisioningRepository provisioningRepository;
@@ -75,13 +79,15 @@ public class BusinessKeyProvisioningBatchAppService {
     private final BusinessKeyAuthorizationPolicy authorizationPolicy;
     private final BusinessKeyPolicyRegistry policyRegistry;
     private final BusinessKeyBizTypeMapper bizTypeMapper;
-    private final ObjectProvider<BusinessKeyMaterialTemplate> businessKeyMaterialTemplateProvider;
-    private final BusinessKeyChangedPublisher businessKeyChangedPublisher;
+    private final BusinessKeyMaterialRouter materialRouter;
     private final BusinessKeyProvisioningDomainService domainService;
     private final PlatformTransactionManager transactionManager;
 
     @Value("${vmd.business-key.provisioning.bundle-ttl-seconds:3600}")
     private long bundleTtlSeconds = 3600;
+
+    @Value("${crypto.provisioning.derived-key.derivation-version:v1}")
+    private String derivationVersion = "v1";
 
     private volatile TransactionTemplate transactionTemplate;
 
@@ -98,16 +104,8 @@ public class BusinessKeyProvisioningBatchAppService {
         return tpl;
     }
 
-    private BusinessKeyMaterialTemplate materialTemplate() {
-        BusinessKeyMaterialTemplate template = businessKeyMaterialTemplateProvider.getIfAvailable();
-        if (template == null) {
-            throw new CryptoDependencyUnavailableException("framework业务密钥模板未装配（crypto.business-key.enabled=false）");
-        }
-        return template;
-    }
-
     /**
-     * 处理 canonical KeyProvisioningRequest。
+     * 处理 canonical KeyProvisioningRequest（V2C 根派生）。
      */
     public KeyProvisioningResponse provision(KeyProvisioningRequest request, KeyprovAuthenticatedContext ctx) {
         String requestId = request.getRequestId();
@@ -134,6 +132,16 @@ public class BusinessKeyProvisioningBatchAppService {
             return rejected(requestId, KeyprovConstants.ERR_DEVICE_NOT_ELIGIBLE, false, "设备身份或active绑定不可用");
         }
 
+        // CR-061 RD-061-2：解析唯一有效 VIN 并规范化，在任何 framework 调用前 fail-closed
+        String normalizedVin;
+        try {
+            normalizedVin = VinCanonicalizer.normalizeAndValidate(identity.vin());
+        } catch (RuntimeException e) {
+            log.warn("keyprov VIN 绑定缺失或非法（fail-closed，framework调用0次）: requestId={}, deviceSn摘要={}, type={}",
+                    requestId, domainService.sha256HexPrefix(identity.deviceSn()), e.getClass().getSimpleName());
+            return rejected(requestId, KeyprovConstants.ERR_VIN_BINDING_INVALID, false, "无唯一有效VIN绑定或VIN非法，安全拒绝");
+        }
+
         for (String purpose : KeyprovConstants.V2C_PURPOSES) {
             try {
                 authorizationPolicy.authorize(BusinessKeyAction.PROVISION, identity.deviceCategory(), domain, purpose);
@@ -150,7 +158,6 @@ public class BusinessKeyProvisioningBatchAppService {
             log.warn("keyprov 无有效设备证书: requestId={}, deviceSn={}", requestId, identity.deviceSn());
             return rejected(requestId, KeyprovConstants.ERR_CERTIFICATE_INVALID, false, "有效设备证书不存在");
         }
-        String certSn = activeCert.certSn();
 
         String suite = domainService.negotiateWrappingSuite(request, KeyprovConstants.DEFAULT_SUPPORTED_SUITES);
         if (suite == null) {
@@ -158,39 +165,53 @@ public class BusinessKeyProvisioningBatchAppService {
         }
 
         String hsmDigest = domainService.digestHsmUid(identity.hsmUid());
-        String requestDigest = domainService.buildRequestDigest(request, hsmDigest);
+        String vinDigest = domainService.sha256Hex(domainService.utf8(normalizedVin));
+        String fingerprintDigest = activeCert.sha256Fingerprint() == null
+                ? null : domainService.sha256Hex(domainService.utf8(activeCert.sha256Fingerprint()));
+        String requestDigest = domainService.buildRequestDigest(request, hsmDigest, vinDigest, derivationVersion, fingerprintDigest);
 
         // 幂等：同 requestId 复用原批次与版本
         BusinessKeyProvisioning existing = provisioningRepository.selectByRequestId(requestId);
+        BusinessKeyProvisioning batch = existing;
         if (existing != null) {
             if (existing.getRequestDigest() != null && !existing.getRequestDigest().equals(requestDigest)) {
                 log.warn("keyprov requestId 摘要冲突: requestId={}", requestId);
                 return conflict(requestId, KeyprovConstants.ERR_IDEMPOTENCY_CONFLICT, "同requestId不同请求摘要");
             }
-            if (existing.getStatus() == BusinessKeyProvisioningState.COMPLETED) {
-                return buildResponse(existing, identity, request, activeCert, suite, true);
-            }
-            if (!existing.getStatus().canAdvance()) {
+            if (existing.getStatus() != BusinessKeyProvisioningState.COMPLETED && !existing.getStatus().canAdvance()) {
                 return rejected(requestId, KeyprovConstants.ERR_STATE_NOT_ALLOWED, false, "批次状态不允许继续申请");
             }
-            return buildResponse(existing, identity, request, activeCert, suite, false);
+        } else {
+            batch = createOrLoadBatch(requestId, identity, domain, hsmDigest, activeCert.certSn(), requestDigest);
+            if (batch == null) {
+                return rejected(requestId, KeyprovConstants.ERR_STATE_NOT_ALLOWED, false, "并发开通冲突，请以原requestId重试");
+            }
         }
 
-        // 新建批次并逐用途创建/复用目标版本
-        BusinessKeyProvisioning batch = createOrLoadBatch(requestId, identity, domain, hsmDigest, certSn, requestDigest);
-        if (batch == null) {
-            return rejected(requestId, KeyprovConstants.ERR_STATE_NOT_ALLOWED, false, "并发开通冲突，请以原requestId重试");
-        }
+        Map<String, DerivedWrappedKey> derived;
         try {
-            prepareTargets(batch, request, identity, domain, certSn, suite, requestDigest);
+            derived = prepareAndDerive(batch, request, identity, domain, normalizedVin, activeCert, requestId, fingerprintDigest);
         } catch (CryptoOperationOutcomeUnknownException e) {
-            markBatchReconcile(batch, "framework创建/Wrap结果未知");
+            markBatchReconcile(batch, "framework派生/Wrap结果未知");
             return retryable(requestId, KeyprovConstants.ERR_UNAVAILABLE, "framework结果未知，需以原requestId对账");
+        } catch (BusinessKeyDerivedProviderUnavailableException e) {
+            markBatchFailed(batch, truncate(e.getMessage()));
+            return retryable(requestId, KeyprovConstants.ERR_DERIVED_PROVIDER_NOT_READY, "根派生/Transit根能力未就绪");
+        } catch (CryptoDependencyUnavailableException e) {
+            markBatchFailed(batch, truncate(e.getMessage()));
+            return retryable(requestId, KeyprovConstants.ERR_DERIVED_PROVIDER_NOT_READY, "根派生依赖不可用");
+        } catch (BusinessKeyDerivationRejectedException e) {
+            markBatchFailed(batch, truncate(e.getMessage()));
+            return rejected(requestId, KeyprovConstants.ERR_DERIVATION_UNSUPPORTED, false, "派生参数/材料模型/锚不受支持，拒绝派生");
+        } catch (KeyMaterialModelMismatchException e) {
+            markBatchFailed(batch, truncate(e.getMessage()));
+            return rejected(requestId, KeyprovConstants.ERR_DERIVATION_UNSUPPORTED, false, "材料模型不匹配，拒绝派生");
         } catch (CryptoException e) {
             markBatchFailed(batch, truncate(e.getMessage()));
-            return rejected(requestId, KeyprovConstants.ERR_UNAVAILABLE, false, "业务密钥材料创建或封装失败");
+            return rejected(requestId, KeyprovConstants.ERR_DERIVATION_UNSUPPORTED, false, "业务密钥派生或封装失败");
         }
-        return buildResponse(provisioningRepository.selectByRequestId(requestId), identity, request, activeCert, suite, false);
+        return buildResponse(provisioningRepository.selectByRequestId(requestId), identity, request,
+                activeCert, suite, derived);
     }
 
     private BusinessKeyProvisioning createOrLoadBatch(String requestId, BoundDeviceIdentity identity, String domain,
@@ -229,34 +250,94 @@ public class BusinessKeyProvisioningBatchAppService {
         }
     }
 
-    private void prepareTargets(BusinessKeyProvisioning batch, KeyProvisioningRequest request,
-                                BoundDeviceIdentity identity, String domain, String certSn,
-                                String suite, String requestDigest) {
-        Map<String, Long> currentVersions = domainService.extractCurrentVersions(request);
-        for (String purpose : KeyprovConstants.V2C_PURPOSES) {
-            BusinessKeyProvisioningItem existingItem = provisioningItemRepository
-                    .selectByProvisioningIdAndPurpose(batch.getId(), purpose);
-            if (existingItem != null) {
-                continue;
-            }
-            DeviceBusinessKey active = deviceBusinessKeyRepository.selectActiveByContext(identity.deviceSn(), domain, purpose);
-            BusinessKeyProvisioningIntent intent = domainService.deriveIntent(active,
-                    currentVersions.getOrDefault(purpose, 0L));
+    /**
+     * 逐用途准备目标版本并执行根派生封装（VMD-DSN-CR-061 RD-061-3）。
+     *
+     * @return purpose → 派生封装结果（Wrapped Key 仅用于本次响应）
+     */
+    private Map<String, DerivedWrappedKey> prepareAndDerive(BusinessKeyProvisioning batch, KeyProvisioningRequest request,
+                                                            BoundDeviceIdentity identity, String domain, String normalizedVin,
+                                                            ActiveDeviceCertificate activeCert, String requestId,
+                                                            String fingerprintDigest) {
+        BizType bizType = bizTypeMapper.resolveBizType(domain);
+        // 显式路由：非 DERIVED_ROOT 一律拒绝（禁隐式回退到随机材料）
+        KeyProvisioningTemplate template = materialRouter.requireDerivedRoot(bizType);
+        KeyAnchor anchor = KeyAnchor.vin(normalizedVin);
+        DerivationContext context = DerivationContext.of(derivationVersion);
 
+        Map<String, Long> currentVersions = domainService.extractCurrentVersions(request);
+        Map<String, DerivedWrappedKey> derived = new HashMap<>();
+
+        for (String purpose : KeyprovConstants.V2C_PURPOSES) {
+            BusinessKeyProvisioningItem item = provisioningItemRepository
+                    .selectByProvisioningIdAndPurpose(batch.getId(), purpose);
             DeviceBusinessKey target;
-            if (intent == BusinessKeyProvisioningIntent.REIMPORT) {
-                // 复用既有 ACTIVE，不新建版本、不重复发布目录 ACTIVE 事件
-                target = active;
+            boolean newItem;
+            if (item != null) {
+                target = deviceBusinessKeyRepository.selectById(item.getDirectoryKeyId());
+                if (target == null) {
+                    throw new BusinessKeyDerivationRejectedException(
+                            "开通批次 item 对应目录版本不存在: purpose=" + purpose);
+                }
+                newItem = false;
             } else {
-                target = createPendingVersion(identity, domain, purpose, request.getRequestId());
-                BusinessKeyPolicyEntry policy = authorizationPolicy.authorize(
-                        BusinessKeyAction.PROVISION, identity.deviceCategory(), domain, purpose);
-                BusinessKeyMaterial material = materialTemplate().create(buildCreateRequest(
-                        request, identity, domain, purpose, target.getBusinessKeyVersion(), policy));
-                target = persistMaterialKeepingPending(target, material, request.getRequestId());
+                DeviceBusinessKey active = deviceBusinessKeyRepository.selectActiveByContext(identity.deviceSn(), domain, purpose);
+                // 历史 ACTIVE 材料来源未知：禁止自动轮换/重建/迁移（VMD-DSN-CR-061 §7.3）
+                if (active != null && active.getMaterialModel() == null) {
+                    throw new BusinessKeyDerivationRejectedException(
+                            "历史ACTIVE业务密钥材料来源未知（material_model IS NULL），须走专项迁移批次，禁止自动轮换/重建: purpose="
+                                    + purpose);
+                }
+                BusinessKeyProvisioningIntent intent = domainService.deriveIntent(active,
+                        currentVersions.getOrDefault(purpose, 0L));
+                if (intent == BusinessKeyProvisioningIntent.REIMPORT && active != null) {
+                    // 复用既有 ACTIVE（同逻辑材料，收方/封装不同），不新建版本
+                    target = active;
+                } else {
+                    target = createPendingVersion(identity, domain, purpose, requestId);
+                }
+                newItem = true;
             }
-            insertItem(batch.getId(), target, purpose);
+
+            // 历史材料来源未知（material_model IS NULL）：禁止自动派生/迁移/轮换
+            if (target.getMaterialModel() == null) {
+                throw new BusinessKeyDerivationRejectedException(
+                        "历史业务密钥材料来源未知（material_model IS NULL），禁止自动派生或迁移: purpose=" + purpose);
+            }
+            if (!MATERIAL_MODEL_DERIVED_ROOT.equals(target.getMaterialModel())) {
+                throw new BusinessKeyDerivationRejectedException(
+                        "目标版本材料模型不是根派生型，禁止 V2C 派生: purpose=" + purpose
+                                + ", materialModel=" + target.getMaterialModel());
+            }
+
+            BusinessKeyPolicyEntry policy = authorizationPolicy.authorize(
+                    BusinessKeyAction.PROVISION, identity.deviceCategory(), domain, purpose);
+            String operationId = DerivedKeyOperationIds.operationId(requestId, purpose, target.getBusinessKeyVersion());
+            String idemKey = DerivedKeyOperationIds.idempotencyKey(requestId, identity.deviceSn(), purpose,
+                    target.getBusinessKeyVersion(), derivationVersion);
+            Map<String, String> audit = new HashMap<>();
+            audit.put("purpose", purpose);
+            audit.put("operation", "KEYPROV_DERIVED");
+
+            DerivedWrappedKey result = template.deriveAndWrap(
+                    bizType,
+                    anchor,
+                    KeyPurpose.valueOf(purpose),
+                    new RecipientRef.DeviceCertificate(activeCert.certSn(), activeCert.pkiRequestId(), null, null,
+                            activeCert.sha256Fingerprint(), audit),
+                    context,
+                    operationId,
+                    idemKey);
+
+            if (newItem) {
+                if (target.getKeyId() == null) {
+                    target = persistDerivedMaterialKeepingPending(target, result, policy, operationId);
+                }
+                insertItem(batch.getId(), target, purpose, result, fingerprintDigest);
+            }
+            derived.put(purpose, result);
         }
+
         tx().executeWithoutResult(status -> {
             BusinessKeyProvisioning current = provisioningRepository.selectById(batch.getId());
             if (current == null || current.getStatus() != BusinessKeyProvisioningState.PREPARING) {
@@ -266,8 +347,9 @@ public class BusinessKeyProvisioningBatchAppService {
             current.setModifyTime(LocalDateTime.now());
             provisioningRepository.update(current);
         });
-        log.info("keyprov 批次进入WAIT_DEVICE_ACK: requestId={}, deviceSn={}, domain={}",
+        log.info("keyprov 批次进入WAIT_DEVICE_ACK（根派生）: requestId={}, deviceSn={}, domain={}",
                 batch.getRequestId(), identity.deviceSn(), domain);
+        return derived;
     }
 
     private DeviceBusinessKey createPendingVersion(BoundDeviceIdentity identity, String domain, String purpose,
@@ -282,10 +364,12 @@ public class BusinessKeyProvisioningBatchAppService {
                     .hsmUid(identity.hsmUid())
                     .businessDomain(domain)
                     .purpose(purpose)
+                    .materialModel(MATERIAL_MODEL_DERIVED_ROOT)
                     .businessKeyVersion(nextVersion)
                     .keyState(BusinessKeyState.PENDING)
                     .wrapMode(WRAP_MODE)
                     .requestId(requestId)
+                    .derivationVersion(derivationVersion)
                     .createTime(LocalDateTime.now())
                     .build();
             try {
@@ -300,57 +384,49 @@ public class BusinessKeyProvisioningBatchAppService {
                 "keyprov目标版本占位并发冲突: deviceSn=" + identity.deviceSn() + ", purpose=" + purpose);
     }
 
-    private DeviceBusinessKey persistMaterialKeepingPending(DeviceBusinessKey row, BusinessKeyMaterial material,
-                                                            String requestId) {
+    /**
+     * 回填根派生非敏感材料并保持 PENDING（Wrapped Key/KCV/派生明文均不落库）。
+     */
+    private DeviceBusinessKey persistDerivedMaterialKeepingPending(DeviceBusinessKey row, DerivedWrappedKey result,
+                                                                   BusinessKeyPolicyEntry policy, String operationId) {
         return tx().execute(status -> {
             DeviceBusinessKey current = deviceBusinessKeyRepository.selectById(row.getId());
             if (current == null) {
                 throw new IllegalStateException("keyprov目标版本行不存在: id=" + row.getId());
             }
-            current.setKeyId(material.keyId());
-            current.setKmsKeyRef(material.kmsKeyRef());
-            current.setKmsKeyVersion(material.kmsKeyVersion());
-            current.setKmsProvider(material.provider());
-            current.setAlgorithm(material.algorithm());
-            current.setKeySpec(material.keySpec());
-            current.setValidFrom(toLocalDateTime(material.validFrom()));
-            current.setValidTo(toLocalDateTime(material.validTo()));
-            current.setRequestId(requestId);
+            current.setKeyId(result.logicalKeyId());
+            current.setKmsKeyRef(result.kmsKeyRef());
+            current.setRootKeyVersion(result.rootKeyVersion() == null ? null : result.rootKeyVersion().longValue());
+            current.setDerivationVersion(result.derivationVersion() != null ? result.derivationVersion() : derivationVersion);
+            current.setOperationId(result.operationId() != null ? result.operationId() : operationId);
+            current.setAlgorithm(policy.algorithm());
+            current.setKeySpec(policy.keySpec());
             current.setModifyTime(LocalDateTime.now());
             deviceBusinessKeyRepository.update(current);
             return current;
         });
     }
 
-    private void insertItem(Long provisioningId, DeviceBusinessKey target, String purpose) {
+    private void insertItem(Long provisioningId, DeviceBusinessKey target, String purpose, DerivedWrappedKey result,
+                            String fingerprintDigest) {
         tx().executeWithoutResult(status -> provisioningItemRepository.insert(BusinessKeyProvisioningItem.builder()
                 .provisioningId(provisioningId)
                 .purpose(purpose)
                 .keyId(target.getKeyId())
                 .businessKeyVersion(target.getBusinessKeyVersion())
                 .directoryKeyId(target.getId())
+                .operationId(result.operationId())
+                .rootKeyVersion(result.rootKeyVersion() == null ? null : result.rootKeyVersion().longValue())
+                .derivationVersion(result.derivationVersion())
+                .recipientCertFingerprintDigest(fingerprintDigest)
                 .deviceResult(ProvisioningDeviceResult.PENDING)
                 .createTime(LocalDateTime.now())
                 .build()));
     }
 
-    private BusinessKeyCreateRequest buildCreateRequest(KeyProvisioningRequest request, BoundDeviceIdentity identity,
-                                                        String domain, String purpose, Long version,
-                                                        BusinessKeyPolicyEntry policy) {
-        BizType bizType = bizTypeMapper.resolveBizType(domain);
-        KeyMaterialPolicy materialPolicy = KeyMaterialPolicy.of(policy.algorithm(), policy.keySpec());
-        Map<String, String> auditContext = new HashMap<>();
-        auditContext.put("deviceSn", identity.deviceSn());
-        auditContext.put("businessDomain", domain);
-        auditContext.put("purpose", purpose);
-        auditContext.put("businessKeyVersion", String.valueOf(version));
-        return new BusinessKeyCreateRequest(bizType, materialPolicy,
-                request.getRequestId() + ":" + purpose, auditContext);
-    }
-
     private KeyProvisioningResponse buildResponse(BusinessKeyProvisioning batch, BoundDeviceIdentity identity,
                                                   KeyProvisioningRequest request, ActiveDeviceCertificate activeCert,
-                                                  String suite, boolean completed) {
+                                                  String suite, Map<String, DerivedWrappedKey> derived) {
         List<BusinessKeyProvisioningItem> items = provisioningItemRepository.selectByProvisioningId(batch.getId());
         List<WrappedKeyItem> wrappedItems = new ArrayList<>();
         for (BusinessKeyProvisioningItem item : items) {
@@ -358,7 +434,10 @@ public class BusinessKeyProvisioningBatchAppService {
             if (directory == null || directory.getKeyId() == null) {
                 continue;
             }
-            WrappedBusinessKey wrapped = wrap(directory, activeCert, request.getRequestId(), item.getPurpose());
+            DerivedWrappedKey wrapped = derived.get(item.getPurpose());
+            if (wrapped == null || wrapped.wrapped() == null) {
+                continue;
+            }
             wrappedItems.add(toWrappedItem(item.getPurpose(), directory, wrapped, suite));
         }
         long expireAt = request.getExpireAtMs() > 0 ? request.getExpireAtMs() : defaultBundleExpireAt();
@@ -371,7 +450,7 @@ public class BusinessKeyProvisioningBatchAppService {
         return builder.build();
     }
 
-    private WrappedKeyItem toWrappedItem(String purpose, DeviceBusinessKey directory, WrappedBusinessKey wrapped,
+    private WrappedKeyItem toWrappedItem(String purpose, DeviceBusinessKey directory, DerivedWrappedKey wrapped,
                                          String suite) {
         WrappedKeyItem.Builder builder = WrappedKeyItem.newBuilder()
                 .setPurpose(KeyprovConstants.purposeProto(purpose))
@@ -382,32 +461,13 @@ public class BusinessKeyProvisioningBatchAppService {
         if (wrapped.wrapped() != null) {
             builder.setWrappedKey(ByteString.copyFrom(wrapped.wrapped()));
         }
-        if (wrapped.expiry() != null) {
-            builder.setValidToMs(wrapped.expiry().toEpochMilli());
-        }
         if (directory.getValidFrom() != null) {
             builder.setValidFromMs(toEpochMs(directory.getValidFrom()));
         }
         if (directory.getValidTo() != null) {
             builder.setValidToMs(toEpochMs(directory.getValidTo()));
         }
-        if (wrapped.parameters() != null && !wrapped.parameters().isEmpty()) {
-            builder.setParameters(ByteString.copyFromUtf8(JSONUtil.toJsonStr(wrapped.parameters())));
-        }
         return builder.build();
-    }
-
-    private WrappedBusinessKey wrap(DeviceBusinessKey directory, ActiveDeviceCertificate activeCert,
-                                    String requestId, String purpose) {
-        Map<String, String> audit = new HashMap<>();
-        audit.put("purpose", purpose);
-        audit.put("operation", "KEYPROV");
-        return materialTemplate().wrap(
-                new BusinessKeyRef(directory.getKeyId(), directory.getKmsKeyRef()),
-                // CR-060 §4.2：直接证据优先——canonical serial + pkiRequestId + fingerprint
-                new RecipientRef.DeviceCertificate(activeCert.certSn(), activeCert.pkiRequestId(), null, null,
-                        activeCert.sha256Fingerprint(), audit),
-                new WrapContext(WrapMode.DEVICE_CERT_PUBLIC_KEY, requestId + ":" + purpose + ":wrap", audit));
     }
 
     private void markBatchReconcile(BusinessKeyProvisioning batch, String reason) {
@@ -424,26 +484,36 @@ public class BusinessKeyProvisioningBatchAppService {
     private void markBatchFailed(BusinessKeyProvisioning batch, String reason) {
         tx().executeWithoutResult(status -> {
             BusinessKeyProvisioning current = provisioningRepository.selectById(batch.getId());
-            if (current != null && current.getStatus().isOpen()) {
-                // 本批次新建 PENDING 目标版本置 FAILED；复用 ACTIVE 不受影响
-                for (BusinessKeyProvisioningItem item : provisioningItemRepository.selectByProvisioningId(current.getId())) {
-                    DeviceBusinessKey directory = deviceBusinessKeyRepository.selectById(item.getDirectoryKeyId());
-                    if (directory != null && directory.getKeyState() == BusinessKeyState.PENDING) {
-                        directory.markFailed(reason);
-                        directory.setModifyTime(LocalDateTime.now());
-                        deviceBusinessKeyRepository.update(directory);
-                    }
-                    if (item.getDeviceResult() == ProvisioningDeviceResult.PENDING) {
-                        item.markFailed(null);
-                        item.setModifyTime(LocalDateTime.now());
-                        provisioningItemRepository.update(item);
-                    }
-                }
-                current.markFailed(reason);
-                current.setModifyTime(LocalDateTime.now());
-                provisioningRepository.update(current);
+            if (current == null || !current.getStatus().isOpen()) {
+                return;
             }
+            // 1) 已建 item 的目标版本置 FAILED；item 置 FAILED（本批次新建 PENDING 目标版本）
+            for (BusinessKeyProvisioningItem item : provisioningItemRepository.selectByProvisioningId(current.getId())) {
+                markPendingKeyFailed(deviceBusinessKeyRepository.selectById(item.getDirectoryKeyId()), reason);
+                if (item.getDeviceResult() == ProvisioningDeviceResult.PENDING) {
+                    item.markFailed(null);
+                    item.setModifyTime(LocalDateTime.now());
+                    provisioningItemRepository.update(item);
+                }
+            }
+            // 2) 失败发生在 item 落库前（如派生前）时的兜底：本批次已占位 PENDING 目标版本按
+            //    requestId+purpose 置 FAILED，避免遗留孤儿 PENDING 阻断后续重试/版本推进
+            for (String purpose : KeyprovConstants.V2C_PURPOSES) {
+                markPendingKeyFailed(deviceBusinessKeyRepository.selectByRequestIdAndPurpose(current.getRequestId(), purpose),
+                        reason);
+            }
+            current.markFailed(reason);
+            current.setModifyTime(LocalDateTime.now());
+            provisioningRepository.update(current);
         });
+    }
+
+    private void markPendingKeyFailed(DeviceBusinessKey directory, String reason) {
+        if (directory != null && directory.getKeyState() == BusinessKeyState.PENDING) {
+            directory.markFailed(reason);
+            directory.setModifyTime(LocalDateTime.now());
+            deviceBusinessKeyRepository.update(directory);
+        }
     }
 
     private KeyProvisioningResponse rejected(String requestId, String code, boolean retryable, String message) {
@@ -476,12 +546,8 @@ public class BusinessKeyProvisioningBatchAppService {
         return System.currentTimeMillis() + bundleTtlSeconds * 1000L;
     }
 
-    private LocalDateTime toLocalDateTime(Instant instant) {
-        return instant != null ? LocalDateTime.ofInstant(instant, ZoneId.systemDefault()) : null;
-    }
-
     private long toEpochMs(LocalDateTime time) {
-        return time.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+        return time.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
     }
 
     private String truncate(String message) {

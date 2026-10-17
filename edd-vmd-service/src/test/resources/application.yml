@@ -1,6 +1,10 @@
 crypto:
   provisioning:
     enabled: true
+    # CR-061：测试环境显式跳过根派生 Provider 启动探测（无真实 Transit v2c-comm-root）
+    derived-key:
+      require-ready-at-startup: false
+      derivation-version: v1
 
 # Actuator 健康分组契约（与 src/main/resources/application.yml 保持一致，供集成测试验证分组聚合与主聚合排除）
 management:
@@ -8,7 +12,7 @@ management:
     health:
       group:
         keyprov:
-          include: keyProvisioningCapability,certificateResolution,kmsBusinessKey
+          include: keyProvisioningCapability,derivedKeyProvider,certificateResolution
           show-details: always
 
 # CR-055 业务密钥域测试策略（真实授权策略 + BizType 映射，供集成测试使用）

@@ -11,10 +11,13 @@
         <result column="hsm_uid" property="hsmUid" />
         <result column="business_domain" property="businessDomain" />
         <result column="purpose" property="purpose" />
+        <result column="material_model" property="materialModel" />
         <result column="key_id" property="keyId" />
         <result column="business_key_version" property="businessKeyVersion" />
         <result column="kms_key_ref" property="kmsKeyRef" />
         <result column="kms_key_version" property="kmsKeyVersion" />
+        <result column="root_key_version" property="rootKeyVersion" />
+        <result column="derivation_version" property="derivationVersion" />
         <result column="kms_provider" property="kmsProvider" />
         <result column="algorithm" property="algorithm" />
         <result column="key_spec" property="keySpec" />
@@ -25,6 +28,7 @@
         <result column="wrap_mode" property="wrapMode" />
         <result column="last_recipient_cert_sn" property="lastRecipientCertSn" />
         <result column="request_id" property="requestId" />
+        <result column="operation_id" property="operationId" />
         <result column="request_digest" property="requestDigest" />
         <result column="policy_version" property="policyVersion" />
         <result column="fail_reason" property="failReason" />
@@ -39,27 +43,27 @@
 
     <!-- 通用查询结果列（不含生成列 active_flag） -->
     <sql id="baseColumnList">
-        id, device_sn, binding_id, part_id, hsm_uid, business_domain, purpose, key_id, business_key_version,
-        kms_key_ref, kms_key_version, kms_provider, algorithm, key_spec, key_state,
+        id, device_sn, binding_id, part_id, hsm_uid, business_domain, purpose, material_model, key_id, business_key_version,
+        kms_key_ref, kms_key_version, root_key_version, derivation_version, kms_provider, algorithm, key_spec, key_state,
         valid_from, valid_to, decrypt_until, wrap_mode, last_recipient_cert_sn,
-        request_id, request_digest, policy_version, fail_reason, last_attempt_time,
+        request_id, operation_id, request_digest, policy_version, fail_reason, last_attempt_time,
         create_time, create_by, modify_time, modify_by, row_version, row_valid
     </sql>
 
     <!-- 插入 -->
     <insert id="insertPo" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO tb_device_business_key (
-            device_sn, binding_id, part_id, hsm_uid, business_domain, purpose, key_id, business_key_version,
-            kms_key_ref, kms_key_version, kms_provider, algorithm, key_spec, key_state,
+            device_sn, binding_id, part_id, hsm_uid, business_domain, purpose, material_model, key_id, business_key_version,
+            kms_key_ref, kms_key_version, root_key_version, derivation_version, kms_provider, algorithm, key_spec, key_state,
             valid_from, valid_to, decrypt_until, wrap_mode, last_recipient_cert_sn,
-            request_id, request_digest, policy_version, fail_reason, last_attempt_time,
+            request_id, operation_id, request_digest, policy_version, fail_reason, last_attempt_time,
             create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
         VALUES (
-            #{deviceSn}, #{bindingId}, #{partId}, #{hsmUid}, #{businessDomain}, #{purpose}, #{keyId}, #{businessKeyVersion},
-            #{kmsKeyRef}, #{kmsKeyVersion}, #{kmsProvider}, #{algorithm}, #{keySpec}, #{keyState},
+            #{deviceSn}, #{bindingId}, #{partId}, #{hsmUid}, #{businessDomain}, #{purpose}, #{materialModel}, #{keyId}, #{businessKeyVersion},
+            #{kmsKeyRef}, #{kmsKeyVersion}, #{rootKeyVersion}, #{derivationVersion}, #{kmsProvider}, #{algorithm}, #{keySpec}, #{keyState},
             #{validFrom}, #{validTo}, #{decryptUntil}, #{wrapMode}, #{lastRecipientCertSn},
-            #{requestId}, #{requestDigest}, #{policyVersion}, #{failReason}, #{lastAttemptTime},
+            #{requestId}, #{operationId}, #{requestDigest}, #{policyVersion}, #{failReason}, #{lastAttemptTime},
             now(), #{createBy}, now(), #{modifyBy}, 1, 1
         )
     </insert>
@@ -85,6 +89,9 @@
         <if test="purpose != null and purpose != ''">
             t.purpose = #{purpose},
         </if>
+        <if test="materialModel != null and materialModel != ''">
+            t.material_model = #{materialModel},
+        </if>
         <if test="keyId != null and keyId != ''">
             t.key_id = #{keyId},
         </if>
@@ -96,6 +103,12 @@
         </if>
         <if test="kmsKeyVersion != null">
             t.kms_key_version = #{kmsKeyVersion},
+        </if>
+        <if test="rootKeyVersion != null">
+            t.root_key_version = #{rootKeyVersion},
+        </if>
+        <if test="derivationVersion != null and derivationVersion != ''">
+            t.derivation_version = #{derivationVersion},
         </if>
         <if test="kmsProvider != null and kmsProvider != ''">
             t.kms_provider = #{kmsProvider},
@@ -126,6 +139,9 @@
         </if>
         <if test="requestId != null and requestId != ''">
             t.request_id = #{requestId},
+        </if>
+        <if test="operationId != null and operationId != ''">
+            t.operation_id = #{operationId},
         </if>
         <if test="requestDigest != null and requestDigest != ''">
             t.request_digest = #{requestDigest},

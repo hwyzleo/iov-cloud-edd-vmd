@@ -61,6 +61,12 @@ public class DeviceBusinessKey extends BaseDo<Long> {
     private String purpose;
 
     /**
+     * 材料模型：DERIVED_ROOT / RANDOM_MATERIAL（VMD-DSN-CR-061）。
+     * <p>历史记录保持 null，不猜测来源；null 行禁止自动轮换/重建/迁移。
+     */
+    private String materialModel;
+
+    /**
      * framework/KMS 返回的不透明标识，唯一
      */
     private String keyId;
@@ -79,6 +85,16 @@ public class DeviceBusinessKey extends BaseDo<Long> {
      * KMS/provider 内部版本，仅审计与对账
      */
     private Integer kmsKeyVersion;
+
+    /**
+     * Transit/HSM 根版本（仅根派生型；VMD-DSN-CR-061）
+     */
+    private Long rootKeyVersion;
+
+    /**
+     * 派生格式版本（首期 v1；VMD-DSN-CR-061）
+     */
+    private String derivationVersion;
 
     /**
      * KMS 提供方
@@ -129,6 +145,11 @@ public class DeviceBusinessKey extends BaseDo<Long> {
      * 调用幂等键
      */
     private String requestId;
+
+    /**
+     * 根派生操作标识（对账主键，不透明；VMD-DSN-CR-061）
+     */
+    private String operationId;
 
     /**
      * 规范化请求摘要（参数冲突识别）

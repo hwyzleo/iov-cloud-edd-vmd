@@ -7,8 +7,8 @@ iov:
       # 服务启动后检查并创建 VMD 作为生产者输出的三个标准 Kafka Topic
       enabled: true
 
-# Actuator 健康分组（VMD-DSN-CR-059 §7 / CR-060 §5.1、§7）：Keyprov capability 独立呈现，
-# 聚合 VMD 编排 + framework 证书解析 + KMS business-key Provider（VAGW keyprov 流量门禁），
+# Actuator 健康分组（VMD-DSN-CR-059 §7 / CR-060 §5.1、§7 / CR-061 §10）：Keyprov capability 独立呈现，
+# 聚合 VMD 编排 + 根派生 Provider（Transit/HSM v2c-comm-root）+ framework 证书解析（VAGW keyprov 流量门禁），
 # 并从主 readiness/liveness 聚合排除（KeyProvisioningHealthGroupsCustomizer）。
 # 生产以 /actuator/health/keyprov 决定是否启用 Keyprov 流量；DOWN 时停止新 Request/Wrap/轮换/吊销。
 management:
@@ -16,12 +16,17 @@ management:
     health:
       group:
         keyprov:
-          include: keyProvisioningCapability,certificateResolution,kmsBusinessKey
+          include: keyProvisioningCapability,derivedKeyProvider,certificateResolution
           show-details: always
 
 crypto:
   provisioning:
     enabled: true
+    # CR-061：V2C 根派生（Transit/HSM v2c-comm-root）——生产要求 Provider READY；
+    # require-ready-at-startup=false 仅限 dev/test（跳过启动探测）。
+    derived-key:
+      require-ready-at-startup: ${CRYPTO_PROVISIONING_DERIVED_KEY_REQUIRE_READY_AT_STARTUP:true}
+      derivation-version: ${CRYPTO_PROVISIONING_DERIVED_KEY_DERIVATION_VERSION:v1}
   # 业务密钥域（CR-055）：VMD 作为目录 SSOT，framework 仅管密钥材料
   business-key:
     enabled: true

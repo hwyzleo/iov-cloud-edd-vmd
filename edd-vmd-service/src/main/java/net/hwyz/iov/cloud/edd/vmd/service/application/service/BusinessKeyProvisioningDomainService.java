@@ -109,21 +109,26 @@ public class BusinessKeyProvisioningDomainService {
 
     /**
      * 规范化请求摘要（同 requestId 参数冲突识别）。
-     * <p>不包含任何敏感材料；仅设备身份摘要 + 业务域 + 用途集合 + 声明版本 + 幂等键。
+     * <p>不包含任何敏感材料；仅设备身份摘要 + 规范化 VIN 摘要 + 业务域 + 用途集合 + 声明版本 +
+     * 派生版本 + 收件证书指纹摘要 + 幂等键（VMD-DSN-CR-061 §8）。VIN 原文不落摘要输入。
      */
-    public String buildRequestDigest(KeyProvisioningRequest request, String hsmUidDigest) {
+    public String buildRequestDigest(KeyProvisioningRequest request, String hsmUidDigest, String vinDigest,
+                                     String derivationVersion, String certFingerprintDigest) {
         Set<String> purposes = normalizePurposes(request);
         List<String> sortedPurposes = new ArrayList<>(purposes);
         sortedPurposes.sort(String::compareTo);
         Map<String, Long> currentVersions = extractCurrentVersions(request);
         StringBuilder sb = new StringBuilder();
         sb.append(hsmUidDigest == null ? "" : hsmUidDigest).append('|')
+                .append(vinDigest == null ? "" : vinDigest).append('|')
                 .append(upper(request.getBusinessDomain())).append('|')
                 .append(String.join(",", sortedPurposes)).append('|');
         currentVersions.entrySet().stream()
                 .sorted(Map.Entry.comparingByKey())
                 .forEach(e -> sb.append(e.getKey()).append('=').append(e.getValue() == null ? 0 : e.getValue()).append(','));
-        sb.append('|').append(request.getIdempotencyKey() == null ? "" : request.getIdempotencyKey());
+        sb.append('|').append(derivationVersion == null ? "" : derivationVersion)
+                .append('|').append(certFingerprintDigest == null ? "" : certFingerprintDigest)
+                .append('|').append(request.getIdempotencyKey() == null ? "" : request.getIdempotencyKey());
         return DigestUtil.sha256Hex(sb.toString());
     }
 
@@ -166,6 +171,18 @@ public class BusinessKeyProvisioningDomainService {
             return null;
         }
         return DigestUtil.sha256Hex(bytes);
+    }
+
+    /**
+     * 字符串 SHA-256 摘要的短前缀（前 16 位十六进制），用于日志/审计关联，不泄露原文。
+     * <p>null 安全：null 或空白返回 {@code null}。
+     */
+    public String sha256HexPrefix(String value) {
+        if (StrUtil.isBlank(value)) {
+            return null;
+        }
+        String digest = DigestUtil.sha256Hex(value.getBytes(StandardCharsets.UTF_8));
+        return digest.length() <= 16 ? digest : digest.substring(0, 16);
     }
 
     /**

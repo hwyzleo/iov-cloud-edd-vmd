@@ -3,9 +3,8 @@ package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.health;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.adapter.KeyProvisioningServiceAdapter;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.BusinessKeyPolicyRegistry;
-import net.hwyz.iov.cloud.edd.vmd.service.application.service.KeyprovProviderReadinessGate;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.DerivedKeyProviderReadinessGate;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.KeyprovConstants;
-import net.hwyz.iov.cloud.framework.security.crypto.BusinessKeyMaterialTemplate;
 import net.hwyz.iov.cloud.framework.security.crypto.resolver.CertificateReferenceDirectory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
@@ -29,6 +28,8 @@ import java.util.Set;
  *   <li>enabled=true：Controller/Adapter/Facade、V2C 业务策略、framework-security 能力或
  *       必要表结构缺失时 DOWN，禁止返回模拟成功</li>
  * </ul>
+ * CR-061：V2C 材料能力门禁由随机 {@code BusinessKeyMaterialTemplate} 改为根派生
+ * {@link DerivedKeyProviderReadinessGate}（Transit/HSM {@code v2c-comm-root}）。
  *
  * @author hwyz_leo
  * @since 2026-10-16
@@ -39,27 +40,24 @@ import java.util.Set;
 public class KeyProvisioningCapabilityHealthIndicator implements HealthIndicator {
 
     private final ObjectProvider<KeyProvisioningServiceAdapter> adapterProvider;
-    private final ObjectProvider<BusinessKeyMaterialTemplate> materialTemplateProvider;
     private final BusinessKeyPolicyRegistry policyRegistry;
     private final ObjectProvider<JdbcTemplate> jdbcTemplateProvider;
     private final ObjectProvider<CertificateReferenceDirectory> certificateDirectoryProvider;
-    private final KeyprovProviderReadinessGate providerReadinessGate;
+    private final DerivedKeyProviderReadinessGate derivedKeyProviderReadinessGate;
 
     @Value("${vmd.business-key.provisioning.keyprov.enabled:false}")
     private boolean keyprovEnabled;
 
     public KeyProvisioningCapabilityHealthIndicator(ObjectProvider<KeyProvisioningServiceAdapter> adapterProvider,
-                                                    ObjectProvider<BusinessKeyMaterialTemplate> materialTemplateProvider,
                                                     BusinessKeyPolicyRegistry policyRegistry,
                                                     ObjectProvider<JdbcTemplate> jdbcTemplateProvider,
                                                     ObjectProvider<CertificateReferenceDirectory> certificateDirectoryProvider,
-                                                    KeyprovProviderReadinessGate providerReadinessGate) {
+                                                    DerivedKeyProviderReadinessGate derivedKeyProviderReadinessGate) {
         this.adapterProvider = adapterProvider;
-        this.materialTemplateProvider = materialTemplateProvider;
         this.policyRegistry = policyRegistry;
         this.jdbcTemplateProvider = jdbcTemplateProvider;
         this.certificateDirectoryProvider = certificateDirectoryProvider;
-        this.providerReadinessGate = providerReadinessGate;
+        this.derivedKeyProviderReadinessGate = derivedKeyProviderReadinessGate;
     }
 
     @Override
@@ -76,15 +74,12 @@ public class KeyProvisioningCapabilityHealthIndicator implements HealthIndicator
         if (adapterProvider.getIfAvailable() == null) {
             down = down(builder, "adapter", "KeyProvisioningServiceAdapter 缺失");
         }
-        if (materialTemplateProvider.getIfAvailable() == null) {
-            down = down(builder, "frameworkSecurity", "framework-security 业务密钥能力未装配");
-        }
         if (certificateDirectoryProvider.getIfAvailable() == null) {
             down = down(builder, "certificateDirectory", "证书目录 Adapter 未装配（CertificateReferenceDirectory 缺失）");
         }
-        if (!providerReadinessGate.isReady()) {
-            down = down(builder, "providerReadiness",
-                    "business-key Provider capability 未就绪: " + providerReadinessGate.reason());
+        if (!derivedKeyProviderReadinessGate.isReady()) {
+            down = down(builder, "derivedKeyProvider",
+                    "根派生/Transit root capability 未就绪: " + derivedKeyProviderReadinessGate.reason());
         }
         Set<String> purposes = policyRegistry.resolvePurposes(KeyprovConstants.BUSINESS_DOMAIN_V2C).orElse(Set.of());
         if (!KeyprovConstants.isCompleteV2cPurposeSet(purposes)) {

@@ -76,13 +76,27 @@ class BusinessKeyProvisioningDomainServiceTest {
     }
 
     @Test
-    @DisplayName("请求摘要确定且随 idempotencyKey 变化")
+    @DisplayName("请求摘要确定且随 idempotencyKey / 派生版本 / 收件指纹变化")
     void requestDigestDeterministic() {
-        String d1 = service.buildRequestDigest(request("IK-1"), "HSM");
-        String d2 = service.buildRequestDigest(request("IK-1"), "HSM");
-        String d3 = service.buildRequestDigest(request("IK-2"), "HSM");
+        String d1 = service.buildRequestDigest(request("IK-1"), "HSM", "VINDIG", "v1", "FP");
+        String d2 = service.buildRequestDigest(request("IK-1"), "HSM", "VINDIG", "v1", "FP");
+        String d3 = service.buildRequestDigest(request("IK-2"), "HSM", "VINDIG", "v1", "FP");
+        String d4 = service.buildRequestDigest(request("IK-1"), "HSM", "VINDIG", "v2", "FP");
+        String d5 = service.buildRequestDigest(request("IK-1"), "HSM", "VINDIG", "v1", "FP2");
         assertEquals(d1, d2);
         assertNotEquals(d1, d3);
+        assertNotEquals(d1, d4, "派生版本必须参与摘要");
+        assertNotEquals(d1, d5, "收件证书指纹摘要必须参与摘要");
+    }
+
+    @Test
+    @DisplayName("sha256HexPrefix 短前缀用于关联，不做原文回显；null/空白安全")
+    void sha256HexPrefix() {
+        String prefix = service.sha256HexPrefix("CR058-TBOX-0001");
+        assertEquals(16, prefix.length());
+        assertEquals(prefix, service.sha256HexPrefix("CR058-TBOX-0001"));
+        assertNull(service.sha256HexPrefix(null));
+        assertNull(service.sha256HexPrefix("   "));
     }
 
     @Test

@@ -7,34 +7,50 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.BusinessKeyRotateC
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.BusinessKeyRotationResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.publish.BusinessKeyChangedPublisher;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.*;
+import net.hwyz.iov.cloud.edd.vmd.service.common.util.DerivedKeyOperationIds;
+import net.hwyz.iov.cloud.edd.vmd.service.common.util.VinCanonicalizer;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.DeviceBusinessKey;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.BusinessKeyState;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.DeviceBusinessKeyRepository;
 import net.hwyz.iov.cloud.framework.security.crypto.BusinessKeyCacheInvalidator;
-import net.hwyz.iov.cloud.framework.security.crypto.BusinessKeyMaterialTemplate;
+import net.hwyz.iov.cloud.framework.security.crypto.KeyProvisioningTemplate;
 import net.hwyz.iov.cloud.framework.security.crypto.exception.CryptoDependencyUnavailableException;
 import net.hwyz.iov.cloud.framework.security.crypto.exception.CryptoException;
 import net.hwyz.iov.cloud.framework.security.crypto.exception.CryptoOperationOutcomeUnknownException;
+import net.hwyz.iov.cloud.framework.security.crypto.exception.KeyMaterialModelMismatchException;
 import net.hwyz.iov.cloud.framework.security.crypto.model.BizType;
+import net.hwyz.iov.cloud.framework.security.crypto.model.DerivationContext;
+import net.hwyz.iov.cloud.framework.security.crypto.model.DerivedWrappedKey;
+import net.hwyz.iov.cloud.framework.security.crypto.model.KeyAnchor;
+import net.hwyz.iov.cloud.framework.security.crypto.model.KeyMaterialModel;
+import net.hwyz.iov.cloud.framework.security.crypto.model.KeyPurpose;
 import net.hwyz.iov.cloud.framework.security.crypto.model.businesskey.*;
-import org.springframework.dao.DuplicateKeyException;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
-
 
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.Consumer;
 
 /**
- * 业务密钥轮换应用服务（CR-055 F20 §6.4）
+ * 业务密钥轮换应用服务（CR-055 F20 §6.4，CR-061 §9.3 材料路由改造）
  * <p>
- * 编排「锁定旧 ACTIVE → 创建新材料 → 验证可 Wrap → 持久化新版本 → 原子切换 ACTIVE」。
- * 任何创建/Wrap/落库失败都不得提前降级旧 ACTIVE；成功后旧版本转 DEPRECATED（仅解密窗口），
+ * 编排「锁定旧 ACTIVE → 准备新材料 → 持久化新版本 → 原子切换 ACTIVE」。
+ * 按 {@code BizType.materialModel()} <strong>显式</strong>路由（VMD-DSN-CR-061 RD-061-3）：
+ * <ul>
+ *   <li>{@link KeyMaterialModel#DERIVED_ROOT}：走 {@code KeyProvisioningTemplate.deriveAndWrap}，
+ *       回填 {@code materialModel/rootKeyVersion/derivationVersion/operationId}；</li>
+ *   <li>{@link KeyMaterialModel#RANDOM_MATERIAL}：保留 CR-055 的 {@code create + wrap} 语义；</li>
+ *   <li>{@code null}（不适用）或历史 {@code material_model IS NULL}：fail-closed 拒绝自动轮换。</li>
+ * </ul>
+ * 任何创建/派生/落库失败都不得提前降级旧 ACTIVE；成功后旧版本转 DEPRECATED（仅解密窗口），
  * 业务版本递增且 KMS 版本不混入信封。
  *
  * @author hwyz_leo
@@ -52,23 +68,15 @@ public class BusinessKeyRotationAppService {
     private final ActiveDeviceCertificateResolver activeDeviceCertificateResolver;
     private final BusinessKeyAuthorizationPolicy authorizationPolicy;
     private final BusinessKeyBizTypeMapper bizTypeMapper;
-    private final ObjectProvider<BusinessKeyMaterialTemplate> businessKeyMaterialTemplateProvider;
+    private final BusinessKeyMaterialRouter materialRouter;
     private final BusinessKeyChangedPublisher businessKeyChangedPublisher;
     private final ObjectProvider<BusinessKeyCacheInvalidator> cacheInvalidatorProvider;
     private final PlatformTransactionManager transactionManager;
 
-    private volatile TransactionTemplate transactionTemplate;
+    @Value("${crypto.provisioning.derived-key.derivation-version:v1}")
+    private String derivationVersion = "v1";
 
-    /**
-     * 获取 BusinessKeyMaterialTemplate（framework 业务密钥未装配时 fail-closed）
-     */
-    private BusinessKeyMaterialTemplate materialTemplate() {
-        BusinessKeyMaterialTemplate template = businessKeyMaterialTemplateProvider.getIfAvailable();
-        if (template == null) {
-            throw new BusinessKeyKmsUnavailableException("framework业务密钥模板未装配（crypto.business-key.enabled=false）");
-        }
-        return template;
-    }
+    private volatile TransactionTemplate transactionTemplate;
 
     /**
      * 获取缓存失效器（未装配时忽略缓存失效，不影响主流程）
@@ -112,57 +120,153 @@ public class BusinessKeyRotationAppService {
         BusinessKeyPolicyEntry policy = authorizationPolicy.authorize(
                 BusinessKeyAction.ROTATE, identity.deviceCategory(), cmd.getBusinessDomain(), cmd.getPurpose());
 
-        // 3. 事务内锁定旧 ACTIVE + 分配新版本 + 落 PENDING 新行（串行化并发轮换）
-        RotationPlan plan = lockAndPlan(cmd, policy);
+        // 3. 显式材料模型路由（禁隐式回退）：仅 DERIVED_ROOT / RANDOM_MATERIAL 可轮换
+        BizType bizType = bizTypeMapper.resolveBizType(cmd.getBusinessDomain());
+        boolean derivedRoot = materialRouter.isDerivedRoot(bizType);
+        boolean randomMaterial = materialRouter.isRandomMaterial(bizType);
+        if (!derivedRoot && !randomMaterial) {
+            throw new BusinessKeyDerivationRejectedException(
+                    "轮换目标材料模型不适用（materialModel=" + materialRouter.materialModel(bizType) + "），拒绝自动轮换: domain="
+                            + cmd.getBusinessDomain());
+        }
+
+        // 4. 事务内锁定旧 ACTIVE + 分配新版本 + 落 PENDING 新行（串行化并发轮换）
+        RotationPlan plan = lockAndPlan(cmd, policy, bizType);
         DeviceBusinessKey oldActive = plan.oldActive;
         DeviceBusinessKey newRow = plan.newRow;
 
         try {
-            // 4. 创建新材料（framework，事务外网络 I/O）
-            BusinessKeyMaterial material;
-            try {
-                material = materialTemplate().create(buildCreateRequest(cmd, identity, policy));
-            } catch (CryptoOperationOutcomeUnknownException e) {
-                failNewRow(newRow, "framework创建结果未知，待对账");
-                throw new BusinessKeyOutcomeUnknownException("轮换材料创建结果未知: requestId=" + cmd.getRequestId());
-            } catch (net.hwyz.iov.cloud.framework.security.crypto.exception.BusinessKeyIdempotencyConflictException e) {
-                failNewRow(newRow, "framework幂等冲突");
-                throw new BusinessKeyIdempotencyConflictException("轮换材料创建幂等冲突: requestId=" + cmd.getRequestId());
-            } catch (CryptoDependencyUnavailableException e) {
-                failNewRow(newRow, "KMS/HSM或framework安全服务不可用");
-                throw new BusinessKeyKmsUnavailableException("KMS/HSM或framework安全服务不可用: requestId=" + cmd.getRequestId());
-            } catch (CryptoException e) {
-                failNewRow(newRow, truncate(e.getMessage()));
-                throw new BusinessKeyKmsUnavailableException("轮换材料创建失败: requestId=" + cmd.getRequestId());
+            if (derivedRoot) {
+                return rotateDerivedRoot(cmd, identity, policy, bizType, oldActive, newRow);
             }
-
-            // 5. 用当前设备证书验证新 keyRef 可 Wrap（仅验证，Wrapped Key 不落库）
-            verifyWrap(cmd, identity, material, newRow);
-
-            // 6. 原子切换：旧→DEPRECATED + 新→ACTIVE + ROTATED 事件 + 缓存失效（单事务）
-            switchActive(oldActive, newRow, material, cmd, policy);
-
-            log.info("业务密钥轮换成功: requestId={}, oldKeyId={}, newKeyId={}, newVersion={}",
-                    cmd.getRequestId(), oldActive.getKeyId(), material.keyId(), newRow.getBusinessKeyVersion());
-            return BusinessKeyRotationResult.builder()
-                    .requestId(cmd.getRequestId())
-                    .newKeyId(material.keyId())
-                    .newBusinessKeyVersion(newRow.getBusinessKeyVersion())
-                    .oldKeyId(oldActive.getKeyId())
-                    .oldBusinessKeyVersion(oldActive.getBusinessKeyVersion())
-                    .state(BusinessKeyState.ACTIVE.getValue())
-                    .build();
+            return rotateRandomMaterial(cmd, identity, policy, bizType, oldActive, newRow);
         } catch (RuntimeException e) {
             // 任何失败都不得降级旧 ACTIVE；新行失败已留痕
-            log.warn("业务密钥轮换失败（旧ACTIVE保持）: requestId={}, oldKeyId={}", cmd.getRequestId(), oldActive.getKeyId(), e);
+            log.warn("业务密钥轮换失败（旧ACTIVE保持）: requestId={}, oldKeyId={}", cmd.getRequestId(),
+                    oldActive.getKeyId(), e);
             throw e;
         }
     }
 
     /**
+     * 根派生型轮换：deriveAndWrap 一步完成「根派生 + 设备证书公钥封装」（CR-061 §9.3）。
+     */
+    private BusinessKeyRotationResult rotateDerivedRoot(BusinessKeyRotateCmd cmd, BoundDeviceIdentity identity,
+                                                        BusinessKeyPolicyEntry policy, BizType bizType,
+                                                        DeviceBusinessKey oldActive, DeviceBusinessKey newRow) {
+        KeyAnchor anchor;
+        try {
+            anchor = resolveAnchor(bizType, identity);
+        } catch (RuntimeException e) {
+            failNewRow(newRow, "派生锚（VIN/UID）缺失或非法");
+            throw new BusinessKeyDerivationRejectedException(
+                    "轮换派生锚缺失或非法: requestId=" + cmd.getRequestId());
+        }
+        ActiveDeviceCertificate activeCert;
+        try {
+            activeCert = activeDeviceCertificateResolver.resolveActive(identity);
+        } catch (RuntimeException e) {
+            failNewRow(newRow, "无有效设备证书");
+            throw new BusinessKeyKmsUnavailableException("轮换无有效设备证书: requestId=" + cmd.getRequestId());
+        }
+        KeyProvisioningTemplate template = materialRouter.requireDerivedRoot(bizType);
+        String operationId = DerivedKeyOperationIds.operationId(cmd.getRequestId(), cmd.getPurpose(),
+                newRow.getBusinessKeyVersion());
+        String idemKey = DerivedKeyOperationIds.idempotencyKey(cmd.getRequestId(), cmd.getDeviceSn(),
+                cmd.getPurpose(), newRow.getBusinessKeyVersion(), derivationVersion);
+        Map<String, String> audit = new HashMap<>();
+        audit.put("purpose", cmd.getPurpose());
+        audit.put("operation", "ROTATE_DERIVED");
+
+        DerivedWrappedKey result;
+        try {
+            result = template.deriveAndWrap(
+                    bizType,
+                    anchor,
+                    KeyPurpose.valueOf(cmd.getPurpose()),
+                    new RecipientRef.DeviceCertificate(activeCert.certSn(), activeCert.pkiRequestId(), null, null,
+                            activeCert.sha256Fingerprint(), audit),
+                    DerivationContext.of(derivationVersion),
+                    operationId,
+                    idemKey);
+        } catch (CryptoOperationOutcomeUnknownException e) {
+            failNewRow(newRow, "framework派生结果未知，待对账");
+            throw new BusinessKeyOutcomeUnknownException("轮换派生结果未知: requestId=" + cmd.getRequestId());
+        } catch (BusinessKeyDerivedProviderUnavailableException e) {
+            failNewRow(newRow, "根派生Provider未就绪");
+            throw new BusinessKeyKmsUnavailableException("根派生Provider未就绪: requestId=" + cmd.getRequestId());
+        } catch (CryptoDependencyUnavailableException e) {
+            failNewRow(newRow, "KMS/HSM或framework安全服务不可用");
+            throw new BusinessKeyKmsUnavailableException("KMS/HSM或framework安全服务不可用: requestId=" + cmd.getRequestId());
+        } catch (KeyMaterialModelMismatchException e) {
+            failNewRow(newRow, truncate(e.getMessage()));
+            throw new BusinessKeyDerivationRejectedException("轮换材料模型不匹配，拒绝派生: requestId=" + cmd.getRequestId());
+        } catch (CryptoException e) {
+            failNewRow(newRow, truncate(e.getMessage()));
+            throw new BusinessKeyKmsUnavailableException("轮换派生失败: requestId=" + cmd.getRequestId());
+        }
+
+        // 原子切换：旧→DEPRECATED + 新→ACTIVE（回填派生非敏感字段）+ ROTATED 事件 + 缓存失效
+        switchActive(oldActive, newRow, policy, current -> applyDerivedMaterial(current, result, policy, operationId));
+
+        log.info("业务密钥轮换成功（根派生）: requestId={}, oldKeyId={}, newKeyId={}, newVersion={}",
+                cmd.getRequestId(), oldActive.getKeyId(), result.logicalKeyId(), newRow.getBusinessKeyVersion());
+        return BusinessKeyRotationResult.builder()
+                .requestId(cmd.getRequestId())
+                .newKeyId(result.logicalKeyId())
+                .newBusinessKeyVersion(newRow.getBusinessKeyVersion())
+                .oldKeyId(oldActive.getKeyId())
+                .oldBusinessKeyVersion(oldActive.getBusinessKeyVersion())
+                .state(BusinessKeyState.ACTIVE.getValue())
+                .build();
+    }
+
+    /**
+     * 独立随机材料型轮换：保留 CR-055 create + wrap 验证语义。
+     */
+    private BusinessKeyRotationResult rotateRandomMaterial(BusinessKeyRotateCmd cmd, BoundDeviceIdentity identity,
+                                                           BusinessKeyPolicyEntry policy, BizType bizType,
+                                                           DeviceBusinessKey oldActive, DeviceBusinessKey newRow) {
+        BusinessKeyMaterial material;
+        try {
+            material = materialRouter.requireRandomMaterial(bizType).create(buildCreateRequest(cmd, identity, policy));
+        } catch (CryptoOperationOutcomeUnknownException e) {
+            failNewRow(newRow, "framework创建结果未知，待对账");
+            throw new BusinessKeyOutcomeUnknownException("轮换材料创建结果未知: requestId=" + cmd.getRequestId());
+        } catch (net.hwyz.iov.cloud.framework.security.crypto.exception.BusinessKeyIdempotencyConflictException e) {
+            failNewRow(newRow, "framework幂等冲突");
+            throw new BusinessKeyIdempotencyConflictException("轮换材料创建幂等冲突: requestId=" + cmd.getRequestId());
+        } catch (CryptoDependencyUnavailableException e) {
+            failNewRow(newRow, "KMS/HSM或framework安全服务不可用");
+            throw new BusinessKeyKmsUnavailableException("KMS/HSM或framework安全服务不可用: requestId=" + cmd.getRequestId());
+        } catch (CryptoException e) {
+            failNewRow(newRow, truncate(e.getMessage()));
+            throw new BusinessKeyKmsUnavailableException("轮换材料创建失败: requestId=" + cmd.getRequestId());
+        }
+
+        // 用当前设备证书验证新 keyRef 可 Wrap（仅验证，Wrapped Key 不落库）
+        verifyWrap(cmd, identity, bizType, material, newRow);
+
+        // 原子切换：旧→DEPRECATED + 新→ACTIVE（回填材料）+ ROTATED 事件 + 缓存失效
+        switchActive(oldActive, newRow, policy, current -> applyRandomMaterial(current, material));
+
+        log.info("业务密钥轮换成功: requestId={}, oldKeyId={}, newKeyId={}, newVersion={}",
+                cmd.getRequestId(), oldActive.getKeyId(), material.keyId(), newRow.getBusinessKeyVersion());
+        return BusinessKeyRotationResult.builder()
+                .requestId(cmd.getRequestId())
+                .newKeyId(material.keyId())
+                .newBusinessKeyVersion(newRow.getBusinessKeyVersion())
+                .oldKeyId(oldActive.getKeyId())
+                .oldBusinessKeyVersion(oldActive.getBusinessKeyVersion())
+                .state(BusinessKeyState.ACTIVE.getValue())
+                .build();
+    }
+
+    /**
      * 事务内锁定旧 ACTIVE + 分配新版本 + 落 PENDING 新行
      */
-    private RotationPlan lockAndPlan(BusinessKeyRotateCmd cmd, BusinessKeyPolicyEntry policy) {
+    private RotationPlan lockAndPlan(BusinessKeyRotateCmd cmd, BusinessKeyPolicyEntry policy, BizType bizType) {
+        KeyMaterialModel materialModel = materialRouter.materialModel(bizType);
         return tx().execute(status -> {
             DeviceBusinessKey oldActive = deviceBusinessKeyRepository.selectActiveByContextForUpdate(
                     cmd.getDeviceSn(), cmd.getBusinessDomain(), cmd.getPurpose());
@@ -170,6 +274,19 @@ public class BusinessKeyRotationAppService {
                 throw new BusinessKeyNotExistException(
                         "轮换失败：当前无ACTIVE业务密钥: deviceSn=" + cmd.getDeviceSn()
                                 + ", domain=" + cmd.getBusinessDomain() + ", purpose=" + cmd.getPurpose());
+            }
+            // 历史材料来源未知：禁止自动轮换/重建/迁移（VMD-DSN-CR-061 §7.3）
+            if (oldActive.getMaterialModel() == null) {
+                throw new BusinessKeyDerivationRejectedException(
+                        "历史业务密钥材料来源未知（material_model IS NULL），禁止自动轮换，须走专项迁移批次: keyId="
+                                + oldActive.getKeyId());
+            }
+            // 目录行材料模型与目标业务域不一致：数据异常，fail-closed
+            if (!oldActive.getMaterialModel().equals(materialModel.name())) {
+                throw new BusinessKeyDerivationRejectedException(
+                        "目录行材料模型与目标业务域不一致，禁止自动轮换: keyId=" + oldActive.getKeyId()
+                                + ", recordModel=" + oldActive.getMaterialModel()
+                                + ", targetModel=" + materialModel.name());
             }
             Long newVersion = deviceBusinessKeyRepository.maxBusinessKeyVersion(
                     cmd.getDeviceSn(), cmd.getBusinessDomain(), cmd.getPurpose()) + 1;
@@ -180,6 +297,8 @@ public class BusinessKeyRotationAppService {
                     .hsmUid(oldActive.getHsmUid())
                     .businessDomain(cmd.getBusinessDomain())
                     .purpose(cmd.getPurpose())
+                    .materialModel(materialModel.name())
+                    .derivationVersion(materialModel == KeyMaterialModel.DERIVED_ROOT ? derivationVersion : null)
                     .businessKeyVersion(newVersion)
                     .keyState(BusinessKeyState.PENDING)
                     .wrapMode("DEVICE_CERT_PUBLIC_KEY")
@@ -199,13 +318,24 @@ public class BusinessKeyRotationAppService {
     }
 
     /**
+     * 按 BizType 锚定层级解析派生锚：VEHICLE→规范化 VIN，DEVICE→UID(device_sn)。
+     */
+    private KeyAnchor resolveAnchor(BizType bizType, BoundDeviceIdentity identity) {
+        BizType.Anchor anchorType = bizType.prov().anchor();
+        if (anchorType == BizType.Anchor.VEHICLE) {
+            return KeyAnchor.vin(VinCanonicalizer.normalizeAndValidate(identity.vin()));
+        }
+        return KeyAnchor.uid(identity.deviceSn());
+    }
+
+    /**
      * 设备证书 Wrap 验证（新 keyRef 可 Wrap 才允许切换）
      */
-    private void verifyWrap(BusinessKeyRotateCmd cmd, BoundDeviceIdentity identity, BusinessKeyMaterial material,
-                            DeviceBusinessKey newRow) {
+    private void verifyWrap(BusinessKeyRotateCmd cmd, BoundDeviceIdentity identity, BizType bizType,
+                            BusinessKeyMaterial material, DeviceBusinessKey newRow) {
         ActiveDeviceCertificate activeCert = activeDeviceCertificateResolver.resolveActive(identity);
         try {
-            materialTemplate().wrap(
+            materialRouter.requireRandomMaterial(bizType).wrap(
                     new BusinessKeyRef(material.keyId(), material.kmsKeyRef()),
                     // CR-060 §4.2：轮换必须使用当前 active 证书的 serial + requestId 直接证据
                     new RecipientRef.DeviceCertificate(activeCert.certSn(), activeCert.pkiRequestId(), null, null,
@@ -225,8 +355,8 @@ public class BusinessKeyRotationAppService {
     /**
      * 原子切换：旧→DEPRECATED（decrypt_until）+ 新→ACTIVE（回填材料）+ ROTATED 事件 + 缓存失效
      */
-    private void switchActive(DeviceBusinessKey oldActive, DeviceBusinessKey newRow, BusinessKeyMaterial material,
-                              BusinessKeyRotateCmd cmd, BusinessKeyPolicyEntry policy) {
+    private void switchActive(DeviceBusinessKey oldActive, DeviceBusinessKey newRow, BusinessKeyPolicyEntry policy,
+                              Consumer<DeviceBusinessKey> materialApplier) {
         tx().executeWithoutResult(status -> {
             LocalDateTime now = LocalDateTime.now();
 
@@ -249,14 +379,7 @@ public class BusinessKeyRotationAppService {
             if (newCurrent == null || newCurrent.getKeyState() != BusinessKeyState.PENDING) {
                 throw new BusinessKeyRotationConflictException("新行状态异常: id=" + newRow.getId());
             }
-            newCurrent.setKeyId(material.keyId());
-            newCurrent.setKmsKeyRef(material.kmsKeyRef());
-            newCurrent.setKmsKeyVersion(material.kmsKeyVersion());
-            newCurrent.setKmsProvider(material.provider());
-            newCurrent.setAlgorithm(material.algorithm());
-            newCurrent.setKeySpec(material.keySpec());
-            newCurrent.setValidFrom(toLocalDateTime(material.validFrom()));
-            newCurrent.setValidTo(toLocalDateTime(material.validTo()));
+            materialApplier.accept(newCurrent);
             newCurrent.activate();
             newCurrent.setModifyTime(now);
             int r2 = deviceBusinessKeyRepository.update(newCurrent);
@@ -277,6 +400,34 @@ public class BusinessKeyRotationAppService {
                 log.warn("业务密钥缓存失效异常（不影响轮换提交）: keyId={}", oldActive.getKeyId(), e);
             }
         });
+    }
+
+    /**
+     * 回填根派生非敏感材料（Wrapped Key/KCV/派生明文均不落库）。
+     */
+    private void applyDerivedMaterial(DeviceBusinessKey current, DerivedWrappedKey result,
+                                      BusinessKeyPolicyEntry policy, String fallbackOperationId) {
+        current.setKeyId(result.logicalKeyId());
+        current.setKmsKeyRef(result.kmsKeyRef());
+        current.setRootKeyVersion(result.rootKeyVersion() == null ? null : result.rootKeyVersion().longValue());
+        current.setDerivationVersion(result.derivationVersion() != null ? result.derivationVersion() : derivationVersion);
+        current.setOperationId(result.operationId() != null ? result.operationId() : fallbackOperationId);
+        current.setAlgorithm(policy.algorithm());
+        current.setKeySpec(policy.keySpec());
+    }
+
+    /**
+     * 回填随机材料字段。
+     */
+    private void applyRandomMaterial(DeviceBusinessKey current, BusinessKeyMaterial material) {
+        current.setKeyId(material.keyId());
+        current.setKmsKeyRef(material.kmsKeyRef());
+        current.setKmsKeyVersion(material.kmsKeyVersion());
+        current.setKmsProvider(material.provider());
+        current.setAlgorithm(material.algorithm());
+        current.setKeySpec(material.keySpec());
+        current.setValidFrom(toLocalDateTime(material.validFrom()));
+        current.setValidTo(toLocalDateTime(material.validTo()));
     }
 
     /**

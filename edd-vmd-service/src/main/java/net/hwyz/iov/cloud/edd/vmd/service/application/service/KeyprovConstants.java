@@ -76,6 +76,10 @@ public final class KeyprovConstants {
     public static final String ERR_IDEMPOTENCY_CONFLICT = "KEYPROV_IDEMPOTENCY_CONFLICT";
     public static final String ERR_IMPORT_FAILED = "KEYPROV_IMPORT_FAILED";
     public static final String ERR_RECONCILE_REQUIRED = "KEYPROV_RECONCILE_REQUIRED";
+    // CR-061 V2C 根派生（VMD 稳定扩展码，车端按 retryable/action 处理）
+    public static final String ERR_VIN_BINDING_INVALID = "KEYPROV_VIN_BINDING_INVALID";
+    public static final String ERR_DERIVED_PROVIDER_NOT_READY = "KEYPROV_DERIVED_PROVIDER_NOT_READY";
+    public static final String ERR_DERIVATION_UNSUPPORTED = "KEYPROV_DERIVATION_UNSUPPORTED";
 
     private static final Map<KeyPurpose, String> PURPOSE_TO_CODE = new LinkedHashMap<>();
     private static final Map<WrappingSuite, String> SUITE_TO_CODE = new LinkedHashMap<>();

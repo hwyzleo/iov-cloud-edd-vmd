@@ -182,6 +182,39 @@ class KeyProvisioningApplicationFacadeTest {
     }
 
     @Test
+    @DisplayName("CR-061 根派生错误码映射：VIN非法/Provider未就绪/派生不支持 → 806106～806108")
+    void derivedRootErrorMapping() {
+        byte[] payload = requestPayload("R1");
+        // 806106 VIN 绑定非法 → REJECTED 不可重试
+        when(batchAppService.provision(any(KeyProvisioningRequest.class), any(KeyprovAuthenticatedContext.class)))
+                .thenReturn(rejectedResponse("R1", KeyprovConstants.ERR_VIN_BINDING_INVALID));
+        KeyProvisioningOperationResult vinInvalid = facade.request(CALLER, ctx(),
+                KeyprovConstants.PAYLOAD_TYPE_REQUEST, "keyprov-v1", payload, digest(payload));
+        assertEquals(VmdErrorCode.KEYPROV_VIN_BINDING_INVALID, vinInvalid.getErrorCode());
+        assertEquals(VmdKeyProvisioningOutcome.REJECTED, vinInvalid.getOutcome());
+        assertFalse(vinInvalid.isRetryable());
+
+        // 806107 根派生 Provider 未就绪 → UNAVAILABLE 可重试（同 requestId），非结果未知
+        when(batchAppService.provision(any(KeyProvisioningRequest.class), any(KeyprovAuthenticatedContext.class)))
+                .thenReturn(rejectedResponse("R1", KeyprovConstants.ERR_DERIVED_PROVIDER_NOT_READY));
+        KeyProvisioningOperationResult notReady = facade.request(CALLER, ctx(),
+                KeyprovConstants.PAYLOAD_TYPE_REQUEST, "keyprov-v1", payload, digest(payload));
+        assertEquals(VmdErrorCode.KEYPROV_DERIVED_PROVIDER_NOT_READY, notReady.getErrorCode());
+        assertEquals(VmdKeyProvisioningOutcome.UNAVAILABLE, notReady.getOutcome());
+        assertTrue(notReady.isRetryable());
+        assertEquals("RETRY_SAME_REQUEST_ID", notReady.getAction());
+
+        // 806108 派生/材料模型不受支持 → REJECTED 不可重试
+        when(batchAppService.provision(any(KeyProvisioningRequest.class), any(KeyprovAuthenticatedContext.class)))
+                .thenReturn(rejectedResponse("R1", KeyprovConstants.ERR_DERIVATION_UNSUPPORTED));
+        KeyProvisioningOperationResult unsupported = facade.request(CALLER, ctx(),
+                KeyprovConstants.PAYLOAD_TYPE_REQUEST, "keyprov-v1", payload, digest(payload));
+        assertEquals(VmdErrorCode.KEYPROV_DERIVATION_UNSUPPORTED, unsupported.getErrorCode());
+        assertEquals(VmdKeyProvisioningOutcome.REJECTED, unsupported.getOutcome());
+        assertFalse(unsupported.isRetryable());
+    }
+
+    @Test
     @DisplayName("framework 依赖不可用 → 806096；结果未知 → 806098")
     void exceptionMapping() {
         byte[] payload = requestPayload("R1");

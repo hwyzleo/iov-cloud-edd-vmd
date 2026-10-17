@@ -55,6 +55,26 @@ public class BusinessKeyProvisioningItem extends BaseDo<Long> {
     private Long directoryKeyId;
 
     /**
+     * 根派生操作标识（对账主键，不透明；VMD-DSN-CR-061）
+     */
+    private String operationId;
+
+    /**
+     * Transit/HSM 根版本（根派生型；VMD-DSN-CR-061）
+     */
+    private Long rootKeyVersion;
+
+    /**
+     * 派生格式版本（首期 v1；VMD-DSN-CR-061）
+     */
+    private String derivationVersion;
+
+    /**
+     * 收件设备证书指纹摘要（非证书本体；VMD-DSN-CR-061）
+     */
+    private String recipientCertFingerprintDigest;
+
+    /**
      * 设备导入结果
      */
     private ProvisioningDeviceResult deviceResult;

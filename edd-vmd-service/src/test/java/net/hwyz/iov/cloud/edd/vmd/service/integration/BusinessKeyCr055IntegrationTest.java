@@ -7,13 +7,12 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.BusinessKeyRevokeC
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.BusinessKeyRotateCmd;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.BusinessKeyProvisionResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.BusinessKeyRevokeResult;
-import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.BusinessKeyRotationResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.BusinessKeyDirectoryAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.BusinessKeyDirectoryQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.BusinessKeyProvisioningAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.BusinessKeyRevocationAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.BusinessKeyRotationAppService;
-import net.hwyz.iov.cloud.framework.security.crypto.BusinessKeyCacheInvalidator;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyDerivationRejectedException;
 import net.hwyz.iov.cloud.framework.security.crypto.BusinessKeyMaterialTemplate;
 import net.hwyz.iov.cloud.framework.security.crypto.model.businesskey.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -30,6 +29,8 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 /**
@@ -111,8 +112,6 @@ class BusinessKeyCr055IntegrationTest extends BaseTest {
         when(businessKeyMaterialTemplate.wrap(any(BusinessKeyRef.class), any(RecipientRef.class), any(WrapContext.class)))
                 .thenReturn(new WrappedBusinessKey(new byte[]{1, 2, 3}, KEY_ID, 1, "AES",
                         Instant.now().plusSeconds(3600), Map.of("iv", "abcd")));
-        when(businessKeyMaterialTemplate.revoke(any(BusinessKeyRef.class), any(RevocationRequest.class)))
-                .thenReturn(new RevocationResult(KEY_ID, CryptoKeyState.REVOKED, Instant.now()));
     }
 
     private BusinessKeyProvisionCmd provisionCmd(String requestId) {
@@ -183,8 +182,8 @@ class BusinessKeyCr055IntegrationTest extends BaseTest {
     }
 
     @Test
-    @DisplayName("轮换：版本递增、旧 ACTIVE→DEPRECATED、新 ACTIVE、发布 ROTATED 事件")
-    void rotate_应递增版本并原子切换() {
+    @DisplayName("轮换：历史 material_model IS NULL 来源未知 → 拒绝自动轮换（fail-closed），旧 ACTIVE 保持")
+    void rotate_历史NULL来源_应拒绝自动轮换() {
         provisioningAppService.provision(provisionCmd(REQUEST_ID + "_ROT"));
 
         BusinessKeyRotateCmd rotateCmd = BusinessKeyRotateCmd.builder()
@@ -194,31 +193,22 @@ class BusinessKeyCr055IntegrationTest extends BaseTest {
                 .businessDomain(DOMAIN)
                 .purpose(PURPOSE)
                 .build();
-        BusinessKeyRotationResult rotation = rotationAppService.rotate(rotateCmd);
 
-        assertEquals(KEY_ID, rotation.getOldKeyId());
-        assertEquals(1L, rotation.getOldBusinessKeyVersion());
-        assertEquals(2L, rotation.getNewBusinessKeyVersion());
+        // CR-061 §7.3：无法证明来源的存量行禁止自动轮换/重建/迁移，须走专项批次
+        assertThrows(BusinessKeyDerivationRejectedException.class, () -> rotationAppService.rotate(rotateCmd));
 
-        // 旧行 DEPRECATED + decrypt_until，新行 ACTIVE v2
-        Integer oldDeprecated = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM tb_device_business_key WHERE device_sn = ? AND purpose = ? AND key_state = 'DEPRECATED' AND decrypt_until IS NOT NULL",
+        Integer oldStillActive = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM tb_device_business_key WHERE device_sn = ? AND purpose = ? AND key_state = 'ACTIVE'",
                 Integer.class, DEVICE_SN, PURPOSE);
-        assertEquals(1, oldDeprecated);
-        Integer newActive = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM tb_device_business_key WHERE device_sn = ? AND purpose = ? AND key_state = 'ACTIVE' AND business_key_version = 2",
+        assertEquals(1, oldStillActive, "拒绝轮换时旧 ACTIVE 必须保持");
+        Integer versions = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM tb_device_business_key WHERE device_sn = ? AND purpose = ?",
                 Integer.class, DEVICE_SN, PURPOSE);
-        assertEquals(1, newActive);
-
-        // ROTATED 事件
-        Integer rotatedEvents = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM tb_vmd_outbox WHERE event_type = 'BusinessKeyChangedEvent' AND source_ref_id = ? AND payload LIKE '%ROTATED%'",
-                Integer.class, REQUEST_ID + "_ROT2");
-        assertTrue(rotatedEvents >= 1, "轮换应发布 ROTATED 事件");
+        assertEquals(1, versions, "拒绝轮换不得新建版本行");
     }
 
     @Test
-    @DisplayName("吊销：REVOKING 阻断 → REVOKED + 缓存失效")
+    @DisplayName("吊销：历史来源未知按目录状态阻断 REVOKING→REVOKED + 缓存失效，不调用 Provider revoke")
     void revoke_应阻断并吊销() {
         provisioningAppService.provision(provisionCmd(REQUEST_ID + "_REV"));
 
@@ -230,6 +220,8 @@ class BusinessKeyCr055IntegrationTest extends BaseTest {
         BusinessKeyRevokeResult result = revocationAppService.revoke(revokeCmd);
 
         assertEquals("REVOKED", result.getState());
+        // CR-061 §9.2：非 RANDOM_MATERIAL（历史未知）仅目录状态阻断，不得调用 framework per-key revoke
+        verify(businessKeyMaterialTemplate, never()).revoke(any(), any());
         Integer revokedRows = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM tb_device_business_key WHERE key_id = ? AND key_state = 'REVOKED'",
                 Integer.class, KEY_ID);

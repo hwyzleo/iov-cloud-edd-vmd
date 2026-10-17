@@ -9,6 +9,10 @@
         <result column="key_id" property="keyId" />
         <result column="business_key_version" property="businessKeyVersion" />
         <result column="directory_key_id" property="directoryKeyId" />
+        <result column="operation_id" property="operationId" />
+        <result column="root_key_version" property="rootKeyVersion" />
+        <result column="derivation_version" property="derivationVersion" />
+        <result column="recipient_cert_fingerprint_digest" property="recipientCertFingerprintDigest" />
         <result column="device_result" property="deviceResult" />
         <result column="import_proof_digest" property="importProofDigest" />
         <result column="confirmed_at" property="confirmedAt" />
@@ -21,29 +25,34 @@
     </resultMap>
 
     <sql id="baseColumnList">
-        id, provisioning_id, purpose, key_id, business_key_version, directory_key_id, device_result,
+        id, provisioning_id, purpose, key_id, business_key_version, directory_key_id,
+        operation_id, root_key_version, derivation_version, recipient_cert_fingerprint_digest, device_result,
         import_proof_digest, confirmed_at, create_time, create_by, modify_time, modify_by, row_version, row_valid
     </sql>
 
     <insert id="insertPo" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO tb_business_key_provisioning_item (
-            provisioning_id, purpose, key_id, business_key_version, directory_key_id, device_result,
+            provisioning_id, purpose, key_id, business_key_version, directory_key_id,
+            operation_id, root_key_version, derivation_version, recipient_cert_fingerprint_digest, device_result,
             import_proof_digest, confirmed_at, create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
         VALUES (
-            #{provisioningId}, #{purpose}, #{keyId}, #{businessKeyVersion}, #{directoryKeyId}, #{deviceResult},
+            #{provisioningId}, #{purpose}, #{keyId}, #{businessKeyVersion}, #{directoryKeyId},
+            #{operationId}, #{rootKeyVersion}, #{derivationVersion}, #{recipientCertFingerprintDigest}, #{deviceResult},
             #{importProofDigest}, #{confirmedAt}, now(), #{createBy}, now(), #{modifyBy}, 1, 1
         )
     </insert>
 
     <insert id="batchInsertPo">
         INSERT INTO tb_business_key_provisioning_item (
-            provisioning_id, purpose, key_id, business_key_version, directory_key_id, device_result,
+            provisioning_id, purpose, key_id, business_key_version, directory_key_id,
+            operation_id, root_key_version, derivation_version, recipient_cert_fingerprint_digest, device_result,
             import_proof_digest, confirmed_at, create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
         VALUES
         <foreach collection="list" item="item" separator=",">
-            (#{item.provisioningId}, #{item.purpose}, #{item.keyId}, #{item.businessKeyVersion}, #{item.directoryKeyId}, #{item.deviceResult},
+            (#{item.provisioningId}, #{item.purpose}, #{item.keyId}, #{item.businessKeyVersion}, #{item.directoryKeyId},
+             #{item.operationId}, #{item.rootKeyVersion}, #{item.derivationVersion}, #{item.recipientCertFingerprintDigest}, #{item.deviceResult},
              #{item.importProofDigest}, #{item.confirmedAt}, now(), #{item.createBy}, now(), #{item.modifyBy}, 1, 1)
         </foreach>
     </insert>
@@ -61,6 +70,18 @@
         </if>
         <if test="directoryKeyId != null">
             t.directory_key_id = #{directoryKeyId},
+        </if>
+        <if test="operationId != null and operationId != ''">
+            t.operation_id = #{operationId},
+        </if>
+        <if test="rootKeyVersion != null">
+            t.root_key_version = #{rootKeyVersion},
+        </if>
+        <if test="derivationVersion != null and derivationVersion != ''">
+            t.derivation_version = #{derivationVersion},
+        </if>
+        <if test="recipientCertFingerprintDigest != null and recipientCertFingerprintDigest != ''">
+            t.recipient_cert_fingerprint_digest = #{recipientCertFingerprintDigest},
         </if>
         <if test="deviceResult != null and deviceResult != ''">
             t.device_result = #{deviceResult},

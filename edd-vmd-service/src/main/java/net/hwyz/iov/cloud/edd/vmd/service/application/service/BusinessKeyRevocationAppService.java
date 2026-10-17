@@ -20,6 +20,7 @@ import net.hwyz.iov.cloud.framework.security.crypto.exception.BusinessKeyNotFoun
 import net.hwyz.iov.cloud.framework.security.crypto.exception.CryptoDependencyUnavailableException;
 import net.hwyz.iov.cloud.framework.security.crypto.exception.CryptoException;
 import net.hwyz.iov.cloud.framework.security.crypto.exception.CryptoOperationOutcomeUnknownException;
+import net.hwyz.iov.cloud.framework.security.crypto.model.KeyMaterialModel;
 import net.hwyz.iov.cloud.framework.security.crypto.model.businesskey.BusinessKeyRef;
 import net.hwyz.iov.cloud.framework.security.crypto.model.businesskey.RevocationRequest;
 import org.springframework.beans.factory.ObjectProvider;
@@ -27,15 +28,20 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
-
 import java.time.LocalDateTime;
 
 /**
- * 业务密钥吊销应用服务（CR-055 F20 §6.5）
+ * 业务密钥吊销应用服务（CR-055 F20 §6.5，CR-061 §9.2 材料路由改造）
  * <p>
- * 先转 REVOKING 立即阻断业务使用（新加解密拒绝），再按显式 keyRef 调 framework revoke；
- * 成功转 REVOKED 并发布缓存失效事件；结果未知转 RECONCILE_REQUIRED 继续阻断并以原幂等键对账；
- * 不得因超时恢复为 ACTIVE。
+ * 按 {@code material_model} <strong>显式</strong>路由（VMD-DSN-CR-061 RD-061-3/RD-061-7）：
+ * <ul>
+ *   <li>{@link KeyMaterialModel#DERIVED_ROOT}（含 V2C）：仅 VMD 目录状态阻断
+ *       （{@code REVOKING → REVOKED} + 失效缓存），<strong>不调用</strong> framework per-key revoke；</li>
+ *   <li>{@link KeyMaterialModel#RANDOM_MATERIAL}：保留 CR-055/CR-060 的显式 keyRef Provider revoke
+ *       + readiness 门禁语义；</li>
+ *   <li>{@code null}（历史未知来源）：不猜测，仅目录状态阻断，登记治理。</li>
+ * </ul>
+ * 结果未知转 RECONCILE_REQUIRED 继续阻断并以原幂等键对账；不得因超时恢复为 ACTIVE。
  *
  * @author hwyz_leo
  * @since 2026-10-08
@@ -102,6 +108,18 @@ public class BusinessKeyRevocationAppService {
         authorizationPolicy.authorize(BusinessKeyAction.REVOKE, null,
                 key.getBusinessDomain(), key.getPurpose());
 
+        // 显式材料模型路由：仅 RANDOM_MATERIAL 走 Provider per-key revoke；
+        // DERIVED_ROOT 与历史未知(null) 一律仅目录状态阻断（禁止隐式回退到随机 revoke）
+        if (isRandomMaterial(key.getMaterialModel())) {
+            return revokeRandomMaterial(cmd, key);
+        }
+        return revokeByStateBlocking(cmd, key);
+    }
+
+    /**
+     * RANDOM_MATERIAL 吊销：按显式 keyRef 调 framework revoke + readiness 门禁（CR-055/CR-060）。
+     */
+    private BusinessKeyRevokeResult revokeRandomMaterial(BusinessKeyRevokeCmd cmd, DeviceBusinessKey key) {
         // 1. 转 REVOKING（立即阻断新加解密），幂等：已 REVOKING/REVOKED 继续
         DeviceBusinessKey revoked = markRevokingOrReuse(cmd, key);
         if (revoked.getKeyState() == BusinessKeyState.REVOKED) {
@@ -141,6 +159,33 @@ public class BusinessKeyRevocationAppService {
         markRevoked(cmd.getKeyId());
         invalidateCache(cmd.getKeyId());
         return buildResult(cmd, deviceBusinessKeyRepository.selectByKeyId(cmd.getKeyId()), STATE_REVOKED);
+    }
+
+    /**
+     * DERIVED_ROOT / 历史未知来源吊销：仅 VMD 目录状态阻断（REVOKING → REVOKED + 失效缓存），
+     * 不调用 framework per-key revoke（VMD-DSN-CR-061 §9.2：TBOX 件内删除/禁用由设备侧承接）。
+     */
+    private BusinessKeyRevokeResult revokeByStateBlocking(BusinessKeyRevokeCmd cmd, DeviceBusinessKey key) {
+        if (key.getMaterialModel() == null) {
+            log.warn("历史业务密钥材料来源未知（material_model IS NULL），按目录状态阻断处理，不调用 Provider revoke: keyId={}",
+                    cmd.getKeyId());
+        } else {
+            log.info("根派生业务密钥吊销按目录状态阻断处理（不调用 Provider per-key revoke）: keyId={}, materialModel={}",
+                    cmd.getKeyId(), key.getMaterialModel());
+        }
+
+        DeviceBusinessKey revoked = markRevokingOrReuse(cmd, key);
+        if (revoked.getKeyState() == BusinessKeyState.REVOKED) {
+            return buildResult(cmd, revoked, STATE_REVOKED);
+        }
+        markRevoked(cmd.getKeyId());
+        invalidateCache(cmd.getKeyId());
+        return buildResult(cmd, deviceBusinessKeyRepository.selectByKeyId(cmd.getKeyId()), STATE_REVOKED);
+    }
+
+    private boolean isRandomMaterial(String materialModel) {
+        return materialModel != null
+                && KeyMaterialModel.RANDOM_MATERIAL.name().equalsIgnoreCase(materialModel.trim());
     }
 
     /**

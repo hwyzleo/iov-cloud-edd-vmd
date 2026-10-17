@@ -391,19 +391,25 @@ public class KeyProvisioningApplicationFacade {
         VmdErrorCode errorCode = mapProtocolCode(protocolCode);
         VmdKeyProvisioningOutcome outcome;
         boolean retryable;
-        switch (result) {
-            case KEY_PROVISIONING_RESULT_RETRYABLE_FAILURE -> {
-                outcome = VmdKeyProvisioningOutcome.OUTCOME_UNKNOWN;
-                retryable = true;
-            }
-            case KEY_PROVISIONING_RESULT_EXPIRED, KEY_PROVISIONING_RESULT_CONFLICT,
-                 KEY_PROVISIONING_RESULT_REJECTED -> {
-                outcome = VmdKeyProvisioningOutcome.REJECTED;
-                retryable = false;
-            }
-            default -> {
-                outcome = VmdKeyProvisioningOutcome.REJECTED;
-                retryable = false;
+        // 根派生/Transit 根未就绪为确定性依赖不可用（同 requestId 重试），非结果未知
+        if (KeyprovConstants.ERR_DERIVED_PROVIDER_NOT_READY.equals(protocolCode)) {
+            outcome = VmdKeyProvisioningOutcome.UNAVAILABLE;
+            retryable = true;
+        } else {
+            switch (result) {
+                case KEY_PROVISIONING_RESULT_RETRYABLE_FAILURE -> {
+                    outcome = VmdKeyProvisioningOutcome.OUTCOME_UNKNOWN;
+                    retryable = true;
+                }
+                case KEY_PROVISIONING_RESULT_EXPIRED, KEY_PROVISIONING_RESULT_CONFLICT,
+                     KEY_PROVISIONING_RESULT_REJECTED -> {
+                    outcome = VmdKeyProvisioningOutcome.REJECTED;
+                    retryable = false;
+                }
+                default -> {
+                    outcome = VmdKeyProvisioningOutcome.REJECTED;
+                    retryable = false;
+                }
             }
         }
         KeyProvisioningOperationResult operationResult = error(requestId, errorCode, outcome, retryable, message);
@@ -529,6 +535,9 @@ public class KeyProvisioningApplicationFacade {
                  KEYPROV_CERTIFICATE_REFERENCE_AMBIGUOUS,
                  KEYPROV_CERTIFICATE_POLICY_REJECTED -> KeyprovConstants.ERR_CERTIFICATE_INVALID;
             case KEYPROV_OUTCOME_UNKNOWN -> KeyprovConstants.ERR_RECONCILE_REQUIRED;
+            case KEYPROV_VIN_BINDING_INVALID -> KeyprovConstants.ERR_VIN_BINDING_INVALID;
+            case KEYPROV_DERIVED_PROVIDER_NOT_READY -> KeyprovConstants.ERR_DERIVED_PROVIDER_NOT_READY;
+            case KEYPROV_DERIVATION_UNSUPPORTED -> KeyprovConstants.ERR_DERIVATION_UNSUPPORTED;
             default -> KeyprovConstants.ERR_UNAVAILABLE;
         };
     }
@@ -621,6 +630,9 @@ public class KeyProvisioningApplicationFacade {
                     VmdErrorCode.KEYPROV_IDEMPOTENCY_CONFLICT;
             case KeyprovConstants.ERR_DEVICE_NOT_ELIGIBLE -> VmdErrorCode.KEYPROV_BINDING_INVALID;
             case KeyprovConstants.ERR_CERTIFICATE_INVALID -> VmdErrorCode.KEYPROV_CERTIFICATE_INVALID;
+            case KeyprovConstants.ERR_VIN_BINDING_INVALID -> VmdErrorCode.KEYPROV_VIN_BINDING_INVALID;
+            case KeyprovConstants.ERR_DERIVED_PROVIDER_NOT_READY -> VmdErrorCode.KEYPROV_DERIVED_PROVIDER_NOT_READY;
+            case KeyprovConstants.ERR_DERIVATION_UNSUPPORTED -> VmdErrorCode.KEYPROV_DERIVATION_UNSUPPORTED;
             case KeyprovConstants.ERR_PROTOCOL_INVALID, KeyprovConstants.ERR_PURPOSE_INCOMPLETE,
                  KeyprovConstants.ERR_STATE_NOT_ALLOWED, KeyprovConstants.ERR_ITEM_MISMATCH,
                  KeyprovConstants.ERR_EXPIRED, KeyprovConstants.ERR_IMPORT_FAILED ->

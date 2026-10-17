@@ -117,7 +117,13 @@ public enum VmdErrorCode implements ErrorCode {
     KEYPROV_CERTIFICATE_EVIDENCE_MISMATCH("806102", "Keyprov证书serial/fingerprint/requestId证据冲突，安全拒绝"),
     KEYPROV_CERTIFICATE_REFERENCE_AMBIGUOUS("806103", "Keyprov证书目录命中多条记录，需数据治理"),
     KEYPROV_CERTIFICATE_POLICY_REJECTED("806104", "Keyprov设备证书不满足受信链/有效期/KU-EKU策略，拒绝封装"),
-    KEYPROV_PROVIDER_NOT_READY("806105", "Keyprov business-key Provider能力未就绪，依赖不可用");
+    KEYPROV_PROVIDER_NOT_READY("806105", "Keyprov business-key Provider能力未就绪，依赖不可用"),
+
+    // ================= CR-061 V2C 根派生域（806106～806108） =================
+    // 落地 VMD-DSN-CR-061 / FW-SEC-DSN-CR-013：V2C 由随机材料改为 Transit/HSM 根派生。
+    KEYPROV_VIN_BINDING_INVALID("806106", "Keyprov无唯一有效VIN绑定或VIN非法，安全拒绝"),
+    KEYPROV_DERIVED_PROVIDER_NOT_READY("806107", "Keyprov根派生/Transit根能力未就绪，依赖不可用"),
+    KEYPROV_DERIVATION_UNSUPPORTED("806108", "Keyprov派生参数/材料模型/锚不受支持，拒绝派生");
 
     private final String code;
     private final String message;
