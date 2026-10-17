@@ -36,6 +36,15 @@ public interface VehicleCertificateMapper extends BaseDao<VehicleCertificatePo, 
     VehicleCertificatePo selectByCertSn(@Param("certSn") String certSn);
 
     /**
+     * 按 canonical 证书序列号查询证书列表（VMD-DSN-CR-060 §4.1）
+     * <p>不 LIMIT：供目录 Adapter 判定 0/1/多值唯一性。</p>
+     *
+     * @param canonicalCertSn canonical 证书序列号
+     * @return 证书列表（可能为空）
+     */
+    List<VehicleCertificatePo> selectByCanonicalCertSn(@Param("canonicalCertSn") String canonicalCertSn);
+
+    /**
      * 根据pkiRequestId查询证书
      *
      * @param pkiRequestId PKI申请编号

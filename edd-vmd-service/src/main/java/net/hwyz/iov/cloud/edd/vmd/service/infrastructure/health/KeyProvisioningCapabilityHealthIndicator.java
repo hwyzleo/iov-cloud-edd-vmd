@@ -3,8 +3,10 @@ package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.health;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.adapter.KeyProvisioningServiceAdapter;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.BusinessKeyPolicyRegistry;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.KeyprovProviderReadinessGate;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.KeyprovConstants;
 import net.hwyz.iov.cloud.framework.security.crypto.BusinessKeyMaterialTemplate;
+import net.hwyz.iov.cloud.framework.security.crypto.resolver.CertificateReferenceDirectory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.actuate.health.Health;
@@ -40,6 +42,8 @@ public class KeyProvisioningCapabilityHealthIndicator implements HealthIndicator
     private final ObjectProvider<BusinessKeyMaterialTemplate> materialTemplateProvider;
     private final BusinessKeyPolicyRegistry policyRegistry;
     private final ObjectProvider<JdbcTemplate> jdbcTemplateProvider;
+    private final ObjectProvider<CertificateReferenceDirectory> certificateDirectoryProvider;
+    private final KeyprovProviderReadinessGate providerReadinessGate;
 
     @Value("${vmd.business-key.provisioning.keyprov.enabled:false}")
     private boolean keyprovEnabled;
@@ -47,11 +51,15 @@ public class KeyProvisioningCapabilityHealthIndicator implements HealthIndicator
     public KeyProvisioningCapabilityHealthIndicator(ObjectProvider<KeyProvisioningServiceAdapter> adapterProvider,
                                                     ObjectProvider<BusinessKeyMaterialTemplate> materialTemplateProvider,
                                                     BusinessKeyPolicyRegistry policyRegistry,
-                                                    ObjectProvider<JdbcTemplate> jdbcTemplateProvider) {
+                                                    ObjectProvider<JdbcTemplate> jdbcTemplateProvider,
+                                                    ObjectProvider<CertificateReferenceDirectory> certificateDirectoryProvider,
+                                                    KeyprovProviderReadinessGate providerReadinessGate) {
         this.adapterProvider = adapterProvider;
         this.materialTemplateProvider = materialTemplateProvider;
         this.policyRegistry = policyRegistry;
         this.jdbcTemplateProvider = jdbcTemplateProvider;
+        this.certificateDirectoryProvider = certificateDirectoryProvider;
+        this.providerReadinessGate = providerReadinessGate;
     }
 
     @Override
@@ -70,6 +78,13 @@ public class KeyProvisioningCapabilityHealthIndicator implements HealthIndicator
         }
         if (materialTemplateProvider.getIfAvailable() == null) {
             down = down(builder, "frameworkSecurity", "framework-security 业务密钥能力未装配");
+        }
+        if (certificateDirectoryProvider.getIfAvailable() == null) {
+            down = down(builder, "certificateDirectory", "证书目录 Adapter 未装配（CertificateReferenceDirectory 缺失）");
+        }
+        if (!providerReadinessGate.isReady()) {
+            down = down(builder, "providerReadiness",
+                    "business-key Provider capability 未就绪: " + providerReadinessGate.reason());
         }
         Set<String> purposes = policyRegistry.resolvePurposes(KeyprovConstants.BUSINESS_DOMAIN_V2C).orElse(Set.of());
         if (!KeyprovConstants.isCompleteV2cPurposeSet(purposes)) {

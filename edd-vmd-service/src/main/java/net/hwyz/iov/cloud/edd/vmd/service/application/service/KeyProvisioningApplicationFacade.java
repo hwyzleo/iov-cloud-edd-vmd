@@ -4,10 +4,23 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.keyprov.VmdKeyProvisioningOutcome;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.KeyProvisioningOperationResult;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyKmsUnavailableException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.VmdErrorCode;
+import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateApplicationRejectedException;
+import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateEvidenceMismatchException;
+import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateMaterialUnavailableException;
+import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateNotReadyException;
+import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateProfileNotAllowedException;
+import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateReferenceAmbiguousException;
+import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateStatusConfigurationException;
+import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateStatusDependencyUnavailableException;
+import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateStatusOutcomeUnknownException;
+import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateStatusProtocolException;
+import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateStatusTrustValidationException;
 import net.hwyz.iov.cloud.framework.security.crypto.exception.CryptoDependencyUnavailableException;
 import net.hwyz.iov.cloud.framework.security.crypto.exception.CryptoException;
 import net.hwyz.iov.cloud.framework.security.crypto.exception.CryptoOperationOutcomeUnknownException;
+import net.hwyz.iov.cloud.framework.security.crypto.exception.KeyRevokedException;
 import net.hwyz.iov.security.keyprov.v1.KeyProvisioningAck;
 import net.hwyz.iov.security.keyprov.v1.KeyProvisioningAckResult;
 import net.hwyz.iov.security.keyprov.v1.KeyProvisioningRequest;
@@ -111,6 +124,18 @@ public class KeyProvisioningApplicationFacade {
             log.warn("keyprov request 结果未知: requestId={}", request.getRequestId());
             return error(request.getRequestId(), VmdErrorCode.KEYPROV_OUTCOME_UNKNOWN,
                     VmdKeyProvisioningOutcome.OUTCOME_UNKNOWN, true, "framework结果未知，请以原requestId对账");
+        } catch (CertificateMaterialUnavailableException | CertificateEvidenceMismatchException
+                 | CertificateReferenceAmbiguousException | CertificateNotReadyException
+                 | CertificateProfileNotAllowedException | KeyRevokedException
+                 | CertificateStatusTrustValidationException | CertificateApplicationRejectedException
+                 | CertificateStatusProtocolException | CertificateStatusDependencyUnavailableException
+                 | CertificateStatusConfigurationException | CertificateStatusOutcomeUnknownException e) {
+            log.warn("keyprov request 证书解析/策略异常: requestId={}, type={}", request.getRequestId(), e.getClass().getSimpleName());
+            return certificateFailure(request.getRequestId(), e);
+        } catch (BusinessKeyKmsUnavailableException e) {
+            log.warn("keyprov request Provider 未就绪: requestId={}", request.getRequestId());
+            return error(request.getRequestId(), VmdErrorCode.KEYPROV_PROVIDER_NOT_READY,
+                    VmdKeyProvisioningOutcome.UNAVAILABLE, true, "business-key Provider能力未就绪");
         } catch (CryptoDependencyUnavailableException e) {
             log.warn("keyprov request 依赖不可用: requestId={}", request.getRequestId());
             return error(request.getRequestId(), VmdErrorCode.KEYPROV_DIRECTORY_UNAVAILABLE,
@@ -159,6 +184,18 @@ public class KeyProvisioningApplicationFacade {
             log.warn("keyprov ack 结果未知: requestId={}", ack.getRequestId());
             return error(ack.getRequestId(), VmdErrorCode.KEYPROV_OUTCOME_UNKNOWN,
                     VmdKeyProvisioningOutcome.OUTCOME_UNKNOWN, true, "framework结果未知，请以原requestId对账");
+        } catch (CertificateMaterialUnavailableException | CertificateEvidenceMismatchException
+                 | CertificateReferenceAmbiguousException | CertificateNotReadyException
+                 | CertificateProfileNotAllowedException | KeyRevokedException
+                 | CertificateStatusTrustValidationException | CertificateApplicationRejectedException
+                 | CertificateStatusProtocolException | CertificateStatusDependencyUnavailableException
+                 | CertificateStatusConfigurationException | CertificateStatusOutcomeUnknownException e) {
+            log.warn("keyprov ack 证书解析/策略异常: requestId={}, type={}", ack.getRequestId(), e.getClass().getSimpleName());
+            return certificateFailure(ack.getRequestId(), e);
+        } catch (BusinessKeyKmsUnavailableException e) {
+            log.warn("keyprov ack Provider 未就绪: requestId={}", ack.getRequestId());
+            return error(ack.getRequestId(), VmdErrorCode.KEYPROV_PROVIDER_NOT_READY,
+                    VmdKeyProvisioningOutcome.UNAVAILABLE, true, "business-key Provider能力未就绪");
         } catch (CryptoDependencyUnavailableException e) {
             log.warn("keyprov ack 依赖不可用: requestId={}", ack.getRequestId());
             return error(ack.getRequestId(), VmdErrorCode.KEYPROV_DIRECTORY_UNAVAILABLE,
@@ -206,6 +243,18 @@ public class KeyProvisioningApplicationFacade {
             log.warn("keyprov status 结果未知: requestId={}", request.getRequestId());
             return error(request.getRequestId(), VmdErrorCode.KEYPROV_OUTCOME_UNKNOWN,
                     VmdKeyProvisioningOutcome.OUTCOME_UNKNOWN, true, "framework结果未知，请以原requestId对账");
+        } catch (CertificateMaterialUnavailableException | CertificateEvidenceMismatchException
+                 | CertificateReferenceAmbiguousException | CertificateNotReadyException
+                 | CertificateProfileNotAllowedException | KeyRevokedException
+                 | CertificateStatusTrustValidationException | CertificateApplicationRejectedException
+                 | CertificateStatusProtocolException | CertificateStatusDependencyUnavailableException
+                 | CertificateStatusConfigurationException | CertificateStatusOutcomeUnknownException e) {
+            log.warn("keyprov status 证书解析/策略异常: requestId={}, type={}", request.getRequestId(), e.getClass().getSimpleName());
+            return certificateFailure(request.getRequestId(), e);
+        } catch (BusinessKeyKmsUnavailableException e) {
+            log.warn("keyprov status Provider 未就绪: requestId={}", request.getRequestId());
+            return error(request.getRequestId(), VmdErrorCode.KEYPROV_PROVIDER_NOT_READY,
+                    VmdKeyProvisioningOutcome.UNAVAILABLE, true, "business-key Provider能力未就绪");
         } catch (CryptoDependencyUnavailableException e) {
             log.warn("keyprov status 依赖不可用: requestId={}", request.getRequestId());
             return error(request.getRequestId(), VmdErrorCode.KEYPROV_DIRECTORY_UNAVAILABLE,
@@ -310,8 +359,40 @@ public class KeyProvisioningApplicationFacade {
         return error(requestId, errorCode, outcome, retryable, message);
     }
 
-    private VmdErrorCode mapProtocolCode(String protocolCode) {
-        if (protocolCode == null) {
+    /**
+     * framework 证书解析/状态异常 → VMD 稳定错误码与结果类别（CR-060 §6.2）。
+     * <ul>
+     *   <li>材料不可取/locator 缺失 → 806101，可重试（原 requestId）</li>
+     *   <li>证据冲突 → 806102，不可重试</li>
+     *   <li>目录多命中 → 806103，不可重试（数据治理）</li>
+     *   <li>信任/有效期/KU-EKU/Profile/吊销/应用拒绝/状态协议 → 806104，不可重试</li>
+     *   <li>状态依赖不可用/配置错误/状态结果未知 → 806105，依赖恢复后可重试</li>
+     * </ul>
+     */
+    private KeyProvisioningOperationResult certificateFailure(String requestId, CryptoException e) {
+        if (e instanceof CertificateMaterialUnavailableException) {
+            return error(requestId, VmdErrorCode.KEYPROV_CERTIFICATE_MATERIAL_UNAVAILABLE,
+                    VmdKeyProvisioningOutcome.UNAVAILABLE, true, "证书材料暂不可取或locator缺失，请以原requestId重试");
+        }
+        if (e instanceof CertificateEvidenceMismatchException) {
+            return error(requestId, VmdErrorCode.KEYPROV_CERTIFICATE_EVIDENCE_MISMATCH,
+                    VmdKeyProvisioningOutcome.REJECTED, false, "证书serial/fingerprint/requestId证据冲突，安全拒绝");
+        }
+        if (e instanceof CertificateReferenceAmbiguousException) {
+            return error(requestId, VmdErrorCode.KEYPROV_CERTIFICATE_REFERENCE_AMBIGUOUS,
+                    VmdKeyProvisioningOutcome.REJECTED, false, "证书目录命中多条记录，需数据治理");
+        }
+        if (e instanceof CertificateStatusDependencyUnavailableException
+                || e instanceof CertificateStatusConfigurationException
+                || e instanceof CertificateStatusOutcomeUnknownException) {
+            return error(requestId, VmdErrorCode.KEYPROV_PROVIDER_NOT_READY,
+                    VmdKeyProvisioningOutcome.UNAVAILABLE, true, "证书状态能力未就绪，依赖不可用");
+        }
+        return error(requestId, VmdErrorCode.KEYPROV_CERTIFICATE_POLICY_REJECTED,
+                VmdKeyProvisioningOutcome.REJECTED, false, "设备证书不满足受信链/有效期/KU-EKU策略，拒绝封装");
+    }
+
+    private VmdErrorCode mapProtocolCode(String protocolCode) {        if (protocolCode == null) {
             return VmdErrorCode.KEYPROV_INTERNAL_UNAVAILABLE;
         }
         return switch (protocolCode) {

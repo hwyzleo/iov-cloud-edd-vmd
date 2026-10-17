@@ -2,6 +2,15 @@ crypto:
   provisioning:
     enabled: true
 
+# Actuator 健康分组契约（与 src/main/resources/application.yml 保持一致，供集成测试验证分组聚合与主聚合排除）
+management:
+  endpoint:
+    health:
+      group:
+        keyprov:
+          include: keyProvisioningCapability,certificateResolution,kmsBusinessKey
+          show-details: always
+
 # CR-055 业务密钥域测试策略（真实授权策略 + BizType 映射，供集成测试使用）
 vmd:
   business-key:

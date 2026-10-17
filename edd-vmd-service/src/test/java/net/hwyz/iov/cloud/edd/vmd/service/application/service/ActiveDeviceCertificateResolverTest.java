@@ -72,4 +72,38 @@ class ActiveDeviceCertificateResolverTest {
         assertThrows(BusinessKeyDeviceCertNotFoundException.class,
                 () -> resolver.resolveActiveCertSn(identity()));
     }
+
+    @Test
+    void resolveActive_returnsRequestIdFingerprintAndCanonicalSerial() {
+        VehicleCertificate cert = VehicleCertificate.builder()
+                .certSn("0A:0B:0C")
+                .pkiRequestId("PKI-0001")
+                .certificateFingerprint("fp-sha256-abc")
+                .notAfter(LocalDateTime.now().plusDays(365))
+                .build();
+        when(vehicleCertificateRepository.selectActiveByDeviceSnAndProfile(DEVICE_SN, "TBOX_TSP_CLIENT"))
+                .thenReturn(cert);
+
+        ActiveDeviceCertificate resolved = resolver.resolveActive(identity());
+
+        // CR-060 §8.2：serial 经 framework canonical 化（去分隔符 + 去前导零 + 小写）
+        assertEquals("a0b0c", resolved.certSn());
+        assertEquals("PKI-0001", resolved.pkiRequestId());
+        assertEquals("fp-sha256-abc", resolved.sha256Fingerprint());
+        assertEquals("a0b0c", resolver.resolveActiveCertSn(identity()));
+    }
+
+    @Test
+    void resolveActive_nonHexadecimalSerial_fallsBackToTrim() {
+        // 兼容读：历史伪 serial 无法 canonical 化，回退 trim 原值，保持既有链路可查询
+        VehicleCertificate cert = VehicleCertificate.builder()
+                .certSn("  " + CERT_SN + "  ")
+                .pkiRequestId("PKI-0002")
+                .notAfter(LocalDateTime.now().plusDays(365))
+                .build();
+        when(vehicleCertificateRepository.selectActiveByDeviceSnAndProfile(DEVICE_SN, "TBOX_TSP_CLIENT"))
+                .thenReturn(cert);
+
+        assertEquals(CERT_SN, resolver.resolveActive(identity()).certSn());
+    }
 }

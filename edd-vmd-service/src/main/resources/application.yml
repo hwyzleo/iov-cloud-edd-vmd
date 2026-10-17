@@ -7,15 +7,16 @@ iov:
       # 服务启动后检查并创建 VMD 作为生产者输出的三个标准 Kafka Topic
       enabled: true
 
-# Actuator 健康分组（VMD-DSN-CR-059 §7）：Keyprov capability 独立呈现，
-# 从主 readiness/liveness 聚合排除（KeyProvisioningHealthGroupsCustomizer），
-# VAGW 与发布门禁以 /actuator/health/keyprov 决定是否启用 Keyprov 流量。
+# Actuator 健康分组（VMD-DSN-CR-059 §7 / CR-060 §5.1、§7）：Keyprov capability 独立呈现，
+# 聚合 VMD 编排 + framework 证书解析 + KMS business-key Provider（VAGW keyprov 流量门禁），
+# 并从主 readiness/liveness 聚合排除（KeyProvisioningHealthGroupsCustomizer）。
+# 生产以 /actuator/health/keyprov 决定是否启用 Keyprov 流量；DOWN 时停止新 Request/Wrap/轮换/吊销。
 management:
   endpoint:
     health:
       group:
         keyprov:
-          include: keyProvisioningCapability
+          include: keyProvisioningCapability,certificateResolution,kmsBusinessKey
           show-details: always
 
 crypto:
@@ -26,6 +27,30 @@ crypto:
     enabled: true
     directory:
       enabled: true
+  # CR-060：business-key Provider（FW-SEC-DSN-CR-011）——仓内安全默认关闭，生产经 Nacos/Secret 显式开启；
+  # 未就绪时 keyprov Health Group DOWN，禁止 keyprov 流量（发布顺序见 CR-060 §10.1）。
+  kms:
+    business-key:
+      enabled: ${CRYPTO_KMS_BUSINESS_KEY_ENABLED:false}
+      api-version: ${CRYPTO_KMS_BUSINESS_KEY_API_VERSION:v1}
+      mount: ${CRYPTO_KMS_BUSINESS_KEY_MOUNT:business-key}
+      capability-path: ${CRYPTO_KMS_BUSINESS_KEY_CAPABILITY_PATH:/v1/business-key/capabilities}
+      require-ready-at-startup: ${CRYPTO_KMS_BUSINESS_KEY_REQUIRE_READY_AT_STARTUP:false}
+      reconcile-enabled: ${CRYPTO_KMS_BUSINESS_KEY_RECONCILE_ENABLED:false}
+  # CR-060：framework 默认证书材料解析（FW-SEC-DSN-CR-012）——仓内安全默认关闭；
+  # trust-anchors-pem 仅经 Secret 注入（Nacos 不保存秘密正文）；生产固定 require-good-status=true 且启用 revocation。
+  pki:
+    certificate-resolution:
+      enabled: ${CRYPTO_PKI_CERTIFICATE_RESOLUTION_ENABLED:false}
+      inline-first: true
+      provider-query-enabled: ${CRYPTO_PKI_CERTIFICATE_RESOLUTION_PROVIDER_QUERY_ENABLED:true}
+      domain-directory-enabled: ${CRYPTO_PKI_CERTIFICATE_RESOLUTION_DOMAIN_DIRECTORY_ENABLED:true}
+      require-unique-result: true
+      trust-anchors-pem: ${CRYPTO_PKI_CERTIFICATE_RESOLUTION_TRUST_ANCHORS_PEM:}
+      business-key-wrap:
+        require-certificate: true
+        require-trusted-chain: true
+        require-good-status: ${CRYPTO_PKI_CERTIFICATE_RESOLUTION_REQUIRE_GOOD_STATUS:false}
 
 # VMD Kafka Topic 目录（VMD-DSN-CR-051 / VMD-DSN-CR-052）：Listener 占位符 / Producer / Outbox 统一引用
 vmd:

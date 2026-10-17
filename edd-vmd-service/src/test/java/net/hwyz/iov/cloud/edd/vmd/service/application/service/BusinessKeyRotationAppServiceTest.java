@@ -143,7 +143,8 @@ class BusinessKeyRotationAppServiceTest {
             k.setRowVersion(1);
             return 1;
         });
-        when(activeDeviceCertificateResolver.resolveActiveCertSn(identity)).thenReturn("CR055-CERT-0001");
+        when(activeDeviceCertificateResolver.resolveActive(identity))
+                .thenReturn(new ActiveDeviceCertificate("CR055-CERT-0001", "PKI-REQ-ROT-0001", "a".repeat(64)));
         when(materialTemplate.create(any(BusinessKeyCreateRequest.class))).thenReturn(material());
         when(materialTemplate.wrap(any(BusinessKeyRef.class), any(RecipientRef.class), any(WrapContext.class)))
                 .thenReturn(new WrappedBusinessKey(new byte[]{1}, NEW_KEY_ID, 1, "AES", Instant.now().plusSeconds(60), Map.of()));
@@ -166,6 +167,13 @@ class BusinessKeyRotationAppServiceTest {
         assertTrue(oldDeprecated, "旧 ACTIVE 应转为 DEPRECATED");
         verify(publisher).publish(any(DeviceBusinessKey.class), eq("ROTATED"));
         verify(cacheInvalidator).invalidateKey(OLD_KEY_ID);
+
+        // CR-060 §4.2：轮换 Wrap 验证必须携带 serial + pkiRequestId 直接证据
+        org.mockito.ArgumentCaptor<RecipientRef> recipientCaptor = org.mockito.ArgumentCaptor.forClass(RecipientRef.class);
+        verify(materialTemplate).wrap(any(BusinessKeyRef.class), recipientCaptor.capture(), any(WrapContext.class));
+        RecipientRef.DeviceCertificate recipient = (RecipientRef.DeviceCertificate) recipientCaptor.getValue();
+        assertEquals("CR055-CERT-0001", recipient.certSerial());
+        assertEquals("PKI-REQ-ROT-0001", recipient.requestId());
     }
 
     @Test
@@ -215,7 +223,8 @@ class BusinessKeyRotationAppServiceTest {
             k.setRowVersion(1);
             return 1;
         });
-        when(activeDeviceCertificateResolver.resolveActiveCertSn(identity)).thenReturn("CR055-CERT-0001");
+        when(activeDeviceCertificateResolver.resolveActive(identity))
+                .thenReturn(new ActiveDeviceCertificate("CR055-CERT-0001", "PKI-REQ-ROT-0001", "a".repeat(64)));
         when(materialTemplate.create(any(BusinessKeyCreateRequest.class))).thenReturn(material());
         when(materialTemplate.wrap(any(BusinessKeyRef.class), any(RecipientRef.class), any(WrapContext.class)))
                 .thenThrow(new net.hwyz.iov.cloud.framework.security.crypto.exception.BusinessKeyWrapFailedException("verify nope"));
@@ -245,7 +254,8 @@ class BusinessKeyRotationAppServiceTest {
             k.setRowVersion(1);
             return 1;
         });
-        when(activeDeviceCertificateResolver.resolveActiveCertSn(identity)).thenReturn("CR055-CERT-0001");
+        when(activeDeviceCertificateResolver.resolveActive(identity))
+                .thenReturn(new ActiveDeviceCertificate("CR055-CERT-0001", "PKI-REQ-ROT-0001", "a".repeat(64)));
         when(materialTemplate.create(any(BusinessKeyCreateRequest.class))).thenReturn(material());
         when(materialTemplate.wrap(any(BusinessKeyRef.class), any(RecipientRef.class), any(WrapContext.class)))
                 .thenReturn(new WrappedBusinessKey(new byte[]{1}, NEW_KEY_ID, 1, "AES", Instant.now().plusSeconds(60), Map.of()));

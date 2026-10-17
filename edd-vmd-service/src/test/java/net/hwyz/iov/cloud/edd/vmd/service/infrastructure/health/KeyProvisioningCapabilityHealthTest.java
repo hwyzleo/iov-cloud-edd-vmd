@@ -3,7 +3,9 @@ package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.health;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.adapter.KeyProvisioningServiceAdapter;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.BusinessKeyPolicyRegistry;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.KeyprovConstants;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.KeyprovProviderReadinessGate;
 import net.hwyz.iov.cloud.framework.security.crypto.BusinessKeyMaterialTemplate;
+import net.hwyz.iov.cloud.framework.security.crypto.resolver.CertificateReferenceDirectory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -41,6 +43,8 @@ class KeyProvisioningCapabilityHealthTest {
     private BusinessKeyPolicyRegistry policyRegistry;
     private ObjectProvider<JdbcTemplate> jdbcProvider;
     private JdbcTemplate jdbcTemplate;
+    private ObjectProvider<CertificateReferenceDirectory> certificateDirectoryProvider;
+    private KeyprovProviderReadinessGate providerReadinessGate;
 
     @SuppressWarnings("unchecked")
     @BeforeEach
@@ -50,12 +54,14 @@ class KeyProvisioningCapabilityHealthTest {
         policyRegistry = mock(BusinessKeyPolicyRegistry.class);
         jdbcProvider = mock(ObjectProvider.class);
         jdbcTemplate = mock(JdbcTemplate.class);
+        certificateDirectoryProvider = mock(ObjectProvider.class);
+        providerReadinessGate = mock(KeyprovProviderReadinessGate.class);
     }
 
     private KeyProvisioningCapabilityHealthIndicator indicator(boolean enabled) {
         KeyProvisioningCapabilityHealthIndicator indicator =
                 new KeyProvisioningCapabilityHealthIndicator(adapterProvider, materialProvider,
-                        policyRegistry, jdbcProvider);
+                        policyRegistry, jdbcProvider, certificateDirectoryProvider, providerReadinessGate);
         ReflectionTestUtils.setField(indicator, "keyprovEnabled", enabled);
         return indicator;
     }
@@ -73,6 +79,8 @@ class KeyProvisioningCapabilityHealthTest {
     void readyState() {
         when(adapterProvider.getIfAvailable()).thenReturn(mock(KeyProvisioningServiceAdapter.class));
         when(materialProvider.getIfAvailable()).thenReturn(mock(BusinessKeyMaterialTemplate.class));
+        when(certificateDirectoryProvider.getIfAvailable()).thenReturn(mock(CertificateReferenceDirectory.class));
+        when(providerReadinessGate.isReady()).thenReturn(true);
         when(policyRegistry.resolvePurposes(KeyprovConstants.BUSINESS_DOMAIN_V2C))
                 .thenReturn(Optional.of(KeyprovConstants.V2C_PURPOSE_SET));
         when(jdbcProvider.getIfAvailable()).thenReturn(jdbcTemplate);
@@ -85,10 +93,13 @@ class KeyProvisioningCapabilityHealthTest {
     }
 
     @Test
-    @DisplayName("enabled=true 但 framework/策略缺失 → DOWN")
+    @DisplayName("enabled=true 但 framework/策略/证书目录/Provider 缺失 → DOWN")
     void downState() {
         when(adapterProvider.getIfAvailable()).thenReturn(mock(KeyProvisioningServiceAdapter.class));
         when(materialProvider.getIfAvailable()).thenReturn(null);
+        when(certificateDirectoryProvider.getIfAvailable()).thenReturn(null);
+        when(providerReadinessGate.isReady()).thenReturn(false);
+        when(providerReadinessGate.reason()).thenReturn("crypto.kms.business-key.enabled=false");
         when(policyRegistry.resolvePurposes(KeyprovConstants.BUSINESS_DOMAIN_V2C))
                 .thenReturn(Optional.of(Set.of()));
         when(jdbcProvider.getIfAvailable()).thenReturn(jdbcTemplate);
@@ -99,6 +110,8 @@ class KeyProvisioningCapabilityHealthTest {
         assertEquals("DOWN", health.getStatus().getCode());
         assertEquals("DOWN", health.getDetails().get("state"));
         assertEquals("DOWN", health.getDetails().get("frameworkSecurity"));
+        assertEquals("DOWN", health.getDetails().get("certificateDirectory"));
+        assertEquals("DOWN", health.getDetails().get("providerReadiness"));
         assertEquals("DOWN", health.getDetails().get("policy"));
     }
 
@@ -129,6 +142,10 @@ class KeyProvisioningCapabilityHealthTest {
 
         assertFalse(processed.getPrimary().isMember(KeyProvisioningHealthGroupsCustomizer.KEYPROV_INDICATOR),
                 "主聚合必须排除 keyprov");
+        assertFalse(processed.getPrimary().isMember(KeyProvisioningHealthGroupsCustomizer.CERTIFICATE_RESOLUTION_INDICATOR),
+                "主聚合必须排除 certificateResolution");
+        assertFalse(processed.getPrimary().isMember(KeyProvisioningHealthGroupsCustomizer.KMS_BUSINESS_KEY_INDICATOR),
+                "主聚合必须排除 kmsBusinessKey");
         assertTrue(processed.getPrimary().isMember("db"), "其他指示器仍保留");
         assertTrue(processed.get("keyprov").isMember(KeyProvisioningHealthGroupsCustomizer.KEYPROV_INDICATOR),
                 "keyprov 分组必须包含 capability");

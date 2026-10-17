@@ -58,6 +58,8 @@ class BusinessKeyRevocationAppServiceTest {
     @Mock
     private org.springframework.beans.factory.ObjectProvider<BusinessKeyCacheInvalidator> cacheInvalidatorProvider;
     @Mock
+    private KeyprovProviderReadinessGate providerReadinessGate;
+    @Mock
     private PlatformTransactionManager transactionManager;
     @Mock
     private TransactionStatus transactionStatus;
@@ -70,7 +72,8 @@ class BusinessKeyRevocationAppServiceTest {
         lenient().when(businessKeyMaterialTemplateProvider.getIfAvailable()).thenReturn(materialTemplate);
         lenient().when(cacheInvalidatorProvider.getIfAvailable()).thenReturn(cacheInvalidator);
         service = new BusinessKeyRevocationAppService(repository, authorizationPolicy,
-                businessKeyMaterialTemplateProvider, publisher, cacheInvalidatorProvider, transactionManager);
+                businessKeyMaterialTemplateProvider, publisher, cacheInvalidatorProvider,
+                providerReadinessGate, transactionManager);
     }
 
     private DeviceBusinessKey activeKey() {
@@ -131,12 +134,33 @@ class BusinessKeyRevocationAppServiceTest {
                         java.util.Set.of(BusinessKeyAction.values()), "AES", "AES-256-GCM",
                         java.time.Duration.ofDays(365), java.time.Duration.ofDays(7), "v1"));
         when(repository.update(any(DeviceBusinessKey.class))).thenReturn(1);
+        when(providerReadinessGate.isReady()).thenReturn(true);
         when(materialTemplate.revoke(any(BusinessKeyRef.class), any(RevocationRequest.class)))
                 .thenThrow(new BusinessKeyNotFoundException("already gone"));
 
         BusinessKeyRevokeResult result = service.revoke(cmd());
         assertEquals("REVOKED", result.getState());
         verify(publisher).publish(any(DeviceBusinessKey.class), eq("REVOKED"));
+    }
+
+    @Test
+    void revoke_kmsNotFound_providerNotReady_failClosed() {
+        DeviceBusinessKey key = activeKey();
+        when(repository.selectByKeyId(KEY_ID)).thenReturn(key, key, key);
+        when(authorizationPolicy.authorize(BusinessKeyAction.REVOKE, null, DOMAIN, PURPOSE))
+                .thenReturn(new BusinessKeyPolicyEntry(DOMAIN, PURPOSE, java.util.Set.of(),
+                        java.util.Set.of(BusinessKeyAction.values()), "AES", "AES-256-GCM",
+                        java.time.Duration.ofDays(365), java.time.Duration.ofDays(7), "v1"));
+        when(repository.update(any(DeviceBusinessKey.class))).thenReturn(1);
+        when(providerReadinessGate.isReady()).thenReturn(false);
+        when(providerReadinessGate.reason()).thenReturn("crypto.kms.business-key.enabled=false");
+        when(materialTemplate.revoke(any(BusinessKeyRef.class), any(RevocationRequest.class)))
+                .thenThrow(new BusinessKeyNotFoundException("not found"));
+
+        // CR-060 RD-060-9：Provider 未就绪时 404 不得收敛为幂等成功
+        assertThrows(net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyKmsUnavailableException.class,
+                () -> service.revoke(cmd()));
+        verify(publisher, never()).publish(any(DeviceBusinessKey.class), eq("REVOKED"));
     }
 
     @Test

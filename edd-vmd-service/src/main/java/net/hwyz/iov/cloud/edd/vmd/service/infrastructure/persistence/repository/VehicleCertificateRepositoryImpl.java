@@ -49,6 +49,12 @@ public class VehicleCertificateRepositoryImpl implements VehicleCertificateRepos
     }
 
     @Override
+    public List<VehicleCertificate> selectByCanonicalCertSn(String canonicalCertSn) {
+        List<VehicleCertificatePo> poList = vehicleCertificateMapper.selectByCanonicalCertSn(canonicalCertSn);
+        return PageUtil.convert(poList, VehicleCertificateConverter.INSTANCE::toDomain);
+    }
+
+    @Override
     public VehicleCertificate selectByPkiRequestId(String pkiRequestId) {
         return VehicleCertificateConverter.INSTANCE.toDomain(vehicleCertificateMapper.selectByPkiRequestId(pkiRequestId));
     }

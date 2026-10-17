@@ -42,6 +42,8 @@ class BusinessKeyProvisioningAppServiceTest {
     private static final String PURPOSE = "SESSION_ENC";
     private static final String KEY_ID = "KEY-0001";
     private static final String CERT_SN = "CR055-CERT-0001";
+    private static final String PKI_REQUEST_ID = "PKI-REQ-0001";
+    private static final String CERT_FINGERPRINT = "f".repeat(64);
     private static final String KMS_REF = "kms/ref/KEY-0001";
 
     @Mock
@@ -103,12 +105,16 @@ class BusinessKeyProvisioningAppServiceTest {
                 Instant.now().plusSeconds(3600), Map.of("iv", "abcd"));
     }
 
+    private ActiveDeviceCertificate activeCert() {
+        return new ActiveDeviceCertificate(CERT_SN, PKI_REQUEST_ID, CERT_FINGERPRINT);
+    }
+
     @Test
     void provision_freshCreate_success() {
         when(repository.selectByRequestId(REQUEST_ID)).thenReturn(null);
         when(boundDeviceIdentityResolver.resolveByDeviceSn(DEVICE_SN, "TBOX")).thenReturn(identity);
         when(authorizationPolicy.authorize(BusinessKeyAction.PROVISION, "TBOX", DOMAIN, PURPOSE)).thenReturn(policyEntry);
-        when(activeDeviceCertificateResolver.resolveActiveCertSn(identity)).thenReturn(CERT_SN);
+        when(activeDeviceCertificateResolver.resolveActive(identity)).thenReturn(activeCert());
         when(bizTypeMapper.resolveBizType(DOMAIN)).thenReturn(net.hwyz.iov.cloud.framework.security.crypto.model.BizType.TBOX_DEVICE_ROOT);
 
         when(repository.maxBusinessKeyVersion(DEVICE_SN, DOMAIN, PURPOSE)).thenReturn(1L);
@@ -132,6 +138,15 @@ class BusinessKeyProvisioningAppServiceTest {
         assertNotNull(result.getWrappedKeyBase64());
         verify(materialTemplate).create(any(BusinessKeyCreateRequest.class));
         verify(publisher).publish(any(DeviceBusinessKey.class), eq("ACTIVE"));
+
+        // CR-060 §4.2：Wrap Recipient 必须携带 canonical serial + pkiRequestId 直接证据
+        org.mockito.ArgumentCaptor<RecipientRef> recipientCaptor = org.mockito.ArgumentCaptor.forClass(RecipientRef.class);
+        verify(materialTemplate).wrap(any(BusinessKeyRef.class), recipientCaptor.capture(), any(WrapContext.class));
+        assertInstanceOf(RecipientRef.DeviceCertificate.class, recipientCaptor.getValue());
+        RecipientRef.DeviceCertificate recipient = (RecipientRef.DeviceCertificate) recipientCaptor.getValue();
+        assertEquals(CERT_SN, recipient.certSerial());
+        assertEquals(PKI_REQUEST_ID, recipient.requestId());
+        assertEquals(CERT_FINGERPRINT, recipient.sha256Fingerprint());
     }
 
     @Test
@@ -150,7 +165,7 @@ class BusinessKeyProvisioningAppServiceTest {
                 .build();
         when(repository.selectByRequestId(REQUEST_ID)).thenReturn(existing);
         when(boundDeviceIdentityResolver.resolveByDeviceSn(DEVICE_SN, "TBOX")).thenReturn(identity);
-        when(activeDeviceCertificateResolver.resolveActiveCertSn(identity)).thenReturn(CERT_SN);
+        when(activeDeviceCertificateResolver.resolveActive(identity)).thenReturn(activeCert());
         when(materialTemplate.wrap(any(BusinessKeyRef.class), any(RecipientRef.class), any(WrapContext.class)))
                 .thenReturn(wrapped());
         when(repository.selectById(any())).thenReturn(existing);
@@ -195,7 +210,7 @@ class BusinessKeyProvisioningAppServiceTest {
         when(repository.selectByRequestId(REQUEST_ID)).thenReturn(null);
         when(boundDeviceIdentityResolver.resolveByDeviceSn(DEVICE_SN, "TBOX")).thenReturn(identity);
         when(authorizationPolicy.authorize(BusinessKeyAction.PROVISION, "TBOX", DOMAIN, PURPOSE)).thenReturn(policyEntry);
-        when(activeDeviceCertificateResolver.resolveActiveCertSn(identity)).thenReturn(CERT_SN);
+        when(activeDeviceCertificateResolver.resolveActive(identity)).thenReturn(activeCert());
         when(bizTypeMapper.resolveBizType(DOMAIN)).thenReturn(net.hwyz.iov.cloud.framework.security.crypto.model.BizType.TBOX_DEVICE_ROOT);
         when(repository.maxBusinessKeyVersion(DEVICE_SN, DOMAIN, PURPOSE)).thenReturn(1L);
         when(repository.insert(any(DeviceBusinessKey.class))).thenReturn(1);
@@ -217,7 +232,7 @@ class BusinessKeyProvisioningAppServiceTest {
         when(repository.selectByRequestId(REQUEST_ID)).thenReturn(null);
         when(boundDeviceIdentityResolver.resolveByDeviceSn(DEVICE_SN, "TBOX")).thenReturn(identity);
         when(authorizationPolicy.authorize(BusinessKeyAction.PROVISION, "TBOX", DOMAIN, PURPOSE)).thenReturn(policyEntry);
-        when(activeDeviceCertificateResolver.resolveActiveCertSn(identity)).thenReturn(CERT_SN);
+        when(activeDeviceCertificateResolver.resolveActive(identity)).thenReturn(activeCert());
         when(bizTypeMapper.resolveBizType(DOMAIN)).thenReturn(net.hwyz.iov.cloud.framework.security.crypto.model.BizType.TBOX_DEVICE_ROOT);
         when(repository.maxBusinessKeyVersion(DEVICE_SN, DOMAIN, PURPOSE)).thenReturn(1L);
         when(repository.insert(any(DeviceBusinessKey.class))).thenReturn(1);

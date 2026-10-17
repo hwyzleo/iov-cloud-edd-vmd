@@ -203,11 +203,14 @@ public class BusinessKeyRotationAppService {
      */
     private void verifyWrap(BusinessKeyRotateCmd cmd, BoundDeviceIdentity identity, BusinessKeyMaterial material,
                             DeviceBusinessKey newRow) {
-        String certSn = activeDeviceCertificateResolver.resolveActiveCertSn(identity);
+        ActiveDeviceCertificate activeCert = activeDeviceCertificateResolver.resolveActive(identity);
         try {
             materialTemplate().wrap(
                     new BusinessKeyRef(material.keyId(), material.kmsKeyRef()),
-                    new RecipientRef.DeviceCertificate(certSn),
+                    // CR-060 §4.2：轮换必须使用当前 active 证书的 serial + requestId 直接证据
+                    new RecipientRef.DeviceCertificate(activeCert.certSn(), activeCert.pkiRequestId(), null, null,
+                            activeCert.sha256Fingerprint(),
+                            Map.of("deviceSn", cmd.getDeviceSn(), "purpose", "ROTATE_VERIFY")),
                     new WrapContext(WrapMode.DEVICE_CERT_PUBLIC_KEY, cmd.getRequestId() + ":verify",
                             Map.of("deviceSn", cmd.getDeviceSn(), "purpose", "ROTATE_VERIFY")));
         } catch (CryptoOperationOutcomeUnknownException e) {

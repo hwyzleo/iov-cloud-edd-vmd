@@ -109,7 +109,15 @@ public enum VmdErrorCode implements ErrorCode {
     KEYPROV_WRAP_FAILED("806097", "Keyprov业务密钥封装失败"),
     KEYPROV_OUTCOME_UNKNOWN("806098", "Keyprov处理结果未知，请以原requestId对账"),
     KEYPROV_BATCH_NOT_FOUND("806099", "Keyprov开通批次不存在"),
-    KEYPROV_INTERNAL_UNAVAILABLE("806100", "Keyprov服务内部不可用");
+    KEYPROV_INTERNAL_UNAVAILABLE("806100", "Keyprov服务内部不可用"),
+
+    // ================= CR-060 证书材料解析与 Provider 就绪门禁域（806101～806105） =================
+    // 落地 VMD-DSN-CR-060：framework 默认证书解析链与 business-key Provider 能力门禁适配。
+    KEYPROV_CERTIFICATE_MATERIAL_UNAVAILABLE("806101", "Keyprov证书材料暂不可取或locator缺失，需以原requestId重试"),
+    KEYPROV_CERTIFICATE_EVIDENCE_MISMATCH("806102", "Keyprov证书serial/fingerprint/requestId证据冲突，安全拒绝"),
+    KEYPROV_CERTIFICATE_REFERENCE_AMBIGUOUS("806103", "Keyprov证书目录命中多条记录，需数据治理"),
+    KEYPROV_CERTIFICATE_POLICY_REJECTED("806104", "Keyprov设备证书不满足受信链/有效期/KU-EKU策略，拒绝封装"),
+    KEYPROV_PROVIDER_NOT_READY("806105", "Keyprov business-key Provider能力未就绪，依赖不可用");
 
     private final String code;
     private final String message;

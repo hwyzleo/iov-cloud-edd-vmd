@@ -276,6 +276,15 @@
         LIMIT 1
     </select>
 
+    <!-- 按 canonical 证书序列号查询证书列表（CR-060 §4.1，不 LIMIT，供唯一性判定） -->
+    <select id="selectByCanonicalCertSn" parameterType="String" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList"/>
+        FROM tb_veh_certificate t
+        WHERE t.row_valid = 1
+        AND t.cert_sn = #{canonicalCertSn}
+        ORDER BY t.id
+    </select>
+
     <!-- 根据pkiRequestId查询证书 -->
     <select id="selectByPkiRequestId" parameterType="String" resultMap="baseResultMap">
         SELECT <include refid="baseColumnList"/>

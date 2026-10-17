@@ -146,8 +146,8 @@ public class BusinessKeyProvisioningAppService {
         BusinessKeyPolicyEntry policy = authorizationPolicy.authorize(
                 BusinessKeyAction.PROVISION, identity.deviceCategory(), cmd.getBusinessDomain(), cmd.getPurpose());
 
-        // 6. 解析当前有效设备证书（Wrap 收件方）
-        String certSn = activeDeviceCertificateResolver.resolveActiveCertSn(identity);
+        // 6. 解析当前有效设备证书（Wrap 收件方）；此处仅做 fail-fast，Wrap 前再次解析以取得最新证据
+        activeDeviceCertificateResolver.resolveActive(identity);
 
         // 7. 创建或继续（原 requestId 幂等；无占位行则先落 PENDING 再 create）
         DeviceBusinessKey row = existing;
@@ -264,14 +264,18 @@ public class BusinessKeyProvisioningAppService {
      * 设备证书公钥 Wrap 并构建响应（Wrapped Key 不落库）
      */
     private BusinessKeyProvisionResult wrapAndBuild(BusinessKeyProvisionCmd cmd, DeviceBusinessKey row, boolean reused) {
-        String certSn = activeDeviceCertificateResolver.resolveActiveCertSn(
+        ActiveDeviceCertificate activeCert = activeDeviceCertificateResolver.resolveActive(
                 boundDeviceIdentityResolver.resolveByDeviceSn(cmd.getDeviceSn(), cmd.getDeviceCategory()));
+        String certSn = activeCert.certSn();
 
         WrappedBusinessKey wrapped;
         try {
             wrapped = materialTemplate().wrap(
                     new BusinessKeyRef(row.getKeyId(), row.getKmsKeyRef()),
-                    new RecipientRef.DeviceCertificate(certSn),
+                    // CR-060 §4.2：直接证据优先——携带 canonical serial + pkiRequestId + fingerprint
+                    new RecipientRef.DeviceCertificate(certSn, activeCert.pkiRequestId(), null, null,
+                            activeCert.sha256Fingerprint(),
+                            buildAuditContext(cmd, certSn)),
                     new WrapContext(WrapMode.DEVICE_CERT_PUBLIC_KEY, cmd.getRequestId() + ":wrap",
                             buildAuditContext(cmd, certSn)));
         } catch (CryptoOperationOutcomeUnknownException e) {

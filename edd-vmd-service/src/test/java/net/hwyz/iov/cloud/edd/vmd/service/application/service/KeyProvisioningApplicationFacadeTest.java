@@ -2,7 +2,13 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 
 import net.hwyz.iov.cloud.edd.vmd.api.vo.keyprov.VmdKeyProvisioningOutcome;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.KeyProvisioningOperationResult;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyKmsUnavailableException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.VmdErrorCode;
+import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateEvidenceMismatchException;
+import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateMaterialUnavailableException;
+import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateProfileNotAllowedException;
+import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateReferenceAmbiguousException;
+import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateStatusConfigurationException;
 import net.hwyz.iov.cloud.framework.security.crypto.exception.CryptoDependencyUnavailableException;
 import net.hwyz.iov.cloud.framework.security.crypto.exception.CryptoOperationOutcomeUnknownException;
 import net.hwyz.iov.security.keyprov.v1.KeyProvisioningAck;
@@ -209,5 +215,42 @@ class KeyProvisioningApplicationFacadeTest {
                 KeyprovConstants.PAYLOAD_TYPE_ACK, "keyprov-v1", ackPayload, digest(ackPayload));
         assertEquals(VmdKeyProvisioningOutcome.SUCCESS, result.getOutcome());
         assertEquals(KeyprovConstants.PAYLOAD_TYPE_ACK_RESULT, result.getDownlinkPayloadType());
+    }
+
+    @Test
+    @DisplayName("CR-060 证书解析/Provider 异常 → 806101～806105 与 retryable 语义")
+    void certificateResolutionErrorMapping() {
+        byte[] payload = requestPayload("R1");
+        // 806101 材料暂不可取/locator 缺失 → UNAVAILABLE 可重试
+        assertCertificateMapping(payload, new CertificateMaterialUnavailableException("no material"),
+                VmdErrorCode.KEYPROV_CERTIFICATE_MATERIAL_UNAVAILABLE, VmdKeyProvisioningOutcome.UNAVAILABLE, true);
+        // 806102 证据冲突 → REJECTED 不可重试
+        assertCertificateMapping(payload, new CertificateEvidenceMismatchException("evidence mismatch"),
+                VmdErrorCode.KEYPROV_CERTIFICATE_EVIDENCE_MISMATCH, VmdKeyProvisioningOutcome.REJECTED, false);
+        // 806103 目录多命中 → REJECTED 不可重试（数据治理）
+        assertCertificateMapping(payload, new CertificateReferenceAmbiguousException("ambiguous"),
+                VmdErrorCode.KEYPROV_CERTIFICATE_REFERENCE_AMBIGUOUS, VmdKeyProvisioningOutcome.REJECTED, false);
+        // 806104 受信链/有效期/KU-EKU/Profile 策略拒绝 → REJECTED 不可重试
+        assertCertificateMapping(payload, new CertificateProfileNotAllowedException("profile not allowed"),
+                VmdErrorCode.KEYPROV_CERTIFICATE_POLICY_REJECTED, VmdKeyProvisioningOutcome.REJECTED, false);
+        // 806105 状态能力配置错误/未就绪 → UNAVAILABLE 可重试
+        assertCertificateMapping(payload, new CertificateStatusConfigurationException("status misconfig"),
+                VmdErrorCode.KEYPROV_PROVIDER_NOT_READY, VmdKeyProvisioningOutcome.UNAVAILABLE, true);
+        // 806105 business-key Provider 未就绪 → UNAVAILABLE 可重试
+        assertCertificateMapping(payload, new BusinessKeyKmsUnavailableException("provider not ready"),
+                VmdErrorCode.KEYPROV_PROVIDER_NOT_READY, VmdKeyProvisioningOutcome.UNAVAILABLE, true);
+    }
+
+    private void assertCertificateMapping(byte[] payload, RuntimeException ex, VmdErrorCode expectedCode,
+                                          VmdKeyProvisioningOutcome expectedOutcome, boolean expectedRetryable) {
+        when(batchAppService.provision(any(KeyProvisioningRequest.class), any(KeyprovAuthenticatedContext.class)))
+                .thenThrow(ex);
+        KeyProvisioningOperationResult result = facade.request(CALLER, ctx(),
+                KeyprovConstants.PAYLOAD_TYPE_REQUEST, "keyprov-v1", payload, digest(payload));
+        String label = ex.getClass().getSimpleName();
+        assertEquals(expectedCode, result.getErrorCode(), label);
+        assertEquals(expectedOutcome, result.getOutcome(), label);
+        assertEquals(expectedRetryable, result.isRetryable(), label);
+        assertEquals("R1", result.getRequestId(), "原 requestId 必须透传: " + label);
     }
 }

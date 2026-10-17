@@ -47,6 +47,18 @@ public interface VehicleCertificateRepository {
     VehicleCertificate selectByCertSn(String certSn);
 
     /**
+     * 按 canonical 证书序列号查询证书列表（VMD-DSN-CR-060 §4.1）
+     * <p>
+     * serial→requestId 映射是历史事实（不因失效/轮换删除），且同一 canonical serial 必须唯一。
+     * 本方法不 LIMIT，保留完整匹配集合：0 条返回空列表，&gt;1 条由调用方（证书目录 Adapter）判定
+     * ambiguous 并安全拒绝，不按更新时间取第一条。
+     *
+     * @param canonicalCertSn canonical 证书序列号
+     * @return 证书列表（可能为空）
+     */
+    List<VehicleCertificate> selectByCanonicalCertSn(String canonicalCertSn);
+
+    /**
      * 根据pkiRequestId查询证书
      *
      * @param pkiRequestId PKI申请编号

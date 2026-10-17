@@ -30,6 +30,22 @@ public class KeyProvisioningHealthGroupsCustomizer implements HealthEndpointGrou
      */
     public static final String KEYPROV_INDICATOR = "keyProvisioningCapability";
 
+    /**
+     * framework 证书解析健康指示器注册名（VMD-DSN-CR-060 §5.1/§7）
+     */
+    public static final String CERTIFICATE_RESOLUTION_INDICATOR = "certificateResolution";
+
+    /**
+     * framework KMS business-key Provider 健康指示器注册名（VMD-DSN-CR-060 §5.1/§7）
+     */
+    public static final String KMS_BUSINESS_KEY_INDICATOR = "kmsBusinessKey";
+
+    /**
+     * 需从主聚合排除的 keyprov 域健康指示器
+     */
+    private static final Set<String> KEYPROV_INDICATORS =
+            Set.of(KEYPROV_INDICATOR, CERTIFICATE_RESOLUTION_INDICATOR, KMS_BUSINESS_KEY_INDICATOR);
+
     @Override
     public HealthEndpointGroups postProcessHealthEndpointGroups(HealthEndpointGroups groups) {
         if (groups == null) {
@@ -60,7 +76,7 @@ public class KeyProvisioningHealthGroupsCustomizer implements HealthEndpointGrou
         return new HealthEndpointGroup() {
             @Override
             public boolean isMember(String name) {
-                return !KEYPROV_INDICATOR.equals(name) && group.isMember(name);
+                return !KEYPROV_INDICATORS.contains(name) && group.isMember(name);
             }
 
             @Override

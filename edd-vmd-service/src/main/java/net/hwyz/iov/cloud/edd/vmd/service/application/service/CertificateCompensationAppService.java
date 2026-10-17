@@ -191,7 +191,7 @@ public class CertificateCompensationAppService {
             map.put("deviceSn", query.getDeviceSn());
         }
         if (query.getCertSn() != null && !query.getCertSn().isEmpty()) {
-            map.put("certSn", query.getCertSn());
+            map.put("certSn", net.hwyz.iov.cloud.edd.vmd.service.common.util.CertificateSerialUtils.canonical(query.getCertSn()));
         }
         if (query.getStatus() != null && !query.getStatus().isEmpty()) {
             map.put("certStatus", query.getStatus());

@@ -143,13 +143,14 @@ public class BusinessKeyProvisioningBatchAppService {
             }
         }
 
-        String certSn;
+        ActiveDeviceCertificate activeCert;
         try {
-            certSn = activeDeviceCertificateResolver.resolveActiveCertSn(identity);
+            activeCert = activeDeviceCertificateResolver.resolveActive(identity);
         } catch (RuntimeException e) {
             log.warn("keyprov 无有效设备证书: requestId={}, deviceSn={}", requestId, identity.deviceSn());
             return rejected(requestId, KeyprovConstants.ERR_CERTIFICATE_INVALID, false, "有效设备证书不存在");
         }
+        String certSn = activeCert.certSn();
 
         String suite = domainService.negotiateWrappingSuite(request, KeyprovConstants.DEFAULT_SUPPORTED_SUITES);
         if (suite == null) {
@@ -167,12 +168,12 @@ public class BusinessKeyProvisioningBatchAppService {
                 return conflict(requestId, KeyprovConstants.ERR_IDEMPOTENCY_CONFLICT, "同requestId不同请求摘要");
             }
             if (existing.getStatus() == BusinessKeyProvisioningState.COMPLETED) {
-                return buildResponse(existing, identity, request, certSn, suite, true);
+                return buildResponse(existing, identity, request, activeCert, suite, true);
             }
             if (!existing.getStatus().canAdvance()) {
                 return rejected(requestId, KeyprovConstants.ERR_STATE_NOT_ALLOWED, false, "批次状态不允许继续申请");
             }
-            return buildResponse(existing, identity, request, certSn, suite, false);
+            return buildResponse(existing, identity, request, activeCert, suite, false);
         }
 
         // 新建批次并逐用途创建/复用目标版本
@@ -189,7 +190,7 @@ public class BusinessKeyProvisioningBatchAppService {
             markBatchFailed(batch, truncate(e.getMessage()));
             return rejected(requestId, KeyprovConstants.ERR_UNAVAILABLE, false, "业务密钥材料创建或封装失败");
         }
-        return buildResponse(provisioningRepository.selectByRequestId(requestId), identity, request, certSn, suite, false);
+        return buildResponse(provisioningRepository.selectByRequestId(requestId), identity, request, activeCert, suite, false);
     }
 
     private BusinessKeyProvisioning createOrLoadBatch(String requestId, BoundDeviceIdentity identity, String domain,
@@ -348,7 +349,7 @@ public class BusinessKeyProvisioningBatchAppService {
     }
 
     private KeyProvisioningResponse buildResponse(BusinessKeyProvisioning batch, BoundDeviceIdentity identity,
-                                                  KeyProvisioningRequest request, String certSn,
+                                                  KeyProvisioningRequest request, ActiveDeviceCertificate activeCert,
                                                   String suite, boolean completed) {
         List<BusinessKeyProvisioningItem> items = provisioningItemRepository.selectByProvisioningId(batch.getId());
         List<WrappedKeyItem> wrappedItems = new ArrayList<>();
@@ -357,7 +358,7 @@ public class BusinessKeyProvisioningBatchAppService {
             if (directory == null || directory.getKeyId() == null) {
                 continue;
             }
-            WrappedBusinessKey wrapped = wrap(directory, certSn, request.getRequestId(), item.getPurpose());
+            WrappedBusinessKey wrapped = wrap(directory, activeCert, request.getRequestId(), item.getPurpose());
             wrappedItems.add(toWrappedItem(item.getPurpose(), directory, wrapped, suite));
         }
         long expireAt = request.getExpireAtMs() > 0 ? request.getExpireAtMs() : defaultBundleExpireAt();
@@ -396,13 +397,16 @@ public class BusinessKeyProvisioningBatchAppService {
         return builder.build();
     }
 
-    private WrappedBusinessKey wrap(DeviceBusinessKey directory, String certSn, String requestId, String purpose) {
+    private WrappedBusinessKey wrap(DeviceBusinessKey directory, ActiveDeviceCertificate activeCert,
+                                    String requestId, String purpose) {
         Map<String, String> audit = new HashMap<>();
         audit.put("purpose", purpose);
         audit.put("operation", "KEYPROV");
         return materialTemplate().wrap(
                 new BusinessKeyRef(directory.getKeyId(), directory.getKmsKeyRef()),
-                new RecipientRef.DeviceCertificate(certSn),
+                // CR-060 §4.2：直接证据优先——canonical serial + pkiRequestId + fingerprint
+                new RecipientRef.DeviceCertificate(activeCert.certSn(), activeCert.pkiRequestId(), null, null,
+                        activeCert.sha256Fingerprint(), audit),
                 new WrapContext(WrapMode.DEVICE_CERT_PUBLIC_KEY, requestId + ":" + purpose + ":wrap", audit));
     }
 

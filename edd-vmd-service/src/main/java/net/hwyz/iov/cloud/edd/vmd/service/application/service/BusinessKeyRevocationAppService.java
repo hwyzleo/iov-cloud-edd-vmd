@@ -53,6 +53,7 @@ public class BusinessKeyRevocationAppService {
     private final ObjectProvider<BusinessKeyMaterialTemplate> businessKeyMaterialTemplateProvider;
     private final BusinessKeyChangedPublisher businessKeyChangedPublisher;
     private final ObjectProvider<BusinessKeyCacheInvalidator> cacheInvalidatorProvider;
+    private final KeyprovProviderReadinessGate providerReadinessGate;
     private final PlatformTransactionManager transactionManager;
 
     private volatile TransactionTemplate transactionTemplate;
@@ -113,6 +114,14 @@ public class BusinessKeyRevocationAppService {
                     new BusinessKeyRef(revoked.getKeyId(), revoked.getKmsKeyRef()),
                     new RevocationRequest(cmd.getReason(), cmd.getRequestId()));
         } catch (BusinessKeyNotFoundException e) {
+            // CR-060 RD-060-9：只有 capability READY 且结构化 BUSINESS_KEY_NOT_FOUND 才可收敛为吊销幂等成功；
+            // capability 未就绪时 404 视为依赖不可用（fail-closed），保持 REVOKING 阻断，禁止伪装成业务成功。
+            if (!providerReadinessGate.isReady()) {
+                log.error("business-key Provider 未就绪，404 不得收敛为吊销幂等成功: keyId={}, reason={}",
+                        cmd.getKeyId(), providerReadinessGate.reason());
+                throw new BusinessKeyKmsUnavailableException(
+                        "business-key Provider 未就绪，404 不收敛为幂等成功: keyId=" + cmd.getKeyId());
+            }
             // KMS 已吊销/不存在 → 幂等成功
             log.info("业务密钥在KMS不存在或已吊销，幂等成功: keyId={}", cmd.getKeyId());
         } catch (CryptoOperationOutcomeUnknownException e) {

@@ -9,6 +9,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.CertificateStat
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.publish.VehicleDeviceCertificatePublisher;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.CertificateCompensationNotAllowedException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.CertificateKeyConflictException;
+import net.hwyz.iov.cloud.edd.vmd.service.common.util.CertificateSerialUtils;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleCertificate;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.CertificateStatus;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehicleCertificateRepository;
@@ -437,12 +438,14 @@ public class CertificateProvisioningAppService {
 
     /**
      * 根据证书序列号获取证书
+     * <p>
+     * CR-060 §8.2：入站序列号统一 canonical 化后再查询，与写入口径一致。
      *
      * @param certSn 证书序列号
      * @return 证书信息
      */
     public VehicleCertificate getCertificateBySerial(String certSn) {
-        return vehicleCertificateRepository.selectByCertSn(certSn);
+        return vehicleCertificateRepository.selectByCertSn(CertificateSerialUtils.canonical(certSn));
     }
 
     /**
@@ -493,7 +496,9 @@ public class CertificateProvisioningAppService {
         if (cmd.getDeviceSn() != null && !cmd.getDeviceSn().equals(certificate.getDeviceSn())) {
             throw new IllegalStateException("安装确认设备SN不匹配");
         }
-        if (cmd.getCertSn() != null && !cmd.getCertSn().equals(certificate.getCertSn())) {
+        if (cmd.getCertSn() != null
+                && !CertificateSerialUtils.canonical(cmd.getCertSn()).equals(
+                        CertificateSerialUtils.canonical(certificate.getCertSn()))) {
             throw new IllegalStateException("安装确认证书序列号不匹配");
         }
     }
@@ -585,7 +590,8 @@ public class CertificateProvisioningAppService {
      * 从签发结果更新证书信息
      */
     private void updateCertificateFromIssued(VehicleCertificate certificate, IssuedCertificate issuedCert) {
-        certificate.setCertSn(issuedCert.serialNumber());
+        // CR-060 §8.2：证书序列号写库前统一 canonical 化
+        certificate.setCertSn(CertificateSerialUtils.canonical(issuedCert.serialNumber()));
         certificate.setCertificateFingerprint(issuedCert.sha256Fingerprint());
         certificate.setNotBefore(issuedCert.notBefore().atZone(ZoneId.systemDefault()).toLocalDateTime());
         certificate.setNotAfter(issuedCert.notAfter().atZone(ZoneId.systemDefault()).toLocalDateTime());

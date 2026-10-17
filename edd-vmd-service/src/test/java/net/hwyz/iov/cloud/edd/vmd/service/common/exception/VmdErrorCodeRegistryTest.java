@@ -101,4 +101,16 @@ class VmdErrorCodeRegistryTest {
         assertEquals(VmdErrorCode.KEYPROV_INTERNAL_UNAVAILABLE,
                 ErrorCodeRegistry.findByCode("806100").orElse(null));
     }
+
+    @Test
+    void keyprovCertificateResolutionErrorCodes_present() {
+        // CR-060 framework 证书材料解析与 Provider 就绪门禁域错误码（806101～806105）
+        assertEquals("806101", VmdErrorCode.KEYPROV_CERTIFICATE_MATERIAL_UNAVAILABLE.getCode());
+        assertEquals("806102", VmdErrorCode.KEYPROV_CERTIFICATE_EVIDENCE_MISMATCH.getCode());
+        assertEquals("806103", VmdErrorCode.KEYPROV_CERTIFICATE_REFERENCE_AMBIGUOUS.getCode());
+        assertEquals("806104", VmdErrorCode.KEYPROV_CERTIFICATE_POLICY_REJECTED.getCode());
+        assertEquals("806105", VmdErrorCode.KEYPROV_PROVIDER_NOT_READY.getCode());
+        assertEquals(VmdErrorCode.KEYPROV_CERTIFICATE_POLICY_REJECTED,
+                ErrorCodeRegistry.findByCode("806104").orElse(null));
+    }
 }
