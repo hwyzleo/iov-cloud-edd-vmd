@@ -11,6 +11,8 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.BusinessKeyProvision
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.BusinessKeyProvisioningRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.DeviceBusinessKeyRepository;
 import net.hwyz.iov.cloud.framework.security.crypto.KeyProvisioningTemplate;
+import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateEvidenceMismatchException;
+import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateMaterialUnavailableException;
 import net.hwyz.iov.cloud.framework.security.crypto.exception.CryptoDependencyUnavailableException;
 import net.hwyz.iov.cloud.framework.security.crypto.exception.CryptoOperationOutcomeUnknownException;
 import net.hwyz.iov.cloud.framework.security.crypto.model.BizType;
@@ -334,6 +336,40 @@ class BusinessKeyProvisioningBatchAppServiceTest {
         assertEquals(1, keyStore.size(), "应保留本次请求占位的目标版本");
         assertTrue(keyStore.values().stream().allMatch(k -> k.getKeyState() == BusinessKeyState.PENDING),
                 "可重试依赖失败不得把目标版本置 FAILED（重试仍复用该版本）");
+    }
+
+    @Test
+    @DisplayName("证书证据冲突 → 上抛交门面映射 806102（不再降级为 806108），批次终态化 FAILED")
+    void provision_certificateEvidenceMismatch_propagates_andFailsBatch() {
+        when(boundDeviceIdentityResolver.resolveByHsmUid(HSM_UID, null)).thenReturn(identity);
+        doThrow(new CertificateEvidenceMismatchException(
+                "Resolved certificate serial does not match the requested certSerial"))
+                .when(derivedTemplate).deriveAndWrap(any(), any(), any(), any(), any(), any(), any());
+
+        // 关键：不得被 catch(CryptoException) 吞成 806108 协议响应，必须上抛由门面映射 806102/DO_NOT_RETRY
+        assertThrows(CertificateEvidenceMismatchException.class, () -> service.provision(request(), ctx()));
+
+        assertEquals(BusinessKeyProvisioningState.FAILED, batchRef.getStatus(),
+                "不可重试的证书证据冲突应终态化批次");
+        assertTrue(keyStore.values().stream().allMatch(k -> k.getKeyState() == BusinessKeyState.FAILED),
+                "本批次占位 PENDING 目标版本应置 FAILED，避免遗留孤儿");
+        assertEquals(0, itemStore.size(), "派生前失败不落 item");
+    }
+
+    @Test
+    @DisplayName("证书材料暂不可取 → 上抛交门面映射 806101（不再降级为 806108），批次保持 PREPARING 可原 requestId 重试")
+    void provision_certificateMaterialUnavailable_propagates_keepsBatchOpen() {
+        when(boundDeviceIdentityResolver.resolveByHsmUid(HSM_UID, null)).thenReturn(identity);
+        doThrow(new CertificateMaterialUnavailableException("pkiRequestId locator 缺失"))
+                .when(derivedTemplate).deriveAndWrap(any(), any(), any(), any(), any(), any(), any());
+
+        assertThrows(CertificateMaterialUnavailableException.class, () -> service.provision(request(), ctx()));
+
+        assertEquals(BusinessKeyProvisioningState.PREPARING, batchRef.getStatus(),
+                "可重试的证书材料缺失不得终态化批次（否则同 requestId 重试被拒 806094）");
+        assertTrue(keyStore.values().stream().allMatch(k -> k.getKeyState() == BusinessKeyState.PENDING),
+                "可重试失败不得把目标版本置 FAILED（重试仍复用该版本）");
+        assertEquals(0, itemStore.size(), "派生前失败不落 item");
     }
 
     @Test

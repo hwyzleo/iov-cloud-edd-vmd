@@ -590,8 +590,12 @@ public class CertificateProvisioningAppService {
      * 从签发结果更新证书信息
      */
     private void updateCertificateFromIssued(VehicleCertificate certificate, IssuedCertificate issuedCert) {
-        // CR-060 §8.2：证书序列号写库前统一 canonical 化
-        certificate.setCertSn(CertificateSerialUtils.canonical(issuedCert.serialNumber()));
+        // CR-060 §8.2：证书序列号以叶子证书 DER 解析结果为准并 canonical 化（hex），与 framework
+        // 证书证据校验口径（CertificateEvidenceValidator 按 DER 计算 hex serial）一致。
+        // 不直接采信 IssuedCertificate.serialNumber()：其进制口径由上游 Provider 决定
+        // （step-ca 历史实现返回十进制），与 framework 的 hex 口径不一致，会让 Wrap 收件方证书
+        // 解析被判为证据冲突（CertificateEvidenceMismatchException）。
+        certificate.setCertSn(canonicalSerialFromLeafDer(issuedCert));
         certificate.setCertificateFingerprint(issuedCert.sha256Fingerprint());
         certificate.setNotBefore(issuedCert.notBefore().atZone(ZoneId.systemDefault()).toLocalDateTime());
         certificate.setNotAfter(issuedCert.notAfter().atZone(ZoneId.systemDefault()).toLocalDateTime());
@@ -602,6 +606,25 @@ public class CertificateProvisioningAppService {
         certificate.setSubject(issuerSubject[0]);
         certificate.setIssuer(issuerSubject[1]);
         vehicleCertificateRepository.update(certificate);
+    }
+
+    /**
+     * 从叶子证书 DER 解析 canonical 十六进制序列号（DER 为权威来源）。
+     * <p>
+     * 解析失败时回退上游 {@code serialNumber}（进制口径可能不一致）并记录 ERROR：既不中断签发
+     * 流程、也不写 null，同时把口径不一致暴露到日志/审计（历史 cert_sn 回填见 CR-060 §12.6）。
+     */
+    private String canonicalSerialFromLeafDer(IssuedCertificate issuedCert) {
+        try {
+            CertificateFactory cf = CertificateFactory.getInstance("X.509");
+            X509Certificate x509 = (X509Certificate) cf.generateCertificate(
+                    new ByteArrayInputStream(issuedCert.leafCertificate()));
+            return CertificateSerialUtils.canonical(x509.getSerialNumber().toString(16));
+        } catch (Exception e) {
+            log.error("叶子证书 DER 解析序列号失败，回退上游 serialNumber（口径可能不一致，需排查）: reportedSerial={}",
+                    issuedCert.serialNumber(), e);
+            return CertificateSerialUtils.canonical(issuedCert.serialNumber());
+        }
     }
 
     /**

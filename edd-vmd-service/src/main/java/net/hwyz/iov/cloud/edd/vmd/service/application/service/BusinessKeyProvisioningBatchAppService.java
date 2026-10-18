@@ -17,10 +17,22 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.BusinessKeyProvision
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.BusinessKeyProvisioningRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.DeviceBusinessKeyRepository;
 import net.hwyz.iov.cloud.framework.security.crypto.KeyProvisioningTemplate;
+import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateApplicationRejectedException;
+import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateEvidenceMismatchException;
+import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateMaterialUnavailableException;
+import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateNotReadyException;
+import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateProfileNotAllowedException;
+import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateReferenceAmbiguousException;
+import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateStatusConfigurationException;
+import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateStatusDependencyUnavailableException;
+import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateStatusOutcomeUnknownException;
+import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateStatusProtocolException;
+import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateStatusTrustValidationException;
 import net.hwyz.iov.cloud.framework.security.crypto.exception.CryptoDependencyUnavailableException;
 import net.hwyz.iov.cloud.framework.security.crypto.exception.CryptoException;
 import net.hwyz.iov.cloud.framework.security.crypto.exception.CryptoOperationOutcomeUnknownException;
 import net.hwyz.iov.cloud.framework.security.crypto.exception.KeyMaterialModelMismatchException;
+import net.hwyz.iov.cloud.framework.security.crypto.exception.KeyRevokedException;
 import net.hwyz.iov.cloud.framework.security.crypto.model.BizType;
 import net.hwyz.iov.cloud.framework.security.crypto.model.DerivationContext;
 import net.hwyz.iov.cloud.framework.security.crypto.model.DerivedWrappedKey;
@@ -224,6 +236,26 @@ public class BusinessKeyProvisioningBatchAppService {
                     requestId, e.getClass().getSimpleName(), e.getMessage());
             markBatchFailed(batch, truncate(e.getMessage()));
             return rejected(requestId, KeyprovConstants.ERR_DERIVATION_UNSUPPORTED, false, "材料模型不匹配，拒绝派生");
+        } catch (CertificateMaterialUnavailableException | CertificateStatusDependencyUnavailableException
+                 | CertificateStatusConfigurationException | CertificateStatusOutcomeUnknownException e) {
+            // 证书材料/locator 暂不可取、证书状态依赖不可用：确定性可重试（由 KeyProvisioningApplicationFacade
+            // 映射为 806101/806105，action=RETRY_SAME_REQUEST_ID）。批次保持未终结、目标版本保持 PENDING，
+            // 供车端以原 requestId 重试（VMD-DSN-CR-060 §6.2）——异常上抛交门面统一映射，不在本层降级为派生错误。
+            log.warn("keyprov 证书材料/状态依赖不可用（可同requestId重试）: requestId={}, cause={}: {}",
+                    requestId, e.getClass().getSimpleName(), e.getMessage());
+            recordDependencyBlocked(batch, truncate(e.getMessage()));
+            throw e;
+        } catch (CertificateEvidenceMismatchException | CertificateReferenceAmbiguousException
+                 | CertificateNotReadyException | CertificateProfileNotAllowedException
+                 | KeyRevokedException | CertificateStatusTrustValidationException
+                 | CertificateApplicationRejectedException | CertificateStatusProtocolException e) {
+            // 证书证据冲突/目录多命中/信任链/KU-EKU/Profile/吊销/状态协议：不可重试（门面映射为 806102～806104，
+            // action=DO_NOT_RETRY），批次终态化避免同 requestId 盲重试。异常上抛交门面统一映射，
+            // 避免被下方 catch(CryptoException) 一律降级为 806108「派生不受支持」而丢失真实根因（CR-060 §6.2）。
+            log.warn("keyprov 证书证据/策略拒绝（不可重试）: requestId={}, cause={}: {}",
+                    requestId, e.getClass().getSimpleName(), e.getMessage());
+            markBatchFailed(batch, truncate(e.getMessage()));
+            throw e;
         } catch (CryptoException e) {
             log.warn("keyprov 业务密钥派生或封装失败（不可重试）: requestId={}, cause={}: {}",
                     requestId, e.getClass().getSimpleName(), e.getMessage());
