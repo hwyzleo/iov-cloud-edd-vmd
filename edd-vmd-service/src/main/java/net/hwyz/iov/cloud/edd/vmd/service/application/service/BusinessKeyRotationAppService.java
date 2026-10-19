@@ -186,7 +186,7 @@ public class BusinessKeyRotationAppService {
                     KeyPurpose.valueOf(cmd.getPurpose()),
                     new RecipientRef.DeviceCertificate(activeCert.certSn(), activeCert.pkiRequestId(), null, null,
                             activeCert.sha256Fingerprint(), audit),
-                    DerivationContext.of(derivationVersion),
+                    DerivationContext.of(derivationVersion, newRow.getBusinessKeyVersion()),
                     operationId,
                     idemKey);
         } catch (CryptoOperationOutcomeUnknownException e) {
@@ -409,7 +409,7 @@ public class BusinessKeyRotationAppService {
                                       BusinessKeyPolicyEntry policy, String fallbackOperationId) {
         current.setKeyId(result.logicalKeyId());
         current.setKmsKeyRef(result.kmsKeyRef());
-        current.setRootKeyVersion(result.rootKeyVersion() == null ? null : result.rootKeyVersion().longValue());
+        current.setRootKeyVersion(result.rootKeyVersion());
         current.setDerivationVersion(result.derivationVersion() != null ? result.derivationVersion() : derivationVersion);
         current.setOperationId(result.operationId() != null ? result.operationId() : fallbackOperationId);
         current.setAlgorithm(policy.algorithm());

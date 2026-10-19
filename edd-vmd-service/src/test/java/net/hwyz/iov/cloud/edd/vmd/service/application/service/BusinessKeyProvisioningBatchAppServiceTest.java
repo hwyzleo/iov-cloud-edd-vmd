@@ -1,6 +1,11 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyDerivationRejectedException;
+import net.hwyz.iov.cloud.edd.vmd.service.support.KeyprovEnvelopeTestFixtures;
+import net.hwyz.iov.cloud.framework.security.crypto.codec.CanonicalDerivedEnvelopeDigestVerifier;
+import net.hwyz.iov.cloud.framework.security.crypto.codec.DerivedEnvelopeDigestVerifier;
+import net.hwyz.iov.security.keyprov.v1.KeyEnvelopeFormat;
+import org.springframework.beans.factory.ObjectProvider;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyDerivedProviderUnavailableException;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.BusinessKeyProvisioning;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.BusinessKeyProvisioningItem;
@@ -94,6 +99,7 @@ class BusinessKeyProvisioningBatchAppServiceTest {
     private TransactionStatus transactionStatus;
 
     private BusinessKeyProvisioningBatchAppService service;
+    private KeyprovEnvelopeAdapter envelopeAdapter;
 
     private final Map<Long, DeviceBusinessKey> keyStore = new HashMap<>();
     private final List<BusinessKeyProvisioningItem> itemStore = new ArrayList<>();
@@ -105,10 +111,15 @@ class BusinessKeyProvisioningBatchAppServiceTest {
 
     @BeforeEach
     void setUp() {
+        @SuppressWarnings("unchecked")
+        ObjectProvider<DerivedEnvelopeDigestVerifier> verifierProvider = mock(ObjectProvider.class);
+        lenient().when(verifierProvider.getIfAvailable())
+                .thenReturn(CanonicalDerivedEnvelopeDigestVerifier.instance());
+        envelopeAdapter = new KeyprovEnvelopeAdapter(verifierProvider);
         service = new BusinessKeyProvisioningBatchAppService(deviceBusinessKeyRepository, provisioningRepository,
                 provisioningItemRepository, boundDeviceIdentityResolver, activeDeviceCertificateResolver,
                 authorizationPolicy, policyRegistry, bizTypeMapper, materialRouter,
-                new BusinessKeyProvisioningDomainService(), transactionManager);
+                new BusinessKeyProvisioningDomainService(), envelopeAdapter, transactionManager);
         ReflectionTestUtils.setField(service, "bundleTtlSeconds", 3600L);
         ReflectionTestUtils.setField(service, "derivationVersion", "v1");
 
@@ -173,10 +184,11 @@ class BusinessKeyProvisioningBatchAppServiceTest {
 
         lenient().when(derivedTemplate.deriveAndWrap(any(), any(), any(), any(), any(), any(), any()))
                 .thenAnswer(inv -> {
-                    KeyPurpose purpose = inv.getArgument(2);
+                    net.hwyz.iov.cloud.framework.security.crypto.model.KeyPurpose purpose = inv.getArgument(2);
                     String name = purpose == null ? "NULL" : purpose.name();
-                    return new DerivedWrappedKey("KEY-" + name, "kms/ref/" + name, 3, "v1",
-                            new byte[]{1, 2, 3}, "RSA-OAEP-SHA256", new byte[]{9}, inv.getArgument(5));
+                    net.hwyz.iov.cloud.framework.security.crypto.model.DerivationContext context = inv.getArgument(4);
+                    return KeyprovEnvelopeTestFixtures.derivedWrappedKey("KEY-" + name, purpose,
+                            context.businessKeyVersion(), 3L, "v1", inv.getArgument(5));
                 });
     }
 
@@ -196,7 +208,8 @@ class BusinessKeyProvisioningBatchAppServiceTest {
                 .setBusinessDomain(DOMAIN)
                 .addPurposes(net.hwyz.iov.security.keyprov.v1.KeyPurpose.KEY_PURPOSE_UPLINK_AEAD)
                 .addPurposes(net.hwyz.iov.security.keyprov.v1.KeyPurpose.KEY_PURPOSE_DOWNLINK_AEAD)
-                .addSupportedWrappingSuites(WrappingSuite.WRAPPING_SUITE_HPKE_BASE_X25519_SHA256_AES128GCM)
+                .addSupportedWrappingSuites(WrappingSuite.WRAPPING_SUITE_ECDH_ES_P256_HKDF_SHA256_AES256GCM)
+                .addSupportedEnvelopeFormats(KeyEnvelopeFormat.KEY_ENVELOPE_FORMAT_ECDH_ES_P256_V1)
                 .setTimestampMs(System.currentTimeMillis())
                 .build();
     }
@@ -377,15 +390,16 @@ class BusinessKeyProvisioningBatchAppServiceTest {
     void provision_dependencyUnavailable_thenRetrySameRequestId_succeeds() {
         when(boundDeviceIdentityResolver.resolveByHsmUid(HSM_UID, null)).thenReturn(identity);
         AtomicInteger attempts = new AtomicInteger();
-        when(derivedTemplate.deriveAndWrap(any(), any(), any(), any(), any(), any(), any())).thenAnswer(inv -> {
+        doAnswer(inv -> {
             if (attempts.getAndIncrement() == 0) {
                 throw new CryptoDependencyUnavailableException(
                         "derive and wrap derived key unavailable (request not sent)");
             }
             KeyPurpose purpose = inv.getArgument(2);
-            return new DerivedWrappedKey("KEY-" + purpose.name(), "kms/ref/" + purpose.name(), 3, "v1",
-                    new byte[]{1, 2, 3}, "RSA-OAEP-SHA256", new byte[]{9}, inv.getArgument(5));
-        });
+            net.hwyz.iov.cloud.framework.security.crypto.model.DerivationContext context = inv.getArgument(4);
+            return KeyprovEnvelopeTestFixtures.derivedWrappedKey("KEY-" + purpose.name(), purpose,
+                    context.businessKeyVersion(), 3L, "v1", inv.getArgument(5));
+        }).when(derivedTemplate).deriveAndWrap(any(), any(), any(), any(), any(), any(), any());
 
         KeyProvisioningRequest request = request();
         KeyProvisioningResponse first = service.provision(request, ctx());

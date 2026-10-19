@@ -13,6 +13,11 @@
         <result column="root_key_version" property="rootKeyVersion" />
         <result column="derivation_version" property="derivationVersion" />
         <result column="recipient_cert_fingerprint_digest" property="recipientCertFingerprintDigest" />
+        <result column="envelope_format" property="envelopeFormat" />
+        <result column="wrapping_suite" property="wrappingSuite" />
+        <result column="envelope_digest" property="envelopeDigest" />
+        <result column="key_check_value" property="keyCheckValue" />
+        <result column="recipient_cert_digest" property="recipientCertDigest" />
         <result column="device_result" property="deviceResult" />
         <result column="import_proof_digest" property="importProofDigest" />
         <result column="confirmed_at" property="confirmedAt" />
@@ -26,19 +31,22 @@
 
     <sql id="baseColumnList">
         id, provisioning_id, purpose, key_id, business_key_version, directory_key_id,
-        operation_id, root_key_version, derivation_version, recipient_cert_fingerprint_digest, device_result,
+        operation_id, root_key_version, derivation_version, recipient_cert_fingerprint_digest,
+        envelope_format, wrapping_suite, envelope_digest, key_check_value, recipient_cert_digest, device_result,
         import_proof_digest, confirmed_at, create_time, create_by, modify_time, modify_by, row_version, row_valid
     </sql>
 
     <insert id="insertPo" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO tb_business_key_provisioning_item (
             provisioning_id, purpose, key_id, business_key_version, directory_key_id,
-            operation_id, root_key_version, derivation_version, recipient_cert_fingerprint_digest, device_result,
+            operation_id, root_key_version, derivation_version, recipient_cert_fingerprint_digest,
+            envelope_format, wrapping_suite, envelope_digest, key_check_value, recipient_cert_digest, device_result,
             import_proof_digest, confirmed_at, create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
         VALUES (
             #{provisioningId}, #{purpose}, #{keyId}, #{businessKeyVersion}, #{directoryKeyId},
-            #{operationId}, #{rootKeyVersion}, #{derivationVersion}, #{recipientCertFingerprintDigest}, #{deviceResult},
+            #{operationId}, #{rootKeyVersion}, #{derivationVersion}, #{recipientCertFingerprintDigest},
+            #{envelopeFormat}, #{wrappingSuite}, #{envelopeDigest}, #{keyCheckValue}, #{recipientCertDigest}, #{deviceResult},
             #{importProofDigest}, #{confirmedAt}, now(), #{createBy}, now(), #{modifyBy}, 1, 1
         )
     </insert>
@@ -46,13 +54,15 @@
     <insert id="batchInsertPo">
         INSERT INTO tb_business_key_provisioning_item (
             provisioning_id, purpose, key_id, business_key_version, directory_key_id,
-            operation_id, root_key_version, derivation_version, recipient_cert_fingerprint_digest, device_result,
+            operation_id, root_key_version, derivation_version, recipient_cert_fingerprint_digest,
+            envelope_format, wrapping_suite, envelope_digest, key_check_value, recipient_cert_digest, device_result,
             import_proof_digest, confirmed_at, create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
         VALUES
         <foreach collection="list" item="item" separator=",">
             (#{item.provisioningId}, #{item.purpose}, #{item.keyId}, #{item.businessKeyVersion}, #{item.directoryKeyId},
-             #{item.operationId}, #{item.rootKeyVersion}, #{item.derivationVersion}, #{item.recipientCertFingerprintDigest}, #{item.deviceResult},
+             #{item.operationId}, #{item.rootKeyVersion}, #{item.derivationVersion}, #{item.recipientCertFingerprintDigest},
+             #{item.envelopeFormat}, #{item.wrappingSuite}, #{item.envelopeDigest}, #{item.keyCheckValue}, #{item.recipientCertDigest}, #{item.deviceResult},
              #{item.importProofDigest}, #{item.confirmedAt}, now(), #{item.createBy}, now(), #{item.modifyBy}, 1, 1)
         </foreach>
     </insert>
@@ -82,6 +92,21 @@
         </if>
         <if test="recipientCertFingerprintDigest != null and recipientCertFingerprintDigest != ''">
             t.recipient_cert_fingerprint_digest = #{recipientCertFingerprintDigest},
+        </if>
+        <if test="envelopeFormat != null and envelopeFormat != ''">
+            t.envelope_format = #{envelopeFormat},
+        </if>
+        <if test="wrappingSuite != null and wrappingSuite != ''">
+            t.wrapping_suite = #{wrappingSuite},
+        </if>
+        <if test="envelopeDigest != null">
+            t.envelope_digest = #{envelopeDigest},
+        </if>
+        <if test="keyCheckValue != null">
+            t.key_check_value = #{keyCheckValue},
+        </if>
+        <if test="recipientCertDigest != null">
+            t.recipient_cert_digest = #{recipientCertDigest},
         </if>
         <if test="deviceResult != null and deviceResult != ''">
             t.device_result = #{deviceResult},

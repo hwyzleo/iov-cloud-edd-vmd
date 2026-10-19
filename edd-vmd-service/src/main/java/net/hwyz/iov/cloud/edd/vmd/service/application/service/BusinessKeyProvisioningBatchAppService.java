@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyDerivationRejectedException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyDerivedProviderUnavailableException;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.KeyprovEnvelopeIntegrityException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.util.DerivedKeyOperationIds;
 import net.hwyz.iov.cloud.edd.vmd.service.common.util.VinCanonicalizer;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.BusinessKeyProvisioning;
@@ -31,11 +32,14 @@ import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateStatusT
 import net.hwyz.iov.cloud.framework.security.crypto.exception.CryptoDependencyUnavailableException;
 import net.hwyz.iov.cloud.framework.security.crypto.exception.CryptoException;
 import net.hwyz.iov.cloud.framework.security.crypto.exception.CryptoOperationOutcomeUnknownException;
+import net.hwyz.iov.cloud.framework.security.crypto.exception.DerivedEnvelopeIntegrityException;
 import net.hwyz.iov.cloud.framework.security.crypto.exception.KeyMaterialModelMismatchException;
 import net.hwyz.iov.cloud.framework.security.crypto.exception.KeyRevokedException;
 import net.hwyz.iov.cloud.framework.security.crypto.model.BizType;
 import net.hwyz.iov.cloud.framework.security.crypto.model.DerivationContext;
 import net.hwyz.iov.cloud.framework.security.crypto.model.DerivedWrappedKey;
+import net.hwyz.iov.cloud.framework.security.crypto.model.DerivedWrappedKeyEnvelopeView;
+import net.hwyz.iov.cloud.framework.security.crypto.model.EcdhEsP256EnvelopeViewV1;
 import net.hwyz.iov.cloud.framework.security.crypto.model.KeyAnchor;
 import net.hwyz.iov.cloud.framework.security.crypto.model.KeyMaterialModel;
 import net.hwyz.iov.cloud.framework.security.crypto.model.KeyPurpose;
@@ -50,8 +54,6 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
-
-import com.google.protobuf.ByteString;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -93,6 +95,7 @@ public class BusinessKeyProvisioningBatchAppService {
     private final BusinessKeyBizTypeMapper bizTypeMapper;
     private final BusinessKeyMaterialRouter materialRouter;
     private final BusinessKeyProvisioningDomainService domainService;
+    private final KeyprovEnvelopeAdapter envelopeAdapter;
     private final PlatformTransactionManager transactionManager;
 
     @Value("${vmd.business-key.provisioning.bundle-ttl-seconds:3600}")
@@ -171,9 +174,16 @@ public class BusinessKeyProvisioningBatchAppService {
             return rejected(requestId, KeyprovConstants.ERR_CERTIFICATE_INVALID, false, "有效设备证书不存在");
         }
 
-        String suite = domainService.negotiateWrappingSuite(request, KeyprovConstants.DEFAULT_SUPPORTED_SUITES);
+        String suite = domainService.negotiateWrappingSuite(request, KeyprovConstants.V2C_SUPPORTED_SUITES);
         if (suite == null) {
             return rejected(requestId, KeyprovConstants.ERR_PROTOCOL_INVALID, false, "无受支持的封装套件");
+        }
+        // CR-062 §4.1：envelope format 必须由请求显式声明并命中 allowlist，否则不得下发 envelope v1
+        if (envelopeAdapter.negotiateEnvelopeFormat(request) == null) {
+            log.warn("keyprov 请求未声明受支持的 envelope format/组合，fail-closed 不下发 v1: requestId={}, domain={}",
+                    requestId, domain);
+            return rejected(requestId, KeyprovConstants.ERR_ENVELOPE_UNSUPPORTED, false,
+                    "请求未声明受支持的envelope格式组合，拒绝下发");
         }
 
         String hsmDigest = domainService.digestHsmUid(identity.hsmUid());
@@ -256,6 +266,12 @@ public class BusinessKeyProvisioningBatchAppService {
                     requestId, e.getClass().getSimpleName(), e.getMessage());
             markBatchFailed(batch, truncate(e.getMessage()));
             throw e;
+        } catch (KeyprovEnvelopeIntegrityException | DerivedEnvelopeIntegrityException e) {
+            log.warn("keyprov 信封完整性拒绝（不可重试）: requestId={}, cause={}: {}",
+                    requestId, e.getClass().getSimpleName(), e.getMessage());
+            markBatchFailed(batch, truncate(e.getMessage()));
+            return rejected(requestId, KeyprovConstants.ERR_ENVELOPE_INTEGRITY, false,
+                    "envelope摘要/版本校验失败，拒绝下发");
         } catch (CryptoException e) {
             log.warn("keyprov 业务密钥派生或封装失败（不可重试）: requestId={}, cause={}: {}",
                     requestId, e.getClass().getSimpleName(), e.getMessage());
@@ -263,7 +279,7 @@ public class BusinessKeyProvisioningBatchAppService {
             return rejected(requestId, KeyprovConstants.ERR_DERIVATION_UNSUPPORTED, false, "业务密钥派生或封装失败");
         }
         return buildResponse(provisioningRepository.selectByRequestId(requestId), identity, request,
-                activeCert, suite, derived);
+                activeCert, derived);
     }
 
     private BusinessKeyProvisioning createOrLoadBatch(String requestId, BoundDeviceIdentity identity, String domain,
@@ -315,7 +331,6 @@ public class BusinessKeyProvisioningBatchAppService {
         // 显式路由：非 DERIVED_ROOT 一律拒绝（禁隐式回退到随机材料）
         KeyProvisioningTemplate template = materialRouter.requireDerivedRoot(bizType);
         KeyAnchor anchor = KeyAnchor.vin(normalizedVin);
-        DerivationContext context = DerivationContext.of(derivationVersion);
 
         Map<String, Long> currentVersions = domainService.extractCurrentVersions(request);
         Map<String, DerivedWrappedKey> derived = new HashMap<>();
@@ -373,7 +388,8 @@ public class BusinessKeyProvisioningBatchAppService {
                     KeyPurpose.valueOf(purpose),
                     new RecipientRef.DeviceCertificate(activeCert.certSn(), activeCert.pkiRequestId(), null, null,
                             activeCert.sha256Fingerprint(), audit),
-                    context,
+                    // CR-062/FW-SEC CR-014：业务版本参与 Provider 幂等摘要，必须显式传入目标版本
+                    DerivationContext.of(derivationVersion, target.getBusinessKeyVersion()),
                     operationId,
                     idemKey);
 
@@ -467,7 +483,7 @@ public class BusinessKeyProvisioningBatchAppService {
             }
             current.setKeyId(result.logicalKeyId());
             current.setKmsKeyRef(result.kmsKeyRef());
-            current.setRootKeyVersion(result.rootKeyVersion() == null ? null : result.rootKeyVersion().longValue());
+            current.setRootKeyVersion(result.rootKeyVersion());
             current.setDerivationVersion(result.derivationVersion() != null ? result.derivationVersion() : derivationVersion);
             current.setOperationId(result.operationId() != null ? result.operationId() : operationId);
             current.setAlgorithm(policy.algorithm());
@@ -480,6 +496,12 @@ public class BusinessKeyProvisioningBatchAppService {
 
     private void insertItem(Long provisioningId, DeviceBusinessKey target, String purpose, DerivedWrappedKey result,
                             String fingerprintDigest) {
+        DerivedWrappedKeyEnvelopeView view = result.envelope();
+        if (view == null) {
+            throw new KeyprovEnvelopeIntegrityException("派生结果缺少结构化 envelope 视图，禁止落库 envelope v1 元数据");
+        }
+        byte[] recipientCertDigest = view instanceof EcdhEsP256EnvelopeViewV1 v1
+                ? v1.recipientCertificateDigest() : null;
         tx().executeWithoutResult(status -> provisioningItemRepository.insert(BusinessKeyProvisioningItem.builder()
                 .provisioningId(provisioningId)
                 .purpose(purpose)
@@ -487,9 +509,14 @@ public class BusinessKeyProvisioningBatchAppService {
                 .businessKeyVersion(target.getBusinessKeyVersion())
                 .directoryKeyId(target.getId())
                 .operationId(result.operationId())
-                .rootKeyVersion(result.rootKeyVersion() == null ? null : result.rootKeyVersion().longValue())
+                .rootKeyVersion(result.rootKeyVersion())
                 .derivationVersion(result.derivationVersion())
                 .recipientCertFingerprintDigest(fingerprintDigest)
+                .envelopeFormat(view.envelopeFormat())
+                .wrappingSuite(view.wrappingSuite() == null ? null : view.wrappingSuite().name())
+                .envelopeDigest(view.envelopeDigest())
+                .keyCheckValue(view.keyCheckValue())
+                .recipientCertDigest(recipientCertDigest)
                 .deviceResult(ProvisioningDeviceResult.PENDING)
                 .createTime(LocalDateTime.now())
                 .build()));
@@ -497,7 +524,7 @@ public class BusinessKeyProvisioningBatchAppService {
 
     private KeyProvisioningResponse buildResponse(BusinessKeyProvisioning batch, BoundDeviceIdentity identity,
                                                   KeyProvisioningRequest request, ActiveDeviceCertificate activeCert,
-                                                  String suite, Map<String, DerivedWrappedKey> derived) {
+                                                  Map<String, DerivedWrappedKey> derived) {
         List<BusinessKeyProvisioningItem> items = provisioningItemRepository.selectByProvisioningId(batch.getId());
         List<WrappedKeyItem> wrappedItems = new ArrayList<>();
         for (BusinessKeyProvisioningItem item : items) {
@@ -506,10 +533,10 @@ public class BusinessKeyProvisioningBatchAppService {
                 continue;
             }
             DerivedWrappedKey wrapped = derived.get(item.getPurpose());
-            if (wrapped == null || wrapped.wrapped() == null) {
+            if (wrapped == null) {
                 continue;
             }
-            wrappedItems.add(toWrappedItem(item.getPurpose(), directory, wrapped, suite));
+            wrappedItems.add(envelopeAdapter.toWrappedKeyItem(item.getPurpose(), directory, wrapped));
         }
         long expireAt = request.getExpireAtMs() > 0 ? request.getExpireAtMs() : defaultBundleExpireAt();
         KeyProvisioningResponse.Builder builder = KeyProvisioningResponse.newBuilder()
@@ -518,26 +545,6 @@ public class BusinessKeyProvisioningBatchAppService {
                 .setExpireAtMs(expireAt);
         wrappedItems.sort((a, b) -> a.getPurposeValue() - b.getPurposeValue());
         wrappedItems.forEach(builder::addItems);
-        return builder.build();
-    }
-
-    private WrappedKeyItem toWrappedItem(String purpose, DeviceBusinessKey directory, DerivedWrappedKey wrapped,
-                                         String suite) {
-        WrappedKeyItem.Builder builder = WrappedKeyItem.newBuilder()
-                .setPurpose(KeyprovConstants.purposeProto(purpose))
-                .setKeyId(directory.getKeyId())
-                .setBusinessKeyVersion(directory.getBusinessKeyVersion() == null ? 0 : directory.getBusinessKeyVersion())
-                .setKeyAlgorithm(directory.getAlgorithm() == null ? "" : directory.getAlgorithm())
-                .setWrappingSuite(KeyprovConstants.suiteProto(suite));
-        if (wrapped.wrapped() != null) {
-            builder.setWrappedKey(ByteString.copyFrom(wrapped.wrapped()));
-        }
-        if (directory.getValidFrom() != null) {
-            builder.setValidFromMs(toEpochMs(directory.getValidFrom()));
-        }
-        if (directory.getValidTo() != null) {
-            builder.setValidToMs(toEpochMs(directory.getValidTo()));
-        }
         return builder.build();
     }
 

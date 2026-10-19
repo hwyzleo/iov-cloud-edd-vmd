@@ -123,7 +123,13 @@ public enum VmdErrorCode implements ErrorCode {
     // 落地 VMD-DSN-CR-061 / FW-SEC-DSN-CR-013：V2C 由随机材料改为 Transit/HSM 根派生。
     KEYPROV_VIN_BINDING_INVALID("806106", "Keyprov无唯一有效VIN绑定或VIN非法，安全拒绝"),
     KEYPROV_DERIVED_PROVIDER_NOT_READY("806107", "Keyprov根派生/Transit根能力未就绪，依赖不可用"),
-    KEYPROV_DERIVATION_UNSUPPORTED("806108", "Keyprov派生参数/材料模型/锚不受支持，拒绝派生");
+    KEYPROV_DERIVATION_UNSUPPORTED("806108", "Keyprov派生参数/材料模型/锚不受支持，拒绝派生"),
+
+    // ================= CR-062 ECDH-ES envelope v1 与 Import Attestation 域（806109～806111） =================
+    // 落地 VMD-DSN-CR-062 / PAR-PROTO-DSN-CR-008 / FW-SEC-DSN-CR-016。
+    KEYPROV_ENVELOPE_UNSUPPORTED("806109", "Keyprov请求未声明受支持的envelope格式组合，不下发v1"),
+    KEYPROV_ENVELOPE_INTEGRITY_REJECTED("806110", "Keyprov信封摘要/版本/view-wire字段校验失败，拒绝下发"),
+    KEYPROV_IMPORT_PROOF_REJECTED("806111", "Keyprov导入证明验签拒绝，安全拒绝且不激活");
 
     private final String code;
     private final String message;

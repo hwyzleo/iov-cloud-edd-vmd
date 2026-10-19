@@ -5,6 +5,10 @@ crypto:
     derived-key:
       require-ready-at-startup: false
       derivation-version: v1
+  # CR-062：VMD 集成测试以 @MockBean ImportProofVerifier 驱动编排；真实验签由 framework 单测/E2E 覆盖。
+  import-proof:
+    enabled: false
+    require-ready-at-startup: false
 
 # Actuator 健康分组契约（与 src/main/resources/application.yml 保持一致，供集成测试验证分组聚合与主聚合排除）
 management:
@@ -12,7 +16,7 @@ management:
     health:
       group:
         keyprov:
-          include: keyProvisioningCapability,derivedKeyProvider,certificateResolution
+          include: keyProvisioningCapability,derivedKeyProvider,certificateResolution,importProofVerification
           show-details: always
 
 # CR-055 业务密钥域测试策略（真实授权策略 + BizType 映射，供集成测试使用）
@@ -52,6 +56,8 @@ vmd:
         allowed-callers: VAGW
         schema-version: keyprov-v1
         max-payload-bytes: 16384
+        protocol-release: test-release-v1
+        descriptor-set-hash: test-descriptor-set-hash
       bundle-ttl-seconds: 3600
       ack-timeout-seconds: 900
       reconcile-alert-seconds: 86400

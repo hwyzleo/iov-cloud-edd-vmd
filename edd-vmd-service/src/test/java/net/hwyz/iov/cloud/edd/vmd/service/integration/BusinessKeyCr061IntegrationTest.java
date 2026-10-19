@@ -8,11 +8,16 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.service.KeyProvisioningApp
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.KeyprovAuthenticatedContext;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.KeyprovConstants;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.VmdErrorCode;
+import net.hwyz.iov.cloud.edd.vmd.service.support.KeyprovEnvelopeTestFixtures;
+import net.hwyz.iov.cloud.framework.security.crypto.ImportProofVerifier;
 import net.hwyz.iov.cloud.framework.security.crypto.KeyProvisioningTemplate;
 import net.hwyz.iov.cloud.framework.security.crypto.exception.CryptoDependencyUnavailableException;
 import net.hwyz.iov.cloud.framework.security.crypto.model.DerivedWrappedKey;
+import net.hwyz.iov.cloud.framework.security.crypto.model.importproof.ImportProofAlgorithm;
+import net.hwyz.iov.cloud.framework.security.crypto.model.importproof.VerifiedImportProof;
 import net.hwyz.iov.security.keyprov.v1.KeyImportItemResult;
 import net.hwyz.iov.security.keyprov.v1.KeyImportResult;
+import net.hwyz.iov.security.keyprov.v1.KeyEnvelopeFormat;
 import net.hwyz.iov.security.keyprov.v1.KeyProvisioningAck;
 import net.hwyz.iov.security.keyprov.v1.KeyProvisioningAckResult;
 import net.hwyz.iov.security.keyprov.v1.KeyProvisioningRequest;
@@ -40,6 +45,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -83,6 +89,9 @@ class BusinessKeyCr061IntegrationTest extends BaseTest {
     @MockBean
     private KeyProvisioningTemplate keyProvisioningTemplate;
 
+    @MockBean
+    private ImportProofVerifier importProofVerifier;
+
     @Autowired
     private KeyProvisioningApplicationFacade keyProvisioningApplicationFacade;
 
@@ -101,11 +110,21 @@ class BusinessKeyCr061IntegrationTest extends BaseTest {
         insertFixture(vin, DEVICE_SN, HSM_UID, PART_CODE, CERT_SN);
         insertFixture(INVALID_VIN, INVALID_DEVICE_SN, INVALID_HSM_UID, INVALID_PART_CODE, INVALID_CERT_SN);
 
-        // 根派生：每次调用返回唯一 logicalKeyId（满足 uk_key_id），Wrapped Key 仅瞬时存在
+        // 根派生：logicalKeyId 按 purpose 稳定（满足 uk_key_id + 幂等重放字节一致），Wrapped Key 仅瞬时存在
         when(keyProvisioningTemplate.deriveAndWrap(any(), any(), any(), any(), any(), any(), any())).thenAnswer(inv -> {
-            int n = deriveCount.incrementAndGet();
-            return new DerivedWrappedKey("CR061-KEY-" + n, "kms/ref/CR061-KEY-" + n, ROOT_KEY_VERSION, DERIVATION_VERSION,
-                    new byte[]{1, 2, 3}, "RSA-OAEP-SHA256", new byte[]{9}, inv.getArgument(5));
+            deriveCount.incrementAndGet();
+            net.hwyz.iov.cloud.framework.security.crypto.model.KeyPurpose purpose = inv.getArgument(2);
+            net.hwyz.iov.cloud.framework.security.crypto.model.DerivationContext context = inv.getArgument(4);
+            String operationId = inv.getArgument(5);
+            return KeyprovEnvelopeTestFixtures.derivedWrappedKey("CR061-KEY-" + purpose.name(), purpose,
+                    context.businessKeyVersion(), ROOT_KEY_VERSION, DERIVATION_VERSION, operationId);
+        });
+        // CR-062：ImportProofVerifier 在集成测试中以 mock 驱动编排；真实验签由 framework 单测/E2E 覆盖
+        when(importProofVerifier.verify(any())).thenAnswer(inv -> {
+            net.hwyz.iov.cloud.framework.security.crypto.model.importproof.ImportProofVerificationRequest req =
+                    inv.getArgument(0);
+            return new VerifiedImportProof(ImportProofAlgorithm.ECDSA_P256_SHA256_P1363,
+                    req.expectedCertificateDigest(), req.purpose(), new byte[32], java.time.Instant.now());
         });
     }
 
@@ -162,7 +181,8 @@ class BusinessKeyCr061IntegrationTest extends BaseTest {
                 .setBusinessDomain(DOMAIN)
                 .addPurposes(KeyPurpose.KEY_PURPOSE_UPLINK_AEAD)
                 .addPurposes(KeyPurpose.KEY_PURPOSE_DOWNLINK_AEAD)
-                .addSupportedWrappingSuites(WrappingSuite.WRAPPING_SUITE_HPKE_BASE_X25519_SHA256_AES128GCM)
+                .addSupportedWrappingSuites(WrappingSuite.WRAPPING_SUITE_ECDH_ES_P256_HKDF_SHA256_AES256GCM)
+                .addSupportedEnvelopeFormats(KeyEnvelopeFormat.KEY_ENVELOPE_FORMAT_ECDH_ES_P256_V1)
                 .setTimestampMs(System.currentTimeMillis())
                 .build();
     }
@@ -175,8 +195,16 @@ class BusinessKeyCr061IntegrationTest extends BaseTest {
                     .setKeyId(item.getKeyId())
                     .setBusinessKeyVersion(item.getBusinessKeyVersion())
                     .setResult(result)
-                    .setImportProof(ByteString.copyFromUtf8("proof-" + item.getPurposeValue()))
-                    .setProofAlgorithm("NONE")
+                    .setImportProof(ByteString.copyFrom(new byte[64]))
+                    .setProofAlgorithm("")
+                    .setImportProofAlgorithm(
+                            net.hwyz.iov.security.keyprov.v1.ImportProofAlgorithm
+                                    .IMPORT_PROOF_ALGORITHM_ECDSA_P256_SHA256_P1363)
+                    .setEnvelopeDigest(item.getEnvelopeDigest())
+                    .setKeyCheckValue(item.getKeyCheckValue())
+                    .setEnvelopeFormat(item.getEnvelopeFormat())
+                    .setRecipientCertificateDigest(
+                            ByteString.copyFrom(KeyprovEnvelopeTestFixtures.RECIPIENT_CERT_DIGEST))
                     .build());
         }
         return builder.build();
@@ -191,7 +219,8 @@ class BusinessKeyCr061IntegrationTest extends BaseTest {
     private KeyProvisioningOperationResult requestOperation(String requestId, String hsmUid) {
         byte[] payload = request(requestId).toByteArray();
         return keyProvisioningApplicationFacade.request(CALLER, ctx(hsmUid),
-                KeyprovConstants.PAYLOAD_TYPE_REQUEST, "keyprov-v1", payload, sha256(payload));
+                KeyprovConstants.PAYLOAD_TYPE_REQUEST, "keyprov-v1", payload, sha256(payload),
+                "test-release-v1", "test-descriptor-set-hash");
     }
 
     private KeyProvisioningAckResult ackResponse(String requestId, KeyProvisioningAck ack) {
@@ -288,9 +317,9 @@ class BusinessKeyCr061IntegrationTest extends BaseTest {
     @DisplayName("根派生依赖不可用 → 806107 可重试：批次保持 PREPARING、版本保持 PENDING，同 requestId 重试复用同版本成功")
     void provision_dependencyUnavailable_retrySameRequestId_reusesReservedVersion() {
         String requestId = "CR061_REQ_005";
-        when(keyProvisioningTemplate.deriveAndWrap(any(), any(), any(), any(), any(), any(), any()))
-                .thenThrow(new CryptoDependencyUnavailableException(
-                        "derive and wrap derived key unavailable (request not sent)"));
+        doThrow(new CryptoDependencyUnavailableException(
+                "derive and wrap derived key unavailable (request not sent)"))
+                .when(keyProvisioningTemplate).deriveAndWrap(any(), any(), any(), any(), any(), any(), any());
 
         KeyProvisioningOperationResult first = requestOperation(requestId, HSM_UID);
         assertEquals(VmdKeyProvisioningOutcome.UNAVAILABLE, first.getOutcome(), "依赖不可用应为 UNAVAILABLE（非结果未知）");
@@ -310,9 +339,12 @@ class BusinessKeyCr061IntegrationTest extends BaseTest {
 
         // 依赖恢复：以原 requestId 重试（当前桩会抛异常，须用 doAnswer 改写行为）
         doAnswer(inv -> {
-            int n = deriveCount.incrementAndGet();
-            return new DerivedWrappedKey("CR061-KEY-" + n, "kms/ref/CR061-KEY-" + n, ROOT_KEY_VERSION, DERIVATION_VERSION,
-                    new byte[]{1, 2, 3}, "RSA-OAEP-SHA256", new byte[]{9}, inv.getArgument(5));
+            deriveCount.incrementAndGet();
+            net.hwyz.iov.cloud.framework.security.crypto.model.KeyPurpose purpose = inv.getArgument(2);
+            net.hwyz.iov.cloud.framework.security.crypto.model.DerivationContext context = inv.getArgument(4);
+            String operationId = inv.getArgument(5);
+            return KeyprovEnvelopeTestFixtures.derivedWrappedKey("CR061-KEY-" + purpose.name(), purpose,
+                    context.businessKeyVersion(), ROOT_KEY_VERSION, DERIVATION_VERSION, operationId);
         }).when(keyProvisioningTemplate).deriveAndWrap(any(), any(), any(), any(), any(), any(), any());
         KeyProvisioningResponse retry = requestResponse(requestId, HSM_UID);
 

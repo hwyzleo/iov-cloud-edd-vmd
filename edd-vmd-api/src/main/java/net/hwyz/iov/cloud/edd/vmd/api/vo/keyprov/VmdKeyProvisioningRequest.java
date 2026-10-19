@@ -39,6 +39,16 @@ public class VmdKeyProvisioningRequest {
     private String schemaVersion;
 
     /**
+     * 调用方声明的 PAR-PROTO release（受 VMD 固定值精确 allowlist 门禁；VMD-DSN-CR-062 §4.1）
+     */
+    private String protocolRelease;
+
+    /**
+     * 调用方声明的 PAR-PROTO DescriptorSet hash（受 VMD 固定值精确 allowlist 门禁；VMD-DSN-CR-062 §4.1）
+     */
+    private String descriptorSetHash;
+
+    /**
      * canonical payload bytes（敏感，禁日志）
      */
     private byte[] payloadBytes;

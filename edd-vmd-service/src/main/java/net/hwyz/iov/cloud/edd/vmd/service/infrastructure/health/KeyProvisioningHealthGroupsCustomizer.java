@@ -46,11 +46,16 @@ public class KeyProvisioningHealthGroupsCustomizer implements HealthEndpointGrou
     public static final String KMS_BUSINESS_KEY_INDICATOR = "kmsBusinessKey";
 
     /**
+     * framework 导入证明验签能力健康指示器注册名（VMD-DSN-CR-062 §9 / FW-SEC-DSN-CR-016 §8）
+     */
+    public static final String IMPORT_PROOF_INDICATOR = "importProofVerification";
+
+    /**
      * 需从主聚合排除的 keyprov 域健康指示器
      */
     private static final Set<String> KEYPROV_INDICATORS =
             Set.of(KEYPROV_INDICATOR, DERIVED_KEY_PROVIDER_INDICATOR,
-                    CERTIFICATE_RESOLUTION_INDICATOR, KMS_BUSINESS_KEY_INDICATOR);
+                    CERTIFICATE_RESOLUTION_INDICATOR, KMS_BUSINESS_KEY_INDICATOR, IMPORT_PROOF_INDICATOR);
 
     @Override
     public HealthEndpointGroups postProcessHealthEndpointGroups(HealthEndpointGroups groups) {

@@ -44,6 +44,8 @@ class KeyProvisioningApplicationFacadeTest {
 
     private static final String CALLER = "VAGW";
     private static final String HSM_UID = "HSM-UID-0001";
+    private static final String RELEASE = "test-release-v1";
+    private static final String DESCRIPTOR_SET_HASH = "test-descriptor-set-hash";
 
     @Mock
     private BusinessKeyProvisioningBatchAppService batchAppService;
@@ -61,6 +63,18 @@ class KeyProvisioningApplicationFacadeTest {
         ReflectionTestUtils.setField(facade, "allowedCallers", "VAGW");
         ReflectionTestUtils.setField(facade, "expectedSchemaVersion", "keyprov-v1");
         ReflectionTestUtils.setField(facade, "maxPayloadBytes", 16384);
+        ReflectionTestUtils.setField(facade, "pinnedProtocolRelease", RELEASE);
+        ReflectionTestUtils.setField(facade, "pinnedDescriptorSetHash", DESCRIPTOR_SET_HASH);
+    }
+
+    /**
+     * 以测试固定的 release/DescriptorSet hash 调用 /request 端点（CR-062 §4.1 精确 allowlist 门禁）。
+     */
+    private KeyProvisioningOperationResult request(String caller, KeyprovAuthenticatedContext ctx,
+                                                    String payloadType, String schemaVersion,
+                                                    byte[] payloadBytes, String payloadDigest) {
+        return facade.request(caller, ctx, payloadType, schemaVersion, payloadBytes, payloadDigest,
+                RELEASE, DESCRIPTOR_SET_HASH);
     }
 
     private KeyprovAuthenticatedContext ctx() {
@@ -101,7 +115,7 @@ class KeyProvisioningApplicationFacadeTest {
     void disabledFailsClosed() {
         ReflectionTestUtils.setField(facade, "keyprovEnabled", false);
         byte[] payload = requestPayload("R1");
-        KeyProvisioningOperationResult result = facade.request(CALLER, ctx(),
+        KeyProvisioningOperationResult result = request(CALLER, ctx(),
                 KeyprovConstants.PAYLOAD_TYPE_REQUEST, "keyprov-v1", payload, digest(payload));
         assertEquals(VmdKeyProvisioningOutcome.UNAVAILABLE, result.getOutcome());
         assertEquals(VmdErrorCode.KEYPROV_INTERNAL_UNAVAILABLE, result.getErrorCode());
@@ -111,7 +125,7 @@ class KeyProvisioningApplicationFacadeTest {
     @DisplayName("调用方非 VAGW → 806090，不调用 framework")
     void unauthorizedCaller() {
         byte[] payload = requestPayload("R1");
-        KeyProvisioningOperationResult result = facade.request("UNKNOWN", ctx(),
+        KeyProvisioningOperationResult result = request("UNKNOWN", ctx(),
                 KeyprovConstants.PAYLOAD_TYPE_REQUEST, "keyprov-v1", payload, digest(payload));
         assertEquals(VmdKeyProvisioningOutcome.REJECTED, result.getOutcome());
         assertEquals(VmdErrorCode.KEYPROV_CALLER_UNAUTHORIZED, result.getErrorCode());
@@ -121,7 +135,7 @@ class KeyProvisioningApplicationFacadeTest {
     @DisplayName("缺少可信设备上下文 → 806091")
     void missingContext() {
         byte[] payload = requestPayload("R1");
-        KeyProvisioningOperationResult result = facade.request(CALLER, null,
+        KeyProvisioningOperationResult result = request(CALLER, null,
                 KeyprovConstants.PAYLOAD_TYPE_REQUEST, "keyprov-v1", payload, digest(payload));
         assertEquals(VmdErrorCode.KEYPROV_DEVICE_CONTEXT_MISMATCH, result.getErrorCode());
     }
@@ -130,7 +144,7 @@ class KeyProvisioningApplicationFacadeTest {
     @DisplayName("payloadType 与端点不匹配 → 806094")
     void payloadTypeMismatch() {
         byte[] payload = requestPayload("R1");
-        KeyProvisioningOperationResult result = facade.request(CALLER, ctx(),
+        KeyProvisioningOperationResult result = request(CALLER, ctx(),
                 KeyprovConstants.PAYLOAD_TYPE_ACK, "keyprov-v1", payload, digest(payload));
         assertEquals(VmdErrorCode.KEYPROV_REQUEST_INVALID, result.getErrorCode());
     }
@@ -139,7 +153,7 @@ class KeyProvisioningApplicationFacadeTest {
     @DisplayName("payload 摘要不匹配 → 806094")
     void digestMismatch() {
         byte[] payload = requestPayload("R1");
-        KeyProvisioningOperationResult result = facade.request(CALLER, ctx(),
+        KeyProvisioningOperationResult result = request(CALLER, ctx(),
                 KeyprovConstants.PAYLOAD_TYPE_REQUEST, "keyprov-v1", payload, "deadbeef");
         assertEquals(VmdErrorCode.KEYPROV_REQUEST_INVALID, result.getErrorCode());
     }
@@ -154,7 +168,7 @@ class KeyProvisioningApplicationFacadeTest {
                         .setResult(KeyProvisioningResult.KEY_PROVISIONING_RESULT_SUCCEEDED)
                         .setExpireAtMs(9999L)
                         .build());
-        KeyProvisioningOperationResult result = facade.request(CALLER, ctx(),
+        KeyProvisioningOperationResult result = request(CALLER, ctx(),
                 KeyprovConstants.PAYLOAD_TYPE_REQUEST, "keyprov-v1", payload, digest(payload));
         assertEquals(VmdKeyProvisioningOutcome.SUCCESS, result.getOutcome());
         assertEquals(KeyprovConstants.PAYLOAD_TYPE_RESPONSE, result.getDownlinkPayloadType());
@@ -168,7 +182,7 @@ class KeyProvisioningApplicationFacadeTest {
         byte[] payload = requestPayload("R1");
         when(batchAppService.provision(any(KeyProvisioningRequest.class), any(KeyprovAuthenticatedContext.class)))
                 .thenReturn(rejectedResponse("R1", KeyprovConstants.ERR_IDEMPOTENCY_CONFLICT));
-        assertEquals(VmdErrorCode.KEYPROV_IDEMPOTENCY_CONFLICT, facade.request(CALLER, ctx(),
+        assertEquals(VmdErrorCode.KEYPROV_IDEMPOTENCY_CONFLICT, request(CALLER, ctx(),
                 KeyprovConstants.PAYLOAD_TYPE_REQUEST, "keyprov-v1", payload, digest(payload)).getErrorCode());
 
         when(statusAppService.queryStatus(any(KeyProvisioningStatusRequest.class), any(KeyprovAuthenticatedContext.class)))
@@ -188,7 +202,7 @@ class KeyProvisioningApplicationFacadeTest {
         // 806106 VIN 绑定非法 → REJECTED 不可重试
         when(batchAppService.provision(any(KeyProvisioningRequest.class), any(KeyprovAuthenticatedContext.class)))
                 .thenReturn(rejectedResponse("R1", KeyprovConstants.ERR_VIN_BINDING_INVALID));
-        KeyProvisioningOperationResult vinInvalid = facade.request(CALLER, ctx(),
+        KeyProvisioningOperationResult vinInvalid = request(CALLER, ctx(),
                 KeyprovConstants.PAYLOAD_TYPE_REQUEST, "keyprov-v1", payload, digest(payload));
         assertEquals(VmdErrorCode.KEYPROV_VIN_BINDING_INVALID, vinInvalid.getErrorCode());
         assertEquals(VmdKeyProvisioningOutcome.REJECTED, vinInvalid.getOutcome());
@@ -197,7 +211,7 @@ class KeyProvisioningApplicationFacadeTest {
         // 806107 根派生 Provider 未就绪 → UNAVAILABLE 可重试（同 requestId），非结果未知
         when(batchAppService.provision(any(KeyProvisioningRequest.class), any(KeyprovAuthenticatedContext.class)))
                 .thenReturn(rejectedResponse("R1", KeyprovConstants.ERR_DERIVED_PROVIDER_NOT_READY));
-        KeyProvisioningOperationResult notReady = facade.request(CALLER, ctx(),
+        KeyProvisioningOperationResult notReady = request(CALLER, ctx(),
                 KeyprovConstants.PAYLOAD_TYPE_REQUEST, "keyprov-v1", payload, digest(payload));
         assertEquals(VmdErrorCode.KEYPROV_DERIVED_PROVIDER_NOT_READY, notReady.getErrorCode());
         assertEquals(VmdKeyProvisioningOutcome.UNAVAILABLE, notReady.getOutcome());
@@ -207,7 +221,7 @@ class KeyProvisioningApplicationFacadeTest {
         // 806108 派生/材料模型不受支持 → REJECTED 不可重试
         when(batchAppService.provision(any(KeyProvisioningRequest.class), any(KeyprovAuthenticatedContext.class)))
                 .thenReturn(rejectedResponse("R1", KeyprovConstants.ERR_DERIVATION_UNSUPPORTED));
-        KeyProvisioningOperationResult unsupported = facade.request(CALLER, ctx(),
+        KeyProvisioningOperationResult unsupported = request(CALLER, ctx(),
                 KeyprovConstants.PAYLOAD_TYPE_REQUEST, "keyprov-v1", payload, digest(payload));
         assertEquals(VmdErrorCode.KEYPROV_DERIVATION_UNSUPPORTED, unsupported.getErrorCode());
         assertEquals(VmdKeyProvisioningOutcome.REJECTED, unsupported.getOutcome());
@@ -220,7 +234,7 @@ class KeyProvisioningApplicationFacadeTest {
         byte[] payload = requestPayload("R1");
         when(batchAppService.provision(any(KeyProvisioningRequest.class), any(KeyprovAuthenticatedContext.class)))
                 .thenThrow(new CryptoDependencyUnavailableException("kms down"));
-        KeyProvisioningOperationResult unavailable = facade.request(CALLER, ctx(),
+        KeyProvisioningOperationResult unavailable = request(CALLER, ctx(),
                 KeyprovConstants.PAYLOAD_TYPE_REQUEST, "keyprov-v1", payload, digest(payload));
         assertEquals(VmdErrorCode.KEYPROV_DIRECTORY_UNAVAILABLE, unavailable.getErrorCode());
         assertEquals(VmdKeyProvisioningOutcome.UNAVAILABLE, unavailable.getOutcome());
@@ -279,7 +293,7 @@ class KeyProvisioningApplicationFacadeTest {
     void gateRejectionCarriesCanonicalPayload() throws Exception {
         byte[] payload = requestPayload("R1");
         // 摘要不匹配：payloadType/schemaVersion 合法、payload 本身可解析 → 可回填 requestId
-        KeyProvisioningOperationResult result = facade.request(CALLER, ctx(),
+        KeyProvisioningOperationResult result = request(CALLER, ctx(),
                 KeyprovConstants.PAYLOAD_TYPE_REQUEST, "keyprov-v1", payload, "deadbeef");
         assertEquals(VmdErrorCode.KEYPROV_REQUEST_INVALID, result.getErrorCode());
         assertEquals(KeyprovConstants.PAYLOAD_TYPE_RESPONSE, result.getDownlinkPayloadType());
@@ -298,7 +312,7 @@ class KeyProvisioningApplicationFacadeTest {
         byte[] payload = requestPayload("R1");
         when(batchAppService.provision(any(KeyProvisioningRequest.class), any(KeyprovAuthenticatedContext.class)))
                 .thenReturn(rejectedResponse("R1", KeyprovConstants.ERR_ITEM_MISMATCH));
-        KeyProvisioningOperationResult result = facade.request(CALLER, ctx(),
+        KeyProvisioningOperationResult result = request(CALLER, ctx(),
                 KeyprovConstants.PAYLOAD_TYPE_REQUEST, "keyprov-v1", payload, digest(payload));
         // VAGW 侧稳定码：ITEM_MISMATCH 归入 806094
         assertEquals(VmdErrorCode.KEYPROV_REQUEST_INVALID, result.getErrorCode());
@@ -315,7 +329,7 @@ class KeyProvisioningApplicationFacadeTest {
         byte[] payload = requestPayload("R1");
         when(batchAppService.provision(any(KeyProvisioningRequest.class), any(KeyprovAuthenticatedContext.class)))
                 .thenThrow(new CryptoDependencyUnavailableException("kms down"));
-        KeyProvisioningOperationResult result = facade.request(CALLER, ctx(),
+        KeyProvisioningOperationResult result = request(CALLER, ctx(),
                 KeyprovConstants.PAYLOAD_TYPE_REQUEST, "keyprov-v1", payload, digest(payload));
         assertEquals(VmdKeyProvisioningOutcome.UNAVAILABLE, result.getOutcome());
         KeyProvisioningResponse response = decodeResponse(result);
@@ -364,7 +378,7 @@ class KeyProvisioningApplicationFacadeTest {
     @DisplayName("无法回填 requestId 时仍返回 canonical payload（request_id 为空，由 VAGW envelope 关联）")
     void unparseablePayloadStillCarriesCanonicalPayload() throws Exception {
         byte[] payload = new byte[] {(byte) 0xFF, (byte) 0xFE, 0x01};
-        KeyProvisioningOperationResult result = facade.request(CALLER, ctx(),
+        KeyProvisioningOperationResult result = request(CALLER, ctx(),
                 KeyprovConstants.PAYLOAD_TYPE_REQUEST, "keyprov-v1", payload, digest(payload));
         assertEquals(VmdErrorCode.KEYPROV_REQUEST_INVALID, result.getErrorCode());
         KeyProvisioningResponse response = decodeResponse(result);
@@ -383,7 +397,7 @@ class KeyProvisioningApplicationFacadeTest {
                                           VmdKeyProvisioningOutcome expectedOutcome, boolean expectedRetryable) {
         when(batchAppService.provision(any(KeyProvisioningRequest.class), any(KeyprovAuthenticatedContext.class)))
                 .thenThrow(ex);
-        KeyProvisioningOperationResult result = facade.request(CALLER, ctx(),
+        KeyProvisioningOperationResult result = request(CALLER, ctx(),
                 KeyprovConstants.PAYLOAD_TYPE_REQUEST, "keyprov-v1", payload, digest(payload));
         String label = ex.getClass().getSimpleName();
         assertEquals(expectedCode, result.getErrorCode(), label);

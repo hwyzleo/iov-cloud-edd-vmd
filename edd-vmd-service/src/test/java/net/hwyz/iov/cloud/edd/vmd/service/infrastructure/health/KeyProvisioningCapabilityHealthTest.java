@@ -4,6 +4,8 @@ import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.adapter.KeyProvisioningSer
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.BusinessKeyPolicyRegistry;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.DerivedKeyProviderReadinessGate;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.KeyprovConstants;
+import net.hwyz.iov.cloud.framework.security.crypto.ImportProofVerifier;
+import net.hwyz.iov.cloud.framework.security.crypto.codec.DerivedEnvelopeDigestVerifier;
 import net.hwyz.iov.cloud.framework.security.crypto.resolver.CertificateReferenceDirectory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -43,6 +45,8 @@ class KeyProvisioningCapabilityHealthTest {
     private JdbcTemplate jdbcTemplate;
     private ObjectProvider<CertificateReferenceDirectory> certificateDirectoryProvider;
     private DerivedKeyProviderReadinessGate derivedKeyProviderReadinessGate;
+    private ObjectProvider<DerivedEnvelopeDigestVerifier> envelopeVerifierProvider;
+    private ObjectProvider<ImportProofVerifier> importProofVerifierProvider;
 
     @SuppressWarnings("unchecked")
     @BeforeEach
@@ -53,13 +57,18 @@ class KeyProvisioningCapabilityHealthTest {
         jdbcTemplate = mock(JdbcTemplate.class);
         certificateDirectoryProvider = mock(ObjectProvider.class);
         derivedKeyProviderReadinessGate = mock(DerivedKeyProviderReadinessGate.class);
+        envelopeVerifierProvider = mock(ObjectProvider.class);
+        importProofVerifierProvider = mock(ObjectProvider.class);
     }
 
     private KeyProvisioningCapabilityHealthIndicator indicator(boolean enabled) {
         KeyProvisioningCapabilityHealthIndicator indicator =
                 new KeyProvisioningCapabilityHealthIndicator(adapterProvider, policyRegistry, jdbcProvider,
-                        certificateDirectoryProvider, derivedKeyProviderReadinessGate);
+                        certificateDirectoryProvider, derivedKeyProviderReadinessGate,
+                        envelopeVerifierProvider, importProofVerifierProvider);
         ReflectionTestUtils.setField(indicator, "keyprovEnabled", enabled);
+        ReflectionTestUtils.setField(indicator, "protocolRelease", "test-release-v1");
+        ReflectionTestUtils.setField(indicator, "descriptorSetHash", "test-descriptor-set-hash");
         return indicator;
     }
 
@@ -77,6 +86,8 @@ class KeyProvisioningCapabilityHealthTest {
         when(adapterProvider.getIfAvailable()).thenReturn(mock(KeyProvisioningServiceAdapter.class));
         when(certificateDirectoryProvider.getIfAvailable()).thenReturn(mock(CertificateReferenceDirectory.class));
         when(derivedKeyProviderReadinessGate.isReady()).thenReturn(true);
+        when(envelopeVerifierProvider.getIfAvailable()).thenReturn(mock(DerivedEnvelopeDigestVerifier.class));
+        when(importProofVerifierProvider.getIfAvailable()).thenReturn(mock(ImportProofVerifier.class));
         when(policyRegistry.resolvePurposes(KeyprovConstants.BUSINESS_DOMAIN_V2C))
                 .thenReturn(Optional.of(KeyprovConstants.V2C_PURPOSE_SET));
         when(jdbcProvider.getIfAvailable()).thenReturn(jdbcTemplate);
@@ -95,6 +106,8 @@ class KeyProvisioningCapabilityHealthTest {
         when(certificateDirectoryProvider.getIfAvailable()).thenReturn(null);
         when(derivedKeyProviderReadinessGate.isReady()).thenReturn(false);
         when(derivedKeyProviderReadinessGate.reason()).thenReturn("Transit v2c-comm-root 未就绪");
+        when(envelopeVerifierProvider.getIfAvailable()).thenReturn(null);
+        when(importProofVerifierProvider.getIfAvailable()).thenReturn(null);
         when(policyRegistry.resolvePurposes(KeyprovConstants.BUSINESS_DOMAIN_V2C))
                 .thenReturn(Optional.of(Set.of()));
         when(jdbcProvider.getIfAvailable()).thenReturn(jdbcTemplate);
@@ -143,6 +156,8 @@ class KeyProvisioningCapabilityHealthTest {
                 "主聚合必须排除 derivedKeyProvider");
         assertFalse(processed.getPrimary().isMember(KeyProvisioningHealthGroupsCustomizer.KMS_BUSINESS_KEY_INDICATOR),
                 "主聚合必须排除 kmsBusinessKey");
+        assertFalse(processed.getPrimary().isMember(KeyProvisioningHealthGroupsCustomizer.IMPORT_PROOF_INDICATOR),
+                "主聚合必须排除 importProofVerification");
         assertTrue(processed.getPrimary().isMember("db"), "其他指示器仍保留");
         assertTrue(processed.get("keyprov").isMember(KeyProvisioningHealthGroupsCustomizer.KEYPROV_INDICATOR),
                 "keyprov 分组必须包含 capability");

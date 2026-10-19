@@ -8,6 +8,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyKmsUnavail
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.VmdErrorCode;
 import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateApplicationRejectedException;
 import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateEvidenceMismatchException;
+import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateEvidenceRejectedException;
 import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateMaterialUnavailableException;
 import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateNotReadyException;
 import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateProfileNotAllowedException;
@@ -20,6 +21,8 @@ import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateStatusT
 import net.hwyz.iov.cloud.framework.security.crypto.exception.CryptoDependencyUnavailableException;
 import net.hwyz.iov.cloud.framework.security.crypto.exception.CryptoException;
 import net.hwyz.iov.cloud.framework.security.crypto.exception.CryptoOperationOutcomeUnknownException;
+import net.hwyz.iov.cloud.framework.security.crypto.exception.ImportProofRejectedException;
+import net.hwyz.iov.cloud.framework.security.crypto.exception.ImportProofVerificationUnavailableException;
 import net.hwyz.iov.cloud.framework.security.crypto.exception.KeyRevokedException;
 import net.hwyz.iov.security.keyprov.v1.KeyProvisioningAck;
 import net.hwyz.iov.security.keyprov.v1.KeyProvisioningAckResult;
@@ -84,6 +87,18 @@ public class KeyProvisioningApplicationFacade {
     @Value("${vmd.business-key.provisioning.keyprov.max-payload-bytes:16384}")
     private int maxPayloadBytes;
 
+    /**
+     * VMD 固定的 PAR-PROTO release（精确 allowlist，缺失时能力 NOT_READY，CR-062 §4.1）
+     */
+    @Value("${vmd.business-key.provisioning.keyprov.protocol-release:}")
+    private String pinnedProtocolRelease;
+
+    /**
+     * VMD 固定的 PAR-PROTO DescriptorSet hash（精确 allowlist，缺失时能力 NOT_READY，CR-062 §4.1）
+     */
+    @Value("${vmd.business-key.provisioning.keyprov.descriptor-set-hash:}")
+    private String pinnedDescriptorSetHash;
+
     public KeyProvisioningApplicationFacade(BusinessKeyProvisioningBatchAppService provisioningBatchAppService,
                                             BusinessKeyProvisioningAckAppService provisioningAckAppService,
                                             BusinessKeyProvisioningStatusAppService provisioningStatusAppService) {
@@ -97,18 +112,34 @@ public class KeyProvisioningApplicationFacade {
      */
     public KeyProvisioningOperationResult request(String caller, KeyprovAuthenticatedContext ctx,
                                                   String payloadType, String schemaVersion,
-                                                  byte[] payloadBytes, String payloadDigest) {
+                                                  byte[] payloadBytes, String payloadDigest,
+                                                  String protocolRelease, String descriptorSetHash) {
         return withCanonicalErrorPayload(KeyprovConstants.PAYLOAD_TYPE_REQUEST, payloadBytes,
-                doRequest(caller, ctx, payloadType, schemaVersion, payloadBytes, payloadDigest));
+                doRequest(caller, ctx, payloadType, schemaVersion, payloadBytes, payloadDigest,
+                        protocolRelease, descriptorSetHash));
+    }
+
+    /**
+     * 处理官方 /request 端点（未声明 release/hash，fail-closed 不下发 envelope v1）。
+     */
+    public KeyProvisioningOperationResult request(String caller, KeyprovAuthenticatedContext ctx,
+                                                  String payloadType, String schemaVersion,
+                                                  byte[] payloadBytes, String payloadDigest) {
+        return request(caller, ctx, payloadType, schemaVersion, payloadBytes, payloadDigest, null, null);
     }
 
     private KeyProvisioningOperationResult doRequest(String caller, KeyprovAuthenticatedContext ctx,
                                                      String payloadType, String schemaVersion,
-                                                     byte[] payloadBytes, String payloadDigest) {
+                                                     byte[] payloadBytes, String payloadDigest,
+                                                     String protocolRelease, String descriptorSetHash) {
         KeyProvisioningOperationResult gate = gate(caller, ctx,
                 KeyprovConstants.PAYLOAD_TYPE_REQUEST, payloadType, schemaVersion, payloadBytes, payloadDigest);
         if (gate != null) {
             return gate;
+        }
+        KeyProvisioningOperationResult releaseGate = releaseGate(protocolRelease, descriptorSetHash);
+        if (releaseGate != null) {
+            return releaseGate;
         }
         KeyProvisioningRequest request;
         try {
@@ -204,9 +235,18 @@ public class KeyProvisioningApplicationFacade {
                  | CertificateProfileNotAllowedException | KeyRevokedException
                  | CertificateStatusTrustValidationException | CertificateApplicationRejectedException
                  | CertificateStatusProtocolException | CertificateStatusDependencyUnavailableException
-                 | CertificateStatusConfigurationException | CertificateStatusOutcomeUnknownException e) {
+                 | CertificateStatusConfigurationException | CertificateStatusOutcomeUnknownException
+                 | CertificateEvidenceRejectedException e) {
             log.warn("keyprov ack 证书解析/策略异常: requestId={}, type={}", ack.getRequestId(), e.getClass().getSimpleName());
             return certificateFailure(ack.getRequestId(), e);
+        } catch (ImportProofRejectedException e) {
+            log.warn("keyprov ack 导入证明验签拒绝: requestId={}, reason={}", ack.getRequestId(), e.rejectReason());
+            return error(ack.getRequestId(), VmdErrorCode.KEYPROV_IMPORT_PROOF_REJECTED,
+                    VmdKeyProvisioningOutcome.REJECTED, false, "导入证明验签拒绝，安全拒绝且不激活");
+        } catch (ImportProofVerificationUnavailableException e) {
+            log.warn("keyprov ack 导入证明验签 capability 未就绪: requestId={}", ack.getRequestId());
+            return error(ack.getRequestId(), VmdErrorCode.KEYPROV_PROVIDER_NOT_READY,
+                    VmdKeyProvisioningOutcome.UNAVAILABLE, true, "导入证明验签能力未就绪，不激活");
         } catch (BusinessKeyKmsUnavailableException e) {
             log.warn("keyprov ack Provider 未就绪: requestId={}", ack.getRequestId());
             return error(ack.getRequestId(), VmdErrorCode.KEYPROV_PROVIDER_NOT_READY,
@@ -383,6 +423,32 @@ public class KeyProvisioningApplicationFacade {
     }
 
     /**
+     * PAR-PROTO release / DescriptorSet hash 精确 allowlist 门禁（CR-062 §4.1/§9）。
+     * <p>
+     * VMD 只接受与自身固定值完全相等（区分大小写、不 trim）的请求；VMD 固定值缺失或请求
+     * 声明缺失/不匹配一律 fail-closed，且不根据请求值动态选择 schema 或算法。
+     */
+    private KeyProvisioningOperationResult releaseGate(String protocolRelease, String descriptorSetHash) {
+        if (isBlank(pinnedProtocolRelease) || isBlank(pinnedDescriptorSetHash)) {
+            log.warn("keyprov 请求被拒(806094 release/hash未固定): pinnedReleasePresent={}, pinnedHashPresent={}",
+                    !isBlank(pinnedProtocolRelease), !isBlank(pinnedDescriptorSetHash));
+            return error(null, VmdErrorCode.KEYPROV_REQUEST_INVALID,
+                    VmdKeyProvisioningOutcome.REJECTED, false, "keyprov release/hash能力未就绪");
+        }
+        if (!pinnedProtocolRelease.equals(protocolRelease)
+                || !pinnedDescriptorSetHash.equals(descriptorSetHash)) {
+            log.warn("keyprov 请求被拒(806094 release/hash不匹配)");
+            return error(null, VmdErrorCode.KEYPROV_REQUEST_INVALID,
+                    VmdKeyProvisioningOutcome.REJECTED, false, "release/DescriptorSet hash不匹配");
+        }
+        return null;
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.isBlank();
+    }
+
+    /**
      * 将业务应用服务返回的协议结果映射为 806xxx 稳定错误与结果类别。
      */
     private KeyProvisioningOperationResult failure(String uplinkPayloadType, String requestId,
@@ -392,7 +458,8 @@ public class KeyProvisioningApplicationFacade {
         VmdKeyProvisioningOutcome outcome;
         boolean retryable;
         // 根派生/Transit 根未就绪为确定性依赖不可用（同 requestId 重试），非结果未知
-        if (KeyprovConstants.ERR_DERIVED_PROVIDER_NOT_READY.equals(protocolCode)) {
+        if (KeyprovConstants.ERR_DERIVED_PROVIDER_NOT_READY.equals(protocolCode)
+                || KeyprovConstants.ERR_IMPORT_PROOF_NOT_READY.equals(protocolCode)) {
             outcome = VmdKeyProvisioningOutcome.UNAVAILABLE;
             retryable = true;
         } else {
@@ -538,6 +605,9 @@ public class KeyProvisioningApplicationFacade {
             case KEYPROV_VIN_BINDING_INVALID -> KeyprovConstants.ERR_VIN_BINDING_INVALID;
             case KEYPROV_DERIVED_PROVIDER_NOT_READY -> KeyprovConstants.ERR_DERIVED_PROVIDER_NOT_READY;
             case KEYPROV_DERIVATION_UNSUPPORTED -> KeyprovConstants.ERR_DERIVATION_UNSUPPORTED;
+            case KEYPROV_ENVELOPE_UNSUPPORTED -> KeyprovConstants.ERR_ENVELOPE_UNSUPPORTED;
+            case KEYPROV_ENVELOPE_INTEGRITY_REJECTED -> KeyprovConstants.ERR_ENVELOPE_INTEGRITY;
+            case KEYPROV_IMPORT_PROOF_REJECTED -> KeyprovConstants.ERR_IMPORT_PROOF_INVALID;
             default -> KeyprovConstants.ERR_UNAVAILABLE;
         };
     }
@@ -633,6 +703,10 @@ public class KeyProvisioningApplicationFacade {
             case KeyprovConstants.ERR_VIN_BINDING_INVALID -> VmdErrorCode.KEYPROV_VIN_BINDING_INVALID;
             case KeyprovConstants.ERR_DERIVED_PROVIDER_NOT_READY -> VmdErrorCode.KEYPROV_DERIVED_PROVIDER_NOT_READY;
             case KeyprovConstants.ERR_DERIVATION_UNSUPPORTED -> VmdErrorCode.KEYPROV_DERIVATION_UNSUPPORTED;
+            case KeyprovConstants.ERR_ENVELOPE_UNSUPPORTED -> VmdErrorCode.KEYPROV_ENVELOPE_UNSUPPORTED;
+            case KeyprovConstants.ERR_ENVELOPE_INTEGRITY -> VmdErrorCode.KEYPROV_ENVELOPE_INTEGRITY_REJECTED;
+            case KeyprovConstants.ERR_IMPORT_PROOF_INVALID -> VmdErrorCode.KEYPROV_IMPORT_PROOF_REJECTED;
+            case KeyprovConstants.ERR_IMPORT_PROOF_NOT_READY -> VmdErrorCode.KEYPROV_PROVIDER_NOT_READY;
             case KeyprovConstants.ERR_PROTOCOL_INVALID, KeyprovConstants.ERR_PURPOSE_INCOMPLETE,
                  KeyprovConstants.ERR_STATE_NOT_ALLOWED, KeyprovConstants.ERR_ITEM_MISMATCH,
                  KeyprovConstants.ERR_EXPIRED, KeyprovConstants.ERR_IMPORT_FAILED ->

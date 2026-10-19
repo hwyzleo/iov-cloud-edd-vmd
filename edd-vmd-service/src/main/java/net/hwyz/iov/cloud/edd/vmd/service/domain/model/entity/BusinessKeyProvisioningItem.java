@@ -75,6 +75,31 @@ public class BusinessKeyProvisioningItem extends BaseDo<Long> {
     private String recipientCertFingerprintDigest;
 
     /**
+     * 信封格式（首期 ECDH_ES_P256_V1；VMD-DSN-CR-062）
+     */
+    private String envelopeFormat;
+
+    /**
+     * 封装套件（allowlist；VMD-DSN-CR-062）
+     */
+    private String wrappingSuite;
+
+    /**
+     * canonical envelope 摘要（32 字节，不可日志化；VMD-DSN-CR-062）
+     */
+    private byte[] envelopeDigest;
+
+    /**
+     * 密钥校验值 KCV（3 字节，不可作认证依据；VMD-DSN-CR-062）
+     */
+    private byte[] keyCheckValue;
+
+    /**
+     * 收件证书策略摘要（32 字节，与 operation 摘要绑定；VMD-DSN-CR-062）
+     */
+    private byte[] recipientCertDigest;
+
+    /**
      * 设备导入结果
      */
     private ProvisioningDeviceResult deviceResult;

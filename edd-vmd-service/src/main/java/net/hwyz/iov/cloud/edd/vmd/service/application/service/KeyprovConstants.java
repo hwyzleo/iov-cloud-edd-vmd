@@ -50,6 +50,10 @@ public final class KeyprovConstants {
             SUITE_HPKE_BASE_X25519_SHA256_AES128GCM,
             SUITE_ECDH_ES_P256_HKDF_SHA256_AES256GCM);
 
+    /** 首期 V2C envelope v1 唯一允许的封装套件（CR-062 RD-062-2） */
+    public static final List<String> V2C_SUPPORTED_SUITES =
+            List.of(SUITE_ECDH_ES_P256_HKDF_SHA256_AES256GCM);
+
     /** canonical payload type 完整名 */
     public static final String PAYLOAD_TYPE_REQUEST = "security.keyprov.v1.KeyProvisioningRequest";
     public static final String PAYLOAD_TYPE_RESPONSE = "security.keyprov.v1.KeyProvisioningResponse";
@@ -80,6 +84,11 @@ public final class KeyprovConstants {
     public static final String ERR_VIN_BINDING_INVALID = "KEYPROV_VIN_BINDING_INVALID";
     public static final String ERR_DERIVED_PROVIDER_NOT_READY = "KEYPROV_DERIVED_PROVIDER_NOT_READY";
     public static final String ERR_DERIVATION_UNSUPPORTED = "KEYPROV_DERIVATION_UNSUPPORTED";
+    // CR-062 ECDH-ES envelope v1 与 Import Attestation
+    public static final String ERR_ENVELOPE_UNSUPPORTED = "KEYPROV_ENVELOPE_UNSUPPORTED";
+    public static final String ERR_ENVELOPE_INTEGRITY = "KEYPROV_ENVELOPE_INTEGRITY";
+    public static final String ERR_IMPORT_PROOF_INVALID = "KEYPROV_IMPORT_PROOF_INVALID";
+    public static final String ERR_IMPORT_PROOF_NOT_READY = "KEYPROV_IMPORT_PROOF_NOT_READY";
 
     private static final Map<KeyPurpose, String> PURPOSE_TO_CODE = new LinkedHashMap<>();
     private static final Map<WrappingSuite, String> SUITE_TO_CODE = new LinkedHashMap<>();

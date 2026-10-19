@@ -47,7 +47,9 @@ public class KeyProvisioningServiceAdapter {
                 request == null ? null : request.getPayloadType(),
                 request == null ? null : request.getSchemaVersion(),
                 request == null ? null : request.getPayloadBytes(),
-                request == null ? null : request.getPayloadDigest());
+                request == null ? null : request.getPayloadDigest(),
+                request == null ? null : request.getProtocolRelease(),
+                request == null ? null : request.getDescriptorSetHash());
         return VmdKeyProvisioningResponse.builder()
                 .requestId(result.getRequestId())
                 .payloadType(result.getDownlinkPayloadType())

@@ -7,9 +7,13 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.KeyProvisioning
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.KeyProvisioningApplicationFacade;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.KeyprovAuthenticatedContext;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.KeyprovConstants;
+import net.hwyz.iov.cloud.framework.security.crypto.ImportProofVerifier;
 import net.hwyz.iov.cloud.framework.security.crypto.KeyProvisioningTemplate;
 import net.hwyz.iov.cloud.framework.security.crypto.model.DerivedWrappedKey;
+import net.hwyz.iov.cloud.framework.security.crypto.model.importproof.ImportProofAlgorithm;
+import net.hwyz.iov.cloud.framework.security.crypto.model.importproof.VerifiedImportProof;
 import net.hwyz.iov.security.keyprov.v1.KeyImportItemResult;
+import net.hwyz.iov.security.keyprov.v1.KeyEnvelopeFormat;
 import net.hwyz.iov.security.keyprov.v1.KeyImportResult;
 import net.hwyz.iov.security.keyprov.v1.KeyProvisioningAck;
 import net.hwyz.iov.security.keyprov.v1.KeyProvisioningAckResult;
@@ -59,6 +63,9 @@ class BusinessKeyCr058IntegrationTest extends BaseTest {
     @MockBean
     private KeyProvisioningTemplate keyProvisioningTemplate;
 
+    @MockBean
+    private ImportProofVerifier importProofVerifier;
+
     @Autowired
     private KeyProvisioningApplicationFacade keyProvisioningApplicationFacade;
 
@@ -96,10 +103,20 @@ class BusinessKeyCr058IntegrationTest extends BaseTest {
                 "CR058_CERT_REQ", CERT_SN, vin, DEVICE_SN, HSM_UID, vin, DEVICE_SN);
 
         when(keyProvisioningTemplate.deriveAndWrap(any(), any(), any(), any(), any(), any(), any())).thenAnswer(inv -> {
-            int n = deriveCount.incrementAndGet();
-            // CR-061：根派生逻辑 keyId 每个 purpose 独立（满足 uk_key_id），Wrapped Key 瞬时
-            return new DerivedWrappedKey("CR058-KEY-" + n, "kms/ref/CR058-KEY-" + n, 1, "v1",
-                    new byte[]{1, 2, 3}, "RSA-OAEP-SHA256", new byte[]{9}, inv.getArgument(5));
+            deriveCount.incrementAndGet();
+            // CR-061/062：logicalKeyId 按 purpose 稳定（满足 uk_key_id + 幂等重放字节一致），Wrapped Key 瞬时
+            net.hwyz.iov.cloud.framework.security.crypto.model.KeyPurpose purpose = inv.getArgument(2);
+            net.hwyz.iov.cloud.framework.security.crypto.model.DerivationContext context = inv.getArgument(4);
+            String operationId = inv.getArgument(5);
+            return net.hwyz.iov.cloud.edd.vmd.service.support.KeyprovEnvelopeTestFixtures
+                    .derivedWrappedKey("CR058-KEY-" + purpose.name(), purpose, context.businessKeyVersion(),
+                            1L, "v1", operationId);
+        });
+        when(importProofVerifier.verify(any())).thenAnswer(inv -> {
+            net.hwyz.iov.cloud.framework.security.crypto.model.importproof.ImportProofVerificationRequest req =
+                    inv.getArgument(0);
+            return new VerifiedImportProof(ImportProofAlgorithm.ECDSA_P256_SHA256_P1363,
+                    req.expectedCertificateDigest(), req.purpose(), new byte[32], java.time.Instant.now());
         });
     }
 
@@ -128,7 +145,8 @@ class BusinessKeyCr058IntegrationTest extends BaseTest {
                 .setBusinessDomain(DOMAIN)
                 .addPurposes(KeyPurpose.KEY_PURPOSE_UPLINK_AEAD)
                 .addPurposes(KeyPurpose.KEY_PURPOSE_DOWNLINK_AEAD)
-                .addSupportedWrappingSuites(WrappingSuite.WRAPPING_SUITE_HPKE_BASE_X25519_SHA256_AES128GCM)
+                .addSupportedWrappingSuites(WrappingSuite.WRAPPING_SUITE_ECDH_ES_P256_HKDF_SHA256_AES256GCM)
+                .addSupportedEnvelopeFormats(KeyEnvelopeFormat.KEY_ENVELOPE_FORMAT_ECDH_ES_P256_V1)
                 .setTimestampMs(System.currentTimeMillis())
                 .build();
     }
@@ -145,8 +163,17 @@ class BusinessKeyCr058IntegrationTest extends BaseTest {
                     .setKeyId(item.getKeyId())
                     .setBusinessKeyVersion(item.getBusinessKeyVersion())
                     .setResult(result)
-                    .setImportProof(ByteString.copyFromUtf8("proof-" + item.getPurposeValue()))
-                    .setProofAlgorithm("NONE")
+                    .setImportProof(ByteString.copyFrom(new byte[64]))
+                    .setProofAlgorithm("")
+                    .setImportProofAlgorithm(
+                            net.hwyz.iov.security.keyprov.v1.ImportProofAlgorithm
+                                    .IMPORT_PROOF_ALGORITHM_ECDSA_P256_SHA256_P1363)
+                    .setEnvelopeDigest(item.getEnvelopeDigest())
+                    .setKeyCheckValue(item.getKeyCheckValue())
+                    .setEnvelopeFormat(item.getEnvelopeFormat())
+                    .setRecipientCertificateDigest(ByteString.copyFrom(
+                            net.hwyz.iov.cloud.edd.vmd.service.support.KeyprovEnvelopeTestFixtures
+                                    .RECIPIENT_CERT_DIGEST))
                     .build());
         }
         return builder.build();
@@ -241,7 +268,8 @@ class BusinessKeyCr058IntegrationTest extends BaseTest {
     private KeyProvisioningOperationResult requestOperation(String requestId) {
         byte[] payload = request(requestId).toByteArray();
         return keyProvisioningApplicationFacade.request(CALLER, ctx(),
-                KeyprovConstants.PAYLOAD_TYPE_REQUEST, "keyprov-v1", payload, sha256(payload));
+                KeyprovConstants.PAYLOAD_TYPE_REQUEST, "keyprov-v1", payload, sha256(payload),
+                "test-release-v1", "test-descriptor-set-hash");
     }
 
     private KeyProvisioningAckResult ackResponse(String requestId, KeyProvisioningAck ack) {

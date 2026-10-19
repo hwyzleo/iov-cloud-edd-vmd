@@ -15,6 +15,7 @@ import net.hwyz.iov.cloud.framework.security.crypto.BusinessKeyMaterialTemplate;
 import net.hwyz.iov.cloud.framework.security.crypto.KeyProvisioningTemplate;
 import net.hwyz.iov.cloud.framework.security.crypto.exception.CryptoDependencyUnavailableException;
 import net.hwyz.iov.cloud.framework.security.crypto.model.BizType;
+import net.hwyz.iov.cloud.edd.vmd.service.support.KeyprovEnvelopeTestFixtures;
 import net.hwyz.iov.cloud.framework.security.crypto.model.DerivedWrappedKey;
 import net.hwyz.iov.cloud.framework.security.crypto.model.KeyAnchor;
 import net.hwyz.iov.cloud.framework.security.crypto.model.KeyMaterialModel;
@@ -177,8 +178,9 @@ class BusinessKeyRotationAppServiceTest {
         when(activeDeviceCertificateResolver.resolveActive(identity))
                 .thenReturn(new ActiveDeviceCertificate("CR061-CERT-0001", "PKI-REQ-ROT-1", "a".repeat(64)));
         when(derivedTemplate.deriveAndWrap(any(), any(), any(), any(), any(), any(), any()))
-                .thenReturn(new DerivedWrappedKey(NEW_KEY_ID, "kms/ref/" + NEW_KEY_ID, 3, "v1",
-                        new byte[]{1, 2, 3}, "RSA-OAEP-SHA256", new byte[]{9}, "OP-1"));
+                .thenReturn(KeyprovEnvelopeTestFixtures.derivedWrappedKey(NEW_KEY_ID,
+                        net.hwyz.iov.cloud.framework.security.crypto.model.KeyPurpose.UPLINK_AEAD,
+                        3L, 3L, "v1", "OP-1"));
         when(repository.selectById(1L)).thenReturn(old);
         when(repository.selectById(2L)).thenAnswer(inv -> newRow);
 
@@ -243,8 +245,9 @@ class BusinessKeyRotationAppServiceTest {
         when(activeDeviceCertificateResolver.resolveActive(v2cIdentity))
                 .thenReturn(new ActiveDeviceCertificate("C", "PKI", "a".repeat(64)));
         when(derivedTemplate.deriveAndWrap(any(), any(), any(), any(), any(), any(), any()))
-                .thenReturn(new DerivedWrappedKey(NEW_KEY_ID, "kms/ref/" + NEW_KEY_ID, 3, "v1",
-                        new byte[]{1}, "RSA-OAEP-SHA256", new byte[]{9}, "OP-2"));
+                .thenReturn(KeyprovEnvelopeTestFixtures.derivedWrappedKey(NEW_KEY_ID,
+                        net.hwyz.iov.cloud.framework.security.crypto.model.KeyPurpose.UPLINK_AEAD,
+                        3L, 3L, "v1", "OP-2"));
         when(repository.selectById(1L)).thenReturn(old);
         when(repository.selectById(2L)).thenAnswer(inv -> newRow);
         when(repository.update(any(DeviceBusinessKey.class))).thenReturn(1);
@@ -342,8 +345,9 @@ class BusinessKeyRotationAppServiceTest {
         when(activeDeviceCertificateResolver.resolveActive(identity))
                 .thenReturn(new ActiveDeviceCertificate("C", "PKI", "a".repeat(64)));
         when(derivedTemplate.deriveAndWrap(any(), any(), any(), any(), any(), any(), any()))
-                .thenReturn(new DerivedWrappedKey(NEW_KEY_ID, "kms/ref/" + NEW_KEY_ID, 3, "v1",
-                        new byte[]{1}, "RSA-OAEP-SHA256", new byte[]{9}, "OP-3"));
+                .thenReturn(KeyprovEnvelopeTestFixtures.derivedWrappedKey(NEW_KEY_ID,
+                        net.hwyz.iov.cloud.framework.security.crypto.model.KeyPurpose.UPLINK_AEAD,
+                        3L, 3L, "v1", "OP-3"));
         when(repository.selectById(1L)).thenReturn(old);
         when(repository.update(argThat(k -> k.getId() != null && k.getId().equals(1L)))).thenReturn(0);
 

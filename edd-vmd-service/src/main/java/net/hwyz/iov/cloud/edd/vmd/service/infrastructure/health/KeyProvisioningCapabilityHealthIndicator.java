@@ -5,6 +5,10 @@ import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.adapter.KeyProvisioningSer
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.BusinessKeyPolicyRegistry;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.DerivedKeyProviderReadinessGate;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.KeyprovConstants;
+import net.hwyz.iov.cloud.framework.security.crypto.DerivedEnvelopeCapability;
+import net.hwyz.iov.cloud.framework.security.crypto.ImportProofCapability;
+import net.hwyz.iov.cloud.framework.security.crypto.ImportProofVerifier;
+import net.hwyz.iov.cloud.framework.security.crypto.codec.DerivedEnvelopeDigestVerifier;
 import net.hwyz.iov.cloud.framework.security.crypto.resolver.CertificateReferenceDirectory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
@@ -44,20 +48,32 @@ public class KeyProvisioningCapabilityHealthIndicator implements HealthIndicator
     private final ObjectProvider<JdbcTemplate> jdbcTemplateProvider;
     private final ObjectProvider<CertificateReferenceDirectory> certificateDirectoryProvider;
     private final DerivedKeyProviderReadinessGate derivedKeyProviderReadinessGate;
+    private final ObjectProvider<DerivedEnvelopeDigestVerifier> envelopeDigestVerifierProvider;
+    private final ObjectProvider<ImportProofVerifier> importProofVerifierProvider;
 
     @Value("${vmd.business-key.provisioning.keyprov.enabled:false}")
     private boolean keyprovEnabled;
+
+    @Value("${vmd.business-key.provisioning.keyprov.protocol-release:}")
+    private String protocolRelease;
+
+    @Value("${vmd.business-key.provisioning.keyprov.descriptor-set-hash:}")
+    private String descriptorSetHash;
 
     public KeyProvisioningCapabilityHealthIndicator(ObjectProvider<KeyProvisioningServiceAdapter> adapterProvider,
                                                     BusinessKeyPolicyRegistry policyRegistry,
                                                     ObjectProvider<JdbcTemplate> jdbcTemplateProvider,
                                                     ObjectProvider<CertificateReferenceDirectory> certificateDirectoryProvider,
-                                                    DerivedKeyProviderReadinessGate derivedKeyProviderReadinessGate) {
+                                                    DerivedKeyProviderReadinessGate derivedKeyProviderReadinessGate,
+                                                    ObjectProvider<DerivedEnvelopeDigestVerifier> envelopeDigestVerifierProvider,
+                                                    ObjectProvider<ImportProofVerifier> importProofVerifierProvider) {
         this.adapterProvider = adapterProvider;
         this.policyRegistry = policyRegistry;
         this.jdbcTemplateProvider = jdbcTemplateProvider;
         this.certificateDirectoryProvider = certificateDirectoryProvider;
         this.derivedKeyProviderReadinessGate = derivedKeyProviderReadinessGate;
+        this.envelopeDigestVerifierProvider = envelopeDigestVerifierProvider;
+        this.importProofVerifierProvider = importProofVerifierProvider;
     }
 
     @Override
@@ -81,6 +97,20 @@ public class KeyProvisioningCapabilityHealthIndicator implements HealthIndicator
             down = down(builder, "derivedKeyProvider",
                     "根派生/Transit root capability 未就绪: " + derivedKeyProviderReadinessGate.reason());
         }
+        // CR-062 §9：envelope 公开 canonical verifier 与 ImportProofVerifier capability 均需 READY
+        if (envelopeDigestVerifierProvider.getIfAvailable() == null
+                || !DerivedEnvelopeCapability.coreDigestVerifyReady()) {
+            down = down(builder, "envelopeDigestVerifier",
+                    "结构化信封 canonical verifier 未就绪（STRUCTURED_ENVELOPE_VIEW_V1/CORE_ENVELOPE_DIGEST_VERIFY_V1）");
+        }
+        if (importProofVerifierProvider.getIfAvailable() == null || !ImportProofCapability.selfCheckReady()) {
+            down = down(builder, "importProofVerifier",
+                    "ImportProofVerifier 未装配或 IMPORT_PROOF_VERIFY_ECDSA_P256_V1 自检未通过");
+        }
+        if (protocolRelease == null || protocolRelease.isBlank()
+                || descriptorSetHash == null || descriptorSetHash.isBlank()) {
+            down = down(builder, "releaseSet", "keyprov release/DescriptorSet hash 未固定，envelope v1 能力未就绪");
+        }
         Set<String> purposes = policyRegistry.resolvePurposes(KeyprovConstants.BUSINESS_DOMAIN_V2C).orElse(Set.of());
         if (!KeyprovConstants.isCompleteV2cPurposeSet(purposes)) {
             down = down(builder, "policy", "V2C_COMM 业务策略缺失或用途不完整");
@@ -91,8 +121,10 @@ public class KeyProvisioningCapabilityHealthIndicator implements HealthIndicator
         } else {
             try {
                 jdbcTemplate.query("SELECT 1 FROM tb_business_key_provisioning LIMIT 1", rs -> null);
+                jdbcTemplate.query("SELECT envelope_digest, key_check_value, recipient_cert_digest "
+                        + "FROM tb_business_key_provisioning_item LIMIT 1", rs -> null);
             } catch (RuntimeException e) {
-                down = down(builder, "schema", "必要表结构缺失: tb_business_key_provisioning");
+                down = down(builder, "schema", "必要表结构缺失: tb_business_key_provisioning/business_key_provisioning_item");
             }
         }
         return down ? builder.down().withDetail("state", "DOWN").build() : builder.build();

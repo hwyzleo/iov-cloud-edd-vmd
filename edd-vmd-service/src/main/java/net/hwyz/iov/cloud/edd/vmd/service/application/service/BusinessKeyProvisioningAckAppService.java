@@ -12,12 +12,21 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.BusinessKeySt
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.BusinessKeyProvisioningItemRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.BusinessKeyProvisioningRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.DeviceBusinessKeyRepository;
+import net.hwyz.iov.cloud.framework.security.crypto.ImportProofVerifier;
+import net.hwyz.iov.cloud.framework.security.crypto.exception.ImportProofVerificationUnavailableException;
+import net.hwyz.iov.cloud.framework.security.crypto.model.EcdhEsP256EnvelopeViewV1;
+import net.hwyz.iov.cloud.framework.security.crypto.model.KeyPurpose;
+import net.hwyz.iov.cloud.framework.security.crypto.model.importproof.ImportProofAlgorithm;
+import net.hwyz.iov.cloud.framework.security.crypto.model.importproof.ImportProofVerificationRequest;
+import net.hwyz.iov.cloud.framework.security.crypto.resolver.DeviceCertificateRef;
+import net.hwyz.iov.security.keyprov.v1.KeyEnvelopeFormat;
 import net.hwyz.iov.security.keyprov.v1.KeyImportItemResult;
 import net.hwyz.iov.security.keyprov.v1.KeyImportResult;
 import net.hwyz.iov.security.keyprov.v1.KeyProvisioningAck;
 import net.hwyz.iov.security.keyprov.v1.KeyProvisioningAckResult;
 import net.hwyz.iov.security.keyprov.v1.KeyProvisioningResult;
 import net.hwyz.iov.security.keyprov.v1.ProtocolError;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
@@ -25,6 +34,7 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -60,6 +70,7 @@ public class BusinessKeyProvisioningAckAppService {
     private final BusinessKeyChangedPublisher businessKeyChangedPublisher;
     private final TboxV2cKeyProvisionedPublisher tboxV2cKeyProvisionedPublisher;
     private final BusinessKeyProvisioningDomainService domainService;
+    private final ObjectProvider<ImportProofVerifier> importProofVerifierProvider;
     private final PlatformTransactionManager transactionManager;
 
     private volatile TransactionTemplate transactionTemplate;
@@ -152,17 +163,24 @@ public class BusinessKeyProvisioningAckAppService {
         for (Map.Entry<String, KeyImportItemResult> e : ackItemByPurpose.entrySet()) {
             BusinessKeyProvisioningItem batchItem = batchItemByPurpose.get(e.getKey());
             KeyImportItemResult ackItem = e.getValue();
-            boolean keyIdMismatch = !Objects.equals(batchItem.getKeyId(), ackItem.getKeyId());
-            boolean versionMismatch = batchItem.getBusinessKeyVersion() == null
-                    || batchItem.getBusinessKeyVersion() != ackItem.getBusinessKeyVersion();
-            if (keyIdMismatch || versionMismatch) {
+            String mismatch = identityMismatch(batchItem, ackItem);
+            if (mismatch != null) {
                 return failed(requestId, KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED,
-                        KeyprovConstants.ERR_ITEM_MISMATCH, false, "ACK keyId/版本与批次不匹配");
+                        KeyprovConstants.ERR_ITEM_MISMATCH, false, "ACK item 与批次不匹配: " + mismatch);
             }
-            // import_proof 与 proof_algorithm 必须成对出现（PAR-PROTO-DSN-CR-006 §4.4）
-            if (!ackItem.getImportProof().isEmpty() && ackItem.getProofAlgorithm().isBlank()) {
-                return failed(requestId, KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED,
-                        KeyprovConstants.ERR_ITEM_MISMATCH, false, "ACK importProof 与 proofAlgorithm 不成对");
+            // CR-062 §4.3：仅成功 item 必须与原 Response 全字段绑定并携带合法 Import Attestation
+            if (ackItem.getResult() == KeyImportResult.KEY_IMPORT_RESULT_IMPORTED) {
+                String envelopeMismatch = envelopeMismatch(batchItem, ackItem);
+                if (envelopeMismatch != null) {
+                    return failed(requestId, KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED,
+                            KeyprovConstants.ERR_ITEM_MISMATCH, false,
+                            "ACK item 与原Response不匹配: " + envelopeMismatch);
+                }
+                String proofIssue = importProofIssue(ackItem);
+                if (proofIssue != null) {
+                    return failed(requestId, KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED,
+                            KeyprovConstants.ERR_IMPORT_PROOF_INVALID, false, "ACK 导入证明字段非法: " + proofIssue);
+                }
             }
         }
 
@@ -237,6 +255,9 @@ public class BusinessKeyProvisioningAckAppService {
                     KeyprovConstants.ERR_DEVICE_NOT_ELIGIBLE, false, "设备证书失效或轮换");
         }
 
+        // CR-062 §4.3/RD-062-8：两用途均经 FW-SEC 真实 ECDSA 验签后，才允许进入激活事务
+        verifyImportProofs(batch, batchItems, ackItemByPurpose, certSn);
+
         // 2) 原子切换目标版本（PENDING→ACTIVE）+ 逐项确认 + 完成批次 + 专用事件
         List<BusinessKeyProvisioningItem> succeeded = new ArrayList<>();
         LocalDateTime now = LocalDateTime.now();
@@ -277,6 +298,100 @@ public class BusinessKeyProvisioningAckAppService {
                 batch.getBusinessDomain(), succeeded);
 
         return succeeded(batch.getRequestId());
+    }
+
+    /**
+     * ACK item 与原批次的身份绑定（purpose 已校验，此处比对 keyId/版本）。
+     *
+     * @return 不匹配字段名；全部匹配返回 {@code null}
+     */
+    private String identityMismatch(BusinessKeyProvisioningItem batchItem, KeyImportItemResult ackItem) {
+        if (!Objects.equals(batchItem.getKeyId(), ackItem.getKeyId())) {
+            return "keyId";
+        }
+        if (batchItem.getBusinessKeyVersion() == null
+                || batchItem.getBusinessKeyVersion() != ackItem.getBusinessKeyVersion()) {
+            return "businessKeyVersion";
+        }
+        return null;
+    }
+
+    /**
+     * 成功 item 与原 Response/批次持久化信封元数据逐项绑定（CR-062 §4.3）。
+     *
+     * @return 不匹配字段名；全部匹配返回 {@code null}
+     */
+    private String envelopeMismatch(BusinessKeyProvisioningItem batchItem, KeyImportItemResult ackItem) {
+        if (!EcdhEsP256EnvelopeViewV1.ENVELOPE_FORMAT.equals(batchItem.getEnvelopeFormat())
+                || ackItem.getEnvelopeFormat() != KeyEnvelopeFormat.KEY_ENVELOPE_FORMAT_ECDH_ES_P256_V1) {
+            return "envelopeFormat";
+        }
+        if (!Arrays.equals(batchItem.getEnvelopeDigest(), ackItem.getEnvelopeDigest().toByteArray())) {
+            return "envelopeDigest";
+        }
+        if (!Arrays.equals(batchItem.getKeyCheckValue(), ackItem.getKeyCheckValue().toByteArray())) {
+            return "keyCheckValue";
+        }
+        if (!Arrays.equals(batchItem.getRecipientCertDigest(),
+                ackItem.getRecipientCertificateDigest().toByteArray())) {
+            return "recipientCertificateDigest";
+        }
+        return null;
+    }
+
+    /**
+     * CR-008 §3.1 成功 item 导入证明字段门禁。
+     *
+     * @return 非法原因；合法返回 {@code null}
+     */
+    private String importProofIssue(KeyImportItemResult ackItem) {
+        if (!ackItem.getProofAlgorithm().isBlank()) {
+            return "遗留 proof_algorithm 必须为空（不得形成第二事实源）";
+        }
+        if (ackItem.getImportProofAlgorithm()
+                != net.hwyz.iov.security.keyprov.v1.ImportProofAlgorithm.IMPORT_PROOF_ALGORITHM_ECDSA_P256_SHA256_P1363) {
+            return "import_proof_algorithm 非 ECDSA_P256_SHA256_P1363";
+        }
+        if (ackItem.getImportProof().size() != ImportProofAlgorithm.SIGNATURE_LENGTH) {
+            return "import_proof 长度非 " + ImportProofAlgorithm.SIGNATURE_LENGTH + " 字节";
+        }
+        if (ackItem.getRecipientCertificateDigest().size() != ImportProofAlgorithm.DIGEST_LENGTH) {
+            return "recipient_certificate_digest 长度非 " + ImportProofAlgorithm.DIGEST_LENGTH + " 字节";
+        }
+        return null;
+    }
+
+    /**
+     * 逐用途调用 FW-SEC CR-016 ImportProofVerifier 执行真实 ECDSA P-256/SHA-256/P1363 验签。
+     * <p>
+     * 不在此处捕获异常：确定性拒绝（{@link net.hwyz.iov.cloud.framework.security.crypto.exception.ImportProofRejectedException}、
+     * {@code CertificateEvidenceRejectedException}）与依赖/材料不可用由应用门面统一映射，
+     * 任一用途失败均不进入激活事务（CR-062 §4.3/§8）。
+     */
+    private void verifyImportProofs(BusinessKeyProvisioning batch, List<BusinessKeyProvisioningItem> batchItems,
+                                    Map<String, KeyImportItemResult> ackItemByPurpose, String certSn) {
+        ImportProofVerifier verifier = importProofVerifierProvider.getIfAvailable();
+        if (verifier == null) {
+            throw new ImportProofVerificationUnavailableException(
+                    "ImportProofVerifier 未装配（crypto.import-proof.enabled=false），禁止激活");
+        }
+        DeviceCertificateRef certificateRef = DeviceCertificateRef.ofSerial(certSn);
+        for (BusinessKeyProvisioningItem item : batchItems) {
+            KeyImportItemResult ackItem = ackItemByPurpose.get(item.getPurpose());
+            ImportProofVerificationRequest request = new ImportProofVerificationRequest(
+                    ImportProofAlgorithm.ECDSA_P256_SHA256_P1363,
+                    ackItem.getImportProof().toByteArray(),
+                    certificateRef,
+                    ackItem.getRecipientCertificateDigest().toByteArray(),
+                    batch.getRequestId(),
+                    KeyprovConstants.BUSINESS_DOMAIN_V2C,
+                    KeyPurpose.valueOf(item.getPurpose()),
+                    item.getKeyId(),
+                    item.getBusinessKeyVersion() == null ? 0L : item.getBusinessKeyVersion(),
+                    ackItem.getEnvelopeDigest().toByteArray(),
+                    ackItem.getKeyCheckValue().toByteArray());
+            verifier.verify(request);
+        }
     }
 
     private void deprecateOldActive(String deviceSn, String domain, String purpose, Long targetId, LocalDateTime now) {

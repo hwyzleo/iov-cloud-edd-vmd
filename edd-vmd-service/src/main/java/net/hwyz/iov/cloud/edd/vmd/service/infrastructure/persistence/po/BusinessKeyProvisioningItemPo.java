@@ -59,6 +59,21 @@ public class BusinessKeyProvisioningItemPo extends BasePo {
     @TableField("recipient_cert_fingerprint_digest")
     private String recipientCertFingerprintDigest;
 
+    @TableField("envelope_format")
+    private String envelopeFormat;
+
+    @TableField("wrapping_suite")
+    private String wrappingSuite;
+
+    @TableField("envelope_digest")
+    private byte[] envelopeDigest;
+
+    @TableField("key_check_value")
+    private byte[] keyCheckValue;
+
+    @TableField("recipient_cert_digest")
+    private byte[] recipientCertDigest;
+
     @TableField("device_result")
     private String deviceResult;
 

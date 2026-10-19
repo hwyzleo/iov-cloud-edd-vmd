@@ -16,7 +16,7 @@ management:
     health:
       group:
         keyprov:
-          include: keyProvisioningCapability,derivedKeyProvider,certificateResolution
+          include: keyProvisioningCapability,derivedKeyProvider,certificateResolution,importProofVerification
           show-details: always
 
 crypto:
@@ -56,6 +56,15 @@ crypto:
         require-certificate: true
         require-trusted-chain: true
         require-good-status: ${CRYPTO_PKI_CERTIFICATE_RESOLUTION_REQUIRE_GOOD_STATUS:false}
+  # CR-062 / FW-SEC-DSN-CR-016：导入证明验签能力。未就绪时 keyprov Health Group DOWN，不激活版本。
+  # 生产要求 require-trusted-chain=true 且经 Secret 注入信任锚；require-ready-at-startup 默认 false（仅上报 NOT_READY）。
+  import-proof:
+    enabled: ${CRYPTO_IMPORT_PROOF_ENABLED:true}
+    require-ready-at-startup: ${CRYPTO_IMPORT_PROOF_REQUIRE_READY_AT_STARTUP:false}
+    certificate:
+      require-certificate: true
+      require-trusted-chain: ${CRYPTO_IMPORT_PROOF_REQUIRE_TRUSTED_CHAIN:true}
+      require-good-status: ${CRYPTO_IMPORT_PROOF_REQUIRE_GOOD_STATUS:false}
 
 # VMD Kafka Topic 目录（VMD-DSN-CR-051 / VMD-DSN-CR-052）：Listener 占位符 / Producer / Outbox 统一引用
 vmd:
@@ -130,6 +139,10 @@ vmd:
         allowed-callers: ${VMD_BUSINESS_KEY_KEYPROV_ALLOWED_CALLERS:VAGW}
         # canonical 协议版本 allowlist 值
         schema-version: ${VMD_BUSINESS_KEY_KEYPROV_SCHEMA_VERSION:keyprov-v1}
+        # CR-062 §4.1：VMD 固定的 PAR-PROTO release / DescriptorSet hash（精确 allowlist，不 trim/大小写折叠）；
+        # 缺失时 envelope v1 能力 NOT_READY 且请求 fail-closed（经 Nacos/Secret 下发）。
+        protocol-release: ${VMD_BUSINESS_KEY_KEYPROV_PROTOCOL_RELEASE:}
+        descriptor-set-hash: ${VMD_BUSINESS_KEY_KEYPROV_DESCRIPTOR_SET_HASH:}
         # canonical payload 大小上限（bytes）
         max-payload-bytes: ${VMD_BUSINESS_KEY_KEYPROV_MAX_PAYLOAD_BYTES:16384}
       # Wrapped Key bundle 可接受期限（秒）
