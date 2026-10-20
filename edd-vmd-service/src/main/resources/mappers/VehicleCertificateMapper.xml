@@ -156,6 +156,12 @@
         <if test="lineCode != null and lineCode != ''">
             t.line_code = #{lineCode},
         </if>
+        <if test="leafCertificateDigest != null">
+            t.leaf_certificate_digest = #{leafCertificateDigest},
+        </if>
+        <if test="profileValidatedAt != null">
+            t.profile_validated_at = #{profileValidatedAt},
+        </if>
         <if test="modifyBy != null">
             t.modify_by = #{modifyBy},
         </if>

@@ -129,7 +129,20 @@ public enum VmdErrorCode implements ErrorCode {
     // 落地 VMD-DSN-CR-062 / PAR-PROTO-DSN-CR-008 / FW-SEC-DSN-CR-016。
     KEYPROV_ENVELOPE_UNSUPPORTED("806109", "Keyprov请求未声明受支持的envelope格式组合，不下发v1"),
     KEYPROV_ENVELOPE_INTEGRITY_REJECTED("806110", "Keyprov信封摘要/版本/view-wire字段校验失败，拒绝下发"),
-    KEYPROV_IMPORT_PROOF_REJECTED("806111", "Keyprov导入证明验签拒绝，安全拒绝且不激活");
+    KEYPROV_IMPORT_PROOF_REJECTED("806111", "Keyprov导入证明验签拒绝，安全拒绝且不激活"),
+
+    // ================= CR-063 逻辑 TBOX ECDH-ES v1 证书 Profile 域（806112～806121） =================
+    // 落地 VMD-DSN-CR-063：逻辑 Profile 注册、CSR 双用途门禁、签发结果复验与 Keyprov 前置门禁。
+    CERTIFICATE_CSR_PUBLIC_KEY_NOT_ALLOWED("806112", "CSR公钥算法/曲线不允许（须 EC P-256）"),
+    CERTIFICATE_CSR_KEY_USAGE_INVALID("806113", "CSR KeyUsage 缺失或冲突（须 digitalSignature + keyAgreement，禁 CA 意图）"),
+    CERTIFICATE_CSR_CLIENT_AUTH_MISSING("806114", "CSR ExtendedKeyUsage 缺失 clientAuth"),
+    CERTIFICATE_CSR_EKU_CONFLICT("806115", "CSR ExtendedKeyUsage 过宽或含 anyEKU/serverAuth，拒绝签发"),
+    CERTIFICATE_CSR_UNSUPPORTED_CRITICAL_EXTENSION("806116", "CSR 含未知 critical 扩展或语义不允许的扩展，拒绝签发"),
+    CERTIFICATE_PUBLIC_KEY_BINDING_MISMATCH("806117", "签发结果公钥与CSR SPKI不一致，复验拒绝"),
+    CERTIFICATE_UID_BINDING_MISMATCH("806118", "签发结果 Subject CN 与权威UID不一致，复验拒绝"),
+    CERTIFICATE_ISSUED_PROFILE_MISMATCH("806119", "签发结果不满足逻辑Profile（链/有效期/曲线/KU/EKU/critical扩展），复验拒绝"),
+    CERTIFICATE_MATERIAL_UNAVAILABLE("806120", "证书签发/复验所需材料或依赖暂不可用，需以原requestId重试"),
+    CERTIFICATE_ENROLLMENT_OUTCOME_UNKNOWN("806121", "证书签发结果未知，需以原requestId对账");
 
     private final String code;
     private final String message;

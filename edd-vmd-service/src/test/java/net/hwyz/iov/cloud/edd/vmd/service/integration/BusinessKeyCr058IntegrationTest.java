@@ -7,6 +7,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.KeyProvisioning
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.KeyProvisioningApplicationFacade;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.KeyprovAuthenticatedContext;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.KeyprovConstants;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.TboxEcdhCertificateEligibilityGate;
 import net.hwyz.iov.cloud.framework.security.crypto.ImportProofVerifier;
 import net.hwyz.iov.cloud.framework.security.crypto.KeyProvisioningTemplate;
 import net.hwyz.iov.cloud.framework.security.crypto.model.DerivedWrappedKey;
@@ -66,6 +67,12 @@ class BusinessKeyCr058IntegrationTest extends BaseTest {
     @MockBean
     private ImportProofVerifier importProofVerifier;
 
+    /**
+     * CR-063：新 ECDH-ES Request 证书前置门禁 mock 放行（门禁逻辑由 TboxEcdhCertificateEligibilityGateTest 单测覆盖）
+     */
+    @MockBean
+    private TboxEcdhCertificateEligibilityGate tboxEcdhCertificateEligibilityGate;
+
     @Autowired
     private KeyProvisioningApplicationFacade keyProvisioningApplicationFacade;
 
@@ -98,7 +105,7 @@ class BusinessKeyCr058IntegrationTest extends BaseTest {
                 vin, DEVICE_SN);
         jdbcTemplate.update("INSERT INTO tb_veh_certificate (request_id, cert_sn, vin, binding_id, part_id, device_category, "
                         + "device_sn, hsm_uid, certificate_profile, cert_status, not_after) "
-                        + "SELECT ?, ?, ?, vp.id, pi.id, 'TBOX', ?, ?, 'TBOX_TSP_CLIENT', 'ACTIVE', DATE_ADD(NOW(), INTERVAL 365 DAY) "
+                        + "SELECT ?, ?, ?, vp.id, pi.id, 'TBOX', ?, ?, 'TBOX_DEVICE_ECDH_ES_P256_V1', 'ACTIVE', DATE_ADD(NOW(), INTERVAL 365 DAY) "
                         + "FROM tb_vehicle_part vp JOIN tb_part_info pi ON pi.id = vp.part_id WHERE vp.vin = ? AND pi.sn = ?",
                 "CR058_CERT_REQ", CERT_SN, vin, DEVICE_SN, HSM_UID, vin, DEVICE_SN);
 
@@ -118,6 +125,8 @@ class BusinessKeyCr058IntegrationTest extends BaseTest {
             return new VerifiedImportProof(ImportProofAlgorithm.ECDSA_P256_SHA256_P1363,
                     req.expectedCertificateDigest(), req.purpose(), new byte[32], java.time.Instant.now());
         });
+        when(tboxEcdhCertificateEligibilityGate.evaluate(any()))
+                .thenReturn(new TboxEcdhCertificateEligibilityGate.GateResult(true, false, "ok"));
     }
 
     private KeyprovAuthenticatedContext ctx() {

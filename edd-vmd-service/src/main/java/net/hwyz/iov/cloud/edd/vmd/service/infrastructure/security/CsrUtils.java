@@ -6,22 +6,29 @@ import org.bouncycastle.asn1.x500.AttributeTypeAndValue;
 import org.bouncycastle.asn1.x500.RDN;
 import org.bouncycastle.asn1.x500.X500Name;
 import org.bouncycastle.asn1.x500.style.BCStyle;
+import org.bouncycastle.asn1.x509.ExtendedKeyUsage;
 import org.bouncycastle.asn1.x509.Extension;
 import org.bouncycastle.asn1.x509.Extensions;
 import org.bouncycastle.asn1.x509.GeneralName;
 import org.bouncycastle.asn1.x509.GeneralNames;
+import org.bouncycastle.asn1.x509.KeyUsage;
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
+import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
 import org.bouncycastle.operator.ContentVerifierProvider;
 import org.bouncycastle.operator.jcajce.JcaContentVerifierProviderBuilder;
 import org.bouncycastle.pkcs.PKCS10CertificationRequest;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.PublicKey;
 import java.security.Security;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Set;
 
 /**
  * CSR工具类
@@ -158,6 +165,164 @@ public class CsrUtils {
             log.error("计算CSR指纹失败", e);
             throw new RuntimeException("计算CSR指纹失败", e);
         }
+    }
+
+    /**
+     * 提取CSR内嵌公钥（VMD-DSN-CR-063 §4.2）
+     * <p>
+     * 供签发后复验比对 leaf SPKI == CSR SPKI，以及策略判定曲线。
+     *
+     * @param csrDerBase64 CSR DER编码的Base64字符串
+     * @return CSR 公钥；解析失败抛 {@link IllegalArgumentException}
+     */
+    public static PublicKey extractPublicKey(String csrDerBase64) {
+        try {
+            PKCS10CertificationRequest req = parseCsr(csrDerBase64);
+            return new JcaPEMKeyConverter()
+                    .setProvider(BouncyCastleProvider.PROVIDER_NAME)
+                    .getPublicKey(req.getSubjectPublicKeyInfo());
+        } catch (Exception e) {
+            throw new IllegalArgumentException("提取CSR公钥失败", e);
+        }
+    }
+
+    /**
+     * 判定公钥是否为 EC P-256（secp256r1 / prime256v1）（VMD-DSN-CR-063 §4.3）
+     * <p>
+     * 与 secp256r1 标准参数逐项比对（域大小 256 + 曲线 a/b + 基点）；
+     * RSA / P-384 / P-521 等其他算法/曲线返回 false，fail-closed 拒绝。
+     *
+     * @param publicKey 公钥
+     * @return true 表示 EC secp256r1
+     */
+    public static boolean isEcP256(PublicKey publicKey) {
+        if (publicKey == null
+                || !("EC".equals(publicKey.getAlgorithm()) || "ECDSA".equals(publicKey.getAlgorithm()))
+                || !(publicKey instanceof java.security.interfaces.ECPublicKey ecPublicKey)) {
+            return false;
+        }
+        java.security.spec.ECParameterSpec params = ecPublicKey.getParams();
+        if (params == null || params.getCurve() == null || params.getGenerator() == null) {
+            return false;
+        }
+        try {
+            org.bouncycastle.jce.spec.ECNamedCurveParameterSpec standard =
+                    org.bouncycastle.jce.ECNamedCurveTable.getParameterSpec("secp256r1");
+            if (standard == null) {
+                return false;
+            }
+            org.bouncycastle.math.ec.ECCurve stdCurve = standard.getCurve();
+            // EC5Util 归一化系数（SunEC 表示 a=-3，BC Fp 表示为 p-3），保证跨 Provider 可比
+            org.bouncycastle.math.ec.ECCurve givenCurve =
+                    org.bouncycastle.jcajce.provider.asymmetric.util.EC5Util.convertCurve(params.getCurve());
+            boolean curveMatch = givenCurve.getFieldSize() == 256
+                    && givenCurve.getA().toBigInteger().equals(stdCurve.getA().toBigInteger())
+                    && givenCurve.getB().toBigInteger().equals(stdCurve.getB().toBigInteger());
+            if (!curveMatch) {
+                return false;
+            }
+            java.security.spec.ECPoint givenG = params.getGenerator();
+            org.bouncycastle.math.ec.ECPoint stdG = standard.getG();
+            return givenG.getAffineX().equals(stdG.getAffineXCoord().toBigInteger())
+                    && givenG.getAffineY().equals(stdG.getAffineYCoord().toBigInteger());
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    /**
+     * 提取CSR请求的 KeyUsage 位集合（VMD-DSN-CR-063 §4.2）
+     * <p>
+     * 从 extensionRequest.keyUsage 解析；缺失时返回空集合（策略判定为 KU 缺失）。
+     *
+     * @param csrDerBase64 CSR DER编码的Base64字符串
+     * @return KeyUsage 标志集合（不可变，可能为空）
+     */
+    public static Set<KeyUsageFlag> extractKeyUsages(String csrDerBase64) {
+        PKCS10CertificationRequest req = parseCsr(csrDerBase64);
+        Extensions exts = extractRequestedExtensions(req);
+        if (exts == null) {
+            return Set.of();
+        }
+        Extension kuExt = exts.getExtension(Extension.keyUsage);
+        if (kuExt == null) {
+            return Set.of();
+        }
+        try {
+            KeyUsage ku = KeyUsage.getInstance(kuExt.getParsedValue());
+            return Set.copyOf(KeyUsageFlag.fromMask(keyUsageMask(ku.getBytes())));
+        } catch (Exception e) {
+            throw new IllegalArgumentException("CSR KeyUsage 解析失败", e);
+        }
+    }
+
+    /**
+     * 提取CSR请求的 ExtendedKeyUsage OID 集合（VMD-DSN-CR-063 §4.2）
+     * <p>
+     * 从 extensionRequest.extendedKeyUsage 解析为 OID 字符串；缺失时返回空集合。
+     *
+     * @param csrDerBase64 CSR DER编码的Base64字符串
+     * @return EKU OID 集合（不可变，可能为空）
+     */
+    public static Set<String> extractExtendedKeyUsages(String csrDerBase64) {
+        PKCS10CertificationRequest req = parseCsr(csrDerBase64);
+        Extensions exts = extractRequestedExtensions(req);
+        if (exts == null) {
+            return Set.of();
+        }
+        Extension ekuExt = exts.getExtension(Extension.extendedKeyUsage);
+        if (ekuExt == null) {
+            return Set.of();
+        }
+        try {
+            ExtendedKeyUsage eku = ExtendedKeyUsage.getInstance(ekuExt.getParsedValue());
+            Set<String> oids = new LinkedHashSet<>();
+            for (org.bouncycastle.asn1.x509.KeyPurposeId kp : eku.getUsages()) {
+                oids.add(kp.getId());
+            }
+            return Set.copyOf(oids);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("CSR ExtendedKeyUsage 解析失败", e);
+        }
+    }
+
+    /**
+     * 提取CSR请求的全部扩展（VMD-DSN-CR-063 §4.2/§4.3）
+     * <p>
+     * 返回 OID + criticality + value（防御性复制）；无 extensionRequest 返回空列表。
+     *
+     * @param csrDerBase64 CSR DER编码的Base64字符串
+     * @return 请求扩展列表（不可变，可能为空）
+     */
+    public static List<CsrExtension> extractRequestedExtensions(String csrDerBase64) {
+        PKCS10CertificationRequest req = parseCsr(csrDerBase64);
+        Extensions exts = extractRequestedExtensions(req);
+        if (exts == null) {
+            return List.of();
+        }
+        List<CsrExtension> result = new ArrayList<>();
+        for (org.bouncycastle.asn1.ASN1ObjectIdentifier oid : exts.getExtensionOIDs()) {
+            Extension e = exts.getExtension(oid);
+            byte[] value = e.getExtnValue() == null ? null : e.getExtnValue().getOctets();
+            result.add(new CsrExtension(e.getExtnId().getId(), e.isCritical(), value));
+        }
+        return List.copyOf(result);
+    }
+
+    /**
+     * 从 KeyUsage BIT STRING 内容字节计算位掩码（大端，与 BC KeyUsage 位定义对齐）
+     * <p>
+     * digitalSignature=0x80、keyAgreement=0x08 等；decipherOnly 为第二字节最高位（0x8000）。
+     */
+    private static int keyUsageMask(byte[] kuBytes) {
+        if (kuBytes == null) {
+            return 0;
+        }
+        int mask = 0;
+        for (int i = 0; i < kuBytes.length && i < 4; i++) {
+            mask = (mask << 8) | (kuBytes[i] & 0xFF);
+        }
+        return mask;
     }
 
     /**

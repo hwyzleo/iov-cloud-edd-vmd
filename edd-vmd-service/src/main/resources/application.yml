@@ -16,7 +16,7 @@ management:
     health:
       group:
         keyprov:
-          include: keyProvisioningCapability,derivedKeyProvider,certificateResolution,importProofVerification
+          include: keyProvisioningCapability,derivedKeyProvider,certificateResolution,importProofVerification,tboxEcdhCertificate
           show-details: always
 
 crypto:
@@ -109,6 +109,14 @@ vmd:
     readiness:
       # 生产 Topic readiness=DOWN 时暂停 Outbox Relay 发布
       gate-producer: ${VMD_KAFKA_READINESS_GATE_PRODUCER:true}
+  # CR-063：逻辑证书 Profile 注册（仅逻辑开关与逻辑→框架 Profile 名映射；
+  # 禁止出现 Provisioner password/JWK私钥/OTT/CA私钥/模板路径，物理 provider route 由 FW-SEC 配置与 Secret 管理）
+  certificate:
+    profiles:
+      tbox-device-ecdh-es-p256-v1:
+        # enabled=false 时关闭整个新 ECDH-ES 证书签发与 Keyprov 请求路径（RD-063-6，不回退旧 Profile）
+        enabled: ${VMD_CERTIFICATE_PROFILE_TBOX_ECDH_ES_P256_V1_ENABLED:false}
+        framework-profile: ${VMD_CERTIFICATE_PROFILE_TBOX_ECDH_ES_P256_V1_FRAMEWORK:TBOX_DEVICE_ECDH_ES_P256_V1}
   business-key:
     policy:
       # 版本化授权策略（fail-closed：未登记域/用途一律拒绝）。生产经 Nacos 下发受治理条目。

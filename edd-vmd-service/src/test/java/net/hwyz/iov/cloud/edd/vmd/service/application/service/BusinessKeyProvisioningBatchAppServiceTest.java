@@ -94,6 +94,8 @@ class BusinessKeyProvisioningBatchAppServiceTest {
     @Mock
     private KeyProvisioningTemplate derivedTemplate;
     @Mock
+    private TboxEcdhCertificateEligibilityGate tboxEcdhCertificateEligibilityGate;
+    @Mock
     private PlatformTransactionManager transactionManager;
     @Mock
     private TransactionStatus transactionStatus;
@@ -119,7 +121,8 @@ class BusinessKeyProvisioningBatchAppServiceTest {
         service = new BusinessKeyProvisioningBatchAppService(deviceBusinessKeyRepository, provisioningRepository,
                 provisioningItemRepository, boundDeviceIdentityResolver, activeDeviceCertificateResolver,
                 authorizationPolicy, policyRegistry, bizTypeMapper, materialRouter,
-                new BusinessKeyProvisioningDomainService(), envelopeAdapter, transactionManager);
+                new BusinessKeyProvisioningDomainService(), envelopeAdapter, tboxEcdhCertificateEligibilityGate,
+                transactionManager);
         ReflectionTestUtils.setField(service, "bundleTtlSeconds", 3600L);
         ReflectionTestUtils.setField(service, "derivationVersion", "v1");
 
@@ -179,8 +182,10 @@ class BusinessKeyProvisioningBatchAppServiceTest {
                 Duration.ofDays(365), Duration.ofDays(7), "v1");
         lenient().when(authorizationPolicy.authorize(eq(BusinessKeyAction.PROVISION), any(), eq(DOMAIN), any()))
                 .thenReturn(policyEntry);
-        lenient().when(activeDeviceCertificateResolver.resolveActive(any()))
+        lenient().when(activeDeviceCertificateResolver.resolveActiveEcdhV1(any()))
                 .thenReturn(new ActiveDeviceCertificate(CERT_SN, "PKI-REQ-1", CERT_FINGERPRINT));
+        lenient().when(tboxEcdhCertificateEligibilityGate.evaluate(any()))
+                .thenReturn(new TboxEcdhCertificateEligibilityGate.GateResult(true, false, "ok"));
 
         lenient().when(derivedTemplate.deriveAndWrap(any(), any(), any(), any(), any(), any(), any()))
                 .thenAnswer(inv -> {

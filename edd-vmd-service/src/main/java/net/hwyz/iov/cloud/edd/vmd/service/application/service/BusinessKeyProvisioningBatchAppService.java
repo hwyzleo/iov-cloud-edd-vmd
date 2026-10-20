@@ -96,6 +96,7 @@ public class BusinessKeyProvisioningBatchAppService {
     private final BusinessKeyMaterialRouter materialRouter;
     private final BusinessKeyProvisioningDomainService domainService;
     private final KeyprovEnvelopeAdapter envelopeAdapter;
+    private final TboxEcdhCertificateEligibilityGate tboxEcdhCertificateEligibilityGate;
     private final PlatformTransactionManager transactionManager;
 
     @Value("${vmd.business-key.provisioning.bundle-ttl-seconds:3600}")
@@ -168,10 +169,24 @@ public class BusinessKeyProvisioningBatchAppService {
 
         ActiveDeviceCertificate activeCert;
         try {
-            activeCert = activeDeviceCertificateResolver.resolveActive(identity);
+            // CR-063 §10：新 ECDH-ES Request 仅接受逻辑 v1 证书（sign-only 存量 fail-closed，RD-063-5）
+            activeCert = activeDeviceCertificateResolver.resolveActiveEcdhV1(identity);
         } catch (RuntimeException e) {
-            log.warn("keyprov 无有效设备证书: requestId={}, deviceSn={}", requestId, identity.deviceSn());
-            return rejected(requestId, KeyprovConstants.ERR_CERTIFICATE_INVALID, false, "有效设备证书不存在");
+            log.warn("keyprov 无有效 v1 设备证书（sign-only 存量证书对新 ECDH-ES fail-closed）: requestId={}, deviceSn={}",
+                    requestId, identity.deviceSn());
+            return rejected(requestId, KeyprovConstants.ERR_CERTIFICATE_INVALID, false,
+                    "无有效逻辑v1设备证书，新ECDH-ES Keyprov拒绝（sign-only存量证书不适用）");
+        }
+
+        // CR-063 §10：证书前置门禁（Profile 启用/leaf digest/目录/FW capability/CR-062 readiness）
+        TboxEcdhCertificateEligibilityGate.GateResult gateResult = tboxEcdhCertificateEligibilityGate.evaluate(activeCert);
+        if (!gateResult.eligible()) {
+            log.warn("keyprov 新 ECDH-ES Request 证书前置门禁拒绝: requestId={}, retryable={}, reason={}",
+                    requestId, gateResult.retryable(), gateResult.reason());
+            if (gateResult.retryable()) {
+                return retryable(requestId, KeyprovConstants.ERR_UNAVAILABLE, gateResult.reason());
+            }
+            return rejected(requestId, KeyprovConstants.ERR_CERTIFICATE_INVALID, false, gateResult.reason());
         }
 
         String suite = domainService.negotiateWrappingSuite(request, KeyprovConstants.V2C_SUPPORTED_SUITES);
@@ -397,7 +412,7 @@ public class BusinessKeyProvisioningBatchAppService {
                 if (target.getKeyId() == null) {
                     target = persistDerivedMaterialKeepingPending(target, result, policy, operationId);
                 }
-                insertItem(batch.getId(), target, purpose, result, fingerprintDigest);
+                insertItem(batch.getId(), target, purpose, result, fingerprintDigest, activeCert);
             }
             derived.put(purpose, result);
         }
@@ -495,13 +510,21 @@ public class BusinessKeyProvisioningBatchAppService {
     }
 
     private void insertItem(Long provisioningId, DeviceBusinessKey target, String purpose, DerivedWrappedKey result,
-                            String fingerprintDigest) {
+                            String fingerprintDigest, ActiveDeviceCertificate activeCert) {
         DerivedWrappedKeyEnvelopeView view = result.envelope();
         if (view == null) {
             throw new KeyprovEnvelopeIntegrityException("派生结果缺少结构化 envelope 视图，禁止落库 envelope v1 元数据");
         }
         byte[] recipientCertDigest = view instanceof EcdhEsP256EnvelopeViewV1 v1
                 ? v1.recipientCertificateDigest() : null;
+        // CR-063 §10：冻结一致性——envelope view 的收件方证书摘要必须等于 ACTIVE 证书 leafCertificateDigest
+        // （门禁已保证 v1 证书存在 leaf digest；不一致视为安全异常 fail-closed）
+        if (activeCert != null && activeCert.leafCertificateDigest() != null) {
+            if (recipientCertDigest == null || !java.util.Arrays.equals(recipientCertDigest, activeCert.leafCertificateDigest())) {
+                throw new KeyprovEnvelopeIntegrityException(
+                        "envelope view recipientCertificateDigest 与 ACTIVE 证书 leafCertificateDigest 不一致（CR-063 冻结校验失败）");
+            }
+        }
         tx().executeWithoutResult(status -> provisioningItemRepository.insert(BusinessKeyProvisioningItem.builder()
                 .provisioningId(provisioningId)
                 .purpose(purpose)

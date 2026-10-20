@@ -7,8 +7,13 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.CertificateConfirm
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.CertificateApplyResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.CertificateStatusResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.publish.VehicleDeviceCertificatePublisher;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.certificateprofile.CertificateProfileRegistry;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.certificateprofile.RegisteredCertificateProfile;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.CertificateCompensationNotAllowedException;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.CertificateIssuedProfileMismatchException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.CertificateKeyConflictException;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.CertificatePublicKeyBindingMismatchException;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.CertificateUidBindingMismatchException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.util.CertificateSerialUtils;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleCertificate;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.CertificateStatus;
@@ -49,6 +54,8 @@ public class CertificateProvisioningAppService {
     private final BoundDeviceIdentityResolver boundDeviceIdentityResolver;
     private final CertificateIdentityValidator certificateIdentityValidator;
     private final VehicleDeviceCertificatePublisher vehicleDeviceCertificatePublisher;
+    private final CertificateProfileRegistry certificateProfileRegistry;
+    private final IssuedCertificateVerifier issuedCertificateVerifier;
     private final ObjectProvider<CertEnrollmentTemplate> certEnrollmentTemplateProvider;
 
     /**
@@ -182,8 +189,15 @@ public class CertificateProvisioningAppService {
                 net.hwyz.iov.cloud.framework.security.crypto.model.CertApplyResult status = 
                         getCertEnrollmentTemplate().getStatus(certificate.getPkiRequestId());
                 if (status.state() == EnrollmentState.ISSUED) {
-                    issuedCert = getCertEnrollmentTemplate().getCertificate(certificate.getPkiRequestId());
-                    updateCertificateFromIssued(certificate, issuedCert);
+                    try {
+                        issuedCert = getCertEnrollmentTemplate().getCertificate(certificate.getPkiRequestId());
+                        updateCertificateFromIssued(certificate, issuedCert);
+                    } catch (CertificatePublicKeyBindingMismatchException | CertificateUidBindingMismatchException
+                             | CertificateIssuedProfileMismatchException e) {
+                        // CR-063：签发后复验确定性拒绝，verifyPostIssuanceOrFail 已置 FAILED 并落库，保持终态
+                        log.warn("状态推进中签发后复验拒绝，保持FAILED: requestId={}, code={}",
+                                requestId, e.getErrorCode().getCode());
+                    }
                 }
             } catch (Exception e) {
                 log.warn("查询PKI状态失败: requestId={}", requestId, e);
@@ -259,8 +273,16 @@ public class CertificateProvisioningAppService {
                 net.hwyz.iov.cloud.framework.security.crypto.model.CertApplyResult status =
                         getCertEnrollmentTemplate().getStatus(certificate.getPkiRequestId());
                 if (status.state() == EnrollmentState.ISSUED) {
-                    issuedCert = getCertEnrollmentTemplate().getCertificate(certificate.getPkiRequestId());
-                    updateCertificateFromIssued(certificate, issuedCert);
+                    try {
+                        issuedCert = getCertEnrollmentTemplate().getCertificate(certificate.getPkiRequestId());
+                        updateCertificateFromIssued(certificate, issuedCert);
+                    } catch (CertificatePublicKeyBindingMismatchException | CertificateUidBindingMismatchException
+                             | CertificateIssuedProfileMismatchException e) {
+                        // CR-063：签发后复验确定性拒绝（verifyPostIssuanceOrFail 已置 FAILED 并落库），
+                        // 不转 PENDING_RECONCILE，避免覆盖终态
+                        log.warn("对账推进中签发后复验拒绝，保持FAILED: requestId={}, code={}",
+                                requestId, e.getErrorCode().getCode());
+                    }
                 } else if (status.state() == EnrollmentState.REJECTED || status.state() == EnrollmentState.FAILED) {
                     certificate.setCertStatus(CertificateStatus.FAILED);
                     certificate.setFailReason("PKI拒绝或失败: " + status.state());
@@ -588,8 +610,13 @@ public class CertificateProvisioningAppService {
 
     /**
      * 从签发结果更新证书信息
+     * <p>
+     * CR-063：keyprovEligible 逻辑 Profile 在登记前先完成签发后复验；确定性拒绝置 FAILED 并落库。
      */
     private void updateCertificateFromIssued(VehicleCertificate certificate, IssuedCertificate issuedCert) {
+        // CR-063 §7：签发后复验（leaf SPKI/UID/Profile），失败抛异常且不得置 ACTIVE
+        verifyPostIssuanceOrFail(certificate, issuedCert);
+
         // CR-060 §8.2：证书序列号以叶子证书 DER 解析结果为准并 canonical 化（hex），与 framework
         // 证书证据校验口径（CertificateEvidenceValidator 按 DER 计算 hex serial）一致。
         // 不直接采信 IssuedCertificate.serialNumber()：其进制口径由上游 Provider 决定
@@ -606,6 +633,25 @@ public class CertificateProvisioningAppService {
         certificate.setSubject(issuerSubject[0]);
         certificate.setIssuer(issuerSubject[1]);
         vehicleCertificateRepository.update(certificate);
+    }
+
+    /**
+     * 签发后复验并处理确定性拒绝（CR-063 §7）
+     * <p>
+     * 复验失败（SPKI/UID/Profile 任一）置 FAILED 并落库后抛出；材料/依赖暂不可用
+     * （{@link net.hwyz.iov.cloud.edd.vmd.service.common.exception.CertificateMaterialUnavailableException}）
+     * 不置终态，保持 ISSUING 供原 requestId 重试/对账。
+     */
+    private void verifyPostIssuanceOrFail(VehicleCertificate certificate, IssuedCertificate issuedCert) {
+        try {
+            issuedCertificateVerifier.verifyPostIssuance(certificate, issuedCert);
+        } catch (CertificatePublicKeyBindingMismatchException | CertificateUidBindingMismatchException
+                 | CertificateIssuedProfileMismatchException e) {
+            certificate.setCertStatus(CertificateStatus.FAILED);
+            certificate.setFailReason(e.getMessage());
+            vehicleCertificateRepository.update(certificate);
+            throw e;
+        }
     }
 
     /**
@@ -648,6 +694,8 @@ public class CertificateProvisioningAppService {
      * 调用framework CertificateEnrollmentTemplate.apply()并推进状态（CR-053 提取，供申请/对账复用）
      * <p>
      * 保存 pki_request_id 并映射状态；ISSUED（step-ca 同步签发常态路径）立即取证回传（不落库）。
+     * keyprovEligible 逻辑 Profile 使用注册表 applyProfile（usage=DIGITAL_SIGNATURE,KEY_AGREEMENT）；
+     * legacy Profile 维持既有动态推导（算法来自 CSR）。
      *
      * @param certificate  证书记录（须已落库）
      * @param csrDerBase64 CSR DER Base64
@@ -656,9 +704,9 @@ public class CertificateProvisioningAppService {
     private IssuedCertificate doFrameworkApply(VehicleCertificate certificate, String csrDerBase64) {
         // 密钥算法从 CSR 实际公钥推导（TBOX 为 ECDSA P-256），不硬编码 RSA
         String keyAlgorithm = CsrUtils.extractPublicKeyAlgorithm(csrDerBase64);
+        CertificateProfile applyProfile = resolveApplyProfile(certificate.getCertificateProfile(), keyAlgorithm);
         CertApplyRequest frameworkRequest = new CertApplyRequest(
-                new CertificateProfile(certificate.getCertificateProfile(), certificate.getCertificateProfile(),
-                        CertificateProfile.SubjectType.DEVICE_IDENTITY, keyAlgorithm, "DIGITAL_SIGNATURE"),
+                applyProfile,
                 // 与校验处共用同一解码入口，兼容 URL-safe 与标准 Base64
                 CsrUtils.decodeBase64(csrDerBase64),
                 new SubjectRef(SubjectRef.SubjectType.DEVICE_UID, certificate.getHsmUid()),
@@ -674,7 +722,8 @@ public class CertificateProvisioningAppService {
         IssuedCertificate issuedCert = null;
         if (frameworkResult.state() == EnrollmentState.ISSUED) {
             certificate.setCertStatus(CertificateStatus.ISSUING);
-            // 立即获取证书（step-ca 同步签发常态路径），证书本体用于响应回传、不落库
+            // 立即获取证书（step-ca 同步签发常态路径），证书本体用于响应回传、不落库；
+            // 签发后复验（CR-063）在 updateCertificateFromIssued 内完成，确定性拒绝已置 FAILED 并落库
             issuedCert = queryAndProcessCertificate(certificate);
         } else if (frameworkResult.state() == EnrollmentState.REJECTED || frameworkResult.state() == EnrollmentState.FAILED) {
             certificate.setCertStatus(CertificateStatus.FAILED);
@@ -688,6 +737,20 @@ public class CertificateProvisioningAppService {
         }
         vehicleCertificateRepository.update(certificate);
         return issuedCert;
+    }
+
+    /**
+     * 解析 framework 签发申请 Profile（VMD-DSN-CR-063 §6）
+     * <p>
+     * keyprovEligible 逻辑 Profile 用注册表 applyProfile（固定 usage）；legacy 维持既有动态推导。
+     */
+    private CertificateProfile resolveApplyProfile(String certificateProfile, String keyAlgorithm) {
+        RegisteredCertificateProfile registered = certificateProfileRegistry.requireEnabled(certificateProfile);
+        if (registered.keyprovEligible()) {
+            return registered.applyProfile();
+        }
+        return new CertificateProfile(certificateProfile, certificateProfile,
+                CertificateProfile.SubjectType.DEVICE_IDENTITY, keyAlgorithm, "DIGITAL_SIGNATURE");
     }
 
     /**
@@ -711,18 +774,22 @@ public class CertificateProvisioningAppService {
 
     /**
      * 查询并处理证书
+     * <p>
+     * 获取证书失败仅告警并返回 null（状态保持 ISSUING，待对账）；签发后复验异常（CR-063）
+     * 不在此吞掉，向上传播由调用方处理（确定性拒绝已置 FAILED）。
      *
      * @return 已签发证书（获取失败返回 null），用于填充响应中的证书本体
      */
     private IssuedCertificate queryAndProcessCertificate(VehicleCertificate certificate) {
+        IssuedCertificate issuedCert;
         try {
-            IssuedCertificate issuedCert = getCertEnrollmentTemplate().getCertificate(certificate.getPkiRequestId());
-            updateCertificateFromIssued(certificate, issuedCert);
-            return issuedCert;
+            issuedCert = getCertEnrollmentTemplate().getCertificate(certificate.getPkiRequestId());
         } catch (Exception e) {
             log.error("获取证书失败: requestId={}", certificate.getRequestId(), e);
             return null;
         }
+        updateCertificateFromIssued(certificate, issuedCert);
+        return issuedCert;
     }
 
     /**

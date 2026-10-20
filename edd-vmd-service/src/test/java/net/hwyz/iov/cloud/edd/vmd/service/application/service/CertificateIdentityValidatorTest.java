@@ -1,9 +1,18 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.certificateprofile.DefaultCertificateProfileRegistry;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.CertificateCsrClientAuthMissingException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.CertificateCsrContainsForbiddenValueException;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.CertificateCsrEkuConflictException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.CertificateCsrInvalidException;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.CertificateCsrKeyUsageInvalidException;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.CertificateCsrPublicKeyNotAllowedException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.CertificateCsrSubjectMismatchException;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.CertificateCsrUnsupportedCriticalExtensionException;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.CertificateDeviceCategoryMismatchException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.CertificateProfileNotAllowedException;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.security.KeyUsageFlag;
+import net.hwyz.iov.cloud.edd.vmd.service.support.TestTboxEcdhCsr;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -43,13 +52,17 @@ class CertificateIdentityValidatorTest {
     private static final String DEVICE_SN = "00000005AA00000001";
     private static final String HSM_UID = "00000000000000000000000000000001";
     private static final String PROFILE = "TBOX_TSP_CLIENT";
+    private static final String ECDH_V1_PROFILE = "TBOX_DEVICE_ECDH_ES_P256_V1";
 
     private CertificateIdentityValidator validator;
     private BoundDeviceIdentity identity;
 
     @BeforeEach
     void setUp() {
-        validator = new CertificateIdentityValidator();
+        // CR-063：注册表启用逻辑 v1 Profile，校验内核按 Profile 分支（legacy TBOX_TSP_CLIENT 保持原口径）
+        validator = new CertificateIdentityValidator(
+                new DefaultCertificateProfileRegistry(true, "TBOX_DEVICE_ECDH_ES_P256_V1"),
+                new DeviceCertificateIdentityPolicy());
         identity = new BoundDeviceIdentity(VIN, 1L, 1L, DEVICE_SN, "TBOX", HSM_UID, "BOTH");
     }
 
@@ -155,6 +168,93 @@ class CertificateIdentityValidatorTest {
         // When & Then：806046
         assertThrows(CertificateProfileNotAllowedException.class,
                 () -> validator.validate(csr, identity, null, "UNKNOWN_PROFILE"));
+    }
+
+    // ================= CR-063：逻辑 v1 Profile 双用途门禁（TBOX_DEVICE_ECDH_ES_P256_V1） =================
+
+    @Test
+    void validate_合法v1双用途CSR_应通过并返回完整要素() {
+        // Given：EC P-256 + KU(DS+KA) + EKU(clientAuth) + CN=hsm_uid
+        String csr = TestTboxEcdhCsr.valid(HSM_UID);
+
+        // When
+        ParsedCsr parsed = validator.validate(csr, identity, null, ECDH_V1_PROFILE);
+
+        // Then：完整 ParsedCsr（含公钥/用途/扩展）
+        assertNotNull(parsed);
+        assertEquals(HSM_UID, parsed.subjectCn());
+        assertTrue(parsed.selfSignatureValid());
+        assertNotNull(parsed.publicKey());
+        assertTrue(parsed.requestedKeyUsages().contains(KeyUsageFlag.DIGITAL_SIGNATURE));
+        assertTrue(parsed.requestedKeyUsages().contains(KeyUsageFlag.KEY_AGREEMENT));
+        assertTrue(parsed.requestedExtendedKeyUsages()
+                .contains(DeviceCertificateIdentityPolicy.OID_EKU_CLIENT_AUTH));
+    }
+
+    @Test
+    void validate_v1RSA公钥_应拒绝806112() {
+        String csr = TestTboxEcdhCsr.rsa(HSM_UID);
+        CertificateCsrPublicKeyNotAllowedException ex = assertThrows(
+                CertificateCsrPublicKeyNotAllowedException.class,
+                () -> validator.validate(csr, identity, null, ECDH_V1_PROFILE));
+        assertEquals("806112", ex.getErrorCode().getCode());
+    }
+
+    @Test
+    void validate_v1缺keyAgreement_应拒绝806113() {
+        String csr = TestTboxEcdhCsr.kuMissingKeyAgreement(HSM_UID);
+        CertificateCsrKeyUsageInvalidException ex = assertThrows(
+                CertificateCsrKeyUsageInvalidException.class,
+                () -> validator.validate(csr, identity, null, ECDH_V1_PROFILE));
+        assertEquals("806113", ex.getErrorCode().getCode());
+    }
+
+    @Test
+    void validate_v1EKU过宽_应拒绝806115() {
+        String csr = TestTboxEcdhCsr.ekuClientAndServerAuth(HSM_UID);
+        CertificateCsrEkuConflictException ex = assertThrows(
+                CertificateCsrEkuConflictException.class,
+                () -> validator.validate(csr, identity, null, ECDH_V1_PROFILE));
+        assertEquals("806115", ex.getErrorCode().getCode());
+    }
+
+    @Test
+    void validate_v1缺clientAuth_应拒绝806114() {
+        String csr = TestTboxEcdhCsr.ekuAbsent(HSM_UID);
+        CertificateCsrClientAuthMissingException ex = assertThrows(
+                CertificateCsrClientAuthMissingException.class,
+                () -> validator.validate(csr, identity, null, ECDH_V1_PROFILE));
+        assertEquals("806114", ex.getErrorCode().getCode());
+    }
+
+    @Test
+    void validate_v1未知critical扩展_应拒绝806116() {
+        String csr = TestTboxEcdhCsr.unknownCriticalExtension(HSM_UID);
+        CertificateCsrUnsupportedCriticalExtensionException ex = assertThrows(
+                CertificateCsrUnsupportedCriticalExtensionException.class,
+                () -> validator.validate(csr, identity, null, ECDH_V1_PROFILE));
+        assertEquals("806116", ex.getErrorCode().getCode());
+    }
+
+    @Test
+    void validate_v1设备类别不匹配_应拒绝806042() {
+        String csr = TestTboxEcdhCsr.valid(HSM_UID);
+        BoundDeviceIdentity nonTbox = new BoundDeviceIdentity(VIN, 1L, 1L, DEVICE_SN, "ECU", HSM_UID, "BOTH");
+        CertificateDeviceCategoryMismatchException ex = assertThrows(
+                CertificateDeviceCategoryMismatchException.class,
+                () -> validator.validate(csr, nonTbox, null, ECDH_V1_PROFILE));
+        assertEquals("806042", ex.getErrorCode().getCode());
+    }
+
+    @Test
+    void validate_legacyProfile不受双用途门禁影响() {
+        // Given：legacy TBOX_TSP_CLIENT 的 KU 仅 digitalSignature（旧口径），不应触发 v1 KU 门禁
+        String csr = buildCsr(HSM_UID, null, null);
+
+        // When & Then：仍通过（保持存量行为）
+        ParsedCsr parsed = validator.validate(csr, identity, null, PROFILE);
+        assertNotNull(parsed);
+        assertFalse(parsed.requestedKeyUsages().contains(KeyUsageFlag.KEY_AGREEMENT));
     }
 
     /**

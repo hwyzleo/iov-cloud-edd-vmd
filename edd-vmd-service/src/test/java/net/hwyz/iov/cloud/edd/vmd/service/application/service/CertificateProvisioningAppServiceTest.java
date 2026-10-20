@@ -88,6 +88,12 @@ class CertificateProvisioningAppServiceTest {
     private ObjectProvider<CertEnrollmentTemplate> certEnrollmentTemplateProvider;
 
     @Mock
+    private net.hwyz.iov.cloud.edd.vmd.service.application.service.certificateprofile.CertificateProfileRegistry certificateProfileRegistry;
+
+    @Mock
+    private IssuedCertificateVerifier issuedCertificateVerifier;
+
+    @Mock
     private CertEnrollmentTemplate certificateEnrollmentTemplate;
 
     @InjectMocks
@@ -101,6 +107,15 @@ class CertificateProvisioningAppServiceTest {
     @BeforeEach
     void setUp() {
         lenient().when(certEnrollmentTemplateProvider.getIfAvailable()).thenReturn(certificateEnrollmentTemplate);
+
+        // CR-063：注册表返回 legacy TBOX_TSP_CLIENT（keyprovEligible=false，不触发复验/双用途门禁）
+        lenient().when(certificateProfileRegistry.requireEnabled(any(String.class)))
+                .thenReturn(new net.hwyz.iov.cloud.edd.vmd.service.application.service.certificateprofile.RegisteredCertificateProfile(
+                        net.hwyz.iov.cloud.edd.vmd.service.application.service.certificateprofile.VmdCertificateProfile.TBOX_TSP_CLIENT,
+                        null,
+                        new CertificateProfile("TBOX_TSP_CLIENT", "TBOX_TSP_CLIENT",
+                                CertificateProfile.SubjectType.DEVICE_IDENTITY, "EC", "DIGITAL_SIGNATURE"),
+                        "TBOX", false, true));
 
         applyCmd = CertificateApplyCmd.builder()
                 .requestId("REQ-001")

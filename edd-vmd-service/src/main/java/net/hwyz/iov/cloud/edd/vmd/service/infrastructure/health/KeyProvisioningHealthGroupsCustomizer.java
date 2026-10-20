@@ -51,11 +51,17 @@ public class KeyProvisioningHealthGroupsCustomizer implements HealthEndpointGrou
     public static final String IMPORT_PROOF_INDICATOR = "importProofVerification";
 
     /**
+     * 逻辑 TBOX ECDH-ES v1 证书能力健康指示器注册名（VMD-DSN-CR-063 §12，VMD_TBOX_ECDH_CERT_READY）
+     */
+    public static final String TBOX_ECDH_CERT_INDICATOR = "tboxEcdhCertificate";
+
+    /**
      * 需从主聚合排除的 keyprov 域健康指示器
      */
     private static final Set<String> KEYPROV_INDICATORS =
             Set.of(KEYPROV_INDICATOR, DERIVED_KEY_PROVIDER_INDICATOR,
-                    CERTIFICATE_RESOLUTION_INDICATOR, KMS_BUSINESS_KEY_INDICATOR, IMPORT_PROOF_INDICATOR);
+                    CERTIFICATE_RESOLUTION_INDICATOR, KMS_BUSINESS_KEY_INDICATOR, IMPORT_PROOF_INDICATOR,
+                    TBOX_ECDH_CERT_INDICATOR);
 
     @Override
     public HealthEndpointGroups postProcessHealthEndpointGroups(HealthEndpointGroups groups) {

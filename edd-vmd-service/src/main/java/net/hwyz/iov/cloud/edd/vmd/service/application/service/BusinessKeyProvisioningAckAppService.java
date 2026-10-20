@@ -236,7 +236,7 @@ public class BusinessKeyProvisioningAckAppService {
                     || !Objects.equals(identity.partId(), batch.getPartId())) {
                 throw new IllegalStateException("active绑定已变化");
             }
-            certSn = activeDeviceCertificateResolver.resolveActiveCertSn(identity);
+            certSn = activeDeviceCertificateResolver.resolveActiveCertSnForProvisioning(identity, batch.getCertificateSnDigest());
         } catch (RuntimeException e) {
             log.warn("keyprov 完成前绑定/证书复核失败: requestId={}, deviceSn={}", batch.getRequestId(), batch.getDeviceSn(), e);
             batch.markFailed("完成前设备绑定或证书失效");

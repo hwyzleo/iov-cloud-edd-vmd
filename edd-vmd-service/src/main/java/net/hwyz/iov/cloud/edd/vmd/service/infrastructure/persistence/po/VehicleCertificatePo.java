@@ -125,6 +125,18 @@ public class VehicleCertificatePo extends BasePo {
     private String certificateFingerprint;
 
     /**
+     * SHA-256(原始 leaf 证书 DER)（CR-063，BINARY(32)）
+     */
+    @TableField("leaf_certificate_digest")
+    private byte[] leafCertificateDigest;
+
+    /**
+     * 逻辑 Profile 签发后复验通过时间（审计事实，非认证事实）
+     */
+    @TableField("profile_validated_at")
+    private LocalDateTime profileValidatedAt;
+
+    /**
      * 证书有效期开始时间
      */
     @TableField("not_before")

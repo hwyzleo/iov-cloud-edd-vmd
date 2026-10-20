@@ -123,4 +123,21 @@ class VmdErrorCodeRegistryTest {
         assertEquals(VmdErrorCode.KEYPROV_DERIVED_PROVIDER_NOT_READY,
                 ErrorCodeRegistry.findByCode("806107").orElse(null));
     }
+
+    @Test
+    void tboxEcdhCertificateErrorCodes_present() {
+        // VMD-DSN-CR-063 逻辑 TBOX ECDH-ES v1 证书 Profile 域错误码（806112～806121）
+        assertEquals("806112", VmdErrorCode.CERTIFICATE_CSR_PUBLIC_KEY_NOT_ALLOWED.getCode());
+        assertEquals("806113", VmdErrorCode.CERTIFICATE_CSR_KEY_USAGE_INVALID.getCode());
+        assertEquals("806114", VmdErrorCode.CERTIFICATE_CSR_CLIENT_AUTH_MISSING.getCode());
+        assertEquals("806115", VmdErrorCode.CERTIFICATE_CSR_EKU_CONFLICT.getCode());
+        assertEquals("806116", VmdErrorCode.CERTIFICATE_CSR_UNSUPPORTED_CRITICAL_EXTENSION.getCode());
+        assertEquals("806117", VmdErrorCode.CERTIFICATE_PUBLIC_KEY_BINDING_MISMATCH.getCode());
+        assertEquals("806118", VmdErrorCode.CERTIFICATE_UID_BINDING_MISMATCH.getCode());
+        assertEquals("806119", VmdErrorCode.CERTIFICATE_ISSUED_PROFILE_MISMATCH.getCode());
+        assertEquals("806120", VmdErrorCode.CERTIFICATE_MATERIAL_UNAVAILABLE.getCode());
+        assertEquals("806121", VmdErrorCode.CERTIFICATE_ENROLLMENT_OUTCOME_UNKNOWN.getCode());
+        assertEquals(VmdErrorCode.CERTIFICATE_ISSUED_PROFILE_MISMATCH,
+                ErrorCodeRegistry.findByCode("806119").orElse(null));
+    }
 }
