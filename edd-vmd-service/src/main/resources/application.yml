@@ -115,7 +115,7 @@ vmd:
     profiles:
       tbox-device-ecdh-es-p256-v1:
         # enabled=false 时关闭整个新 ECDH-ES 证书签发与 Keyprov 请求路径（RD-063-6，不回退旧 Profile）
-        enabled: ${VMD_CERTIFICATE_PROFILE_TBOX_ECDH_ES_P256_V1_ENABLED:false}
+        enabled: ${VMD_CERTIFICATE_PROFILE_TBOX_ECDH_ES_P256_V1_ENABLED:true}
         framework-profile: ${VMD_CERTIFICATE_PROFILE_TBOX_ECDH_ES_P256_V1_FRAMEWORK:TBOX_DEVICE_ECDH_ES_P256_V1}
   business-key:
     policy:
