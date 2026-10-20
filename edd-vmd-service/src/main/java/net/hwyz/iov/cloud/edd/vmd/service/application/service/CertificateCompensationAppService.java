@@ -336,7 +336,7 @@ public class CertificateCompensationAppService {
             result.setCertificateDerBase64(status.getCertificateDerBase64());
             result.setChainDerBase64(status.getChainDerBase64());
         }
-        appendAudit(cmdOf(null, operatorId, operatorName, sourceIp, userAgent, certificate, null),
+        appendAudit(cmdOf(null, operatorId, operatorName, sourceIp, userAgent, certificate, null, null),
                 "QUERY", certificate.getCertStatus(), certificate.getCertStatus(),
                 "SUCCESS", null, certificate.getOriginalRequestId(), certificate.getRequestId());
         boolean hasBody = status != null && status.getCertificateDerBase64() != null;
@@ -371,7 +371,7 @@ public class CertificateCompensationAppService {
                 && updated.getCertStatus() == before ? "PENDING" : "SUCCESS";
         CertificateCompensateResult result = buildCompensateResult(updated, false, nextActionFor(updated));
         fillCertificateBody(result, applyResult);
-        appendAudit(cmdOf(reason, operatorId, operatorName, sourceIp, userAgent, certificate, null),
+        appendAudit(cmdOf(reason, operatorId, operatorName, sourceIp, userAgent, certificate, null, null),
                 "RECONCILE", before, updated != null ? updated.getCertStatus() : null, resultCode, null,
                 certificate.getOriginalRequestId(), certificate.getRequestId());
         log.info("证书申请对账完成: requestId={}, from={}, to={}", certificate.getRequestId(), before, updated != null ? updated.getCertStatus() : null);
@@ -438,7 +438,7 @@ public class CertificateCompensationAppService {
         VehicleCertificate saved = vehicleCertificateRepository.selectByRequestId(newRequestId);
         CertificateCompensateResult result = buildCompensateResult(saved, false, nextActionFor(saved));
         fillCertificateBody(result, applyResult);
-        appendAudit(cmdOf(reason, operatorId, operatorName, sourceIp, userAgent, old, ticketNo),
+        appendAudit(cmdOf(reason, operatorId, operatorName, sourceIp, userAgent, old, ticketNo, csrDerBase64),
                 "REISSUE", before, saved != null ? saved.getCertStatus() : null, "SUCCESS", null,
                 old.getRequestId(), newRequestId);
         log.info("证书重新签发完成: oldRequestId={}, newRequestId={}, status={}",
@@ -492,7 +492,7 @@ public class CertificateCompensationAppService {
 
         VehicleCertificate updated = vehicleCertificateRepository.selectByRequestId(certificate.getRequestId());
         CertificateCompensateResult compensateResult = buildCompensateResult(updated, false, "NONE");
-        appendAudit(cmdOf(reason, operatorId, operatorName, sourceIp, userAgent, certificate, ticketNo),
+        appendAudit(cmdOf(reason, operatorId, operatorName, sourceIp, userAgent, certificate, ticketNo, null),
                 "CONFIRM_INSTALLED", before, updated != null ? updated.getCertStatus() : null,
                 "SUCCESS", null, certificate.getOriginalRequestId(), certificate.getRequestId());
         log.info("证书安装结果补录完成: requestId={}, from={}, to={}", certificate.getRequestId(), before, updated != null ? updated.getCertStatus() : null);
@@ -665,7 +665,8 @@ public class CertificateCompensationAppService {
      * 写人工操作审计（reconcile / confirm 路径）
      */
     private CompensateCertificateCmd cmdOf(String reason, String operatorId, String operatorName,
-                                           String sourceIp, String userAgent, VehicleCertificate cert, String ticketNo) {
+                                           String sourceIp, String userAgent, VehicleCertificate cert,
+                                           String ticketNo, String csrDerBase64) {
         return CompensateCertificateCmd.builder()
                 .reason(reason)
                 .operatorId(operatorId)
@@ -677,6 +678,7 @@ public class CertificateCompensationAppService {
                 .deviceSn(cert.getDeviceSn())
                 .certificateProfile(cert.getCertificateProfile())
                 .ticketNo(ticketNo)
+                .csrDerBase64(csrDerBase64)
                 .build();
     }
 
@@ -694,10 +696,13 @@ public class CertificateCompensationAppService {
      */
     private String buildRequestDigest(CompensateCertificateCmd cmd) {
         String fingerprint = "";
-        try {
-            fingerprint = CsrUtils.calculateFingerprint(cmd.getCsrDerBase64());
-        } catch (Exception e) {
-            log.warn("计算CSR指纹失败，请求摘要不含指纹", e);
+        // QUERY/RECONCILE/CONFIRM_INSTALLED 等操作本就不携带 CSR，跳过指纹计算避免误报 WARN
+        if (StrUtil.isNotBlank(cmd.getCsrDerBase64())) {
+            try {
+                fingerprint = CsrUtils.calculateFingerprint(cmd.getCsrDerBase64());
+            } catch (Exception e) {
+                log.warn("计算CSR指纹失败，请求摘要不含指纹", e);
+            }
         }
         return "vin=" + cmd.getVin()
                 + "|deviceCategory=" + cmd.getDeviceCategory()

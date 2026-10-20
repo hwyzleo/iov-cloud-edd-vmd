@@ -423,6 +423,9 @@ class CertificateCompensationAppServiceTest {
         verify(vehicleCertificateOperationRepository).insert(opCaptor.capture());
         assertEquals("REISSUE", opCaptor.getValue().getAction());
         assertEquals("ISSUED_NOT_CONFIRMED", opCaptor.getValue().getBeforeStatus());
+        // 修复：REISSUE 审计摘要必须含 CSR 指纹（CSR 全文不落库，指纹是唯一可回溯凭证），且不得含 CSR 全文
+        assertTrue(opCaptor.getValue().getRequestDigest().contains("csrFingerprint=" + fingerprintOf(csrBase64)));
+        assertFalse(opCaptor.getValue().getRequestDigest().contains(csrBase64), "审计不得包含CSR全文");
     }
 
     @Test
