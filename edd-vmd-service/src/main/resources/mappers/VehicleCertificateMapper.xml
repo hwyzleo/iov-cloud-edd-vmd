@@ -20,6 +20,8 @@
         <result column="subject" property="subject" />
         <result column="issuer" property="issuer" />
         <result column="certificate_fingerprint" property="certificateFingerprint" />
+        <result column="leaf_certificate_digest" property="leafCertificateDigest" />
+        <result column="profile_validated_at" property="profileValidatedAt" />
         <result column="not_before" property="notBefore" />
         <result column="not_after" property="notAfter" />
         <result column="cert_status" property="certStatus" />
@@ -45,7 +47,7 @@
     <!-- 通用查询结果列 -->
     <sql id="baseColumnList">
         id, request_id, pki_request_id, cert_sn, vin, binding_id, part_id, device_category, device_sn, hsm_uid, public_key_sha256, certificate_profile, csr_fingerprint,
-        subject, issuer, certificate_fingerprint, not_before, not_after, cert_status, issued_at, confirmed_at, fail_reason,
+        subject, issuer, certificate_fingerprint, leaf_certificate_digest, profile_validated_at, not_before, not_after, cert_status, issued_at, confirmed_at, fail_reason,
         source_system, original_request_id, compensation_reason, ticket_no, last_operator, last_operation_at, facility_no, line_code,
         create_time, create_by, modify_time, modify_by, row_version, row_valid
     </sql>
@@ -54,13 +56,13 @@
     <insert id="insertPo" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO tb_veh_certificate (
             id, request_id, pki_request_id, cert_sn, vin, binding_id, part_id, device_category, device_sn, hsm_uid, public_key_sha256, certificate_profile, csr_fingerprint,
-            subject, issuer, certificate_fingerprint, not_before, not_after, cert_status, issued_at, confirmed_at, fail_reason,
+            subject, issuer, certificate_fingerprint, leaf_certificate_digest, profile_validated_at, not_before, not_after, cert_status, issued_at, confirmed_at, fail_reason,
             source_system, original_request_id, compensation_reason, ticket_no, last_operator, last_operation_at, facility_no, line_code,
             create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
         VALUES (
             #{id}, #{requestId}, #{pkiRequestId}, #{certSn}, #{vin}, #{bindingId}, #{partId}, #{deviceCategory}, #{deviceSn}, #{hsmUid}, #{publicKeySha256}, #{certificateProfile}, #{csrFingerprint},
-            #{subject}, #{issuer}, #{certificateFingerprint}, #{notBefore}, #{notAfter}, #{certStatus}, #{issuedAt}, #{confirmedAt}, #{failReason},
+            #{subject}, #{issuer}, #{certificateFingerprint}, #{leafCertificateDigest}, #{profileValidatedAt}, #{notBefore}, #{notAfter}, #{certStatus}, #{issuedAt}, #{confirmedAt}, #{failReason},
             #{sourceSystem}, #{originalRequestId}, #{compensationReason}, #{ticketNo}, #{lastOperator}, #{lastOperationAt}, #{facilityNo}, #{lineCode},
             now(), #{createBy}, now(), #{modifyBy}, 1, 1
         )
