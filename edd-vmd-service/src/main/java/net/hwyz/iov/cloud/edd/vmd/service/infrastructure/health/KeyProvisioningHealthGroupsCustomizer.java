@@ -41,6 +41,14 @@ public class KeyProvisioningHealthGroupsCustomizer implements HealthEndpointGrou
     public static final String DERIVED_KEY_PROVIDER_INDICATOR = "derivedKeyProvider";
 
     /**
+     * FW-SEC Transit 派生能力健康指示器注册名（VMD-DSN-CR-064 §5 / FW-SEC-DSN-CR-019 §10）：
+     * 聚合 OpenBao active/unsealed、AppRole 认证、transit mount/根元数据、HMAC 路径权限、
+     * 证书 validator、本地 Wrap/JCA/SecureRandom 与 V2C 策略/derivationVersion。
+     * 未就绪报告 NOT_READY，禁止拖垮主聚合（keyprov 域独立呈现）。
+     */
+    public static final String TRANSIT_DERIVED_KEY_INDICATOR = "transitDerivedKey";
+
+    /**
      * framework KMS business-key Provider 健康指示器注册名（VMD-DSN-CR-060 §5.1/§7）
      */
     public static final String KMS_BUSINESS_KEY_INDICATOR = "kmsBusinessKey";
@@ -59,7 +67,7 @@ public class KeyProvisioningHealthGroupsCustomizer implements HealthEndpointGrou
      * 需从主聚合排除的 keyprov 域健康指示器
      */
     private static final Set<String> KEYPROV_INDICATORS =
-            Set.of(KEYPROV_INDICATOR, DERIVED_KEY_PROVIDER_INDICATOR,
+            Set.of(KEYPROV_INDICATOR, DERIVED_KEY_PROVIDER_INDICATOR, TRANSIT_DERIVED_KEY_INDICATOR,
                     CERTIFICATE_RESOLUTION_INDICATOR, KMS_BUSINESS_KEY_INDICATOR, IMPORT_PROOF_INDICATOR,
                     TBOX_ECDH_CERT_INDICATOR);
 

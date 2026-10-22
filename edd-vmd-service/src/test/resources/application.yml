@@ -1,10 +1,23 @@
 crypto:
+  # CR-064：测试环境显式选择 openbao-transit-local-wrap（不依赖 FW-SEC legacy 默认值）；
+  # 静态 test token 仅用于装配（无真实 OpenBao，require-ready-at-startup=false 跳过启动探测）。
+  kms:
+    endpoint: http://openbao-test:8200
+    token: test-static-token
   provisioning:
     enabled: true
     # CR-061：测试环境显式跳过根派生 Provider 启动探测（无真实 Transit v2c-comm-root）
     derived-key:
+      provider: openbao-transit-local-wrap
       require-ready-at-startup: false
       derivation-version: v1
+      # 与 FW-SEC 编译期 allowlist 一致的根映射声明（TransitDerivedKeyProvider 启动校验必需）
+      roots:
+        V2C_COMM_ROOT:
+          transit-key: v2c-comm-root
+          hmac-algorithm: sha2-256
+          purposes: [UPLINK_AEAD, DOWNLINK_AEAD]
+          wrap-modes: [DEVICE_CERT_PUBLIC_KEY]
   # CR-062：VMD 集成测试以 @MockBean ImportProofVerifier 驱动编排；真实验签由 framework 单测/E2E 覆盖。
   import-proof:
     enabled: false
@@ -16,7 +29,7 @@ management:
     health:
       group:
         keyprov:
-          include: keyProvisioningCapability,derivedKeyProvider,certificateResolution,importProofVerification
+          include: keyProvisioningCapability,derivedKeyProvider,transitDerivedKey,certificateResolution,importProofVerification
           show-details: always
 
 # CR-055 业务密钥域测试策略（真实授权策略 + BizType 映射，供集成测试使用）
