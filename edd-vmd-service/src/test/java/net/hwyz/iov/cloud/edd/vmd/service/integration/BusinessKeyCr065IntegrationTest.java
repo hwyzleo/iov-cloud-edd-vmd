@@ -4,6 +4,7 @@ import net.hwyz.iov.cloud.edd.vmd.api.vo.keyprov.VmdKeyProvisioningOutcome;
 import net.hwyz.iov.cloud.edd.vmd.service.BaseTest;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.OperatorContext;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.TerminateStaleProvisioningCommand;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.CertificateProvisioningResolutionResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ProvisioningBlockingDiagnosisResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ProvisioningTerminationResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.BusinessKeyMaintenanceAppService;
@@ -472,5 +473,56 @@ class BusinessKeyCr065IntegrationTest extends BaseTest {
                 STUCK_REQUEST_ID), "晚到 ACK 不得激活目录");
         assertEquals(0, count("SELECT COUNT(*) FROM tb_vmd_outbox WHERE event_type = 'TboxV2cKeyProvisionedEvent' "
                 + "AND source_ref_id = ?", STUCK_REQUEST_ID), "晚到 ACK 不得发成功事件");
+    }
+
+    // ================= §9.4 证书详情端到端闭环 =================
+
+    @Test
+    @DisplayName("证书详情端到端：F1/F2 寻址滞留批次 kp-* → 诊断 → 清理 → NO_OPEN_PROVISIONING")
+    void certificateDetailAddressingE2E() {
+        insertStuckPreparingBatch();
+        switchToF2();
+
+        // 1) 分别从 F1、F2 证书详情寻址：均定位绑定 F1 摘要的唯一未终结批次，certificateChanged=true
+        CertificateProvisioningResolutionResult fromF1 = maintenanceAppService
+                .resolveByCertificateRequest("CR065_CERT_REQ_" + CERT_SN_F1, DOMAIN, false);
+        CertificateProvisioningResolutionResult fromF2 = maintenanceAppService
+                .resolveByCertificateRequest("CR065_CERT_REQ_" + CERT_SN_F2, DOMAIN, false);
+
+        assertEquals(CertificateProvisioningResolutionResult.Resolution.OPEN_BATCH_FOUND, fromF1.getResolution());
+        assertEquals(DEVICE_SN, fromF1.getDeviceSn());
+        assertEquals(STUCK_REQUEST_ID, fromF1.getOpenBatch().getProvisioningRequestId(),
+                "必须返回真实 kp-* requestId，不得把证书号传给批次接口");
+        assertEquals("PREPARING", fromF1.getOpenBatch().getState());
+        assertTrue(Boolean.TRUE.equals(fromF1.getOpenBatch().getCertificateChanged()), "从 F1 进入应判定证书已升级");
+        assertTrue(Boolean.TRUE.equals(fromF1.getOpenBatch().getClearCandidate()), "PREPARING 应可清理候选");
+        assertEquals(STUCK_REQUEST_ID, fromF2.getOpenBatch().getProvisioningRequestId(),
+                "从 F2 详情进入也应定位同一未终结批次");
+        assertTrue(Boolean.TRUE.equals(fromF2.getOpenBatch().getCertificateChanged()), "从 F2 进入同样判定证书已升级");
+
+        // 2) 以 kp-old 调诊断（不得把 MPT-CERT-F1/F2 传给批次接口）
+        ProvisioningBlockingDiagnosisResult diag = maintenanceAppService.inspectTermination(STUCK_REQUEST_ID);
+        assertTrue(diag.getClearable(), "预检应判定可清理");
+
+        // 3) 一键清理（使用诊断返回的状态）
+        ProvisioningTerminationResult terminated = maintenanceAppService.terminateStale(
+                terminateCmd(STUCK_REQUEST_ID, BusinessKeyProvisioningState.PREPARING), operator());
+        assertTrue(terminated.isChanged());
+        assertTrue(terminated.isBlockingCleared());
+        assertTrue(terminated.isReopenAllowed());
+
+        // 4) 清理后再次寻址 → NO_OPEN_PROVISIONING（HTTP 200 语义，非 806083）
+        CertificateProvisioningResolutionResult after = maintenanceAppService
+                .resolveByCertificateRequest("CR065_CERT_REQ_" + CERT_SN_F1, DOMAIN, false);
+        assertEquals(CertificateProvisioningResolutionResult.Resolution.NO_OPEN_PROVISIONING, after.getResolution());
+        assertNull(after.getOpenBatch());
+
+        // 5) 历史终结批次（includeTerminal=true）仅供审计，不进入清理选择
+        CertificateProvisioningResolutionResult withTerminal = maintenanceAppService
+                .resolveByCertificateRequest("CR065_CERT_REQ_" + CERT_SN_F1, DOMAIN, true);
+        assertFalse(withTerminal.getTerminalHistory().isEmpty(), "终止后应能返回历史终结批次");
+        assertTrue(withTerminal.getTerminalHistory().stream()
+                .noneMatch(CertificateProvisioningResolutionResult.ProvisioningSummary::getClearCandidate),
+                "历史终结批次不得进入清理选择");
     }
 }

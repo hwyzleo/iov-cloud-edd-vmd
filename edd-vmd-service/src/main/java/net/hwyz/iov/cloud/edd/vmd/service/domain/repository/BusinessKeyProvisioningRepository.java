@@ -35,6 +35,19 @@ public interface BusinessKeyProvisioningRepository {
     BusinessKeyProvisioning selectOpenByDeviceAndDomain(String deviceSn, String businessDomain);
 
     /**
+     * 查询同设备+业务域全部未终结批次（证书维度寻址，VMD-DSN-CR-065 §6.2）
+     * <p>
+     * 返回完整集合（不 LIMIT）：0 条返回空列表，&gt;1 条由调用方判定数据一致性异常并 fail-closed。
+     */
+    List<BusinessKeyProvisioning> selectOpenListByDeviceAndDomain(String deviceSn, String businessDomain);
+
+    /**
+     * 查询同设备+业务域历史终结批次（COMPLETED/FAILED/EXPIRED，按 modify_time DESC, create_time DESC）
+     * <p>仅供审计展示，不进入清理选择（VMD-DSN-CR-065 §6.2 includeTerminal=true）。
+     */
+    List<BusinessKeyProvisioning> selectTerminalListByDeviceAndDomain(String deviceSn, String businessDomain);
+
+    /**
      * 按状态扫描修改时间早于 before 的批次（超时/对账扫批）
      */
     List<BusinessKeyProvisioning> selectListByStatusBefore(BusinessKeyProvisioningState status, LocalDateTime before, int limit);

@@ -2,6 +2,7 @@ package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.controller.mpt;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.CertificateProvisioningResolutionResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ProvisioningBlockingDiagnosisResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ProvisioningTerminationResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.BusinessKeyProvisioningMaintenanceAppService;
@@ -77,6 +78,61 @@ class MptBusinessKeyProvisioningControllerWebTest {
                 .andExpect(jsonPath("$.data.pendingDirectoryCount").value(2))
                 .andExpect(jsonPath("$.data.suggestedAction").value("CLEARABLE"))
                 .andExpect(jsonPath("$.data.operationSummary.notStarted").value(2));
+    }
+
+    @Test
+    @DisplayName("GET by-certificate-request 证书维度寻址返回真实批次 requestId")
+    void resolveByCertificateRequest() throws Exception {
+        CertificateProvisioningResolutionResult.ProvisioningSummary summary =
+                CertificateProvisioningResolutionResult.ProvisioningSummary.builder()
+                        .provisioningRequestId(REQUEST_ID)
+                        .state("PREPARING")
+                        .modifyTime(LocalDateTime.of(2026, 10, 22, 10, 30, 0))
+                        .certificateChanged(true)
+                        .clearCandidate(true)
+                        .build();
+        when(maintenanceAppService.resolveByCertificateRequest("MPT-CERT-F1", "V2C_COMM", false))
+                .thenReturn(CertificateProvisioningResolutionResult.builder()
+                        .certificateRequestId("MPT-CERT-F1")
+                        .deviceSn("TBOX-1")
+                        .businessDomain("V2C_COMM")
+                        .resolution(CertificateProvisioningResolutionResult.Resolution.OPEN_BATCH_FOUND)
+                        .openBatch(summary)
+                        .terminalHistory(List.of())
+                        .build());
+
+        mockMvc.perform(get(BASE + "/by-certificate-request/MPT-CERT-F1"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.certificateRequestId").value("MPT-CERT-F1"))
+                .andExpect(jsonPath("$.data.resolution").value("OPEN_BATCH_FOUND"))
+                .andExpect(jsonPath("$.data.openBatch.provisioningRequestId").value(REQUEST_ID))
+                .andExpect(jsonPath("$.data.openBatch.state").value("PREPARING"))
+                .andExpect(jsonPath("$.data.openBatch.certificateChanged").value(true))
+                .andExpect(jsonPath("$.data.openBatch.clearCandidate").value(true));
+
+        verify(maintenanceAppService).resolveByCertificateRequest("MPT-CERT-F1", "V2C_COMM", false);
+    }
+
+    @Test
+    @DisplayName("GET by-certificate-request 支持 businessDomain/includeTerminal 查询参数")
+    void resolveByCertificateRequest_withQueryParams() throws Exception {
+        when(maintenanceAppService.resolveByCertificateRequest("MPT-CERT-F1", "V2C_COMM", true))
+                .thenReturn(CertificateProvisioningResolutionResult.builder()
+                        .certificateRequestId("MPT-CERT-F1")
+                        .deviceSn("TBOX-1")
+                        .businessDomain("V2C_COMM")
+                        .resolution(CertificateProvisioningResolutionResult.Resolution.NO_OPEN_PROVISIONING)
+                        .terminalHistory(List.of())
+                        .build());
+
+        mockMvc.perform(get(BASE + "/by-certificate-request/MPT-CERT-F1")
+                        .param("businessDomain", "V2C_COMM")
+                        .param("includeTerminal", "true"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.resolution").value("NO_OPEN_PROVISIONING"))
+                .andExpect(jsonPath("$.data.openBatch").doesNotExist());
+
+        verify(maintenanceAppService).resolveByCertificateRequest("MPT-CERT-F1", "V2C_COMM", true);
     }
 
     @Test

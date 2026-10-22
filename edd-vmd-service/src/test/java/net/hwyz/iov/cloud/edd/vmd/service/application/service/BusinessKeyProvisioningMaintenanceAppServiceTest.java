@@ -3,17 +3,22 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 import io.micrometer.core.instrument.simple.SimpleMeterRegistry;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.OperatorContext;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.TerminateStaleProvisioningCommand;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.CertificateProvisioningResolutionResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ProvisioningBlockingDiagnosisResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ProvisioningTerminationResult;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyProvisioningCertificateDataIncompleteException;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyProvisioningResolutionInconsistentException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyProvisioningTerminateDirectoryConflictException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyProvisioningTerminateDisabledException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyProvisioningTerminateNotAllowedException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyProvisioningTerminateReconcileFirstException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyProvisioningTerminateStaleViewException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyProvisioningTerminateSuccessFactExistsException;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.CertificateRequestNotExistException;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.BusinessKeyProvisioning;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.BusinessKeyProvisioningItem;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.DeviceBusinessKey;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleCertificate;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.BusinessKeyProvisioningState;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.BusinessKeyState;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.ProvisioningDeviceResult;
@@ -21,6 +26,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.TerminationRe
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.BusinessKeyProvisioningItemRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.BusinessKeyProvisioningRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.DeviceBusinessKeyRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehicleCertificateRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VmdOutboxRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.monitoring.BusinessKeyProvisioningMaintenanceMetrics;
 import org.junit.jupiter.api.BeforeEach;
@@ -78,6 +84,8 @@ class BusinessKeyProvisioningMaintenanceAppServiceTest {
     @Mock
     private VmdOutboxRepository vmdOutboxRepository;
     @Mock
+    private VehicleCertificateRepository vehicleCertificateRepository;
+    @Mock
     private ProvisioningOperationEvidence operationEvidence;
     @Mock
     private PlatformTransactionManager transactionManager;
@@ -101,7 +109,7 @@ class BusinessKeyProvisioningMaintenanceAppServiceTest {
                 provisioningRepository, provisioningItemRepository, deviceBusinessKeyRepository,
                 new BusinessKeyProvisioningDomainService(),
                 boundDeviceIdentityResolver, activeDeviceCertificateResolver,
-                vmdOutboxRepository, operationEvidence, metrics, transactionManager);
+                vmdOutboxRepository, vehicleCertificateRepository, operationEvidence, metrics, transactionManager);
         ReflectionTestUtils.setField(service, "terminateEnabled", true);
         ReflectionTestUtils.setField(service, "staleThresholdSeconds", 0L);
 
@@ -537,5 +545,118 @@ class BusinessKeyProvisioningMaintenanceAppServiceTest {
 
         assertFalse(diag.getClearable());
         assertEquals("WAIT_ACK_EXPIRY", diag.getSuggestedAction());
+    }
+
+    // ================= VMD-DSN-CR-065 §6.2 证书维度寻址 =================
+
+    private VehicleCertificate cert(String requestId, String deviceSn, String certSn) {
+        return VehicleCertificate.builder()
+                .requestId(requestId)
+                .deviceSn(deviceSn)
+                .certSn(certSn)
+                .build();
+    }
+
+    @Test
+    @DisplayName("寻址：证书申请记录不存在 → 证书域 806052")
+    void resolve_certificateRequestNotExist() {
+        when(vehicleCertificateRepository.selectByRequestId("MPT-CERT-0001")).thenReturn(null);
+
+        assertThrows(CertificateRequestNotExistException.class,
+                () -> service.resolveByCertificateRequest("MPT-CERT-0001", DOMAIN, false));
+    }
+
+    @Test
+    @DisplayName("寻址：证书缺少 deviceSn → 806128 证书关联数据不完整")
+    void resolve_certificateDataIncomplete() {
+        when(vehicleCertificateRepository.selectByRequestId("MPT-CERT-0002"))
+                .thenReturn(cert("MPT-CERT-0002", null, "CR065-CERT-F1"));
+
+        assertThrows(BusinessKeyProvisioningCertificateDataIncompleteException.class,
+                () -> service.resolveByCertificateRequest("MPT-CERT-0002", DOMAIN, false));
+    }
+
+    @Test
+    @DisplayName("寻址：证书存在但无未终结批次 → NO_OPEN_PROVISIONING（非 806083）")
+    void resolve_noOpenProvisioning() {
+        when(vehicleCertificateRepository.selectByRequestId("MPT-CERT-F1"))
+                .thenReturn(cert("MPT-CERT-F1", DEVICE_SN, "CR065-CERT-F1"));
+        when(provisioningRepository.selectOpenListByDeviceAndDomain(DEVICE_SN, DOMAIN)).thenReturn(List.of());
+
+        CertificateProvisioningResolutionResult result =
+                service.resolveByCertificateRequest("MPT-CERT-F1", DOMAIN, false);
+
+        assertEquals(CertificateProvisioningResolutionResult.Resolution.NO_OPEN_PROVISIONING, result.getResolution());
+        assertNull(result.getOpenBatch());
+        assertEquals(DEVICE_SN, result.getDeviceSn());
+    }
+
+    @Test
+    @DisplayName("寻址：唯一未终结批次 → OPEN_BATCH_FOUND 返回真实 kp-* requestId")
+    void resolve_openBatchFound() {
+        LocalDateTime modifyTime = LocalDateTime.now().minusHours(2);
+        BusinessKeyProvisioning open = BusinessKeyProvisioning.builder()
+                .id(9L)
+                .requestId("kp-8d0442793522daeeed74dcef5a9c80ce")
+                .deviceSn(DEVICE_SN)
+                .businessDomain(DOMAIN)
+                .status(BusinessKeyProvisioningState.PREPARING)
+                .certificateSnDigest("digest-f1")
+                .modifyTime(modifyTime)
+                .build();
+        when(vehicleCertificateRepository.selectByRequestId("MPT-CERT-F1"))
+                .thenReturn(cert("MPT-CERT-F1", DEVICE_SN, "CR065-CERT-F1"));
+        when(provisioningRepository.selectOpenListByDeviceAndDomain(DEVICE_SN, DOMAIN)).thenReturn(List.of(open));
+
+        CertificateProvisioningResolutionResult result =
+                service.resolveByCertificateRequest("MPT-CERT-F1", DOMAIN, false);
+
+        assertEquals(CertificateProvisioningResolutionResult.Resolution.OPEN_BATCH_FOUND, result.getResolution());
+        assertNotNull(result.getOpenBatch());
+        assertEquals("kp-8d0442793522daeeed74dcef5a9c80ce", result.getOpenBatch().getProvisioningRequestId());
+        assertEquals("PREPARING", result.getOpenBatch().getState());
+        assertEquals(modifyTime, result.getOpenBatch().getModifyTime());
+        assertTrue(result.getOpenBatch().getClearCandidate());
+    }
+
+    @Test
+    @DisplayName("寻址：同设备+业务域多条未终结批次 → 806129 fail-closed")
+    void resolve_multipleOpenBatches_failClosed() {
+        BusinessKeyProvisioning open1 = newBatch(BusinessKeyProvisioningState.PREPARING, LocalDateTime.now());
+        BusinessKeyProvisioning open2 = BusinessKeyProvisioning.builder()
+                .id(2L).requestId("kp-other").deviceSn(DEVICE_SN).businessDomain(DOMAIN)
+                .status(BusinessKeyProvisioningState.WAIT_DEVICE_ACK).build();
+        when(vehicleCertificateRepository.selectByRequestId("MPT-CERT-F1"))
+                .thenReturn(cert("MPT-CERT-F1", DEVICE_SN, "CR065-CERT-F1"));
+        when(provisioningRepository.selectOpenListByDeviceAndDomain(DEVICE_SN, DOMAIN))
+                .thenReturn(List.of(open1, open2));
+
+        assertThrows(BusinessKeyProvisioningResolutionInconsistentException.class,
+                () -> service.resolveByCertificateRequest("MPT-CERT-F1", DOMAIN, false));
+    }
+
+    @Test
+    @DisplayName("寻址：includeTerminal=true 附带历史终结批次（仅供审计）")
+    void resolve_includeTerminal() {
+        BusinessKeyProvisioning open = BusinessKeyProvisioning.builder()
+                .id(9L).requestId("kp-open").deviceSn(DEVICE_SN).businessDomain(DOMAIN)
+                .status(BusinessKeyProvisioningState.PREPARING).modifyTime(LocalDateTime.now())
+                .build();
+        BusinessKeyProvisioning terminal = BusinessKeyProvisioning.builder()
+                .id(8L).requestId("kp-old-completed").deviceSn(DEVICE_SN).businessDomain(DOMAIN)
+                .status(BusinessKeyProvisioningState.COMPLETED).modifyTime(LocalDateTime.now().minusDays(1))
+                .build();
+        when(vehicleCertificateRepository.selectByRequestId("MPT-CERT-F1"))
+                .thenReturn(cert("MPT-CERT-F1", DEVICE_SN, "CR065-CERT-F1"));
+        when(provisioningRepository.selectOpenListByDeviceAndDomain(DEVICE_SN, DOMAIN)).thenReturn(List.of(open));
+        when(provisioningRepository.selectTerminalListByDeviceAndDomain(DEVICE_SN, DOMAIN))
+                .thenReturn(List.of(terminal));
+
+        CertificateProvisioningResolutionResult result =
+                service.resolveByCertificateRequest("MPT-CERT-F1", DOMAIN, true);
+
+        assertEquals(1, result.getTerminalHistory().size());
+        assertEquals("kp-old-completed", result.getTerminalHistory().get(0).getProvisioningRequestId());
+        assertFalse(result.getTerminalHistory().get(0).getClearCandidate());
     }
 }

@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.request.MptBusinessKeyClearBlockingRequest;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.OperatorContext;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.TerminateStaleProvisioningCommand;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.CertificateProvisioningResolutionResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ProvisioningBlockingDiagnosisResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ProvisioningTerminationResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.BusinessKeyProvisioningMaintenanceAppService;
@@ -24,6 +25,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -31,9 +33,12 @@ import org.springframework.web.bind.annotation.RestController;
  * <p>
  * 后台功能面向“直接解除旧批次对新证书流程的占用”，不要求管理员理解领域状态机：
  * <ul>
+ *   <li>GET /api/mpt/business-key/provisioning/by-certificate-request/{certificateRequestId}（证书维度寻址，只读桥接）；</li>
  *   <li>GET /api/mpt/business-key/provisioning/{requestId}/blocking-diagnosis（只读诊断）；</li>
  *   <li>POST /api/mpt/business-key/provisioning/{requestId}/clear-blocking（唯一破坏性入口）。</li>
  * </ul>
+ * 证书申请 requestId 与 Keyprov 批次 requestId 是两套独立标识，本控制器不得混用、猜测或让
+ * 诊断/清理接口兼容解释两种 ID（VMD-DSN-CR-065 §6）。
  * 服务端单次完成执行时复核、逻辑终止、PENDING 连带失败化与审计；不得签发/升级/撤销证书，
  * 不得代替车端创建新批次。生产建议仅授予安全运维角色；不得暴露给 VAGW/TBOX 或普通业务服务。
  *
@@ -47,6 +52,29 @@ import org.springframework.web.bind.annotation.RestController;
 public class MptBusinessKeyProvisioningController extends BaseController {
 
     private final BusinessKeyProvisioningMaintenanceAppService maintenanceAppService;
+
+    /**
+     * 证书维度寻址开通批次（只读桥接，VMD-DSN-CR-065 §6.2，方案 A）。
+     * <p>
+     * 从证书申请 requestId（MPT-CERT-* 等）解析同设备+业务域唯一未终结 Keyprov 批次 requestId（kp-*），
+     * 前端取真实批次号后再调用 {@link #blockingDiagnosis}/{@link #clearBlocking}；
+     * 诊断/清理接口不接受证书申请 requestId，两套 ID 不得混用。
+     *
+     * @param certificateRequestId 证书申请 requestId
+     * @param businessDomain       业务域（缺省 V2C_COMM）
+     * @param includeTerminal      是否附带历史终结批次（仅供审计）
+     */
+    @RequiresPermissions("vmd:security:businessKey:provisioning:query")
+    @GetMapping("/by-certificate-request/{certificateRequestId}")
+    public ApiResponse<CertificateProvisioningResolutionResult> resolveByCertificateRequest(
+            @PathVariable String certificateRequestId,
+            @RequestParam(value = "businessDomain", defaultValue = "V2C_COMM") String businessDomain,
+            @RequestParam(value = "includeTerminal", defaultValue = "false") boolean includeTerminal) {
+        log.info("MPT请求按证书申请requestId寻址开通批次: certificateRequestId={}, businessDomain={}, includeTerminal={}",
+                certificateRequestId, businessDomain, includeTerminal);
+        return ApiResponse.ok(maintenanceAppService.resolveByCertificateRequest(
+                certificateRequestId, businessDomain, includeTerminal));
+    }
 
     /**
      * 阻塞诊断（只读，供页面展示）

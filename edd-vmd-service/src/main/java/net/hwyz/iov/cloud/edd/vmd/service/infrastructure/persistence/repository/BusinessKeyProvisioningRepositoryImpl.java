@@ -50,6 +50,26 @@ public class BusinessKeyProvisioningRepositoryImpl implements BusinessKeyProvisi
     }
 
     @Override
+    public List<BusinessKeyProvisioning> selectOpenListByDeviceAndDomain(String deviceSn, String businessDomain) {
+        List<BusinessKeyProvisioningPo> poList =
+                businessKeyProvisioningMapper.selectOpenPoListByDeviceAndDomain(deviceSn, businessDomain);
+        if (poList == null || poList.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return BusinessKeyProvisioningConverter.INSTANCE.toDomainList(poList);
+    }
+
+    @Override
+    public List<BusinessKeyProvisioning> selectTerminalListByDeviceAndDomain(String deviceSn, String businessDomain) {
+        List<BusinessKeyProvisioningPo> poList =
+                businessKeyProvisioningMapper.selectTerminalPoListByDeviceAndDomain(deviceSn, businessDomain);
+        if (poList == null || poList.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return BusinessKeyProvisioningConverter.INSTANCE.toDomainList(poList);
+    }
+
+    @Override
     public List<BusinessKeyProvisioning> selectListByStatusBefore(BusinessKeyProvisioningState status,
                                                                   LocalDateTime before, int limit) {
         List<BusinessKeyProvisioningPo> poList = businessKeyProvisioningMapper.selectPoListByStatusBefore(

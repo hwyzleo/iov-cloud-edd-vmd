@@ -151,7 +151,10 @@ public enum VmdErrorCode implements ErrorCode {
     BUSINESS_KEY_PROVISIONING_TERMINATE_RECONCILE_FIRST("806124", "业务密钥开通批次存在结果未知的operation，需先对账"),
     BUSINESS_KEY_PROVISIONING_TERMINATE_SUCCESS_FACT_EXISTS("806125", "业务密钥开通批次存在成功事实，禁止终止"),
     BUSINESS_KEY_PROVISIONING_TERMINATE_DIRECTORY_CONFLICT("806126", "业务密钥开通批次目录归属冲突，禁止终止"),
-    BUSINESS_KEY_PROVISIONING_TERMINATE_STALE_VIEW("806127", "业务密钥开通批次页面视图已过期，请刷新后重试");
+    BUSINESS_KEY_PROVISIONING_TERMINATE_STALE_VIEW("806127", "业务密钥开通批次页面视图已过期，请刷新后重试"),
+    // VMD-DSN-CR-065 §6.2：证书维度寻址开通批次（只读桥接接口）
+    BUSINESS_KEY_PROVISIONING_CERTIFICATE_DATA_INCOMPLETE("806128", "证书关联数据不完整，无法寻址开通批次"),
+    BUSINESS_KEY_PROVISIONING_RESOLUTION_INCONSISTENT("806129", "同设备+业务域存在多条未终结开通批次，数据一致性异常，拒绝寻址");
 
     private final String code;
     private final String message;

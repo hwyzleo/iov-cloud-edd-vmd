@@ -34,6 +34,18 @@ public interface BusinessKeyProvisioningMapper extends BaseDao<BusinessKeyProvis
                                                             @Param("businessDomain") String businessDomain);
 
     /**
+     * 查询同设备+业务域全部未终结批次（证书维度寻址，VMD-DSN-CR-065 §6.2，不 LIMIT）
+     */
+    List<BusinessKeyProvisioningPo> selectOpenPoListByDeviceAndDomain(@Param("deviceSn") String deviceSn,
+                                                                      @Param("businessDomain") String businessDomain);
+
+    /**
+     * 查询同设备+业务域历史终结批次（VMD-DSN-CR-065 §6.2 includeTerminal=true）
+     */
+    List<BusinessKeyProvisioningPo> selectTerminalPoListByDeviceAndDomain(@Param("deviceSn") String deviceSn,
+                                                                          @Param("businessDomain") String businessDomain);
+
+    /**
      * 扫描指定状态的过期批次
      */
     List<BusinessKeyProvisioningPo> selectPoListByStatusBefore(@Param("status") String status,

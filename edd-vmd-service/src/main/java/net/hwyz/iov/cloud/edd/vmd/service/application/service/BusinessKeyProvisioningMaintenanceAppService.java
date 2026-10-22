@@ -4,19 +4,24 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.OperatorContext;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.TerminateStaleProvisioningCommand;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.CertificateProvisioningResolutionResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ProvisioningBlockingDiagnosisResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ProvisioningTerminationResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.ProvisioningOperationEvidence.OperationOutcome;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyProvisioningCertificateDataIncompleteException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyProvisioningNotExistException;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyProvisioningResolutionInconsistentException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyProvisioningTerminateDirectoryConflictException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyProvisioningTerminateDisabledException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyProvisioningTerminateNotAllowedException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyProvisioningTerminateReconcileFirstException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyProvisioningTerminateStaleViewException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyProvisioningTerminateSuccessFactExistsException;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.CertificateRequestNotExistException;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.BusinessKeyProvisioning;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.BusinessKeyProvisioningItem;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.DeviceBusinessKey;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleCertificate;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.BusinessKeyProvisioningState;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.BusinessKeyState;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.ProvisioningDeviceResult;
@@ -24,6 +29,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.TerminationRe
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.BusinessKeyProvisioningItemRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.BusinessKeyProvisioningRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.DeviceBusinessKeyRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehicleCertificateRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VmdOutboxRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.monitoring.BusinessKeyProvisioningMaintenanceMetrics;
 import org.springframework.beans.factory.annotation.Value;
@@ -35,6 +41,7 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -65,6 +72,9 @@ public class BusinessKeyProvisioningMaintenanceAppService {
 
     private static final String EVENT_TYPE_TBOX_V2C = "TboxV2cKeyProvisionedEvent";
 
+    /** 缺省业务域（首期固定 V2C_COMM） */
+    private static final String DEFAULT_BUSINESS_DOMAIN = "V2C_COMM";
+
     private static final Pattern VIN_PATTERN = Pattern.compile("\\b[A-HJ-NPR-Z0-9]{17}\\b");
     private static final Pattern HEX_BLOB_PATTERN = Pattern.compile("\\b[0-9a-fA-F]{32,}\\b");
     private static final Pattern BASE64_BLOB_PATTERN = Pattern.compile("\\b[A-Za-z0-9+/]{44,}={0,2}\\b");
@@ -80,6 +90,7 @@ public class BusinessKeyProvisioningMaintenanceAppService {
     private final BoundDeviceIdentityResolver boundDeviceIdentityResolver;
     private final ActiveDeviceCertificateResolver activeDeviceCertificateResolver;
     private final VmdOutboxRepository vmdOutboxRepository;
+    private final VehicleCertificateRepository vehicleCertificateRepository;
     private final ProvisioningOperationEvidence operationEvidence;
     private final BusinessKeyProvisioningMaintenanceMetrics metrics;
     private final PlatformTransactionManager transactionManager;
@@ -118,6 +129,92 @@ public class BusinessKeyProvisioningMaintenanceAppService {
         Map<Long, OperationOutcome> opOutcomes = operationEvidence.query(items);
 
         return buildDiagnosis(batch, items, opOutcomes);
+    }
+
+    /**
+     * 证书维度寻址开通批次（VMD-DSN-CR-065 §6.2，只读桥接接口）。
+     * <p>
+     * 从证书申请 requestId 解析到同设备+业务域唯一未终结 Keyprov 批次 requestId（kp-*），
+     * 供前端取真实批次号后调用 {@link #inspectTermination(String)} / {@link #terminateStale}；
+     * 本接口不替代也不兼容诊断/清理接口的两套 ID 语义。
+     * <ul>
+     *   <li>证书申请记录不存在 → 沿用证书域 {@link CertificateRequestNotExistException}（806052）；</li>
+     *   <li>证书存在但无未终结批次 → HTTP 200 + {@code NO_OPEN_PROVISIONING}（非 806083）；</li>
+     *   <li>证书缺少 deviceSn/证书序列号 → {@link BusinessKeyProvisioningCertificateDataIncompleteException}（806128）；</li>
+     *   <li>同设备+业务域多条未终结批次 → {@link BusinessKeyProvisioningResolutionInconsistentException}（806129）fail-closed。</li>
+     * </ul>
+     *
+     * @param certificateRequestId 证书申请 requestId（MPT-CERT-* 等）
+     * @param businessDomain       业务域（缺省 V2C_COMM）
+     * @param includeTerminal      是否附带历史终结批次（仅供审计，不进入清理选择）
+     * @return 寻址结果；批次摘要不包含任何证书/密钥材料
+     */
+    public CertificateProvisioningResolutionResult resolveByCertificateRequest(String certificateRequestId,
+                                                                                String businessDomain,
+                                                                                boolean includeTerminal) {
+        if (certificateRequestId == null || certificateRequestId.isBlank()) {
+            throw new IllegalArgumentException("证书申请 requestId 必填");
+        }
+        if (businessDomain == null || businessDomain.isBlank()) {
+            businessDomain = DEFAULT_BUSINESS_DOMAIN;
+        }
+        VehicleCertificate cert = vehicleCertificateRepository.selectByRequestId(certificateRequestId);
+        if (cert == null) {
+            throw new CertificateRequestNotExistException("certificateRequestId=" + certificateRequestId);
+        }
+        if (cert.getDeviceSn() == null || cert.getCertSn() == null || cert.getCertSn().isBlank()) {
+            throw new BusinessKeyProvisioningCertificateDataIncompleteException(
+                    "certificateRequestId=" + certificateRequestId + ", 缺少 deviceSn 或 certSn");
+        }
+
+        List<BusinessKeyProvisioning> openBatches =
+                provisioningRepository.selectOpenListByDeviceAndDomain(cert.getDeviceSn(), businessDomain);
+        if (openBatches.size() > 1) {
+            log.warn("证书维度寻址命中多条未终结批次，fail-closed: certificateRequestId={}, deviceSn={}, domain={}, count={}",
+                    certificateRequestId, cert.getDeviceSn(), businessDomain, openBatches.size());
+            throw new BusinessKeyProvisioningResolutionInconsistentException(
+                    "deviceSn=" + cert.getDeviceSn() + ", domain=" + businessDomain
+                            + ", openBatchCount=" + openBatches.size());
+        }
+
+        List<CertificateProvisioningResolutionResult.ProvisioningSummary> terminalHistory = Collections.emptyList();
+        if (includeTerminal) {
+            terminalHistory = provisioningRepository
+                    .selectTerminalListByDeviceAndDomain(cert.getDeviceSn(), businessDomain).stream()
+                    .map(this::toProvisioningSummary)
+                    .toList();
+        }
+
+        CertificateProvisioningResolutionResult.Resolution resolution = openBatches.isEmpty()
+                ? CertificateProvisioningResolutionResult.Resolution.NO_OPEN_PROVISIONING
+                : CertificateProvisioningResolutionResult.Resolution.OPEN_BATCH_FOUND;
+        log.info("证书维度寻址开通批次完成: certificateRequestId={}, deviceSn={}, domain={}, resolution={}, openBatch={}",
+                certificateRequestId, cert.getDeviceSn(), businessDomain, resolution,
+                openBatches.isEmpty() ? null : openBatches.get(0).getRequestId());
+
+        return CertificateProvisioningResolutionResult.builder()
+                .certificateRequestId(certificateRequestId)
+                .deviceSn(cert.getDeviceSn())
+                .businessDomain(businessDomain)
+                .resolution(resolution)
+                .openBatch(openBatches.isEmpty() ? null : toProvisioningSummary(openBatches.get(0)))
+                .terminalHistory(terminalHistory)
+                .build();
+    }
+
+    /**
+     * 构造批次摘要（VMD-DSN-CR-065 §6.2 ProvisioningSummary）。
+     * <p>证书变更判定复用 {@link #resolveCertificateChanged}（best-effort，仅展示）。
+     */
+    private CertificateProvisioningResolutionResult.ProvisioningSummary toProvisioningSummary(BusinessKeyProvisioning batch) {
+        return CertificateProvisioningResolutionResult.ProvisioningSummary.builder()
+                .provisioningRequestId(batch.getRequestId())
+                .state(batch.getStatus() != null ? batch.getStatus().getValue() : null)
+                .modifyTime(batch.getModifyTime())
+                .certificateChanged(resolveCertificateChanged(batch))
+                .clearCandidate(batch.getStatus() == BusinessKeyProvisioningState.PREPARING
+                        || batch.getStatus() == BusinessKeyProvisioningState.RECONCILE_REQUIRED)
+                .build();
     }
 
     /**

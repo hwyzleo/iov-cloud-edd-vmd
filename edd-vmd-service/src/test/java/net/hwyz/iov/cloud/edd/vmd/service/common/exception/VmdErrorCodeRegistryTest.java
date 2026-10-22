@@ -140,4 +140,13 @@ class VmdErrorCodeRegistryTest {
         assertEquals(VmdErrorCode.CERTIFICATE_ISSUED_PROFILE_MISMATCH,
                 ErrorCodeRegistry.findByCode("806119").orElse(null));
     }
+
+    @Test
+    void businessKeyProvisioningAddressingErrorCodes_present() {
+        // VMD-DSN-CR-065 §6.2 证书维度寻址域错误码（806128～806129）
+        assertEquals("806128", VmdErrorCode.BUSINESS_KEY_PROVISIONING_CERTIFICATE_DATA_INCOMPLETE.getCode());
+        assertEquals("806129", VmdErrorCode.BUSINESS_KEY_PROVISIONING_RESOLUTION_INCONSISTENT.getCode());
+        assertEquals(VmdErrorCode.BUSINESS_KEY_PROVISIONING_RESOLUTION_INCONSISTENT,
+                ErrorCodeRegistry.findByCode("806129").orElse(null));
+    }
 }

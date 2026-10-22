@@ -150,6 +150,26 @@
         LIMIT 1
     </select>
 
+    <select id="selectOpenPoListByDeviceAndDomain" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList" />
+        FROM tb_business_key_provisioning
+        WHERE device_sn = #{deviceSn}
+          AND business_domain = #{businessDomain}
+          AND status IN ('PREPARING','WAIT_DEVICE_ACK','RECONCILE_REQUIRED')
+          AND row_valid = 1
+        ORDER BY id DESC
+    </select>
+
+    <select id="selectTerminalPoListByDeviceAndDomain" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList" />
+        FROM tb_business_key_provisioning
+        WHERE device_sn = #{deviceSn}
+          AND business_domain = #{businessDomain}
+          AND status IN ('COMPLETED','FAILED','EXPIRED')
+          AND row_valid = 1
+        ORDER BY modify_time DESC, create_time DESC
+    </select>
+
     <select id="selectPoListByStatusBefore" resultMap="baseResultMap">
         SELECT <include refid="baseColumnList" />
         FROM tb_business_key_provisioning
