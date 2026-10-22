@@ -100,4 +100,9 @@ public class VmdOutboxRepositoryImpl implements VmdOutboxRepository {
     public long countBySourceRefIdAndPublishState(String sourceRefId, String publishState) {
         return vmdOutboxMapper.countBySourceRefIdAndPublishState(sourceRefId, publishState);
     }
+
+    @Override
+    public long countByAggregateAndEventType(String aggregateId, String eventType) {
+        return vmdOutboxMapper.countPoByAggregateAndEventType(aggregateId, eventType);
+    }
 }

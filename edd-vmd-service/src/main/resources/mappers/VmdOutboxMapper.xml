@@ -162,4 +162,13 @@
         <!-- 添加自定义条件 -->
     </select>
 
+    <!-- VMD-DSN-CR-065：成功事实反查——统计指定聚合（批次）下某事件类型的消息数 -->
+    <select id="countPoByAggregateAndEventType" resultType="long">
+        SELECT COUNT(*)
+        FROM tb_vmd_outbox t
+        WHERE t.aggregate_id = #{aggregateId}
+          AND t.event_type = #{eventType}
+          AND t.row_valid = 1
+    </select>
+
 </mapper>

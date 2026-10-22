@@ -40,4 +40,13 @@ public interface VmdOutboxRepository {
      * @return 消息数量
      */
     long countBySourceRefIdAndPublishState(String sourceRefId, String publishState);
+
+    /**
+     * 统计指定聚合（批次）下某事件类型的消息数（VMD-DSN-CR-065 成功事实反查）
+     *
+     * @param aggregateId 聚合ID（开通批次 requestId）
+     * @param eventType   事件类型（TboxV2cKeyProvisionedEvent）
+     * @return 消息数
+     */
+    long countByAggregateAndEventType(String aggregateId, String eventType);
 }

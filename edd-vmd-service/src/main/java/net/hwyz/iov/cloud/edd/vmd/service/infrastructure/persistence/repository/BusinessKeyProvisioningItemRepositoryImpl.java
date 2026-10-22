@@ -39,6 +39,15 @@ public class BusinessKeyProvisioningItemRepositoryImpl implements BusinessKeyPro
     }
 
     @Override
+    public List<BusinessKeyProvisioningItem> selectByProvisioningIdForUpdate(Long provisioningId) {
+        List<BusinessKeyProvisioningItemPo> poList = businessKeyProvisioningItemMapper.selectPoListByProvisioningIdForUpdate(provisioningId);
+        if (poList == null || poList.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return BusinessKeyProvisioningItemConverter.INSTANCE.toDomainList(poList);
+    }
+
+    @Override
     public BusinessKeyProvisioningItem selectByProvisioningIdAndPurpose(Long provisioningId, String purpose) {
         BusinessKeyProvisioningItemPo po = businessKeyProvisioningItemMapper
                 .selectPoByProvisioningIdAndPurpose(provisioningId, purpose);

@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.BusinessKeyProvisioningState;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.TerminationReasonCode;
 import net.hwyz.iov.cloud.framework.common.domain.BaseDo;
 
 import java.time.LocalDateTime;
@@ -176,5 +177,44 @@ public class BusinessKeyProvisioning extends BaseDo<Long> {
     public void markExpired(String reason) {
         this.status = BusinessKeyProvisioningState.EXPIRED;
         this.failReason = reason;
+    }
+
+    /**
+     * 运维逻辑终止为 FAILED（VMD-DSN-CR-065 RD-065-2/RD-065-3）。
+     * <p>
+     * 仅允许 PREPARING / RECONCILE_REQUIRED → FAILED；COMPLETED 已有合法成功事实，永不允许逆转；
+     * FAILED/EXPIRED 为终态，重复调用幂等不变更。
+     * 由调用方保证安全门禁（成功事实/目录归属/operation 无副作用）通过后才可调用。
+     *
+     * @param reasonCode       受治理终止原因码（写入 fail_reason 的紧凑前缀）
+     * @param sanitizedReason  清理后的自由文本上下文（非敏感、不含操作者/敏感材料）
+     * @param now              操作时间
+     * @return 是否发生状态变更；false 表示已是 FAILED/EXPIRED 终态或状态不允许
+     */
+    public boolean terminateByOperator(TerminationReasonCode reasonCode, String sanitizedReason, java.time.LocalDateTime now) {
+        if (status == BusinessKeyProvisioningState.FAILED || status == BusinessKeyProvisioningState.EXPIRED) {
+            // 幂等：保留原终态
+            return false;
+        }
+        if (status != BusinessKeyProvisioningState.PREPARING
+                && status != BusinessKeyProvisioningState.RECONCILE_REQUIRED) {
+            // COMPLETED 等状态不允许运维终止
+            return false;
+        }
+        this.status = BusinessKeyProvisioningState.FAILED;
+        this.failReason = buildTerminationReason(reasonCode, sanitizedReason);
+        this.modifyTime = now;
+        return true;
+    }
+
+    /**
+     * 构造紧凑、非敏感的终止原因：终止码 + 清理后的上下文；审计关联号由调用方拼入上下文。
+     */
+    private String buildTerminationReason(TerminationReasonCode reasonCode, String sanitizedReason) {
+        String code = reasonCode != null ? reasonCode.getValue() : "MANUAL_INCIDENT_RECOVERY";
+        if (sanitizedReason == null || sanitizedReason.isBlank()) {
+            return code;
+        }
+        return code + "|" + sanitizedReason;
     }
 }

@@ -51,4 +51,13 @@ public interface VmdOutboxMapper extends BaseDao<VmdOutboxPo, Long> {
      */
     @Select("SELECT COUNT(*) FROM tb_vmd_outbox WHERE source_ref_id = #{sourceRefId} AND publish_state = #{publishState} AND row_valid = 1")
     long countBySourceRefIdAndPublishState(@Param("sourceRefId") String sourceRefId, @Param("publishState") String publishState);
+
+    /**
+     * 统计指定聚合（批次）下某事件类型的消息数（VMD-DSN-CR-065 成功事实反查）
+     *
+     * @param aggregateId 聚合ID（开通批次 requestId）
+     * @param eventType   事件类型（TboxV2cKeyProvisionedEvent）
+     * @return 消息数
+     */
+    long countPoByAggregateAndEventType(@Param("aggregateId") String aggregateId, @Param("eventType") String eventType);
 }

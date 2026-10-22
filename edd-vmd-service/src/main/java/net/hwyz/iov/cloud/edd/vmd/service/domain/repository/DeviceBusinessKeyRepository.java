@@ -135,6 +135,20 @@ public interface DeviceBusinessKeyRepository {
     List<DeviceBusinessKey> selectDeprecatedExpired(LocalDateTime now, int limit);
 
     /**
+     * 条件批量失败化本批次 PENDING 目录（VMD-DSN-CR-065 RD-065-3）
+     * <p>
+     * 仅允许 PENDING → FAILED：{@code WHERE request_id = :requestId AND key_state = 'PENDING'
+     * AND key_id IN (:keyIds)}，返回受影响行数；与预期 item 数不一致时由调用方整体回滚。
+     * 不删除数据、不清空 key_id/operation_id/request_digest 等证据元数据。
+     *
+     * @param requestId 批次幂等键
+     * @param keyIds    本批次关联的目录 key_id 集合（空集合时不做任何更新并返回 0）
+     * @param reason    非敏感失败原因（紧凑终止码 + 审计关联号）
+     * @return 受影响行数
+     */
+    int markPendingKeysFailed(String requestId, java.util.List<String> keyIds, String reason);
+
+    /**
      * 插入新行
      *
      * @param entity 业务密钥

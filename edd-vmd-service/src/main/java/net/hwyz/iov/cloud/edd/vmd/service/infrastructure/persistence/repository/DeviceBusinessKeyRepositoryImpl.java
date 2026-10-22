@@ -113,6 +113,14 @@ public class DeviceBusinessKeyRepositoryImpl implements DeviceBusinessKeyReposit
     }
 
     @Override
+    public int markPendingKeysFailed(String requestId, List<String> keyIds, String reason) {
+        if (requestId == null || keyIds == null || keyIds.isEmpty()) {
+            return 0;
+        }
+        return deviceBusinessKeyMapper.markPendingKeysFailed(requestId, keyIds, reason);
+    }
+
+    @Override
     public int insert(DeviceBusinessKey entity) {
         DeviceBusinessKeyPo po = DeviceBusinessKeyConverter.INSTANCE.fromDomain(entity);
         int rows = deviceBusinessKeyMapper.insertPo(po);

@@ -303,6 +303,24 @@
         LIMIT #{limit}
     </select>
 
+    <!-- VMD-DSN-CR-065：运维终止——条件批量失败化本批次 PENDING 目录（仅 PENDING→FAILED，
+         不删除数据、不清空 key_id/operation_id/request_digest 等证据元数据） -->
+    <update id="markPendingKeysFailed">
+        UPDATE tb_device_business_key t SET
+        t.key_state = 'FAILED',
+        t.fail_reason = #{reason},
+        t.last_attempt_time = now(),
+        t.modify_time = now(),
+        t.row_version = t.row_version + 1
+        WHERE t.request_id = #{requestId}
+          AND t.key_state = 'PENDING'
+          AND t.key_id IN
+        <foreach collection="keyIds" item="keyId" open="(" separator="," close=")">
+            #{keyId}
+        </foreach>
+          AND t.row_valid = 1
+    </update>
+
     <!-- 根据主键获取对应数据 -->
     <select id="selectPoById" parameterType="Long" resultMap="baseResultMap">
         SELECT <include refid="baseColumnList"/>

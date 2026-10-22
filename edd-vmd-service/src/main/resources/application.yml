@@ -185,6 +185,10 @@ vmd:
       scheduler:
         enabled: ${VMD_BUSINESS_KEY_MAINTENANCE_ENABLED:true}
         batch-size: ${VMD_BUSINESS_KEY_MAINTENANCE_BATCH_SIZE:200}
+      # VMD-DSN-CR-065：MPT 一键清理阻塞（运维终止）开关，默认关闭 fail-closed
+      terminate-enabled: ${VMD_BUSINESS_KEY_TERMINATE_ENABLED:false}
+      # 最小滞留阈值（秒）：滞留未超过该阈值时禁止运维终止（NOT_STALE）
+      terminate-stale-threshold-seconds: ${VMD_BUSINESS_KEY_TERMINATE_STALE_THRESHOLD_SECONDS:86400}
   binding:
     kafka:
       enabled: ${VMD_BINDING_KAFKA_ENABLED:true}

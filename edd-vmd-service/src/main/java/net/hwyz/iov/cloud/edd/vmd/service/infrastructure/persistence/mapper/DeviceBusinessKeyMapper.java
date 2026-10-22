@@ -134,6 +134,18 @@ public interface DeviceBusinessKeyMapper extends BaseDao<DeviceBusinessKeyPo, Lo
     List<DeviceBusinessKeyPo> selectPoListByDeviceSn(@Param("deviceSn") String deviceSn);
 
     /**
+     * 条件批量失败化本批次 PENDING 目录（VMD-DSN-CR-065）
+     *
+     * @param requestId 批次幂等键
+     * @param keyIds    本批次关联的目录 key_id 集合
+     * @param reason    非敏感失败原因
+     * @return 受影响行数
+     */
+    int markPendingKeysFailed(@Param("requestId") String requestId,
+                              @Param("keyIds") List<String> keyIds,
+                              @Param("reason") String reason);
+
+    /**
      * 查询超过解密窗口的 DEPRECATED 行（EXPIRED 扫批）
      *
      * @param now   当前时间

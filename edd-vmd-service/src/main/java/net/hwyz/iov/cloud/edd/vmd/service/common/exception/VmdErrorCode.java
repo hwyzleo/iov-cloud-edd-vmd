@@ -142,7 +142,16 @@ public enum VmdErrorCode implements ErrorCode {
     CERTIFICATE_UID_BINDING_MISMATCH("806118", "签发结果 Subject CN 与权威UID不一致，复验拒绝"),
     CERTIFICATE_ISSUED_PROFILE_MISMATCH("806119", "签发结果不满足逻辑Profile（链/有效期/曲线/KU/EKU/critical扩展），复验拒绝"),
     CERTIFICATE_MATERIAL_UNAVAILABLE("806120", "证书签发/复验所需材料或依赖暂不可用，需以原requestId重试"),
-    CERTIFICATE_ENROLLMENT_OUTCOME_UNKNOWN("806121", "证书签发结果未知，需以原requestId对账");
+    CERTIFICATE_ENROLLMENT_OUTCOME_UNKNOWN("806121", "证书签发结果未知，需以原requestId对账"),
+
+    // ================= CR-065 滞留开通批次运维终止域（806122～806127） =================
+    // 落地 VMD-DSN-CR-065：MPT 一键清理阻塞（逻辑终止，不删数据、不发成功事件）。
+    BUSINESS_KEY_PROVISIONING_TERMINATE_DISABLED("806122", "业务密钥开通批次运维终止未启用"),
+    BUSINESS_KEY_PROVISIONING_TERMINATE_NOT_ALLOWED("806123", "业务密钥开通批次状态不允许运维终止或未超滞留阈值"),
+    BUSINESS_KEY_PROVISIONING_TERMINATE_RECONCILE_FIRST("806124", "业务密钥开通批次存在结果未知的operation，需先对账"),
+    BUSINESS_KEY_PROVISIONING_TERMINATE_SUCCESS_FACT_EXISTS("806125", "业务密钥开通批次存在成功事实，禁止终止"),
+    BUSINESS_KEY_PROVISIONING_TERMINATE_DIRECTORY_CONFLICT("806126", "业务密钥开通批次目录归属冲突，禁止终止"),
+    BUSINESS_KEY_PROVISIONING_TERMINATE_STALE_VIEW("806127", "业务密钥开通批次页面视图已过期，请刷新后重试");
 
     private final String code;
     private final String message;

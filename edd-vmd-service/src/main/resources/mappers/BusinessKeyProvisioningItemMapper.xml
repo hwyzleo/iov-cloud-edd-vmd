@@ -147,6 +147,14 @@
         ORDER BY purpose ASC
     </select>
 
+    <select id="selectPoListByProvisioningIdForUpdate" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList" />
+        FROM tb_business_key_provisioning_item
+        WHERE provisioning_id = #{provisioningId} AND row_valid = 1
+        ORDER BY purpose ASC
+        FOR UPDATE
+    </select>
+
     <select id="selectPoByProvisioningIdAndPurpose" resultMap="baseResultMap">
         SELECT <include refid="baseColumnList" />
         FROM tb_business_key_provisioning_item
