@@ -9,7 +9,9 @@ import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyNotExistEx
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyRotationConflictException;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.DeviceBusinessKey;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.BusinessKeyState;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.BusinessKeyProvisioningItemRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.DeviceBusinessKeyRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.monitoring.BusinessKeyProvisioningMetrics;
 import net.hwyz.iov.cloud.framework.security.crypto.BusinessKeyCacheInvalidator;
 import net.hwyz.iov.cloud.framework.security.crypto.BusinessKeyMaterialTemplate;
 import net.hwyz.iov.cloud.framework.security.crypto.KeyProvisioningTemplate;
@@ -63,6 +65,10 @@ class BusinessKeyRotationAppServiceTest {
     @Mock
     private DeviceBusinessKeyRepository repository;
     @Mock
+    private BusinessKeyProvisioningItemRepository itemRepository;
+    @Mock
+    private BusinessKeyProvisioningMetrics metrics;
+    @Mock
     private BoundDeviceIdentityResolver boundDeviceIdentityResolver;
     @Mock
     private ActiveDeviceCertificateResolver activeDeviceCertificateResolver;
@@ -98,9 +104,13 @@ class BusinessKeyRotationAppServiceTest {
     void setUp() {
         lenient().when(transactionManager.getTransaction(any())).thenReturn(transactionStatus);
         lenient().when(cacheInvalidatorProvider.getIfAvailable()).thenReturn(cacheInvalidator);
+        LogicalKeyGenerationPolicy generationPolicy = new LogicalKeyGenerationPolicy();
+        BusinessKeyDerivedMaterialService derivedMaterialService = new BusinessKeyDerivedMaterialService(
+                repository, itemRepository, generationPolicy, metrics);
+        lenient().when(itemRepository.selectByDirectoryKeyId(any())).thenReturn(null);
         service = new BusinessKeyRotationAppService(repository, boundDeviceIdentityResolver,
                 activeDeviceCertificateResolver, authorizationPolicy, bizTypeMapper, materialRouter,
-                publisher, cacheInvalidatorProvider, transactionManager);
+                publisher, derivedMaterialService, metrics, cacheInvalidatorProvider, transactionManager);
         identity = new BoundDeviceIdentity("HWYZTEST900000001", 10L, 20L, DEVICE_SN, "TBOX",
                 "00000000000000000000000000000001", "BOTH");
         policyEntry = new BusinessKeyPolicyEntry(DOMAIN, PURPOSE, Set.of("TBOX"),
@@ -158,6 +168,8 @@ class BusinessKeyRotationAppServiceTest {
         when(materialRouter.isDerivedRoot(bizType)).thenReturn(true);
         when(materialRouter.materialModel(bizType)).thenReturn(KeyMaterialModel.DERIVED_ROOT);
         when(materialRouter.requireDerivedRoot(bizType)).thenReturn(derivedTemplate);
+        // CR-066：新行材料回填（attachDerivedMaterial 成功）
+        lenient().when(repository.attachDerivedMaterial(any(DeviceBusinessKey.class))).thenReturn(1);
         when(repository.selectActiveByContextForUpdate(DEVICE_SN, DOMAIN, PURPOSE)).thenReturn(old);
         when(repository.maxBusinessKeyVersion(DEVICE_SN, DOMAIN, PURPOSE)).thenReturn(1L);
         when(repository.insert(any(DeviceBusinessKey.class))).thenAnswer(inv -> {
@@ -251,6 +263,7 @@ class BusinessKeyRotationAppServiceTest {
         when(repository.selectById(1L)).thenReturn(old);
         when(repository.selectById(2L)).thenAnswer(inv -> newRow);
         when(repository.update(any(DeviceBusinessKey.class))).thenReturn(1);
+        when(repository.attachDerivedMaterial(any(DeviceBusinessKey.class))).thenReturn(1);
 
         service.rotate(cmd(V2C_DOMAIN));
 
@@ -394,5 +407,34 @@ class BusinessKeyRotationAppServiceTest {
         verify(randomTemplate).wrap(any(BusinessKeyRef.class), any(RecipientRef.class), any(WrapContext.class));
         verify(derivedTemplate, never()).deriveAndWrap(any(), any(), any(), any(), any(), any(), any());
         verify(publisher).publish(any(DeviceBusinessKey.class), eq("ROTATED"));
+    }
+
+    @Test
+    @DisplayName("CR-066：轮换 Provider 返回与 ACTIVE 相同 keyId → 未发生真实代际变化，拒绝激活新行")
+    void rotate_sameKeyIdAsActive_rejected() {
+        DeviceBusinessKey old = oldActive(KeyMaterialModel.DERIVED_ROOT.name());
+        stubCommonForDerived(BizType.TBOX_DEVICE_ROOT, old);
+        when(activeDeviceCertificateResolver.resolveActive(identity))
+                .thenReturn(new ActiveDeviceCertificate("C", "PKI", "a".repeat(64)));
+        // Provider 返回与当前 ACTIVE 相同的 keyId（rootKeyVersion/derivationVersion/anchor 未变）
+        when(derivedTemplate.deriveAndWrap(any(), any(), any(), any(), any(), any(), any()))
+                .thenReturn(KeyprovEnvelopeTestFixtures.derivedWrappedKey(OLD_KEY_ID,
+                        net.hwyz.iov.cloud.framework.security.crypto.model.KeyPurpose.UPLINK_AEAD,
+                        3L, 3L, "v1", "OP-SAME"));
+        when(repository.selectById(2L)).thenAnswer(inv -> newRow);
+        when(repository.update(any(DeviceBusinessKey.class))).thenReturn(1);
+
+        assertThrows(BusinessKeyRotationConflictException.class, () -> service.rotate(cmd()));
+
+        // 新行不得激活（留痕 FAILED），旧 ACTIVE 不降级
+        ArgumentCaptor<DeviceBusinessKey> captor = ArgumentCaptor.forClass(DeviceBusinessKey.class);
+        verify(repository, atLeastOnce()).update(captor.capture());
+        assertTrue(captor.getAllValues().stream().anyMatch(k -> k.getId() != null && k.getId().equals(2L)
+                        && k.getKeyState() == BusinessKeyState.FAILED),
+                "新行应标记 FAILED（未发生真实代际变化）");
+        assertTrue(captor.getAllValues().stream().noneMatch(k -> k.getId() != null && k.getId().equals(2L)
+                        && k.getKeyState() == BusinessKeyState.ACTIVE),
+                "不得激活新行");
+        verify(publisher, never()).publish(any(DeviceBusinessKey.class), eq("ROTATED"));
     }
 }

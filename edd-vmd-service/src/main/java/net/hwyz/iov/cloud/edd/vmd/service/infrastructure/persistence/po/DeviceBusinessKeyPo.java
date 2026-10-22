@@ -177,6 +177,30 @@ public class DeviceBusinessKeyPo extends BasePo {
     private String operationId;
 
     /**
+     * 被取代后指向canonical目录行（SUPERSEDED行必填）
+     */
+    @TableField("superseded_by_id")
+    private Long supersededById;
+
+    /**
+     * 非敏感规范化身份摘要（BINARY32，辅助预检与审计）
+     */
+    @TableField("logical_identity_digest")
+    private byte[] logicalIdentityDigest;
+
+    /**
+     * 同目录材料恢复次数（FAILED→PENDING_RECOVERY→PENDING）
+     */
+    @TableField("recovery_count")
+    private Integer recoveryCount;
+
+    /**
+     * 最近恢复attempt审计引用
+     */
+    @TableField("last_recovery_request_id")
+    private String lastRecoveryRequestId;
+
+    /**
      * 规范化请求摘要（参数冲突识别）
      */
     @TableField("request_digest")

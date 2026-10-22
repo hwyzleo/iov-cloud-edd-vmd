@@ -30,8 +30,13 @@ import java.util.TreeMap;
  * <ul>
  *   <li>无 ACTIVE → INITIAL</li>
  *   <li>设备声明版本 == ACTIVE 版本 → REIMPORT（复用 ACTIVE，重新 Wrap）</li>
- *   <li>版本缺失/落后 → ROTATE（新建 PENDING）</li>
+ *   <li>版本缺失（0）且代际相同 → REIMPORT（复用 canonical 行，VMD-DSN-CR-066 §6.1）</li>
+ *   <li>派生格式版本变化（真实代际变化）→ ROTATE（新建 PENDING，VMD-DSN-CR-066 §5.2）</li>
+ *   <li>声明版本与 ACTIVE 不一致但代际相同 → VERSION_GENERATION_MISMATCH（不可重试，
+ *       外部车端声明不得强制提升业务版本，VMD-DSN-CR-066 §6.1/§8）</li>
  * </ul>
+ * rootKeyVersion 由 Provider 在派生后返回：真实根版本代际变化经 claim-or-reuse 的
+ * keyId/身份一致性校验收敛（不新建目录行时复用既有 canonical 行）。
  *
  * @author hwyz_leo
  * @since 2026-10-12
@@ -61,21 +66,32 @@ public class BusinessKeyProvisioningDomainService {
     }
 
     /**
-     * 服务端推导目标版本模式。
+     * 服务端推导目标版本模式（VMD-DSN-CR-066 §6.1 修订）。
      *
-     * @param active          当前 ACTIVE 目录行（可为空）
-     * @param declaredVersion 设备在 current_versions 中声明的版本（0 表示无版本）
+     * @param active                 当前 ACTIVE 目录行（可为空）
+     * @param declaredVersion       设备在 current_versions 中声明的版本（0 表示无版本）
+     * @param currentDerivationVersion VMD 当前派生格式版本（{@code crypto.provisioning.derived-key.derivation-version}）
      * @return 目标版本模式
      */
-    public BusinessKeyProvisioningIntent deriveIntent(DeviceBusinessKey active, long declaredVersion) {
+    public BusinessKeyProvisioningIntent deriveIntent(DeviceBusinessKey active, long declaredVersion,
+                                                      String currentDerivationVersion) {
         if (active == null) {
             return BusinessKeyProvisioningIntent.INITIAL;
+        }
+        // 真实代际变化优先：派生格式版本变化（rootKeyVersion 由 Provider 返回后经 claim-or-reuse 校验）
+        if (active.getDerivationVersion() != null
+                && !active.getDerivationVersion().equals(currentDerivationVersion)) {
+            return BusinessKeyProvisioningIntent.ROTATE;
         }
         if (declaredVersion > 0 && active.getBusinessKeyVersion() != null
                 && declaredVersion == active.getBusinessKeyVersion()) {
             return BusinessKeyProvisioningIntent.REIMPORT;
         }
-        return BusinessKeyProvisioningIntent.ROTATE;
+        // 历史行派生格式未知（null）：无法证明代际变化；版本缺失 → 复用 canonical，不一致 → 版本代际冲突
+        if (declaredVersion <= 0) {
+            return BusinessKeyProvisioningIntent.REIMPORT;
+        }
+        return BusinessKeyProvisioningIntent.VERSION_GENERATION_MISMATCH;
     }
 
     /**

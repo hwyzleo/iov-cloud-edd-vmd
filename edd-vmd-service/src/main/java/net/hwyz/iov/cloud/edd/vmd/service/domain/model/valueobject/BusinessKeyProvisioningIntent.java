@@ -9,8 +9,12 @@ import java.util.Locale;
  * 服务端轮换策略推导，不出现在车云 wire（canonical proto 无 intent 字段）：
  * <ul>
  *   <li>INITIAL：无 ACTIVE，创建新 PENDING 版本</li>
- *   <li>REIMPORT：设备声明的当前版本 == 目录 ACTIVE 版本（丢失/换证/恢复重导入），复用 ACTIVE 行重新 Wrap，不新建版本</li>
- *   <li>ROTATE：设备声明版本缺失/落后于 ACTIVE（升级/轮换），创建新 PENDING 版本，完成时旧 ACTIVE 转 DEPRECATED</li>
+ *   <li>REIMPORT：设备声明的当前版本 == 目录 ACTIVE 版本（或版本缺失且代际相同；丢失/换证/恢复重导入），
+ *       复用 ACTIVE 行重新 Wrap，不新建版本</li>
+ *   <li>ROTATE：真实密码学代际变化（派生格式/根版本变化，VMD-DSN-CR-066 §5.2），创建新 PENDING 版本，
+ *       完成时旧 ACTIVE 转 DEPRECATED</li>
+ *   <li>VERSION_GENERATION_MISMATCH：设备声明版本与 ACTIVE 不一致但密码学代际相同，
+ *       版本代际冲突（不可重试，VMD-DSN-CR-066 §6.1）</li>
  * </ul>
  *
  * @author hwyz_leo
@@ -20,7 +24,8 @@ public enum BusinessKeyProvisioningIntent {
 
     INITIAL,
     REIMPORT,
-    ROTATE;
+    ROTATE,
+    VERSION_GENERATION_MISMATCH;
 
     public static BusinessKeyProvisioningIntent valOf(String val) {
         if (val == null) {

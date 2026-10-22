@@ -12,6 +12,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.common.util.VinCanonicalizer;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.DeviceBusinessKey;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.BusinessKeyState;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.DeviceBusinessKeyRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.monitoring.BusinessKeyProvisioningMetrics;
 import net.hwyz.iov.cloud.framework.security.crypto.BusinessKeyCacheInvalidator;
 import net.hwyz.iov.cloud.framework.security.crypto.KeyProvisioningTemplate;
 import net.hwyz.iov.cloud.framework.security.crypto.exception.CryptoDependencyUnavailableException;
@@ -52,6 +53,11 @@ import java.util.function.Consumer;
  * </ul>
  * 任何创建/派生/落库失败都不得提前降级旧 ACTIVE；成功后旧版本转 DEPRECATED（仅解密窗口），
  * 业务版本递增且 KMS 版本不混入信封。
+ * <p>
+ * <strong>CR-066 §6.5</strong>：轮换必须发生真实密码学代际变化——Provider 返回与当前 ACTIVE 相同 keyId
+ * （rootKeyVersion/derivationVersion/anchor 未变）时拒绝激活新行；新行材料落库复用
+ * {@link BusinessKeyDerivedMaterialService#persistOrClaimDerivedMaterial}（撞 uk_key_id → claim-or-reuse 收敛），
+ * 与批量开通共用同一代际语义与身份一致性校验。
  *
  * @author hwyz_leo
  * @since 2026-10-08
@@ -70,6 +76,8 @@ public class BusinessKeyRotationAppService {
     private final BusinessKeyBizTypeMapper bizTypeMapper;
     private final BusinessKeyMaterialRouter materialRouter;
     private final BusinessKeyChangedPublisher businessKeyChangedPublisher;
+    private final BusinessKeyDerivedMaterialService derivedMaterialService;
+    private final BusinessKeyProvisioningMetrics metrics;
     private final ObjectProvider<BusinessKeyCacheInvalidator> cacheInvalidatorProvider;
     private final PlatformTransactionManager transactionManager;
 
@@ -206,15 +214,37 @@ public class BusinessKeyRotationAppService {
             throw new BusinessKeyKmsUnavailableException("轮换派生失败: requestId=" + cmd.getRequestId());
         }
 
-        // 原子切换：旧→DEPRECATED + 新→ACTIVE（回填派生非敏感字段）+ ROTATED 事件 + 缓存失效
-        switchActive(oldActive, newRow, policy, current -> applyDerivedMaterial(current, result, policy, operationId));
+        // CR-066 §6.5：断言返回代际与当前 ACTIVE 不同；同 keyId 说明无真实代际变化，拒绝激活新行
+        if (oldActive.getKeyId() != null && oldActive.getKeyId().equals(result.logicalKeyId())) {
+            failNewRow(newRow, "轮换未发生真实代际变化（Provider 返回与 ACTIVE 相同 keyId）");
+            metrics.recordRetryLoopPrevented("rotation_same_key_id");
+            throw new BusinessKeyRotationConflictException(
+                    "轮换配置错误：Provider 返回与当前 ACTIVE 相同 keyId，未发生真实代际变化"
+                            + "（rootKeyVersion/derivationVersion/anchor 未变），拒绝激活新行");
+        }
 
-        log.info("业务密钥轮换成功（根派生）: requestId={}, oldKeyId={}, newKeyId={}, newVersion={}",
-                cmd.getRequestId(), oldActive.getKeyId(), result.logicalKeyId(), newRow.getBusinessKeyVersion());
+        // CR-066 §6.5：与批量开通复用 persistOrClaimDerivedMaterial（撞 uk_key_id → claim-or-reuse 收敛）
+        Long canonicalId = derivedMaterialService.persistOrClaimDerivedMaterial(
+                newRow, result, policy, operationId, null,
+                new BusinessKeyDerivedMaterialService.ClaimContext(
+                        cmd.getDeviceSn(), cmd.getBusinessDomain(), cmd.getPurpose(),
+                        bizType.name(), anchor.value(), cmd.getRequestId()));
+        DeviceBusinessKey canonical = canonicalId.equals(newRow.getId())
+                ? newRow : deviceBusinessKeyRepository.selectById(canonicalId);
+        if (canonical == null) {
+            throw new BusinessKeyLogicalIdentityConflict("轮换 canonical 目录行不存在: id=" + canonicalId);
+        }
+
+        // 原子切换：旧→DEPRECATED + canonical→ACTIVE（回填派生非敏感字段）+ ROTATED 事件 + 缓存失效
+        switchActive(oldActive, canonical, policy, current -> applyDerivedMaterial(current, result, policy, operationId));
+
+        log.info("业务密钥轮换成功（根派生）: requestId={}, oldKeyId={}, newKeyId={}, newVersion={}, canonicalId={}",
+                cmd.getRequestId(), oldActive.getKeyId(), result.logicalKeyId(),
+                canonical.getBusinessKeyVersion(), canonical.getId());
         return BusinessKeyRotationResult.builder()
                 .requestId(cmd.getRequestId())
                 .newKeyId(result.logicalKeyId())
-                .newBusinessKeyVersion(newRow.getBusinessKeyVersion())
+                .newBusinessKeyVersion(canonical.getBusinessKeyVersion())
                 .oldKeyId(oldActive.getKeyId())
                 .oldBusinessKeyVersion(oldActive.getBusinessKeyVersion())
                 .state(BusinessKeyState.ACTIVE.getValue())

@@ -281,4 +281,25 @@ class FlywayMigrationTest {
         assertTrue(content.contains("idx_mdm_configuration_variant"), "迁移脚本应新增variant查询索引");
         assertTrue(content.contains("idx_mdm_configuration_sync"), "迁移脚本应新增同步监控索引");
     }
+
+    @Test
+    @DisplayName("V63迁移脚本文件应存在（CR-066）")
+    void v63MigrationScript_shouldExist() {
+        Path migrationFile = Paths.get(MIGRATION_PATH, "V63__Alter_business_key_cr066.sql");
+        assertTrue(Files.exists(migrationFile), "V63迁移脚本文件应该存在");
+    }
+
+    @Test
+    @DisplayName("V63迁移脚本应增加 claim-or-reuse 辅助字段与索引并保留 uk_key_id（CR-066）")
+    void v63MigrationScript_shouldAddClaimSupportColumns() throws IOException {
+        Path migrationFile = Paths.get(MIGRATION_PATH, "V63__Alter_business_key_cr066.sql");
+        String content = Files.readString(migrationFile);
+        assertTrue(content.contains("superseded_by_id"), "应新增 superseded_by_id 列");
+        assertTrue(content.contains("logical_identity_digest"), "应新增 logical_identity_digest 列");
+        assertTrue(content.contains("recovery_count"), "应新增 recovery_count 列");
+        assertTrue(content.contains("last_recovery_request_id"), "应新增 last_recovery_request_id 列");
+        assertTrue(content.contains("idx_logical_identity_digest"), "应新增 logical_identity_digest 索引");
+        assertTrue(content.contains("idx_superseded_by_id"), "应新增 superseded_by_id 索引");
+        assertFalse(content.contains("DROP INDEX"), "不得删除既有约束（uk_key_id 保留）");
+    }
 }

@@ -34,6 +34,18 @@ public interface BusinessKeyProvisioningItemRepository {
     BusinessKeyProvisioningItem selectByProvisioningIdAndPurpose(Long provisioningId, String purpose);
 
     /**
+     * 按目录行主键查询关联明细（CR-066 身份一致性校验：比较既有 canonical 行的 KCV 证据）。
+     * <p>同一目录行可能被多个批次 item 引用；返回首个（按 id 升序）。
+     */
+    BusinessKeyProvisioningItem selectByDirectoryKeyId(Long directoryKeyId);
+
+    /**
+     * 重挂目录行（CR-066 §6.3 claim-or-reuse）：item 指向 canonical 目录行。
+     * <p>在同一事务中调用；保留原占位 item 的 id 与冲突原因到审计（由调用方写入日志/审计）。
+     */
+    int rebindDirectoryKey(Long itemId, Long directoryKeyId, String keyId, Long businessKeyVersion);
+
+    /**
      * 插入明细
      */
     int insert(BusinessKeyProvisioningItem entity);

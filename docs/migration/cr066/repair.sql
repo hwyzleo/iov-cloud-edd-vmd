@@ -1,0 +1,72 @@
+-- VMD-DSN-CR-066 §10.3：存量数据修复动作（维护窗口按小批事务执行）
+-- 前置：已执行 V63 迁移；已按 inventory.sql 完成只读盘点并逐行确认 canonical；
+-- 以下为模板 SQL，实际执行前必须逐行核对主键，禁止整表盲跑。
+-- canonical 选择规则（§10.2）：
+--   1. 被已完成/未终结批次 item 正确引用且元数据完整；
+--   2. ACTIVE；
+--   3. PENDING/RECONCILE_REQUIRED 且有原 operation 证据；
+--   4. FAILED 但 Provider 元数据完整；
+--   5. 创建时间最早仅作 tie-breaker。
+-- 多 ACTIVE / KCV/root/derivation/kmsKeyRef 不一致 / 无法证明同源 → 停止自动处理并人工裁决。
+
+-- ============================================================
+-- 场景 A：同逻辑材料存在非 canonical 占位/重复行（key_id NULL 的 PENDING 占位）
+-- 本批次占位行 SUPERSEDED + 指向 canonical 行（保留 requestId/operationId/failReason 证据）
+-- ============================================================
+-- UPDATE tb_device_business_key
+-- SET key_state = 'SUPERSEDED',
+--     superseded_by_id = <canonical_id>,
+--     fail_reason = 'CR066_MIGRATION_SUPERSEDED',
+--     modify_time = NOW(),
+--     row_version = row_version + 1
+-- WHERE id = <placeholder_id>
+--   AND key_state = 'PENDING' AND key_id IS NULL AND row_valid = 1;
+
+-- ============================================================
+-- 场景 B：批次 item 重挂 canonical 行（同一事务）
+-- ============================================================
+-- UPDATE tb_business_key_provisioning_item t
+-- SET t.directory_key_id = <canonical_id>,
+--     t.key_id = (SELECT key_id FROM tb_device_business_key WHERE id = <canonical_id>),
+--     t.business_key_version = (SELECT business_key_version FROM tb_device_business_key WHERE id = <canonical_id>),
+--     t.modify_time = NOW(),
+--     t.row_version = t.row_version + 1
+-- WHERE t.id = <item_id> AND t.row_valid = 1;
+
+-- ============================================================
+-- 场景 C：canonical 为可恢复 FAILED（有 keyId 证据）→ 按批准状态迁移恢复
+-- FAILED→PENDING_RECOVERY→PENDING（recovery_count+1, last_recovery_request_id 记录运维审计引用）
+-- ============================================================
+-- UPDATE tb_device_business_key
+-- SET key_state = 'PENDING_RECOVERY',
+--     fail_reason = 'CR066_MIGRATION_RECOVERY',
+--     modify_time = NOW(),
+--     row_version = row_version + 1
+-- WHERE id = <canonical_id> AND key_state = 'FAILED' AND key_id IS NOT NULL AND row_valid = 1;
+--
+-- UPDATE tb_device_business_key
+-- SET key_state = 'PENDING',
+--     recovery_count = recovery_count + 1,
+--     last_recovery_request_id = '<maintenance_request_id>',
+--     fail_reason = NULL,
+--     modify_time = NOW(),
+--     row_version = row_version + 1
+-- WHERE id = <canonical_id> AND key_state = 'PENDING_RECOVERY' AND key_id IS NOT NULL AND row_valid = 1;
+
+-- ============================================================
+-- 修复后校验（§10.3）：唯一性、引用完整性、ACTIVE 唯一、批次用途完整性
+-- ============================================================
+-- 唯一性：同 keyId 多行
+-- SELECT key_id, COUNT(*) FROM tb_device_business_key WHERE key_id IS NOT NULL AND row_valid = 1
+--   GROUP BY key_id HAVING COUNT(*) > 1;
+-- 引用完整性：item 指向 SUPERSEDED/失效行的数量（应为 0，除占位外均指向 canonical）
+-- SELECT COUNT(*) FROM tb_business_key_provisioning_item i
+--   JOIN tb_device_business_key k ON k.id = i.directory_key_id
+--   WHERE i.row_valid = 1 AND k.row_valid = 1 AND k.key_state = 'SUPERSEDED';
+-- ACTIVE 唯一
+-- SELECT device_sn, business_domain, purpose, COUNT(*) FROM tb_device_business_key
+--   WHERE key_state = 'ACTIVE' AND row_valid = 1
+--   GROUP BY device_sn, business_domain, purpose HAVING COUNT(*) > 1;
+-- 断裂 superseded 引用
+-- SELECT id, superseded_by_id FROM tb_device_business_key
+--   WHERE key_state = 'SUPERSEDED' AND (superseded_by_id IS NULL OR row_valid = 0);

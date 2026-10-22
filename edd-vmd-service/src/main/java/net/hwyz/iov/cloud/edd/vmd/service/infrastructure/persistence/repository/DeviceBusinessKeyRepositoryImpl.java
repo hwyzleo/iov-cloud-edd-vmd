@@ -39,6 +39,12 @@ public class DeviceBusinessKeyRepositoryImpl implements DeviceBusinessKeyReposit
     }
 
     @Override
+    public DeviceBusinessKey selectByKeyIdForUpdate(String keyId) {
+        DeviceBusinessKeyPo po = deviceBusinessKeyMapper.selectPoByKeyIdForUpdate(keyId);
+        return po != null ? DeviceBusinessKeyConverter.INSTANCE.toDomain(po) : null;
+    }
+
+    @Override
     public DeviceBusinessKey selectByRequestId(String requestId) {
         DeviceBusinessKeyPo po = deviceBusinessKeyMapper.selectPoByRequestId(requestId);
         return po != null ? DeviceBusinessKeyConverter.INSTANCE.toDomain(po) : null;
@@ -118,6 +124,27 @@ public class DeviceBusinessKeyRepositoryImpl implements DeviceBusinessKeyReposit
             return 0;
         }
         return deviceBusinessKeyMapper.markPendingKeysFailed(requestId, keyIds, reason);
+    }
+
+    @Override
+    public int attachDerivedMaterial(DeviceBusinessKey entity) {
+        DeviceBusinessKeyPo po = DeviceBusinessKeyConverter.INSTANCE.fromDomain(entity);
+        return deviceBusinessKeyMapper.attachDerivedMaterial(po);
+    }
+
+    @Override
+    public int markPlaceholderSuperseded(Long id, Long supersededById, String reason) {
+        return deviceBusinessKeyMapper.markPlaceholderSuperseded(id, supersededById, reason);
+    }
+
+    @Override
+    public int markPendingRecovery(Long id, String reason) {
+        return deviceBusinessKeyMapper.markPendingRecovery(id, reason);
+    }
+
+    @Override
+    public int confirmRecovery(Long id, String recoveryRequestId) {
+        return deviceBusinessKeyMapper.confirmRecovery(id, recoveryRequestId);
     }
 
     @Override

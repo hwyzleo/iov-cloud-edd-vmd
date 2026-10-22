@@ -164,6 +164,28 @@
         LIMIT 1
     </select>
 
+    <!-- CR-066：按目录行主键查询关联明细（身份一致性校验：KCV 证据比对） -->
+    <select id="selectPoByDirectoryKeyId" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList" />
+        FROM tb_business_key_provisioning_item
+        WHERE directory_key_id = #{directoryKeyId}
+          AND row_valid = 1
+        ORDER BY id ASC
+        LIMIT 1
+    </select>
+
+    <!-- CR-066：item 重挂 canonical 目录行（claim-or-reuse 同事务执行） -->
+    <update id="rebindDirectoryKey">
+        UPDATE tb_business_key_provisioning_item t SET
+        t.directory_key_id = #{directoryKeyId},
+        t.key_id = #{keyId},
+        t.business_key_version = #{businessKeyVersion},
+        t.modify_time = now(),
+        t.row_version = t.row_version + 1
+        WHERE t.id = #{itemId}
+          AND t.row_valid = 1
+    </update>
+
     <select id="selectPoById" parameterType="Long" resultMap="baseResultMap">
         SELECT <include refid="baseColumnList"/>
         FROM tb_business_key_provisioning_item t

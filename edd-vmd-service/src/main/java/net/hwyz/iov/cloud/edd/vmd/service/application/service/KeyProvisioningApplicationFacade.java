@@ -5,6 +5,8 @@ import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.keyprov.VmdKeyProvisioningOutcome;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.KeyProvisioningOperationResult;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyKmsUnavailableException;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyLogicalIdentityConflict;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyVersionGenerationMismatchException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.VmdErrorCode;
 import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateApplicationRejectedException;
 import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateEvidenceMismatchException;
@@ -183,6 +185,17 @@ public class KeyProvisioningApplicationFacade {
             log.warn("keyprov request 封装失败: requestId={}", request.getRequestId());
             return error(request.getRequestId(), VmdErrorCode.KEYPROV_WRAP_FAILED,
                     VmdKeyProvisioningOutcome.REJECTED, false, "业务密钥封装失败");
+        } catch (BusinessKeyLogicalIdentityConflict e) {
+            // CR-066 §8：同 keyId 不可变元数据冲突 → 不可重试（防御：业务层已收敛为 claim-or-reuse）
+            log.warn("keyprov request 逻辑身份冲突（不可重试）: requestId={}, reason={}",
+                    request.getRequestId(), e.getMessage());
+            return error(request.getRequestId(), VmdErrorCode.KEYPROV_LOGICAL_IDENTITY_CONFLICT,
+                    VmdKeyProvisioningOutcome.REJECTED, false, "同keyId材料身份冲突，数据一致性/安全冲突");
+        } catch (BusinessKeyVersionGenerationMismatchException e) {
+            log.warn("keyprov request 版本代际冲突（不可重试）: requestId={}, reason={}",
+                    request.getRequestId(), e.getMessage());
+            return error(request.getRequestId(), VmdErrorCode.KEYPROV_VERSION_GENERATION_MISMATCH,
+                    VmdKeyProvisioningOutcome.REJECTED, false, "声明的businessKeyVersion与实际密码学代际不一致");
         } catch (RuntimeException e) {
             log.error("keyprov request 内部异常: requestId={}", request.getRequestId(), e);
             return error(request.getRequestId(), VmdErrorCode.KEYPROV_INTERNAL_UNAVAILABLE,
@@ -259,6 +272,16 @@ public class KeyProvisioningApplicationFacade {
             log.warn("keyprov ack 密钥操作失败: requestId={}", ack.getRequestId());
             return error(ack.getRequestId(), VmdErrorCode.KEYPROV_WRAP_FAILED,
                     VmdKeyProvisioningOutcome.REJECTED, false, "业务密钥操作失败");
+        } catch (BusinessKeyLogicalIdentityConflict e) {
+            log.warn("keyprov ack 逻辑身份冲突（不可重试）: requestId={}, reason={}",
+                    ack.getRequestId(), e.getMessage());
+            return error(ack.getRequestId(), VmdErrorCode.KEYPROV_LOGICAL_IDENTITY_CONFLICT,
+                    VmdKeyProvisioningOutcome.REJECTED, false, "同keyId材料身份冲突，数据一致性/安全冲突");
+        } catch (BusinessKeyVersionGenerationMismatchException e) {
+            log.warn("keyprov ack 版本代际冲突（不可重试）: requestId={}, reason={}",
+                    ack.getRequestId(), e.getMessage());
+            return error(ack.getRequestId(), VmdErrorCode.KEYPROV_VERSION_GENERATION_MISMATCH,
+                    VmdKeyProvisioningOutcome.REJECTED, false, "声明的businessKeyVersion与实际密码学代际不一致");
         } catch (RuntimeException e) {
             log.error("keyprov ack 内部异常: requestId={}", ack.getRequestId(), e);
             return error(ack.getRequestId(), VmdErrorCode.KEYPROV_INTERNAL_UNAVAILABLE,
@@ -322,6 +345,16 @@ public class KeyProvisioningApplicationFacade {
             log.warn("keyprov status 依赖不可用: requestId={}", request.getRequestId());
             return error(request.getRequestId(), VmdErrorCode.KEYPROV_DIRECTORY_UNAVAILABLE,
                     VmdKeyProvisioningOutcome.UNAVAILABLE, true, "业务密钥目录或framework能力不可用");
+        } catch (BusinessKeyLogicalIdentityConflict e) {
+            log.warn("keyprov status 逻辑身份冲突（不可重试）: requestId={}, reason={}",
+                    request.getRequestId(), e.getMessage());
+            return error(request.getRequestId(), VmdErrorCode.KEYPROV_LOGICAL_IDENTITY_CONFLICT,
+                    VmdKeyProvisioningOutcome.REJECTED, false, "同keyId材料身份冲突，数据一致性/安全冲突");
+        } catch (BusinessKeyVersionGenerationMismatchException e) {
+            log.warn("keyprov status 版本代际冲突（不可重试）: requestId={}, reason={}",
+                    request.getRequestId(), e.getMessage());
+            return error(request.getRequestId(), VmdErrorCode.KEYPROV_VERSION_GENERATION_MISMATCH,
+                    VmdKeyProvisioningOutcome.REJECTED, false, "声明的businessKeyVersion与实际密码学代际不一致");
         } catch (RuntimeException e) {
             log.error("keyprov status 内部异常: requestId={}", request.getRequestId(), e);
             return error(request.getRequestId(), VmdErrorCode.KEYPROV_INTERNAL_UNAVAILABLE,
@@ -608,6 +641,8 @@ public class KeyProvisioningApplicationFacade {
             case KEYPROV_ENVELOPE_UNSUPPORTED -> KeyprovConstants.ERR_ENVELOPE_UNSUPPORTED;
             case KEYPROV_ENVELOPE_INTEGRITY_REJECTED -> KeyprovConstants.ERR_ENVELOPE_INTEGRITY;
             case KEYPROV_IMPORT_PROOF_REJECTED -> KeyprovConstants.ERR_IMPORT_PROOF_INVALID;
+            case KEYPROV_LOGICAL_IDENTITY_CONFLICT -> KeyprovConstants.ERR_LOGICAL_KEY_IDENTITY_CONFLICT;
+            case KEYPROV_VERSION_GENERATION_MISMATCH -> KeyprovConstants.ERR_VERSION_GENERATION_MISMATCH;
             default -> KeyprovConstants.ERR_UNAVAILABLE;
         };
     }
@@ -707,6 +742,8 @@ public class KeyProvisioningApplicationFacade {
             case KeyprovConstants.ERR_ENVELOPE_INTEGRITY -> VmdErrorCode.KEYPROV_ENVELOPE_INTEGRITY_REJECTED;
             case KeyprovConstants.ERR_IMPORT_PROOF_INVALID -> VmdErrorCode.KEYPROV_IMPORT_PROOF_REJECTED;
             case KeyprovConstants.ERR_IMPORT_PROOF_NOT_READY -> VmdErrorCode.KEYPROV_PROVIDER_NOT_READY;
+            case KeyprovConstants.ERR_LOGICAL_KEY_IDENTITY_CONFLICT -> VmdErrorCode.KEYPROV_LOGICAL_IDENTITY_CONFLICT;
+            case KeyprovConstants.ERR_VERSION_GENERATION_MISMATCH -> VmdErrorCode.KEYPROV_VERSION_GENERATION_MISMATCH;
             case KeyprovConstants.ERR_PROTOCOL_INVALID, KeyprovConstants.ERR_PURPOSE_INCOMPLETE,
                  KeyprovConstants.ERR_STATE_NOT_ALLOWED, KeyprovConstants.ERR_ITEM_MISMATCH,
                  KeyprovConstants.ERR_EXPIRED, KeyprovConstants.ERR_IMPORT_FAILED ->

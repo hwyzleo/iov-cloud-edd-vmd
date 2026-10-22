@@ -31,4 +31,15 @@ public interface BusinessKeyProvisioningItemMapper extends BaseDao<BusinessKeyPr
      */
     BusinessKeyProvisioningItemPo selectPoByProvisioningIdAndPurpose(@Param("provisioningId") Long provisioningId,
                                                                      @Param("purpose") String purpose);
+
+    /**
+     * 按目录行主键查询关联明细（CR-066 身份一致性校验）
+     */
+    BusinessKeyProvisioningItemPo selectPoByDirectoryKeyId(@Param("directoryKeyId") Long directoryKeyId);
+
+    /**
+     * 重挂目录行（CR-066 §6.3 claim-or-reuse）
+     */
+    int rebindDirectoryKey(@Param("itemId") Long itemId, @Param("directoryKeyId") Long directoryKeyId,
+                           @Param("keyId") String keyId, @Param("businessKeyVersion") Long businessKeyVersion);
 }

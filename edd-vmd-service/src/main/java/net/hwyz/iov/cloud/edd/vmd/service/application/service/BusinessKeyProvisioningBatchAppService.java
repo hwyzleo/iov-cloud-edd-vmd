@@ -4,6 +4,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyDerivationRejectedException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyDerivedProviderUnavailableException;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyLogicalIdentityConflict;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyVersionGenerationMismatchException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.KeyprovEnvelopeIntegrityException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.util.DerivedKeyOperationIds;
 import net.hwyz.iov.cloud.edd.vmd.service.common.util.VinCanonicalizer;
@@ -17,6 +19,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.ProvisioningD
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.BusinessKeyProvisioningItemRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.BusinessKeyProvisioningRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.DeviceBusinessKeyRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.monitoring.BusinessKeyProvisioningMetrics;
 import net.hwyz.iov.cloud.framework.security.crypto.KeyProvisioningTemplate;
 import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateApplicationRejectedException;
 import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateEvidenceMismatchException;
@@ -70,6 +73,11 @@ import java.util.Set;
  * {@code DOWNLINK_AEAD} 分别调用 {@link KeyProvisioningTemplate#deriveAndWrap}，Transit/HSM
  * {@code v2c-comm-root} 按规范化 VIN + purpose + 派生版本确定性派生并在受控边界内封装。
  * <p>
+ * <strong>CR-066</strong>：目录材料身份与开通 attempt 分离，同逻辑材料复用 canonical 行；
+ * item 在 Provider 调用前持久化身份，派生后经 {@link BusinessKeyDerivedMaterialService#persistOrClaimDerivedMaterial}
+ * 回填/claim-or-reuse，撞 uk_key_id 不再映射为可重试 806100；声明版本与实际代际不一致、同 keyId 不可变元数据
+ * 冲突均为不可重试（806130/806131）。
+ * <p>
  * VMD 只持久化非敏感字段（logicalKeyId/kmsKeyRef/materialModel/rootKeyVersion/derivationVersion/
  * operationId）；Wrapped Key 仅进当前响应；禁止 VMD 直连 Provider wire 或自行组合 hmac+encryptWith。
  * 完成设备导入 ACK 前不发布目录 ACTIVE 事件（由 ACK 应用服务承接）。
@@ -97,6 +105,8 @@ public class BusinessKeyProvisioningBatchAppService {
     private final BusinessKeyProvisioningDomainService domainService;
     private final KeyprovEnvelopeAdapter envelopeAdapter;
     private final TboxEcdhCertificateEligibilityGate tboxEcdhCertificateEligibilityGate;
+    private final BusinessKeyDerivedMaterialService derivedMaterialService;
+    private final BusinessKeyProvisioningMetrics metrics;
     private final PlatformTransactionManager transactionManager;
 
     @Value("${vmd.business-key.provisioning.bundle-ttl-seconds:3600}")
@@ -261,6 +271,23 @@ public class BusinessKeyProvisioningBatchAppService {
                     requestId, e.getClass().getSimpleName(), e.getMessage());
             markBatchFailed(batch, truncate(e.getMessage()));
             return rejected(requestId, KeyprovConstants.ERR_DERIVATION_UNSUPPORTED, false, "材料模型不匹配，拒绝派生");
+        } catch (BusinessKeyVersionGenerationMismatchException e) {
+            // CR-066 §8：声明的 businessKeyVersion 与实际密码学代际不一致 → 版本代际冲突，不可重试（DO_NOT_RETRY）
+            log.warn("keyprov 声明版本与实际代际不一致（不可重试）: requestId={}, cause={}",
+                    requestId, e.getMessage());
+            markBatchFailed(batch, truncate(e.getMessage()));
+            metrics.recordRetryLoopPrevented("version_generation_rejected");
+            return rejected(requestId, KeyprovConstants.ERR_VERSION_GENERATION_MISMATCH, false,
+                    "声明的businessKeyVersion与实际密码学代际不一致，拒绝派生");
+        } catch (BusinessKeyLogicalIdentityConflict e) {
+            // CR-066 §8：同 keyId 但不可变元数据冲突 → 数据一致性/安全冲突，不可重试；
+            // 禁止落可重试 806100（否则每次重试同一 keyId 形成确定性死循环）
+            log.warn("keyprov 同keyId不可变元数据冲突（不可重试）: requestId={}, cause={}",
+                    requestId, e.getMessage());
+            markBatchFailed(batch, truncate(e.getMessage()));
+            metrics.recordRetryLoopPrevented("identity_conflict_rejected");
+            return rejected(requestId, KeyprovConstants.ERR_LOGICAL_KEY_IDENTITY_CONFLICT, false,
+                    "同keyId材料身份冲突，数据一致性/安全冲突，禁止自动重试");
         } catch (CertificateMaterialUnavailableException | CertificateStatusDependencyUnavailableException
                  | CertificateStatusConfigurationException | CertificateStatusOutcomeUnknownException e) {
             // 证书材料/locator 暂不可取、证书状态依赖不可用：确定性可重试（由 KeyProvisioningApplicationFacade
@@ -354,43 +381,52 @@ public class BusinessKeyProvisioningBatchAppService {
             BusinessKeyProvisioningItem item = provisioningItemRepository
                     .selectByProvisioningIdAndPurpose(batch.getId(), purpose);
             DeviceBusinessKey target;
-            boolean newItem;
             if (item != null) {
-                target = deviceBusinessKeyRepository.selectById(item.getDirectoryKeyId());
+                // CR-066 §6.2：既有 item → 复用 directoryKeyId + businessKeyVersion + operationId
+                target = resolveItemDirectory(item);
                 if (target == null) {
                     throw new BusinessKeyDerivationRejectedException(
                             "开通批次 item 对应目录版本不存在: purpose=" + purpose);
                 }
-                newItem = false;
+                if (!target.getId().equals(item.getDirectoryKeyId())) {
+                    // 占位行已被并发 claim：跟随 canonical 并重挂 item（防御性）
+                    provisioningItemRepository.rebindDirectoryKey(item.getId(), target.getId(),
+                            target.getKeyId(), target.getBusinessKeyVersion());
+                    item.setDirectoryKeyId(target.getId());
+                    item.setKeyId(target.getKeyId());
+                    item.setBusinessKeyVersion(target.getBusinessKeyVersion());
+                }
+                recoverTargetIfNeeded(target, requestId);
             } else {
-                // 依赖不可用等原因以原 requestId 重试：复用本请求已占位的 PENDING 目标版本，
+                // 依赖不可用等原因以原 requestId 重试：复用本请求已占位的目标版本，
                 // 保持 businessKeyVersion/operationId/幂等键稳定（Provider 侧幂等命中同一逻辑材料），
                 // 避免重试遗留孤儿 PENDING 与版本跳号（VMD-DSN-CR-061 RD-061-5）。
                 DeviceBusinessKey reserved = deviceBusinessKeyRepository
                         .selectByRequestIdAndPurpose(requestId, purpose);
-                if (reserved != null && reserved.getKeyState() == BusinessKeyState.PENDING) {
+                if (reserved != null && isRecoverableReserved(reserved)) {
                     target = reserved;
-                    newItem = true;
+                    recoverTargetIfNeeded(target, requestId);
                 } else {
-                    target = acquireNewTarget(identity, domain, purpose, requestId, currentVersions);
-                    newItem = true;
+                    target = resolveNewTarget(identity, domain, purpose, requestId, currentVersions);
                 }
             }
 
-            // 历史材料来源未知（material_model IS NULL）：禁止自动派生/迁移/轮换
-            if (target.getMaterialModel() == null) {
-                throw new BusinessKeyDerivationRejectedException(
-                        "历史业务密钥材料来源未知（material_model IS NULL），禁止自动派生或迁移: purpose=" + purpose);
-            }
-            if (!MATERIAL_MODEL_DERIVED_ROOT.equals(target.getMaterialModel())) {
-                throw new BusinessKeyDerivationRejectedException(
-                        "目标版本材料模型不是根派生型，禁止 V2C 派生: purpose=" + purpose
-                                + ", materialModel=" + target.getMaterialModel());
-            }
+            // 材料模型门禁（历史来源未知/非根派生禁止自动派生/迁移/轮换）
+            assertDerivedRow(target, purpose);
 
             BusinessKeyPolicyEntry policy = authorizationPolicy.authorize(
                     BusinessKeyAction.PROVISION, identity.deviceCategory(), domain, purpose);
-            String operationId = DerivedKeyOperationIds.operationId(requestId, purpose, target.getBusinessKeyVersion());
+
+            if (item == null) {
+                // CR-066 §6.2：Provider 调用前持久化 item 身份（directoryKeyId + 版本 + operationId）
+                String preOperationId = DerivedKeyOperationIds.operationId(requestId, purpose,
+                        target.getBusinessKeyVersion());
+                item = insertItemIdentity(batch.getId(), target, purpose, preOperationId);
+            }
+
+            // 同 requestId 绝不重新分配目录行、版本或 operationId
+            String operationId = item.getOperationId() != null ? item.getOperationId()
+                    : DerivedKeyOperationIds.operationId(requestId, purpose, target.getBusinessKeyVersion());
             String idemKey = DerivedKeyOperationIds.idempotencyKey(requestId, identity.deviceSn(), purpose,
                     target.getBusinessKeyVersion(), derivationVersion);
             Map<String, String> audit = new HashMap<>();
@@ -408,12 +444,19 @@ public class BusinessKeyProvisioningBatchAppService {
                     operationId,
                     idemKey);
 
-            if (newItem) {
-                if (target.getKeyId() == null) {
-                    target = persistDerivedMaterialKeepingPending(target, result, policy, operationId);
-                }
-                insertItem(batch.getId(), target, purpose, result, fingerprintDigest, activeCert);
+            // CR-066 §6.3：persistOrClaimDerivedMaterial（撞 uk_key_id → 确定性 claim-or-reuse，不再落可重试 806100）
+            Long canonicalId = derivedMaterialService.persistOrClaimDerivedMaterial(
+                    target, result, policy, operationId, item.getId(),
+                    new BusinessKeyDerivedMaterialService.ClaimContext(
+                            identity.deviceSn(), domain, purpose, bizType.name(), normalizedVin, requestId));
+            // 始终从 DB 重读 canonical 行（attach 路径以 SQL 回填，内存对象可能仍为旧值）
+            DeviceBusinessKey canonical = deviceBusinessKeyRepository.selectById(canonicalId);
+            if (canonical == null) {
+                throw new BusinessKeyLogicalIdentityConflict(
+                        "canonical 目录行不存在: id=" + canonicalId + ", purpose=" + purpose);
             }
+            // CR-066 §6.2：保存 item 元数据（envelope/KCV/root/derivation/收件指纹）
+            updateItemMetadata(item, canonical, result, fingerprintDigest, activeCert);
             derived.put(purpose, result);
         }
 
@@ -432,11 +475,12 @@ public class BusinessKeyProvisioningBatchAppService {
     }
 
     /**
-     * 为新用途解析目标目录版本：复用既有 ACTIVE（REIMPORT）或占位新 PENDING 版本。
+     * 为新用途解析目标目录版本（CR-066 §6.1 修订）：同代际复用既有 ACTIVE（REIMPORT），
+     * 声明版本与 ACTIVE 不一致但代际相同 → 版本代际冲突（不可重试）；真实代际变化（派生格式变化）→ 新建 PENDING。
      * <p>
      * 历史 {@code material_model IS NULL} 的 ACTIVE 禁止自动轮换/重建/迁移（VMD-DSN-CR-061 §7.3）。
      */
-    private DeviceBusinessKey acquireNewTarget(BoundDeviceIdentity identity, String domain, String purpose,
+    private DeviceBusinessKey resolveNewTarget(BoundDeviceIdentity identity, String domain, String purpose,
                                                String requestId, Map<String, Long> currentVersions) {
         DeviceBusinessKey active = deviceBusinessKeyRepository.selectActiveByContext(identity.deviceSn(), domain, purpose);
         // 历史 ACTIVE 材料来源未知：禁止自动轮换/重建/迁移（VMD-DSN-CR-061 §7.3）
@@ -446,10 +490,21 @@ public class BusinessKeyProvisioningBatchAppService {
                             + purpose);
         }
         BusinessKeyProvisioningIntent intent = domainService.deriveIntent(active,
-                currentVersions.getOrDefault(purpose, 0L));
+                currentVersions.getOrDefault(purpose, 0L), derivationVersion);
+        metrics.recordVersionDecision(intent.name().toLowerCase(java.util.Locale.ROOT),
+                intent == BusinessKeyProvisioningIntent.REIMPORT ? "same_generation_reuse"
+                        : intent == BusinessKeyProvisioningIntent.VERSION_GENERATION_MISMATCH
+                        ? "declared_version_conflict" : "no_active_or_generation_change");
         if (intent == BusinessKeyProvisioningIntent.REIMPORT && active != null) {
             // 复用既有 ACTIVE（同逻辑材料，收方/封装不同），不新建版本
             return active;
+        }
+        if (intent == BusinessKeyProvisioningIntent.VERSION_GENERATION_MISMATCH) {
+            metrics.recordRetryLoopPrevented("version_generation_rejected");
+            throw new BusinessKeyVersionGenerationMismatchException(
+                    "设备声明版本与目录 ACTIVE 不一致但密码学代际相同，禁止提升业务版本: purpose=" + purpose
+                            + ", declared=" + currentVersions.getOrDefault(purpose, 0L)
+                            + ", active=" + (active == null ? null : active.getBusinessKeyVersion()));
         }
         return createPendingVersion(identity, domain, purpose, requestId);
     }
@@ -487,62 +542,145 @@ public class BusinessKeyProvisioningBatchAppService {
     }
 
     /**
-     * 回填根派生非敏感材料并保持 PENDING（Wrapped Key/KCV/派生明文均不落库）。
+     * 解析 item 关联的目录行；占位行已被 claim（SUPERSEDED）时跟随 canonical（防御性）。
      */
-    private DeviceBusinessKey persistDerivedMaterialKeepingPending(DeviceBusinessKey row, DerivedWrappedKey result,
-                                                                   BusinessKeyPolicyEntry policy, String operationId) {
-        return tx().execute(status -> {
-            DeviceBusinessKey current = deviceBusinessKeyRepository.selectById(row.getId());
-            if (current == null) {
-                throw new IllegalStateException("keyprov目标版本行不存在: id=" + row.getId());
-            }
-            current.setKeyId(result.logicalKeyId());
-            current.setKmsKeyRef(result.kmsKeyRef());
-            current.setRootKeyVersion(result.rootKeyVersion());
-            current.setDerivationVersion(result.derivationVersion() != null ? result.derivationVersion() : derivationVersion);
-            current.setOperationId(result.operationId() != null ? result.operationId() : operationId);
-            current.setAlgorithm(policy.algorithm());
-            current.setKeySpec(policy.keySpec());
-            current.setModifyTime(LocalDateTime.now());
-            deviceBusinessKeyRepository.update(current);
-            return current;
-        });
+    private DeviceBusinessKey resolveItemDirectory(BusinessKeyProvisioningItem item) {
+        if (item.getDirectoryKeyId() == null) {
+            return null;
+        }
+        DeviceBusinessKey directory = deviceBusinessKeyRepository.selectById(item.getDirectoryKeyId());
+        if (directory == null) {
+            return null;
+        }
+        if (directory.getKeyState() == BusinessKeyState.SUPERSEDED && directory.getSupersededById() != null) {
+            return deviceBusinessKeyRepository.selectById(directory.getSupersededById());
+        }
+        return directory;
     }
 
-    private void insertItem(Long provisioningId, DeviceBusinessKey target, String purpose, DerivedWrappedKey result,
-                            String fingerprintDigest, ActiveDeviceCertificate activeCert) {
+    /**
+     * 本 requestId 预留行是否可复用（CR-066 §6.4）：PENDING / PENDING_RECOVERY，
+     * 或 FAILED/RECONCILE_REQUIRED 且已写 keyId 证据（可恢复同一行，不另建行）。
+     */
+    private boolean isRecoverableReserved(DeviceBusinessKey reserved) {
+        BusinessKeyState state = reserved.getKeyState();
+        if (state == null) {
+            return false;
+        }
+        return state == BusinessKeyState.PENDING
+                || state == BusinessKeyState.PENDING_RECOVERY
+                || ((state == BusinessKeyState.FAILED || state == BusinessKeyState.RECONCILE_REQUIRED)
+                && reserved.getKeyId() != null);
+    }
+
+    /**
+     * 目标目录行 FAILED→PENDING_RECOVERY→PENDING 恢复（CR-066 §6.4，同事务；证据缺失时冲突拒绝）。
+     */
+    private void recoverTargetIfNeeded(DeviceBusinessKey target, String requestId) {
+        if (target.getKeyState() == BusinessKeyState.PENDING_RECOVERY) {
+            confirmRecovery(target, requestId);
+            return;
+        }
+        if (target.getKeyState() == BusinessKeyState.FAILED) {
+            if (target.getKeyId() == null) {
+                metrics.recordIdentityConflict("evidence_incomplete");
+                throw new BusinessKeyLogicalIdentityConflict(
+                        "FAILED 目标版本证据不完整（key_id IS NULL），不可恢复: id=" + target.getId());
+            }
+            int r1 = deviceBusinessKeyRepository.markPendingRecovery(target.getId(), "CR066_REQUEST_RETRY_RECOVERY");
+            if (r1 != 1) {
+                metrics.recordIdentityConflict("state_not_reusable");
+                throw new BusinessKeyLogicalIdentityConflict(
+                        "目标版本恢复入口失败（状态已变）: id=" + target.getId());
+            }
+            confirmRecovery(target, requestId);
+            metrics.recordClaim("reuse", "recovered", "request_retry_recovered");
+        }
+    }
+
+    private void confirmRecovery(DeviceBusinessKey target, String requestId) {
+        int r2 = deviceBusinessKeyRepository.confirmRecovery(target.getId(), requestId);
+        if (r2 != 1) {
+            metrics.recordIdentityConflict("state_not_reusable");
+            throw new BusinessKeyLogicalIdentityConflict(
+                    "目标版本恢复确认失败（状态已变）: id=" + target.getId());
+        }
+    }
+
+    /**
+     * 材料模型门禁：历史来源未知（material_model IS NULL）或非根派生型禁止自动派生/迁移/轮换。
+     */
+    private void assertDerivedRow(DeviceBusinessKey target, String purpose) {
+        if (target == null) {
+            throw new BusinessKeyDerivationRejectedException("目标目录行不存在: purpose=" + purpose);
+        }
+        if (target.getMaterialModel() == null) {
+            throw new BusinessKeyDerivationRejectedException(
+                    "历史业务密钥材料来源未知（material_model IS NULL），禁止自动派生或迁移: purpose=" + purpose);
+        }
+        if (!MATERIAL_MODEL_DERIVED_ROOT.equals(target.getMaterialModel())) {
+            throw new BusinessKeyDerivationRejectedException(
+                    "目标版本材料模型不是根派生型，禁止 V2C 派生: purpose=" + purpose
+                            + ", materialModel=" + target.getMaterialModel());
+        }
+    }
+
+    /**
+     * Provider 调用前持久化 item 身份（CR-066 §6.2）：directoryKeyId + businessKeyVersion + operationId，
+     * keyId 与信封元数据在派生后回填/claim 收敛。
+     */
+    private BusinessKeyProvisioningItem insertItemIdentity(Long provisioningId, DeviceBusinessKey target,
+                                                           String purpose, String operationId) {
+        BusinessKeyProvisioningItem item = BusinessKeyProvisioningItem.builder()
+                .provisioningId(provisioningId)
+                .purpose(purpose)
+                .businessKeyVersion(target.getBusinessKeyVersion())
+                .directoryKeyId(target.getId())
+                .operationId(operationId)
+                .deviceResult(ProvisioningDeviceResult.PENDING)
+                .createTime(LocalDateTime.now())
+                .build();
+        tx().executeWithoutResult(status -> provisioningItemRepository.insert(item));
+        return item;
+    }
+
+    /**
+     * 派生后保存 item 元数据（envelope/KCV/root/derivation/收件指纹；CR-062 §4）。
+     * <p>含 CR-063 §10 冻结一致性：envelope view 收件方证书摘要必须等于 ACTIVE 证书 leafCertificateDigest。
+     */
+    private void updateItemMetadata(BusinessKeyProvisioningItem item, DeviceBusinessKey canonical,
+                                    DerivedWrappedKey result, String fingerprintDigest,
+                                    ActiveDeviceCertificate activeCert) {
         DerivedWrappedKeyEnvelopeView view = result.envelope();
         if (view == null) {
             throw new KeyprovEnvelopeIntegrityException("派生结果缺少结构化 envelope 视图，禁止落库 envelope v1 元数据");
         }
         byte[] recipientCertDigest = view instanceof EcdhEsP256EnvelopeViewV1 v1
                 ? v1.recipientCertificateDigest() : null;
-        // CR-063 §10：冻结一致性——envelope view 的收件方证书摘要必须等于 ACTIVE 证书 leafCertificateDigest
-        // （门禁已保证 v1 证书存在 leaf digest；不一致视为安全异常 fail-closed）
         if (activeCert != null && activeCert.leafCertificateDigest() != null) {
-            if (recipientCertDigest == null || !java.util.Arrays.equals(recipientCertDigest, activeCert.leafCertificateDigest())) {
+            if (recipientCertDigest == null
+                    || !java.util.Arrays.equals(recipientCertDigest, activeCert.leafCertificateDigest())) {
                 throw new KeyprovEnvelopeIntegrityException(
                         "envelope view recipientCertificateDigest 与 ACTIVE 证书 leafCertificateDigest 不一致（CR-063 冻结校验失败）");
             }
         }
-        tx().executeWithoutResult(status -> provisioningItemRepository.insert(BusinessKeyProvisioningItem.builder()
-                .provisioningId(provisioningId)
-                .purpose(purpose)
-                .keyId(target.getKeyId())
-                .businessKeyVersion(target.getBusinessKeyVersion())
-                .directoryKeyId(target.getId())
-                .operationId(result.operationId())
-                .rootKeyVersion(result.rootKeyVersion())
-                .derivationVersion(result.derivationVersion())
-                .recipientCertFingerprintDigest(fingerprintDigest)
-                .envelopeFormat(view.envelopeFormat())
-                .wrappingSuite(view.wrappingSuite() == null ? null : view.wrappingSuite().name())
-                .envelopeDigest(view.envelopeDigest())
-                .keyCheckValue(view.keyCheckValue())
-                .recipientCertDigest(recipientCertDigest)
-                .deviceResult(ProvisioningDeviceResult.PENDING)
-                .createTime(LocalDateTime.now())
-                .build()));
+        item.setKeyId(canonical.getKeyId());
+        item.setBusinessKeyVersion(canonical.getBusinessKeyVersion());
+        item.setDirectoryKeyId(canonical.getId());
+        item.setOperationId(result.operationId() != null ? result.operationId() : item.getOperationId());
+        item.setRootKeyVersion(result.rootKeyVersion());
+        item.setDerivationVersion(result.derivationVersion());
+        item.setRecipientCertFingerprintDigest(fingerprintDigest);
+        item.setEnvelopeFormat(view.envelopeFormat());
+        item.setWrappingSuite(view.wrappingSuite() == null ? null : view.wrappingSuite().name());
+        item.setEnvelopeDigest(view.envelopeDigest());
+        item.setKeyCheckValue(view.keyCheckValue());
+        item.setRecipientCertDigest(recipientCertDigest);
+        if (item.getDeviceResult() == null) {
+            item.setDeviceResult(ProvisioningDeviceResult.PENDING);
+        }
+        item.setModifyTime(LocalDateTime.now());
+        tx().executeWithoutResult(status -> provisioningItemRepository.update(item));
     }
 
     private KeyProvisioningResponse buildResponse(BusinessKeyProvisioning batch, BoundDeviceIdentity identity,

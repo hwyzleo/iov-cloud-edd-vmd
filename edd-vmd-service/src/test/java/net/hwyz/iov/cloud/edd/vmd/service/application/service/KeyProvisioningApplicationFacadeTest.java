@@ -229,6 +229,30 @@ class KeyProvisioningApplicationFacadeTest {
     }
 
     @Test
+    @DisplayName("CR-066 逻辑身份/版本代际冲突映射：806130/806131 → REJECTED 不可重试（防 806100 死循环）")
+    void logicalIdentityErrorMapping() {
+        byte[] payload = requestPayload("R1");
+        // 806130 同 keyId 不可变元数据冲突 → REJECTED 不可重试（DO_NOT_RETRY）
+        when(batchAppService.provision(any(KeyProvisioningRequest.class), any(KeyprovAuthenticatedContext.class)))
+                .thenReturn(rejectedResponse("R1", KeyprovConstants.ERR_LOGICAL_KEY_IDENTITY_CONFLICT));
+        KeyProvisioningOperationResult identityConflict = request(CALLER, ctx(),
+                KeyprovConstants.PAYLOAD_TYPE_REQUEST, "keyprov-v1", payload, digest(payload));
+        assertEquals(VmdErrorCode.KEYPROV_LOGICAL_IDENTITY_CONFLICT, identityConflict.getErrorCode());
+        assertEquals(VmdKeyProvisioningOutcome.REJECTED, identityConflict.getOutcome());
+        assertFalse(identityConflict.isRetryable());
+        assertEquals("DO_NOT_RETRY", identityConflict.getAction());
+
+        // 806131 声明版本与实际代际不一致 → REJECTED 不可重试
+        when(batchAppService.provision(any(KeyProvisioningRequest.class), any(KeyprovAuthenticatedContext.class)))
+                .thenReturn(rejectedResponse("R1", KeyprovConstants.ERR_VERSION_GENERATION_MISMATCH));
+        KeyProvisioningOperationResult genMismatch = request(CALLER, ctx(),
+                KeyprovConstants.PAYLOAD_TYPE_REQUEST, "keyprov-v1", payload, digest(payload));
+        assertEquals(VmdErrorCode.KEYPROV_VERSION_GENERATION_MISMATCH, genMismatch.getErrorCode());
+        assertEquals(VmdKeyProvisioningOutcome.REJECTED, genMismatch.getOutcome());
+        assertFalse(genMismatch.isRetryable());
+    }
+
+    @Test
     @DisplayName("framework 依赖不可用 → 806096；结果未知 → 806098")
     void exceptionMapping() {
         byte[] payload = requestPayload("R1");

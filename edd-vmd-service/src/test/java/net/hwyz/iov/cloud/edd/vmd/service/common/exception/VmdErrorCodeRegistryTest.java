@@ -149,4 +149,15 @@ class VmdErrorCodeRegistryTest {
         assertEquals(VmdErrorCode.BUSINESS_KEY_PROVISIONING_RESOLUTION_INCONSISTENT,
                 ErrorCodeRegistry.findByCode("806129").orElse(null));
     }
+
+    @Test
+    void keyprovLogicalIdentityErrorCodes_present() {
+        // VMD-DSN-CR-066 逻辑材料身份与版本代际冲突域错误码（806130～806131），不可重试
+        assertEquals("806130", VmdErrorCode.KEYPROV_LOGICAL_IDENTITY_CONFLICT.getCode());
+        assertEquals("806131", VmdErrorCode.KEYPROV_VERSION_GENERATION_MISMATCH.getCode());
+        assertEquals(VmdErrorCode.KEYPROV_LOGICAL_IDENTITY_CONFLICT,
+                ErrorCodeRegistry.findByCode("806130").orElse(null));
+        assertEquals(VmdErrorCode.KEYPROV_VERSION_GENERATION_MISMATCH,
+                ErrorCodeRegistry.findByCode("806131").orElse(null));
+    }
 }

@@ -154,7 +154,12 @@ public enum VmdErrorCode implements ErrorCode {
     BUSINESS_KEY_PROVISIONING_TERMINATE_STALE_VIEW("806127", "业务密钥开通批次页面视图已过期，请刷新后重试"),
     // VMD-DSN-CR-065 §6.2：证书维度寻址开通批次（只读桥接接口）
     BUSINESS_KEY_PROVISIONING_CERTIFICATE_DATA_INCOMPLETE("806128", "证书关联数据不完整，无法寻址开通批次"),
-    BUSINESS_KEY_PROVISIONING_RESOLUTION_INCONSISTENT("806129", "同设备+业务域存在多条未终结开通批次，数据一致性异常，拒绝寻址");
+    BUSINESS_KEY_PROVISIONING_RESOLUTION_INCONSISTENT("806129", "同设备+业务域存在多条未终结开通批次，数据一致性异常，拒绝寻址"),
+
+    // ================= CR-066 逻辑材料身份与版本代际冲突域（806130～806131） =================
+    // 落地 VMD-DSN-CR-066：保留 uk_key_id，同 keyId 不可变元数据冲突 / 声明版本与实际代际不一致，均为不可重试。
+    KEYPROV_LOGICAL_IDENTITY_CONFLICT("806130", "Keyprov同keyId不可变元数据冲突（上下文/root/derivation/kmsKeyRef/算法/KCV），数据一致性或安全冲突"),
+    KEYPROV_VERSION_GENERATION_MISMATCH("806131", "Keyprov声明的businessKeyVersion与实际密码学代际不一致");
 
     private final String code;
     private final String message;

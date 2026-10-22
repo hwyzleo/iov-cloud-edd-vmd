@@ -47,23 +47,46 @@ class BusinessKeyProvisioningDomainServiceTest {
         return DeviceBusinessKey.builder().businessKeyVersion(version).build();
     }
 
+    private DeviceBusinessKey activeWithDerivation(long version, String derivationVersion) {
+        return DeviceBusinessKey.builder().businessKeyVersion(version).derivationVersion(derivationVersion).build();
+    }
+
     @Test
     @DisplayName("无 ACTIVE → INITIAL")
     void deriveIntent_noActive_initial() {
-        assertEquals(BusinessKeyProvisioningIntent.INITIAL, service.deriveIntent(null, 0));
+        assertEquals(BusinessKeyProvisioningIntent.INITIAL, service.deriveIntent(null, 0, "v1"));
     }
 
     @Test
     @DisplayName("设备声明版本 == ACTIVE 版本 → REIMPORT（复用 ACTIVE 不新建版本）")
     void deriveIntent_sameVersion_reimport() {
-        assertEquals(BusinessKeyProvisioningIntent.REIMPORT, service.deriveIntent(active(3), 3));
+        assertEquals(BusinessKeyProvisioningIntent.REIMPORT, service.deriveIntent(active(3), 3, "v1"));
+        assertEquals(BusinessKeyProvisioningIntent.REIMPORT, service.deriveIntent(activeWithDerivation(3, "v1"), 3, "v1"));
     }
 
     @Test
-    @DisplayName("设备声明版本缺失或落后 → ROTATE（新建 PENDING）")
-    void deriveIntent_missingOrStale_rotate() {
-        assertEquals(BusinessKeyProvisioningIntent.ROTATE, service.deriveIntent(active(3), 0));
-        assertEquals(BusinessKeyProvisioningIntent.ROTATE, service.deriveIntent(active(3), 2));
+    @DisplayName("版本缺失且代际相同 → REIMPORT（复用 canonical 行，CR-066 §6.1）")
+    void deriveIntent_missingVersion_sameGeneration_reimport() {
+        assertEquals(BusinessKeyProvisioningIntent.REIMPORT, service.deriveIntent(active(3), 0, "v1"));
+        assertEquals(BusinessKeyProvisioningIntent.REIMPORT, service.deriveIntent(activeWithDerivation(3, "v1"), 0, "v1"));
+    }
+
+    @Test
+    @DisplayName("声明版本与 ACTIVE 不一致但代际相同 → VERSION_GENERATION_MISMATCH（不可重试）")
+    void deriveIntent_staleVersion_sameGeneration_mismatch() {
+        assertEquals(BusinessKeyProvisioningIntent.VERSION_GENERATION_MISMATCH,
+                service.deriveIntent(activeWithDerivation(3, "v1"), 2, "v1"));
+        assertEquals(BusinessKeyProvisioningIntent.VERSION_GENERATION_MISMATCH,
+                service.deriveIntent(active(3), 2, "v1"));
+    }
+
+    @Test
+    @DisplayName("派生格式版本变化（真实代际变化）→ ROTATE（新建 PENDING，CR-066 §5.2）")
+    void deriveIntent_derivationChanged_rotate() {
+        assertEquals(BusinessKeyProvisioningIntent.ROTATE,
+                service.deriveIntent(activeWithDerivation(3, "v1"), 0, "v2"));
+        assertEquals(BusinessKeyProvisioningIntent.ROTATE,
+                service.deriveIntent(activeWithDerivation(3, "v1"), 3, "v2"));
     }
 
     @Test

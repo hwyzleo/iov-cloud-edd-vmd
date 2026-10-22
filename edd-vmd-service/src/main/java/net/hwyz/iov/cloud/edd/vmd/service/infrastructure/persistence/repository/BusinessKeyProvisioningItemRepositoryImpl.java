@@ -55,6 +55,17 @@ public class BusinessKeyProvisioningItemRepositoryImpl implements BusinessKeyPro
     }
 
     @Override
+    public BusinessKeyProvisioningItem selectByDirectoryKeyId(Long directoryKeyId) {
+        BusinessKeyProvisioningItemPo po = businessKeyProvisioningItemMapper.selectPoByDirectoryKeyId(directoryKeyId);
+        return po != null ? BusinessKeyProvisioningItemConverter.INSTANCE.toDomain(po) : null;
+    }
+
+    @Override
+    public int rebindDirectoryKey(Long itemId, Long directoryKeyId, String keyId, Long businessKeyVersion) {
+        return businessKeyProvisioningItemMapper.rebindDirectoryKey(itemId, directoryKeyId, keyId, businessKeyVersion);
+    }
+
+    @Override
     public int insert(BusinessKeyProvisioningItem entity) {
         BusinessKeyProvisioningItemPo po = BusinessKeyProvisioningItemConverter.INSTANCE.fromDomain(entity);
         int rows = businessKeyProvisioningItemMapper.insertPo(po);

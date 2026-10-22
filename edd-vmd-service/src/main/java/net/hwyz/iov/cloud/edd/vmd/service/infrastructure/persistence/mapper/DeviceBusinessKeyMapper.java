@@ -26,6 +26,14 @@ public interface DeviceBusinessKeyMapper extends BaseDao<DeviceBusinessKeyPo, Lo
     DeviceBusinessKeyPo selectPoByKeyId(@Param("keyId") String keyId);
 
     /**
+     * 根据 keyId 查询并加行锁（CR-066 claim-or-reuse，须在事务内调用）
+     *
+     * @param keyId framework/KMS 不透明标识
+     * @return PO，不存在返回 null
+     */
+    DeviceBusinessKeyPo selectPoByKeyIdForUpdate(@Param("keyId") String keyId);
+
+    /**
      * 根据 requestId 查询（幂等）
      *
      * @param requestId 调用幂等键
@@ -153,4 +161,42 @@ public interface DeviceBusinessKeyMapper extends BaseDao<DeviceBusinessKeyPo, Lo
      * @return PO 列表
      */
     List<DeviceBusinessKeyPo> selectDeprecatedExpiredPo(@Param("now") LocalDateTime now, @Param("limit") int limit);
+
+    /**
+     * 回填根派生非敏感材料（CR-066 §6.3）。
+     * <p>仅更新 PENDING 且 key_id IS NULL 的占位行（乐观锁保护）；撞 uk_key_id 时抛 DuplicateKeyException。
+     *
+     * @param po 携带 id/rowVersion 与 keyId/kmsKeyRef/rootKeyVersion/derivationVersion/operationId/algorithm/keySpec/logicalIdentityDigest
+     * @return 影响行数
+     */
+    int attachDerivedMaterial(DeviceBusinessKeyPo po);
+
+    /**
+     * 占位行标记 SUPERSEDED（CR-066 §6.4，仅 key_id IS NULL 的 PENDING 占位行）。
+     *
+     * @param id            占位行主键
+     * @param supersededById canonical 目录行主键
+     * @param reason        非敏感取代原因
+     * @return 影响行数
+     */
+    int markPlaceholderSuperseded(@Param("id") Long id, @Param("supersededById") Long supersededById,
+                                  @Param("reason") String reason);
+
+    /**
+     * FAILED→PENDING_RECOVERY（恢复入口，仅 FAILED 且已有 keyId 证据；CR-066 §6.4）。
+     *
+     * @param id     目录行主键
+     * @param reason 非敏感恢复原因
+     * @return 影响行数
+     */
+    int markPendingRecovery(@Param("id") Long id, @Param("reason") String reason);
+
+    /**
+     * PENDING_RECOVERY→PENDING（恢复确认，recovery_count+1，记录最近恢复 attempt 审计引用；CR-066 §6.4）。
+     *
+     * @param id                  目录行主键
+     * @param recoveryRequestId   本次恢复 attempt 的 requestId
+     * @return 影响行数
+     */
+    int confirmRecovery(@Param("id") Long id, @Param("recoveryRequestId") String recoveryRequestId);
 }

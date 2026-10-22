@@ -89,6 +89,9 @@ public final class KeyprovConstants {
     public static final String ERR_ENVELOPE_INTEGRITY = "KEYPROV_ENVELOPE_INTEGRITY";
     public static final String ERR_IMPORT_PROOF_INVALID = "KEYPROV_IMPORT_PROOF_INVALID";
     public static final String ERR_IMPORT_PROOF_NOT_READY = "KEYPROV_IMPORT_PROOF_NOT_READY";
+    // CR-066 逻辑材料身份与版本代际冲突（不可重试）
+    public static final String ERR_LOGICAL_KEY_IDENTITY_CONFLICT = "KEYPROV_LOGICAL_KEY_IDENTITY_CONFLICT";
+    public static final String ERR_VERSION_GENERATION_MISMATCH = "KEYPROV_VERSION_GENERATION_MISMATCH";
 
     private static final Map<KeyPurpose, String> PURPOSE_TO_CODE = new LinkedHashMap<>();
     private static final Map<WrappingSuite, String> SUITE_TO_CODE = new LinkedHashMap<>();

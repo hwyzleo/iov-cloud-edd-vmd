@@ -32,6 +32,14 @@ public interface DeviceBusinessKeyRepository {
     DeviceBusinessKey selectByKeyId(String keyId);
 
     /**
+     * 根据 keyId 查询并加行锁（CR-066 claim-or-reuse，须在事务内调用）
+     *
+     * @param keyId framework/KMS 不透明标识
+     * @return 业务密钥，不存在返回 null
+     */
+    DeviceBusinessKey selectByKeyIdForUpdate(String keyId);
+
+    /**
      * 根据 requestId 查询（幂等）
      *
      * @param requestId 调用幂等键
@@ -133,6 +141,43 @@ public interface DeviceBusinessKeyRepository {
      * @return 过期待转 EXPIRED 的行
      */
     List<DeviceBusinessKey> selectDeprecatedExpired(LocalDateTime now, int limit);
+
+    /**
+     * 回填根派生非敏感材料（CR-066 §6.3，仅 PENDING 且 key_id IS NULL 的占位行，乐观锁保护）。
+     * <p>撞 uk_key_id 时抛 {@link org.springframework.dao.DuplicateKeyException}，由调用方执行 claim-or-reuse。
+     *
+     * @param entity 携带 id/rowVersion 与回填字段的目录行
+     * @return 影响行数
+     */
+    int attachDerivedMaterial(DeviceBusinessKey entity);
+
+    /**
+     * 占位行标记 SUPERSEDED（CR-066 §6.4，仅 key_id IS NULL 的 PENDING 占位行；保留全部证据）。
+     *
+     * @param id            占位行主键
+     * @param supersededById canonical 目录行主键
+     * @param reason        非敏感取代原因
+     * @return 影响行数
+     */
+    int markPlaceholderSuperseded(Long id, Long supersededById, String reason);
+
+    /**
+     * FAILED→PENDING_RECOVERY（恢复入口，仅 FAILED 且已有 keyId 证据；CR-066 §6.4）。
+     *
+     * @param id     目录行主键
+     * @param reason 非敏感恢复原因
+     * @return 影响行数
+     */
+    int markPendingRecovery(Long id, String reason);
+
+    /**
+     * PENDING_RECOVERY→PENDING（恢复确认，recovery_count+1，记录最近恢复 attempt 审计引用；CR-066 §6.4）。
+     *
+     * @param id                 目录行主键
+     * @param recoveryRequestId  本次恢复 attempt 的 requestId
+     * @return 影响行数
+     */
+    int confirmRecovery(Long id, String recoveryRequestId);
 
     /**
      * 条件批量失败化本批次 PENDING 目录（VMD-DSN-CR-065 RD-065-3）

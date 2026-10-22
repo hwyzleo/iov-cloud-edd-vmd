@@ -152,6 +152,26 @@ public class DeviceBusinessKey extends BaseDo<Long> {
     private String operationId;
 
     /**
+     * 被取代后指向 canonical 目录行（SUPERSEDED 行必填；VMD-DSN-CR-066 §6.4）
+     */
+    private Long supersededById;
+
+    /**
+     * 非敏感规范化身份摘要（BINARY32；VMD-DSN-CR-066 §7.2），辅助预检与审计，不取代 Provider keyId
+     */
+    private byte[] logicalIdentityDigest;
+
+    /**
+     * 同目录材料恢复次数（FAILED→PENDING_RECOVERY→PENDING；VMD-DSN-CR-066 §6.4）
+     */
+    private Integer recoveryCount;
+
+    /**
+     * 最近恢复 attempt 审计引用（VMD-DSN-CR-066 §7.2）
+     */
+    private String lastRecoveryRequestId;
+
+    /**
      * 规范化请求摘要（参数冲突识别）
      */
     private String requestDigest;
@@ -246,6 +266,44 @@ public class DeviceBusinessKey extends BaseDo<Long> {
     public void markReconcileRequired(String reason) {
         this.keyState = BusinessKeyState.RECONCILE_REQUIRED;
         this.failReason = reason;
+        this.lastAttemptTime = LocalDateTime.now();
+    }
+
+    /**
+     * 置为 SUPERSEDED（占位行被 canonical 目录行取代，终态不可用；VMD-DSN-CR-066 §6.4）。
+     * <p>必须同时记录 {@code supersededById}；保留 requestId/operationId/failReason 等证据，
+     * 不清空 keyId（若已写）或任何证据元数据。
+     *
+     * @param canonicalId canonical 目录行主键
+     * @param reason      非敏感取代原因
+     */
+    public void markSuperseded(Long canonicalId, String reason) {
+        this.keyState = BusinessKeyState.SUPERSEDED;
+        this.supersededById = canonicalId;
+        this.failReason = reason;
+        this.lastAttemptTime = LocalDateTime.now();
+    }
+
+    /**
+     * FAILED→PENDING_RECOVERY（恢复入口中间态；VMD-DSN-CR-066 §6.4）。
+     * <p>仅允许携带 keyId 证据的 FAILED 行进入恢复；证据缺失/被安全拒绝的行不可恢复。
+     */
+    public void markPendingRecovery(String reason) {
+        this.keyState = BusinessKeyState.PENDING_RECOVERY;
+        this.failReason = reason;
+        this.lastAttemptTime = LocalDateTime.now();
+    }
+
+    /**
+     * PENDING_RECOVERY→PENDING（恢复确认，记录恢复计数与审计引用；VMD-DSN-CR-066 §6.4）。
+     *
+     * @param recoveryRequestId 本次恢复 attempt 的 requestId（审计引用）
+     */
+    public void confirmRecovered(String recoveryRequestId) {
+        this.keyState = BusinessKeyState.PENDING;
+        this.recoveryCount = (this.recoveryCount == null ? 0 : this.recoveryCount) + 1;
+        this.lastRecoveryRequestId = recoveryRequestId;
+        this.failReason = null;
         this.lastAttemptTime = LocalDateTime.now();
     }
 }

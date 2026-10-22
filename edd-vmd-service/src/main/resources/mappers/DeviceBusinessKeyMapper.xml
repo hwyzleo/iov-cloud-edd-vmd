@@ -29,6 +29,10 @@
         <result column="last_recipient_cert_sn" property="lastRecipientCertSn" />
         <result column="request_id" property="requestId" />
         <result column="operation_id" property="operationId" />
+        <result column="superseded_by_id" property="supersededById" />
+        <result column="logical_identity_digest" property="logicalIdentityDigest" />
+        <result column="recovery_count" property="recoveryCount" />
+        <result column="last_recovery_request_id" property="lastRecoveryRequestId" />
         <result column="request_digest" property="requestDigest" />
         <result column="policy_version" property="policyVersion" />
         <result column="fail_reason" property="failReason" />
@@ -46,7 +50,8 @@
         id, device_sn, binding_id, part_id, hsm_uid, business_domain, purpose, material_model, key_id, business_key_version,
         kms_key_ref, kms_key_version, root_key_version, derivation_version, kms_provider, algorithm, key_spec, key_state,
         valid_from, valid_to, decrypt_until, wrap_mode, last_recipient_cert_sn,
-        request_id, operation_id, request_digest, policy_version, fail_reason, last_attempt_time,
+        request_id, operation_id, superseded_by_id, logical_identity_digest, recovery_count, last_recovery_request_id,
+        request_digest, policy_version, fail_reason, last_attempt_time,
         create_time, create_by, modify_time, modify_by, row_version, row_valid
     </sql>
 
@@ -56,14 +61,16 @@
             device_sn, binding_id, part_id, hsm_uid, business_domain, purpose, material_model, key_id, business_key_version,
             kms_key_ref, kms_key_version, root_key_version, derivation_version, kms_provider, algorithm, key_spec, key_state,
             valid_from, valid_to, decrypt_until, wrap_mode, last_recipient_cert_sn,
-            request_id, operation_id, request_digest, policy_version, fail_reason, last_attempt_time,
+            request_id, operation_id, superseded_by_id, logical_identity_digest, recovery_count, last_recovery_request_id,
+            request_digest, policy_version, fail_reason, last_attempt_time,
             create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
         VALUES (
             #{deviceSn}, #{bindingId}, #{partId}, #{hsmUid}, #{businessDomain}, #{purpose}, #{materialModel}, #{keyId}, #{businessKeyVersion},
             #{kmsKeyRef}, #{kmsKeyVersion}, #{rootKeyVersion}, #{derivationVersion}, #{kmsProvider}, #{algorithm}, #{keySpec}, #{keyState},
             #{validFrom}, #{validTo}, #{decryptUntil}, #{wrapMode}, #{lastRecipientCertSn},
-            #{requestId}, #{operationId}, #{requestDigest}, #{policyVersion}, #{failReason}, #{lastAttemptTime},
+            #{requestId}, #{operationId}, #{supersededById}, #{logicalIdentityDigest}, COALESCE(#{recoveryCount}, 0), #{lastRecoveryRequestId},
+            #{requestDigest}, #{policyVersion}, #{failReason}, #{lastAttemptTime},
             now(), #{createBy}, now(), #{modifyBy}, 1, 1
         )
     </insert>
@@ -143,6 +150,18 @@
         <if test="operationId != null and operationId != ''">
             t.operation_id = #{operationId},
         </if>
+        <if test="supersededById != null">
+            t.superseded_by_id = #{supersededById},
+        </if>
+        <if test="logicalIdentityDigest != null">
+            t.logical_identity_digest = #{logicalIdentityDigest},
+        </if>
+        <if test="recoveryCount != null">
+            t.recovery_count = #{recoveryCount},
+        </if>
+        <if test="lastRecoveryRequestId != null and lastRecoveryRequestId != ''">
+            t.last_recovery_request_id = #{lastRecoveryRequestId},
+        </if>
         <if test="requestDigest != null and requestDigest != ''">
             t.request_digest = #{requestDigest},
         </if>
@@ -184,6 +203,15 @@
         FROM tb_device_business_key
         WHERE key_id = #{keyId} AND row_valid = 1
         LIMIT 1
+    </select>
+
+    <!-- 按 keyId 查询并加行锁（CR-066 claim-or-reuse，须在事务内调用） -->
+    <select id="selectPoByKeyIdForUpdate" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList" />
+        FROM tb_device_business_key
+        WHERE key_id = #{keyId} AND row_valid = 1
+        LIMIT 1
+        FOR UPDATE
     </select>
 
     <!-- 按 requestId 查询 -->
@@ -328,6 +356,73 @@
         WHERE t.id = #{value}
         AND t.row_valid = 1
     </select>
+
+    <!-- CR-066：回填根派生非敏感材料（仅 PENDING 且 key_id IS NULL 的占位行，乐观锁保护）；
+         撞 uk_key_id 时由数据库抛 DuplicateKeyException，由调用方执行 claim-or-reuse -->
+    <update id="attachDerivedMaterial" parameterType="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.DeviceBusinessKeyPo">
+        UPDATE tb_device_business_key t SET
+        t.key_id = #{keyId},
+        t.kms_key_ref = #{kmsKeyRef},
+        t.root_key_version = #{rootKeyVersion},
+        t.derivation_version = #{derivationVersion},
+        t.operation_id = #{operationId},
+        t.algorithm = #{algorithm},
+        t.key_spec = #{keySpec},
+        t.logical_identity_digest = #{logicalIdentityDigest},
+        t.modify_time = now(),
+        t.row_version = t.row_version + 1
+        WHERE t.id = #{id}
+          AND t.key_state = 'PENDING'
+          AND t.key_id IS NULL
+          AND t.row_valid = 1
+          AND t.row_version = #{rowVersion}
+    </update>
+
+    <!-- CR-066：占位行标记 SUPERSEDED（仅 key_id IS NULL 的 PENDING 占位行）；
+         保留 requestId/operationId/failReason 等证据，不清空任何字段 -->
+    <update id="markPlaceholderSuperseded">
+        UPDATE tb_device_business_key t SET
+        t.key_state = 'SUPERSEDED',
+        t.superseded_by_id = #{supersededById},
+        t.fail_reason = #{reason},
+        t.last_attempt_time = now(),
+        t.modify_time = now(),
+        t.row_version = t.row_version + 1
+        WHERE t.id = #{id}
+          AND t.key_state = 'PENDING'
+          AND t.key_id IS NULL
+          AND t.row_valid = 1
+    </update>
+
+    <!-- CR-066：FAILED→PENDING_RECOVERY（恢复入口，仅 FAILED 且已有 keyId 证据的行） -->
+    <update id="markPendingRecovery">
+        UPDATE tb_device_business_key t SET
+        t.key_state = 'PENDING_RECOVERY',
+        t.fail_reason = #{reason},
+        t.last_attempt_time = now(),
+        t.modify_time = now(),
+        t.row_version = t.row_version + 1
+        WHERE t.id = #{id}
+          AND t.key_state = 'FAILED'
+          AND t.key_id IS NOT NULL
+          AND t.row_valid = 1
+    </update>
+
+    <!-- CR-066：PENDING_RECOVERY→PENDING（恢复确认，recovery_count+1，记录最近恢复 attempt 审计引用） -->
+    <update id="confirmRecovery">
+        UPDATE tb_device_business_key t SET
+        t.key_state = 'PENDING',
+        t.recovery_count = t.recovery_count + 1,
+        t.last_recovery_request_id = #{recoveryRequestId},
+        t.fail_reason = NULL,
+        t.last_attempt_time = now(),
+        t.modify_time = now(),
+        t.row_version = t.row_version + 1
+        WHERE t.id = #{id}
+          AND t.key_state = 'PENDING_RECOVERY'
+          AND t.key_id IS NOT NULL
+          AND t.row_valid = 1
+    </update>
 
     <!-- 根据数据对象获取对应数据列表 -->
     <select id="selectPoByExample" parameterType="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.DeviceBusinessKeyPo" resultMap="baseResultMap">
