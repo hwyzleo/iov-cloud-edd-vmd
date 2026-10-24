@@ -13,6 +13,7 @@ import net.hwyz.iov.cloud.framework.security.crypto.model.DerivedWrappedKey;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Objects;
 
@@ -88,6 +89,8 @@ public class BusinessKeyDerivedMaterialService {
         }
         // 占位行已带 keyId（重试/恢复/REIMPORT 路径）：校验身份一致后直接复用
         verifySameLogicalIdentity(pendingRow, result, policy, ctx);
+        // 复用行（重试保留/REIMPORT ACTIVE/恢复占位）同样可能缺失有效期，兜底回填
+        ensureDirectoryValidity(pendingRow, policy);
         metrics.recordClaim("reuse", "success", "existing_key_id");
         return pendingRow.getId();
     }
@@ -97,6 +100,10 @@ public class BusinessKeyDerivedMaterialService {
      */
     private int attach(DeviceBusinessKey pendingRow, DerivedWrappedKey result,
                        BusinessKeyPolicyEntry policy, String fallbackOperationId, ClaimContext ctx) {
+        // 目录行有效期：attach 回填时按策略一次性补齐（valid_to = valid_from + policy.validity()）。
+        // 缺失会导致 KeyprovEnvelopeAdapter 不下发 valid_from_ms/valid_to_ms（=0），
+        // 车端 SEC validate_structure 以 WRAPPED_KEY_INVALID 拒绝导入（CR-066 实现缺陷修复）。
+        LocalDateTime validFrom = LocalDateTime.now();
         DeviceBusinessKey attachRow = DeviceBusinessKey.builder()
                 .id(pendingRow.getId())
                 .rowVersion(pendingRow.getRowVersion())
@@ -107,11 +114,34 @@ public class BusinessKeyDerivedMaterialService {
                 .operationId(result.operationId() != null ? result.operationId() : fallbackOperationId)
                 .algorithm(policy.algorithm())
                 .keySpec(policy.keySpec())
+                .validFrom(validFrom)
+                .validTo(validFrom.plus(policy.validity()))
                 .logicalIdentityDigest(generationPolicy.logicalIdentityDigest(
                         ctx.bizType(), ctx.normalizedAnchor(), ctx.purpose(),
                         result.rootKeyVersion(), result.derivationVersion()))
                 .build();
         return deviceBusinessKeyRepository.attachDerivedMaterial(attachRow);
+    }
+
+    /**
+     * 目录行有效期兜底回填（CR-066 实现缺陷修复）。
+     * <p>
+     * attach 历史缺陷（未回填 validFrom/validTo）或旧路径派生前失败遗留的 FAILED 行可能缺失有效期；
+     * 此类行经 claim-or-reuse/恢复/REIMPORT 复用时若不补齐，KeyprovEnvelopeAdapter 将不下发
+     * valid_from_ms/valid_to_ms（=0），车端 SEC validate_structure 以 WRAPPED_KEY_INVALID 拒绝导入。
+     * 按策略有效期补齐（valid_to = valid_from + policy.validity()）；updatePo 乐观锁失配仅告警，
+     * 由 KeyprovEnvelopeAdapter 的 fail-closed 守卫在 envelope 构建时兜底拦截。
+     */
+    private void ensureDirectoryValidity(DeviceBusinessKey row, BusinessKeyPolicyEntry policy) {
+        if (row.getValidFrom() != null && row.getValidTo() != null) {
+            return;
+        }
+        LocalDateTime validFrom = LocalDateTime.now();
+        row.setValidFrom(validFrom);
+        row.setValidTo(validFrom.plus(policy.validity()));
+        if (deviceBusinessKeyRepository.update(row) == 0) {
+            log.warn("keyprov 目录行有效期兜底回填未生效（行已被并发修改）: keyId={}", row.getKeyId());
+        }
     }
 
     /**
@@ -134,6 +164,9 @@ public class BusinessKeyDerivedMaterialService {
         }
         // 身份一致性校验（完全一致才允许复用；任一不可变事实冲突 → 不可重试）
         verifySameLogicalIdentity(existing, result, policy, ctx);
+        // 既有行（历史/缺陷期间创建的 FAILED 行）可能缺失有效期：先兜底回填，再执行状态恢复——
+        // markPendingRecovery/confirmRecovery 会递增 row_version，有效期须在状态恢复前持久化
+        ensureDirectoryValidity(existing, policy);
         // 状态可复用性 + FAILED/RECONCILE_REQUIRED 恢复
         recoverIfNeeded(existing, ctx);
         // item 重挂 canonical 目录行（同一事务）
@@ -164,6 +197,7 @@ public class BusinessKeyDerivedMaterialService {
         if (current.getKeyId() != null) {
             // 并发已回填：校验身份一致后复用本行
             verifySameLogicalIdentity(current, result, policy, ctx);
+            ensureDirectoryValidity(current, policy);
             metrics.recordClaim("reuse", "success", "concurrent_attach");
             return current.getId();
         }

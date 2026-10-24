@@ -19,6 +19,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.ObjectProvider;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -43,7 +46,10 @@ class KeyprovEnvelopeAdapterTest {
     }
 
     private DeviceBusinessKey directory() {
-        return DeviceBusinessKey.builder().keyId("k").algorithm("AES").build();
+        return DeviceBusinessKey.builder().keyId("k").algorithm("AES")
+                .validFrom(LocalDateTime.now())
+                .validTo(LocalDateTime.now().plus(Duration.ofDays(365)))
+                .build();
     }
 
     @Test
@@ -98,6 +104,8 @@ class KeyprovEnvelopeAdapterTest {
         assertArrayEquals(view.ciphertext(), item.getWrappedKey().toByteArray(), "wrappedKey = ciphertext");
         assertArrayEquals(view.envelopeDigest(), item.getEnvelopeDigest().toByteArray());
         assertArrayEquals(view.keyCheckValue(), item.getKeyCheckValue().toByteArray());
+        assertTrue(item.getValidFromMs() > 0, "目录有效期必须下发 valid_from_ms（缺失=0 会被 SEC 拒）");
+        assertTrue(item.getValidToMs() > item.getValidFromMs(), "valid_to_ms 必须大于 valid_from_ms");
 
         EcdhEsP256EnvelopeParametersV1 parameters =
                 EcdhEsP256EnvelopeParametersV1.parseFrom(item.getParameters().toByteArray());
@@ -146,5 +154,16 @@ class KeyprovEnvelopeAdapterTest {
                 "logical-uplink", KeyPurpose.UPLINK_AEAD, 3L, 7L, "v1", "op-1");
         assertThrows(KeyprovEnvelopeIntegrityException.class,
                 () -> adapter.toWrappedKeyItem("UPLINK_AEAD", directory(), source));
+    }
+
+    @Test
+    @DisplayName("目录行缺有效期（validFrom/validTo 缺失）→ fail-closed 拒绝下发 envelope")
+    void toWrappedKeyItem_missingValidity_failClosed() {
+        DerivedWrappedKey source = KeyprovEnvelopeTestFixtures.derivedWrappedKey(
+                "logical-uplink", KeyPurpose.UPLINK_AEAD, 3L, 7L, "v1", "op-1");
+        DeviceBusinessKey noValidity = DeviceBusinessKey.builder().keyId("k").algorithm("AES").build();
+        KeyprovEnvelopeIntegrityException e = assertThrows(KeyprovEnvelopeIntegrityException.class,
+                () -> adapter.toWrappedKeyItem("UPLINK_AEAD", noValidity, source));
+        assertTrue(e.getMessage().contains("有效期"), "异常信息应指明缺有效期");
     }
 }

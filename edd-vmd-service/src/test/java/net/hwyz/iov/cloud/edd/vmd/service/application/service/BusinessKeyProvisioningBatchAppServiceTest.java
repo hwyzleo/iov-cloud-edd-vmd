@@ -157,6 +157,9 @@ class BusinessKeyProvisioningBatchAppServiceTest {
                 current.setOperationId(attach.getOperationId());
                 current.setAlgorithm(attach.getAlgorithm());
                 current.setKeySpec(attach.getKeySpec());
+                // CR-066 缺陷修复：真实 SQL 同步回填有效期（否则 envelope 缺 valid_from_ms/valid_to_ms）
+                current.setValidFrom(attach.getValidFrom());
+                current.setValidTo(attach.getValidTo());
                 current.setLogicalIdentityDigest(attach.getLogicalIdentityDigest());
                 keyStore.put(attach.getId(), current);
                 return 1;

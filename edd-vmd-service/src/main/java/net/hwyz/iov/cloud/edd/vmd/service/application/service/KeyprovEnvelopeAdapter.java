@@ -163,10 +163,15 @@ public class KeyprovEnvelopeAdapter {
                 .setEnvelopeDigest(ByteString.copyFrom(v1.envelopeDigest()))
                 .setKeyCheckValue(ByteString.copyFrom(v1.keyCheckValue()))
                 .setEnvelopeFormat(KeyEnvelopeFormat.KEY_ENVELOPE_FORMAT_ECDH_ES_P256_V1);
-        if (directory != null && directory.getValidFrom() != null) {
+        if (directory != null) {
+            // fail-closed：目录行缺有效期不得静默不下发（valid_from_ms=0 会被车端 SEC 以
+            // WRAPPED_KEY_INVALID 拒绝导入）；缺有效期属内部数据缺陷，显式抛信封完整性异常
+            if (directory.getValidFrom() == null || directory.getValidTo() == null) {
+                throw new KeyprovEnvelopeIntegrityException(
+                        "目录行缺少有效期（validFrom/validTo 缺失），拒绝下发 envelope: keyId="
+                                + directory.getKeyId());
+            }
             builder.setValidFromMs(toEpochMs(directory.getValidFrom()));
-        }
-        if (directory != null && directory.getValidTo() != null) {
             builder.setValidToMs(toEpochMs(directory.getValidTo()));
         }
         return builder.build();

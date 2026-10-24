@@ -19,6 +19,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DuplicateKeyException;
 
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -106,7 +107,42 @@ class BusinessKeyDerivedMaterialServiceTest {
         verify(repository).attachDerivedMaterial(argThat(a ->
                 KEY_ID.equals(a.getKeyId()) && KMS_REF.equals(a.getKmsKeyRef())
                         && a.getRootKeyVersion() == ROOT_VERSION
-                        && a.getLogicalIdentityDigest() != null && a.getLogicalIdentityDigest().length == 32));
+                        && a.getLogicalIdentityDigest() != null && a.getLogicalIdentityDigest().length == 32
+                        && a.getValidFrom() != null && a.getValidTo() != null
+                        && a.getValidTo().isAfter(a.getValidFrom())));
+    }
+
+    @Test
+    @DisplayName("claim-or-reuse 复用行缺有效期（历史/缺陷期间 FAILED 行）→ 按策略兜底回填 validFrom/validTo")
+    void claimOrReuse_missingValidity_backfills() {
+        when(repository.attachDerivedMaterial(any())).thenThrow(new DuplicateKeyException("uk_key_id"));
+        DeviceBusinessKey existing = existingRow(BusinessKeyState.ACTIVE, ROOT_VERSION, KMS_REF); // 无 validFrom/validTo
+        when(repository.selectByKeyIdForUpdate(KEY_ID)).thenReturn(existing);
+        when(itemRepository.selectByDirectoryKeyId(5L)).thenReturn(null);
+
+        Long id = service.persistOrClaimDerivedMaterial(pendingRow(), result(), policy(), "OP-1", 100L, ctx());
+
+        assertEquals(5L, id);
+        verify(repository).update(argThat(a ->
+                a.getValidFrom() != null && a.getValidTo() != null
+                        && a.getValidTo().isAfter(a.getValidFrom())));
+        assertNotNull(existing.getValidFrom());
+        assertNotNull(existing.getValidTo());
+    }
+
+    @Test
+    @DisplayName("复用行已有有效期 → 不重复回填（不触发 update）")
+    void claimOrReuse_validityPresent_noBackfill() {
+        when(repository.attachDerivedMaterial(any())).thenThrow(new DuplicateKeyException("uk_key_id"));
+        DeviceBusinessKey existing = existingRow(BusinessKeyState.ACTIVE, ROOT_VERSION, KMS_REF);
+        existing.setValidFrom(LocalDateTime.now());
+        existing.setValidTo(LocalDateTime.now().plus(Duration.ofDays(365)));
+        when(repository.selectByKeyIdForUpdate(KEY_ID)).thenReturn(existing);
+        when(itemRepository.selectByDirectoryKeyId(5L)).thenReturn(null);
+
+        service.persistOrClaimDerivedMaterial(pendingRow(), result(), policy(), "OP-1", 100L, ctx());
+
+        verify(repository, never()).update(any());
     }
 
     @Test

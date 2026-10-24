@@ -269,19 +269,24 @@ class BusinessKeyCr061IntegrationTest extends BaseTest {
         response.getItemsList().forEach(item -> {
             assertFalse(item.getKeyId().isBlank(), "应返回 logicalKeyId");
             assertTrue(item.getWrappedKey().size() > 0, "应返回一次性 Wrapped Key");
+            assertTrue(item.getValidFromMs() > 0, "envelope 必须携带 valid_from_ms（=0 会被 SEC 以 WRAPPED_KEY_INVALID 拒）");
+            assertTrue(item.getValidToMs() > item.getValidFromMs(), "valid_to_ms 必须大于 valid_from_ms");
             keyIds.add(item.getKeyId());
         });
         assertEquals(2, keyIds.size(), "两用途根派生逻辑 keyId 必须隔离（uk_key_id）");
 
         for (String purpose : KeyprovConstants.V2C_PURPOSES) {
             var row = jdbcTemplate.queryForMap(
-                    "SELECT key_id, kms_key_ref, material_model, root_key_version, derivation_version, operation_id, key_state "
+                    "SELECT key_id, kms_key_ref, material_model, root_key_version, derivation_version, operation_id, "
+                            + "key_state, valid_from, valid_to "
                             + "FROM tb_device_business_key WHERE device_sn = ? AND business_domain = ? AND purpose = ?",
                     DEVICE_SN, DOMAIN, purpose);
             assertEquals(MATERIAL_MODEL, row.get("material_model"), "材料模型应为 DERIVED_ROOT: " + purpose);
             assertEquals(ROOT_KEY_VERSION, ((Number) row.get("root_key_version")).intValue(), "应落根版本: " + purpose);
             assertEquals(DERIVATION_VERSION, row.get("derivation_version"), "应落派生版本: " + purpose);
             assertNotNull(row.get("operation_id"), "应落 operationId: " + purpose);
+            assertNotNull(row.get("valid_from"), "目录行必须落有效期 valid_from: " + purpose);
+            assertNotNull(row.get("valid_to"), "目录行必须落有效期 valid_to: " + purpose);
             assertNotNull(row.get("key_id"));
             assertNotNull(row.get("kms_key_ref"));
             assertEquals("PENDING", row.get("key_state"), "ACK 前目标版本保持 PENDING: " + purpose);

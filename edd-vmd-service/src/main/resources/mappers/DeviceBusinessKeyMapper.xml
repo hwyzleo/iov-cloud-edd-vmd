@@ -368,6 +368,8 @@
         t.operation_id = #{operationId},
         t.algorithm = #{algorithm},
         t.key_spec = #{keySpec},
+        t.valid_from = #{validFrom},
+        t.valid_to = #{validTo},
         t.logical_identity_digest = #{logicalIdentityDigest},
         t.modify_time = now(),
         t.row_version = t.row_version + 1

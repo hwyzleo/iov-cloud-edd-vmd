@@ -291,6 +291,12 @@ class BusinessKeyCr066IntegrationTest extends BaseTest {
         assertEquals(1, ((Number) up.get("recovery_count")).intValue(), "应记录恢复次数");
         assertEquals("CR066_REQ_001", up.get("last_recovery_request_id"), "应记录最近恢复 attempt 审计引用");
 
+        // 既有行（fixture 未写有效期，模拟历史/缺陷期间行）应被兜底补齐，保证 envelope 可下发
+        Map<String, Object> validity = jdbcTemplate.queryForMap(
+                "SELECT valid_from, valid_to FROM tb_device_business_key WHERE id = ?", failedUpId);
+        assertNotNull(validity.get("valid_from"), "恢复复用的既有行应兜底补齐 valid_from");
+        assertNotNull(validity.get("valid_to"), "恢复复用的既有行应兜底补齐 valid_to");
+
         // 本批次占位行 SUPERSEDED 且保留证据 + 指向 canonical
         Integer superseded = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM tb_device_business_key WHERE device_sn = ? AND key_state = 'SUPERSEDED' "
