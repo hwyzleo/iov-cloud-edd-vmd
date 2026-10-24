@@ -76,9 +76,17 @@ public final class KeyprovConstants {
     public static final String ERR_CERTIFICATE_INVALID = "KEYPROV_CERTIFICATE_INVALID";
     public static final String ERR_EXPIRED = "KEYPROV_EXPIRED";
     public static final String ERR_PROTOCOL_INVALID = "KEYPROV_PROTOCOL_INVALID";
+    /**
+     * 当前命令尚未建立可查询 operation（批次前 gate/目录/依赖暂不可用，VMD-DSN-CR-067 §4.6）。
+     * 依赖恢复后以同一 requestId 重发原 KeyProvisioningRequest，不得转为 StatusRequest。
+     */
     public static final String ERR_UNAVAILABLE = "KEYPROV_VMD_UNAVAILABLE";
     public static final String ERR_IDEMPOTENCY_CONFLICT = "KEYPROV_IDEMPOTENCY_CONFLICT";
     public static final String ERR_IMPORT_FAILED = "KEYPROV_IMPORT_FAILED";
+    /**
+     * 原命令已建立权威批次/operation（批次后结果未知，VMD-DSN-CR-067 §4.6）。
+     * 禁止重建批次或重放 KeyProvisioningRequest，只能通过 Status/operation 对账。
+     */
     public static final String ERR_RECONCILE_REQUIRED = "KEYPROV_RECONCILE_REQUIRED";
     // CR-061 V2C 根派生（VMD 稳定扩展码，车端按 retryable/action 处理）
     public static final String ERR_VIN_BINDING_INVALID = "KEYPROV_VIN_BINDING_INVALID";

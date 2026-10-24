@@ -247,10 +247,13 @@ public class BusinessKeyProvisioningBatchAppService {
         try {
             derived = prepareAndDerive(batch, request, identity, domain, normalizedVin, activeCert, requestId, fingerprintDigest);
         } catch (CryptoOperationOutcomeUnknownException e) {
-            log.warn("keyprov framework 派生/Wrap 结果未知（转待对账，以原requestId对账）: requestId={}, cause={}: {}",
+            // VMD-DSN-CR-067 §4.1b：批次已持久化、operation 可能已执行——恢复动作只能是 Status 对账
+            // （ERR_RECONCILE_REQUIRED/QUERY_STATUS_LATER），不得再以 ERR_UNAVAILABLE 引导重发 Request。
+            log.warn("keyprov framework 派生/Wrap 结果未知（批次已落库，转只读对账，不得重建）: requestId={}, cause={}: {}",
                     requestId, e.getClass().getSimpleName(), e.getMessage(), e);
             markBatchReconcile(batch, "framework派生/Wrap结果未知");
-            return retryable(requestId, KeyprovConstants.ERR_UNAVAILABLE, "framework结果未知，需以原requestId对账");
+            return retryable(requestId, KeyprovConstants.ERR_RECONCILE_REQUIRED,
+                    "framework结果未知，批次已落库，需以原requestId查询Status对账");
         } catch (BusinessKeyDerivedProviderUnavailableException e) {
             log.warn("keyprov 根派生门面未就绪（可同requestId重试）: requestId={}, cause={}: {}",
                     requestId, e.getClass().getSimpleName(), e.getMessage(), e);
@@ -775,29 +778,84 @@ public class BusinessKeyProvisioningBatchAppService {
     }
 
     private KeyProvisioningResponse rejected(String requestId, String code, boolean retryable, String message) {
-        return responseWithError(requestId, KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED, code, retryable, message);
+        return responseWithError(requestId, KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED,
+                code, retryable, "DO_NOT_RETRY", message);
     }
 
     private KeyProvisioningResponse retryable(String requestId, String code, String message) {
-        return responseWithError(requestId, KeyProvisioningResult.KEY_PROVISIONING_RESULT_RETRYABLE_FAILURE, code, true, message);
+        // VMD-DSN-CR-067 §4.1：恢复动作按 protocol code 区分，不再以 retryable 布尔单独推导——
+        // ERR_RECONCILE_REQUIRED（批次已落库）只能 Status 对账；其余可重试（批次前暂不可用）重发原 Request。
+        String action = KeyprovConstants.ERR_RECONCILE_REQUIRED.equals(code)
+                ? "QUERY_STATUS_LATER" : "RETRY_SAME_REQUEST_ID";
+        return responseWithError(requestId, KeyProvisioningResult.KEY_PROVISIONING_RESULT_RETRYABLE_FAILURE,
+                code, true, action, message);
     }
 
     private KeyProvisioningResponse conflict(String requestId, String code, String message) {
-        return responseWithError(requestId, KeyProvisioningResult.KEY_PROVISIONING_RESULT_CONFLICT, code, false, message);
+        return responseWithError(requestId, KeyProvisioningResult.KEY_PROVISIONING_RESULT_CONFLICT,
+                code, false, "DO_NOT_RETRY", message);
     }
 
     private KeyProvisioningResponse responseWithError(String requestId, KeyProvisioningResult result,
-                                                      String code, boolean retryable, String message) {
+                                                      String code, boolean retryable, String action, String message) {
+        validateRecoveryTuple(code, retryable, action, result);
+        // CR-067 §9：低基数错误元组监控（phase 由 code 推导：ERR_RECONCILE_REQUIRED=post_batch）
+        metrics.recordKeyprovError(
+                KeyprovConstants.ERR_RECONCILE_REQUIRED.equals(code) ? "post_batch" : "pre_batch",
+                code, action);
         return KeyProvisioningResponse.newBuilder()
                 .setRequestId(requestId == null ? "" : requestId)
                 .setResult(result)
                 .setError(ProtocolError.newBuilder()
                         .setCode(code == null ? "" : code)
                         .setRetryable(retryable)
-                        .setAction(retryable ? "RETRY_SAME_REQUEST_ID" : "DO_NOT_RETRY")
+                        .setAction(action == null ? "" : action)
                         .setMessage(message == null ? "" : truncate(message))
                         .build())
                 .build();
+    }
+
+    /**
+     * 恢复元组内部一致性断言（VMD-DSN-CR-067 §4.1c）：禁止仅凭 retryable 布尔推导恢复方式，
+     * protocol code 与建议动作必须自洽。
+     * <ul>
+     *   <li>ERR_RECONCILE_REQUIRED：必须 retryable=true 且 action=QUERY_STATUS_LATER（批次已落库，仅可 Status 对账）</li>
+     *   <li>ERR_UNAVAILABLE / ERR_DERIVED_PROVIDER_NOT_READY / ERR_IMPORT_PROOF_NOT_READY 的可重试路径：
+     *       必须 action=RETRY_SAME_REQUEST_ID（批次前/确定性依赖，重发原 Request）</li>
+     *   <li>ERR_NOT_FOUND：必须 retryable=false 且 action=DO_NOT_RETRY</li>
+     * </ul>
+     */
+    private void validateRecoveryTuple(String code, boolean retryable, String action,
+                                       KeyProvisioningResult result) {
+        if (KeyprovConstants.ERR_RECONCILE_REQUIRED.equals(code)) {
+            if (!retryable || !"QUERY_STATUS_LATER".equals(action)) {
+                metrics.recordInvalidErrorTuple("reconcile_required_mismatch");
+                throw new IllegalStateException(
+                        "keyprov 恢复元组不一致: ERR_RECONCILE_REQUIRED 必须 retryable=true 且 action=QUERY_STATUS_LATER"
+                                + ", actual(retryable=" + retryable + ", action=" + action
+                                + ", result=" + result + ")");
+            }
+            return;
+        }
+        if (KeyprovConstants.ERR_UNAVAILABLE.equals(code)
+                || KeyprovConstants.ERR_DERIVED_PROVIDER_NOT_READY.equals(code)
+                || KeyprovConstants.ERR_IMPORT_PROOF_NOT_READY.equals(code)) {
+            if (retryable && !"RETRY_SAME_REQUEST_ID".equals(action)) {
+                metrics.recordInvalidErrorTuple("retryable_unavailable_action_mismatch");
+                throw new IllegalStateException(
+                        "keyprov 恢复元组不一致: " + code + " 的可重试路径必须 action=RETRY_SAME_REQUEST_ID"
+                                + ", actual(action=" + action + ")");
+            }
+            return;
+        }
+        if (KeyprovConstants.ERR_NOT_FOUND.equals(code)) {
+            if (retryable || !"DO_NOT_RETRY".equals(action)) {
+                metrics.recordInvalidErrorTuple("not_found_must_not_retry");
+                throw new IllegalStateException(
+                        "keyprov 恢复元组不一致: ERR_NOT_FOUND 必须 retryable=false 且 action=DO_NOT_RETRY"
+                                + ", actual(retryable=" + retryable + ", action=" + action + ")");
+            }
+        }
     }
 
     private long defaultBundleExpireAt() {

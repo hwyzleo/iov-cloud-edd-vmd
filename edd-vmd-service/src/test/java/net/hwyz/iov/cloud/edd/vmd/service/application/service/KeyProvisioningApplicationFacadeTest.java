@@ -4,6 +4,7 @@ import net.hwyz.iov.cloud.edd.vmd.api.vo.keyprov.VmdKeyProvisioningOutcome;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.KeyProvisioningOperationResult;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyKmsUnavailableException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.VmdErrorCode;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.monitoring.BusinessKeyProvisioningMetrics;
 import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateEvidenceMismatchException;
 import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateMaterialUnavailableException;
 import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateProfileNotAllowedException;
@@ -16,6 +17,7 @@ import net.hwyz.iov.security.keyprov.v1.KeyProvisioningAckResult;
 import net.hwyz.iov.security.keyprov.v1.KeyProvisioningRequest;
 import net.hwyz.iov.security.keyprov.v1.KeyProvisioningResponse;
 import net.hwyz.iov.security.keyprov.v1.KeyProvisioningResult;
+import net.hwyz.iov.security.keyprov.v1.KeyProvisioningStatus;
 import net.hwyz.iov.security.keyprov.v1.KeyProvisioningStatusRequest;
 import net.hwyz.iov.security.keyprov.v1.KeyProvisioningStatusResponse;
 import net.hwyz.iov.security.keyprov.v1.ProtocolError;
@@ -53,12 +55,14 @@ class KeyProvisioningApplicationFacadeTest {
     private BusinessKeyProvisioningAckAppService ackAppService;
     @Mock
     private BusinessKeyProvisioningStatusAppService statusAppService;
+    @Mock
+    private BusinessKeyProvisioningMetrics metrics;
 
     private KeyProvisioningApplicationFacade facade;
 
     @BeforeEach
     void setUp() {
-        facade = new KeyProvisioningApplicationFacade(batchAppService, ackAppService, statusAppService);
+        facade = new KeyProvisioningApplicationFacade(batchAppService, ackAppService, statusAppService, metrics);
         ReflectionTestUtils.setField(facade, "keyprovEnabled", true);
         ReflectionTestUtils.setField(facade, "allowedCallers", "VAGW");
         ReflectionTestUtils.setField(facade, "expectedSchemaVersion", "keyprov-v1");
@@ -107,6 +111,14 @@ class KeyProvisioningApplicationFacadeTest {
                 .setRequestId(requestId)
                 .setResult(KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED)
                 .setError(ProtocolError.newBuilder().setCode(code).setMessage("x").build())
+                .build();
+    }
+
+    private KeyProvisioningResponse retryableResponse(String requestId, String code) {
+        return KeyProvisioningResponse.newBuilder()
+                .setRequestId(requestId)
+                .setResult(KeyProvisioningResult.KEY_PROVISIONING_RESULT_RETRYABLE_FAILURE)
+                .setError(ProtocolError.newBuilder().setCode(code).setRetryable(true).setMessage("x").build())
                 .build();
     }
 
@@ -409,6 +421,117 @@ class KeyProvisioningApplicationFacadeTest {
         assertEquals("", response.getRequestId());
         assertEquals(KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED, response.getResult());
         assertEquals(KeyprovConstants.ERR_PROTOCOL_INVALID, response.getError().getCode());
+    }
+
+    @Test
+    @DisplayName("CR-067 §4.2/§4.4/§5：按 protocol code 分流——806096 重发原 Request、806098 仅 Status 对账、806099 DO_NOT_RETRY")
+    void cr067RecoveryTupleMapping() throws Exception {
+        byte[] payload = requestPayload("R1");
+        // 1) 批次前 gate/目录/依赖暂不可用（ERR_UNAVAILABLE + RETRYABLE_FAILURE）→ UNAVAILABLE/RETRY_SAME_REQUEST_ID/806096
+        when(batchAppService.provision(any(KeyProvisioningRequest.class), any(KeyprovAuthenticatedContext.class)))
+                .thenReturn(retryableResponse("R1", KeyprovConstants.ERR_UNAVAILABLE));
+        KeyProvisioningOperationResult unavailable = request(CALLER, ctx(),
+                KeyprovConstants.PAYLOAD_TYPE_REQUEST, "keyprov-v1", payload, digest(payload));
+        assertEquals(VmdErrorCode.KEYPROV_DIRECTORY_UNAVAILABLE, unavailable.getErrorCode());
+        assertEquals(VmdKeyProvisioningOutcome.UNAVAILABLE, unavailable.getOutcome());
+        assertTrue(unavailable.isRetryable());
+        assertEquals("RETRY_SAME_REQUEST_ID", unavailable.getAction());
+        KeyProvisioningResponse canonUnavailable = decodeResponse(unavailable);
+        assertEquals(KeyProvisioningResult.KEY_PROVISIONING_RESULT_RETRYABLE_FAILURE, canonUnavailable.getResult());
+        assertEquals(KeyprovConstants.ERR_UNAVAILABLE, canonUnavailable.getError().getCode());
+        assertTrue(canonUnavailable.getError().getRetryable());
+        assertEquals("RETRY_SAME_REQUEST_ID", canonUnavailable.getError().getAction());
+
+        // 2) 批次已落库结果未知（ERR_RECONCILE_REQUIRED + RETRYABLE_FAILURE）→ OUTCOME_UNKNOWN/QUERY_STATUS_LATER/806098
+        when(batchAppService.provision(any(KeyProvisioningRequest.class), any(KeyprovAuthenticatedContext.class)))
+                .thenReturn(retryableResponse("R1", KeyprovConstants.ERR_RECONCILE_REQUIRED));
+        KeyProvisioningOperationResult unknown = request(CALLER, ctx(),
+                KeyprovConstants.PAYLOAD_TYPE_REQUEST, "keyprov-v1", payload, digest(payload));
+        assertEquals(VmdErrorCode.KEYPROV_OUTCOME_UNKNOWN, unknown.getErrorCode());
+        assertEquals(VmdKeyProvisioningOutcome.OUTCOME_UNKNOWN, unknown.getOutcome());
+        assertTrue(unknown.isRetryable());
+        assertEquals("QUERY_STATUS_LATER", unknown.getAction());
+        KeyProvisioningResponse canonUnknown = decodeResponse(unknown);
+        assertEquals(KeyprovConstants.ERR_RECONCILE_REQUIRED, canonUnknown.getError().getCode());
+        assertTrue(canonUnknown.getError().getRetryable());
+        assertEquals("QUERY_STATUS_LATER", canonUnknown.getError().getAction());
+
+        // 3) Status 批次不存在（ERR_NOT_FOUND）→ REJECTED/DO_NOT_RETRY/806099，且 canonical 四元组一致
+        byte[] statusPayload = KeyProvisioningStatusRequest.newBuilder().setRequestId("R1").build().toByteArray();
+        when(statusAppService.queryStatus(any(KeyProvisioningStatusRequest.class), any(KeyprovAuthenticatedContext.class)))
+                .thenReturn(KeyProvisioningStatusResponse.newBuilder()
+                        .setRequestId("R1")
+                        .setStatus(KeyProvisioningStatus.KEY_PROVISIONING_STATUS_UNKNOWN)
+                        .setError(ProtocolError.newBuilder()
+                                .setCode(KeyprovConstants.ERR_NOT_FOUND).setMessage("不存在").build())
+                        .build());
+        KeyProvisioningOperationResult notFound = facade.status(CALLER, ctx(),
+                KeyprovConstants.PAYLOAD_TYPE_STATUS_REQUEST, "keyprov-v1", statusPayload, digest(statusPayload));
+        assertEquals(VmdErrorCode.KEYPROV_BATCH_NOT_FOUND, notFound.getErrorCode());
+        assertEquals(VmdKeyProvisioningOutcome.REJECTED, notFound.getOutcome());
+        assertFalse(notFound.isRetryable());
+        assertEquals("DO_NOT_RETRY", notFound.getAction());
+        KeyProvisioningStatusResponse canonNotFound =
+                KeyProvisioningStatusResponse.parseFrom(notFound.getDownlinkPayload());
+        assertEquals(KeyprovConstants.ERR_NOT_FOUND, canonNotFound.getError().getCode());
+        assertFalse(canonNotFound.getError().getRetryable());
+        assertEquals("DO_NOT_RETRY", canonNotFound.getError().getAction());
+
+        // 4) §4.4 双向映射一致性：806096↔ERR_UNAVAILABLE、806098↔ERR_RECONCILE_REQUIRED、806099↔ERR_NOT_FOUND
+        assertEquals(VmdErrorCode.KEYPROV_DIRECTORY_UNAVAILABLE,
+                ReflectionTestUtils.invokeMethod(facade, "mapProtocolCode", KeyprovConstants.ERR_UNAVAILABLE));
+        assertEquals(VmdErrorCode.KEYPROV_OUTCOME_UNKNOWN,
+                ReflectionTestUtils.invokeMethod(facade, "mapProtocolCode", KeyprovConstants.ERR_RECONCILE_REQUIRED));
+        assertEquals(VmdErrorCode.KEYPROV_BATCH_NOT_FOUND,
+                ReflectionTestUtils.invokeMethod(facade, "mapProtocolCode", KeyprovConstants.ERR_NOT_FOUND));
+        assertEquals(KeyprovConstants.ERR_UNAVAILABLE,
+                ReflectionTestUtils.invokeMethod(facade, "mapErrorCodeToProtocolCode",
+                        VmdErrorCode.KEYPROV_DIRECTORY_UNAVAILABLE));
+        assertEquals(KeyprovConstants.ERR_RECONCILE_REQUIRED,
+                ReflectionTestUtils.invokeMethod(facade, "mapErrorCodeToProtocolCode",
+                        VmdErrorCode.KEYPROV_OUTCOME_UNKNOWN));
+        assertEquals(KeyprovConstants.ERR_NOT_FOUND,
+                ReflectionTestUtils.invokeMethod(facade, "mapErrorCodeToProtocolCode",
+                        VmdErrorCode.KEYPROV_BATCH_NOT_FOUND));
+    }
+
+    @Test
+    @DisplayName("CR-067 §8.1：确定性 Profile/身份拒绝不被 retryable fallback 覆盖（仍 DO_NOT_RETRY）")
+    void cr067DeterministicRejectNotOverriddenByRetryableFallback() throws Exception {
+        byte[] payload = requestPayload("R1");
+        // 确定性策略拒绝（ERR_CERTIFICATE_INVALID / ERR_DERIVATION_UNSUPPORTED）即使结果带 REJECTED 也不落入可重试分支
+        when(batchAppService.provision(any(KeyProvisioningRequest.class), any(KeyprovAuthenticatedContext.class)))
+                .thenReturn(rejectedResponse("R1", KeyprovConstants.ERR_CERTIFICATE_INVALID));
+        KeyProvisioningOperationResult rejected = request(CALLER, ctx(),
+                KeyprovConstants.PAYLOAD_TYPE_REQUEST, "keyprov-v1", payload, digest(payload));
+        assertEquals(VmdKeyProvisioningOutcome.REJECTED, rejected.getOutcome());
+        assertFalse(rejected.isRetryable());
+        assertEquals("DO_NOT_RETRY", rejected.getAction());
+        assertEquals(VmdErrorCode.KEYPROV_CERTIFICATE_INVALID, rejected.getErrorCode());
+    }
+
+    @Test
+    @DisplayName("CR-067 §8.1：确定性依赖不可用（ERR_DERIVED_PROVIDER_NOT_READY）保持 UNAVAILABLE/RETRY_SAME_REQUEST_ID")
+    void cr067DerivedProviderNotReadyStaysRetryRequest() throws Exception {
+        byte[] payload = requestPayload("R1");
+        when(batchAppService.provision(any(KeyProvisioningRequest.class), any(KeyprovAuthenticatedContext.class)))
+                .thenReturn(retryableResponse("R1", KeyprovConstants.ERR_DERIVED_PROVIDER_NOT_READY));
+        KeyProvisioningOperationResult notReady = request(CALLER, ctx(),
+                KeyprovConstants.PAYLOAD_TYPE_REQUEST, "keyprov-v1", payload, digest(payload));
+        assertEquals(VmdErrorCode.KEYPROV_DERIVED_PROVIDER_NOT_READY, notReady.getErrorCode());
+        assertEquals(VmdKeyProvisioningOutcome.UNAVAILABLE, notReady.getOutcome());
+        assertTrue(notReady.isRetryable());
+        assertEquals("RETRY_SAME_REQUEST_ID", notReady.getAction());
+    }
+
+    @Test
+    @DisplayName("CR-067 §8.1：恢复元组不自洽时 fail-fast（error() 构造后校验）")
+    void cr067InvalidRecoveryTupleFailsFast() {
+        // error() 不允许出现 outcome 与 action 矛盾的四元组（如 OUTCOME_UNKNOWN + RETRY_SAME_REQUEST_ID）
+        assertThrows(IllegalStateException.class, () ->
+                ReflectionTestUtils.invokeMethod(facade, "error", "R1",
+                        VmdErrorCode.KEYPROV_OUTCOME_UNKNOWN, VmdKeyProvisioningOutcome.OUTCOME_UNKNOWN,
+                        false, "x"));
     }
 
     private KeyProvisioningResponse decodeResponse(KeyProvisioningOperationResult result) throws Exception {

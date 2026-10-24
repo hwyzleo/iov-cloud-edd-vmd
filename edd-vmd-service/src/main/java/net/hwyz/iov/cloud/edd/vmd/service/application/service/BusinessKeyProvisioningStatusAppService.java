@@ -94,6 +94,10 @@ public class BusinessKeyProvisioningStatusAppService {
 
     private KeyProvisioningStatusResponse status(String requestId, KeyProvisioningStatus status,
                                                  String code, String message) {
+        // VMD-DSN-CR-067 §4.5/§5：Status 错误元组自洽——批次不存在（ERR_NOT_FOUND/806099）必须
+        // retryable=false 且 action=DO_NOT_RETRY，不得引导继续对账（Status 保持只读，不查询 gate 历史、
+        // 不调用 provision()、不创建批次）。其余上下文/协议类错误维持现有语义。
+        boolean notFound = KeyprovConstants.ERR_NOT_FOUND.equals(code);
         return KeyProvisioningStatusResponse.newBuilder()
                 .setRequestId(requestId == null ? "" : requestId)
                 .setStatus(status)
@@ -101,7 +105,7 @@ public class BusinessKeyProvisioningStatusAppService {
                 .setError(ProtocolError.newBuilder()
                         .setCode(code == null ? "" : code)
                         .setRetryable(false)
-                        .setAction("QUERY_STATUS_LATER")
+                        .setAction(notFound ? "DO_NOT_RETRY" : "QUERY_STATUS_LATER")
                         .setMessage(message == null ? "" : message)
                         .build())
                 .build();

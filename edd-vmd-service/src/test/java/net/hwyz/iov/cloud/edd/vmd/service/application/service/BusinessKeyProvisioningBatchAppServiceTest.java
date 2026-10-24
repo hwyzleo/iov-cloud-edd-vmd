@@ -509,7 +509,7 @@ class BusinessKeyProvisioningBatchAppServiceTest {
     }
 
     @Test
-    @DisplayName("framework 结果未知 → 可重试对账，批次 RECONCILE_REQUIRED")
+    @DisplayName("CR-067：framework 结果未知（批次已落库）→ ERR_RECONCILE_REQUIRED/QUERY_STATUS_LATER，批次 RECONCILE_REQUIRED")
     void provision_outcomeUnknown_reconcile() {
         when(boundDeviceIdentityResolver.resolveByHsmUid(HSM_UID, null)).thenReturn(identity);
         doThrow(new CryptoOperationOutcomeUnknownException("timeout"))
@@ -518,8 +518,46 @@ class BusinessKeyProvisioningBatchAppServiceTest {
         KeyProvisioningResponse response = service.provision(request(), ctx());
 
         assertEquals(KeyProvisioningResult.KEY_PROVISIONING_RESULT_RETRYABLE_FAILURE, response.getResult());
-        assertEquals(KeyprovConstants.ERR_UNAVAILABLE, response.getError().getCode());
+        assertEquals(KeyprovConstants.ERR_RECONCILE_REQUIRED, response.getError().getCode());
+        assertTrue(response.getError().getRetryable());
+        assertEquals("QUERY_STATUS_LATER", response.getError().getAction(),
+                "批次已落库只能 Status 对账，不得引导重发原 Request");
         assertEquals(BusinessKeyProvisioningState.RECONCILE_REQUIRED, batchRef.getStatus());
+    }
+
+    @Test
+    @DisplayName("CR-067：批次前证书门禁可重试拒绝 → ERR_UNAVAILABLE/RETRY_SAME_REQUEST_ID，不落批次、不调用 Provider")
+    void provision_gateRetryableRejection_preBatch() {
+        when(boundDeviceIdentityResolver.resolveByHsmUid(HSM_UID, null)).thenReturn(identity);
+        when(tboxEcdhCertificateEligibilityGate.evaluate(any()))
+                .thenReturn(new TboxEcdhCertificateEligibilityGate.GateResult(false, true, "provider-not-ready"));
+
+        KeyProvisioningResponse response = service.provision(request(), ctx());
+
+        assertEquals(KeyProvisioningResult.KEY_PROVISIONING_RESULT_RETRYABLE_FAILURE, response.getResult());
+        assertEquals(KeyprovConstants.ERR_UNAVAILABLE, response.getError().getCode());
+        assertTrue(response.getError().getRetryable());
+        assertEquals("RETRY_SAME_REQUEST_ID", response.getError().getAction(),
+                "批次前暂不可用必须以原 requestId 重发 Request，不得转为 Status");
+        // §8.2：gate DOWN 时 Repository createBatch 次数为 0、Provider 调用次数为 0
+        assertNull(batchRef, "批次前失败不得创建批次");
+        verify(provisioningRepository, never()).insert(any(BusinessKeyProvisioning.class));
+        verify(derivedTemplate, never()).deriveAndWrap(any(), any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("CR-067 §4.1c：ERR_RECONCILE_REQUIRED 若被错误配为 RETRY_SAME_REQUEST_ID 则四元组断言 fail-fast")
+    void provision_reconcileRequiredWrongAction_failsFast() {
+        // 防御性验证：validateRecoveryTuple 不允许 ERR_RECONCILE_REQUIRED 携带 RETRY_SAME_REQUEST_ID
+        assertThrows(IllegalStateException.class, () ->
+                ReflectionTestUtils.invokeMethod(service, "responseWithError",
+                        REQUEST_ID, KeyProvisioningResult.KEY_PROVISIONING_RESULT_RETRYABLE_FAILURE,
+                        KeyprovConstants.ERR_RECONCILE_REQUIRED, true, "RETRY_SAME_REQUEST_ID", "x"));
+        // 反向组合（ERR_UNAVAILABLE 可重试却配 QUERY_STATUS_LATER）同样 fail-fast
+        assertThrows(IllegalStateException.class, () ->
+                ReflectionTestUtils.invokeMethod(service, "responseWithError",
+                        REQUEST_ID, KeyProvisioningResult.KEY_PROVISIONING_RESULT_RETRYABLE_FAILURE,
+                        KeyprovConstants.ERR_UNAVAILABLE, true, "QUERY_STATUS_LATER", "x"));
     }
 
     // ================= CR-066 claim-or-reuse / 防死循环 / 版本代际 =================

@@ -8,6 +8,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyKmsUnavail
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyLogicalIdentityConflict;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyVersionGenerationMismatchException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.VmdErrorCode;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.monitoring.BusinessKeyProvisioningMetrics;
 import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateApplicationRejectedException;
 import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateEvidenceMismatchException;
 import net.hwyz.iov.cloud.framework.security.crypto.exception.CertificateEvidenceRejectedException;
@@ -64,6 +65,7 @@ public class KeyProvisioningApplicationFacade {
     private final BusinessKeyProvisioningBatchAppService provisioningBatchAppService;
     private final BusinessKeyProvisioningAckAppService provisioningAckAppService;
     private final BusinessKeyProvisioningStatusAppService provisioningStatusAppService;
+    private final BusinessKeyProvisioningMetrics metrics;
 
     /**
      * keyprov capability 功能开关（默认关闭 fail-closed）
@@ -103,10 +105,12 @@ public class KeyProvisioningApplicationFacade {
 
     public KeyProvisioningApplicationFacade(BusinessKeyProvisioningBatchAppService provisioningBatchAppService,
                                             BusinessKeyProvisioningAckAppService provisioningAckAppService,
-                                            BusinessKeyProvisioningStatusAppService provisioningStatusAppService) {
+                                            BusinessKeyProvisioningStatusAppService provisioningStatusAppService,
+                                            BusinessKeyProvisioningMetrics metrics) {
         this.provisioningBatchAppService = provisioningBatchAppService;
         this.provisioningAckAppService = provisioningAckAppService;
         this.provisioningStatusAppService = provisioningStatusAppService;
+        this.metrics = metrics;
     }
 
     /**
@@ -490,17 +494,22 @@ public class KeyProvisioningApplicationFacade {
         VmdErrorCode errorCode = mapProtocolCode(protocolCode);
         VmdKeyProvisioningOutcome outcome;
         boolean retryable;
-        // 根派生/Transit 根未就绪为确定性依赖不可用（同 requestId 重试），非结果未知
-        if (KeyprovConstants.ERR_DERIVED_PROVIDER_NOT_READY.equals(protocolCode)
+        // VMD-DSN-CR-067 §4.2：按 protocol code 优先分类——OUTCOME_UNKNOWN 仅表示“批次/operation 已存在可对账”，
+        // 不再表示泛化的临时失败；其余可重试失败按批次前暂不可用（UNAVAILABLE/RETRY_SAME_REQUEST_ID）。
+        if (KeyprovConstants.ERR_RECONCILE_REQUIRED.equals(protocolCode)) {
+            outcome = VmdKeyProvisioningOutcome.OUTCOME_UNKNOWN;
+            retryable = true;
+        } else if (KeyprovConstants.ERR_DERIVED_PROVIDER_NOT_READY.equals(protocolCode)
                 || KeyprovConstants.ERR_IMPORT_PROOF_NOT_READY.equals(protocolCode)) {
+            // 根派生/Transit 根未就绪为确定性依赖不可用（同 requestId 重试），非结果未知
+            outcome = VmdKeyProvisioningOutcome.UNAVAILABLE;
+            retryable = true;
+        } else if (result == KeyProvisioningResult.KEY_PROVISIONING_RESULT_RETRYABLE_FAILURE) {
+            // 其余可重试失败（如 ERR_UNAVAILABLE 806096 门禁/目录暂不可用）：批次前暂不可用 → 重发原 Request
             outcome = VmdKeyProvisioningOutcome.UNAVAILABLE;
             retryable = true;
         } else {
             switch (result) {
-                case KEY_PROVISIONING_RESULT_RETRYABLE_FAILURE -> {
-                    outcome = VmdKeyProvisioningOutcome.OUTCOME_UNKNOWN;
-                    retryable = true;
-                }
                 case KEY_PROVISIONING_RESULT_EXPIRED, KEY_PROVISIONING_RESULT_CONFLICT,
                      KEY_PROVISIONING_RESULT_REJECTED -> {
                     outcome = VmdKeyProvisioningOutcome.REJECTED;
@@ -512,6 +521,8 @@ public class KeyProvisioningApplicationFacade {
                 }
             }
         }
+        metrics.recordKeyprovRecovery(recoveryMode(outcome),
+                outcome == null ? VmdKeyProvisioningOutcome.REJECTED.name() : outcome.name());
         KeyProvisioningOperationResult operationResult = error(requestId, errorCode, outcome, retryable, message);
         // 业务层已给出 canonical 协议结果：下行 payload 直接透传其精确 result 与协议错误码
         attachCanonicalErrorPayload(operationResult, uplinkPayloadType, requestId, result,
@@ -766,6 +777,21 @@ public class KeyProvisioningApplicationFacade {
                 .build();
     }
 
+    /**
+     * 恢复模式受控枚举字符串（CR-067 §9，低基数）：UNAVAILABLE→retry_request，
+     * OUTCOME_UNKNOWN→query_status，其余（REJECTED 等）→do_not_retry。
+     */
+    private static String recoveryMode(VmdKeyProvisioningOutcome outcome) {
+        if (outcome == null) {
+            return "do_not_retry";
+        }
+        return switch (outcome) {
+            case UNAVAILABLE -> "retry_request";
+            case OUTCOME_UNKNOWN -> "query_status";
+            default -> "do_not_retry";
+        };
+    }
+
     private KeyProvisioningOperationResult error(String requestId, VmdErrorCode errorCode,
                                                  VmdKeyProvisioningOutcome outcome,
                                                  boolean retryable, String message) {
@@ -774,6 +800,9 @@ public class KeyProvisioningApplicationFacade {
             case UNAVAILABLE -> "RETRY_SAME_REQUEST_ID";
             default -> "DO_NOT_RETRY";
         };
+        // VMD-DSN-CR-067 §4.3：构造后校验——outcome/retryable/action 必须自洽，且与 out-of-band 806xxx
+        // 同一来源推导（code 统一经 mapProtocolCode，action 统一经 outcome 映射），禁止两层各自猜测。
+        validateOutcomeActionTuple(outcome, retryable, action);
         return KeyProvisioningOperationResult.builder()
                 .requestId(requestId)
                 .outcome(outcome)
@@ -782,6 +811,37 @@ public class KeyProvisioningApplicationFacade {
                 .retryable(retryable)
                 .action(action)
                 .build();
+    }
+
+    /**
+     * outcome→(retryable, action) 一致性断言（VMD-DSN-CR-067 §4.3）。
+     * <ul>
+     *   <li>OUTCOME_UNKNOWN：必须 retryable=true 且 action=QUERY_STATUS_LATER（存在原批次/operation，可查询或对账）</li>
+     *   <li>UNAVAILABLE：必须 action=RETRY_SAME_REQUEST_ID（重发原 Request）</li>
+     *   <li>其余（REJECTED 等）：必须 retryable=false 且 action=DO_NOT_RETRY</li>
+     * </ul>
+     */
+    private void validateOutcomeActionTuple(VmdKeyProvisioningOutcome outcome, boolean retryable, String action) {
+        if (outcome == VmdKeyProvisioningOutcome.OUTCOME_UNKNOWN) {
+            if (!retryable || !"QUERY_STATUS_LATER".equals(action)) {
+                metrics.recordInvalidErrorTuple("outcome_unknown_mismatch");
+                throw new IllegalStateException(
+                        "keyprov 结果类别不一致: OUTCOME_UNKNOWN 必须 retryable=true 且 action=QUERY_STATUS_LATER"
+                                + ", actual(retryable=" + retryable + ", action=" + action + ")");
+            }
+        } else if (outcome == VmdKeyProvisioningOutcome.UNAVAILABLE) {
+            if (!"RETRY_SAME_REQUEST_ID".equals(action)) {
+                metrics.recordInvalidErrorTuple("unavailable_action_mismatch");
+                throw new IllegalStateException(
+                        "keyprov 结果类别不一致: UNAVAILABLE 必须 action=RETRY_SAME_REQUEST_ID"
+                                + ", actual(action=" + action + ")");
+            }
+        } else if (retryable || !"DO_NOT_RETRY".equals(action)) {
+            metrics.recordInvalidErrorTuple("rejected_action_mismatch");
+            throw new IllegalStateException(
+                        "keyprov 结果类别不一致: " + outcome + " 必须 retryable=false 且 action=DO_NOT_RETRY"
+                                + ", actual(retryable=" + retryable + ", action=" + action + ")");
+        }
     }
 
     private String truncate(String message) {
