@@ -50,6 +50,14 @@ public final class KeyprovConstants {
             SUITE_HPKE_BASE_X25519_SHA256_AES128GCM,
             SUITE_ECDH_ES_P256_HKDF_SHA256_AES256GCM);
 
+    /**
+     * ECDH-ES v1 信封下 key_algorithm 的协议 canonical 值
+     * （PAR-PROTO §7.2：key_algorithm <= 64 字节，v1 固定 AES-256）。
+     * KMS 策略/目录可能使用通用标签（如 "AES"），wire 必须输出 "AES-256"
+     * 供 SEC 侧 allowlist 校验（SEC validateEnvelope 硬编码 AES-256）。
+     */
+    public static final String KEY_ALGORITHM_ECDH_ES_V1 = "AES-256";
+
     /** 首期 V2C envelope v1 唯一允许的封装套件（CR-062 RD-062-2） */
     public static final List<String> V2C_SUPPORTED_SUITES =
             List.of(SUITE_ECDH_ES_P256_HKDF_SHA256_AES256GCM);

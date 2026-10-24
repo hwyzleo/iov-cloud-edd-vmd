@@ -89,6 +89,9 @@ class KeyprovEnvelopeAdapterTest {
         assertEquals(view.logicalKeyId(), item.getKeyId());
         assertEquals(view.businessKeyVersion(), item.getBusinessKeyVersion());
         assertEquals(KeyEnvelopeFormat.KEY_ENVELOPE_FORMAT_ECDH_ES_P256_V1, item.getEnvelopeFormat());
+        // 目录/KMS 通用算法标签 "AES" → wire 必须输出协议 canonical "AES-256"
+        // （PAR-PROTO §7.2：ECDH-ES v1 固定 AES-256；SEC validateEnvelope 硬编码 AES-256）。
+        assertEquals(KeyprovConstants.KEY_ALGORITHM_ECDH_ES_V1, item.getKeyAlgorithm());
         assertEquals(net.hwyz.iov.security.keyprov.v1.WrappingSuite
                         .WRAPPING_SUITE_ECDH_ES_P256_HKDF_SHA256_AES256GCM,
                 item.getWrappingSuite());

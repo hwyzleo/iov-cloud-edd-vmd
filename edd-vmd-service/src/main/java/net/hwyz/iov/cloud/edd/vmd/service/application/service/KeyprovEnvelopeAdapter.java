@@ -156,7 +156,7 @@ public class KeyprovEnvelopeAdapter {
                 .setPurpose(KeyprovConstants.purposeProto(purposeCode))
                 .setKeyId(v1.logicalKeyId())
                 .setBusinessKeyVersion(v1.businessKeyVersion())
-                .setKeyAlgorithm(directory == null || directory.getAlgorithm() == null ? "" : directory.getAlgorithm())
+                .setKeyAlgorithm(canonicalKeyAlgorithm(directory))
                 .setWrappingSuite(KeyprovConstants.suiteProto(v1.wrappingSuite().name()))
                 .setWrappedKey(ByteString.copyFrom(v1.ciphertext()))
                 .setParameters(ByteString.copyFrom(parametersBytes))
@@ -218,5 +218,25 @@ public class KeyprovEnvelopeAdapter {
 
     private static long toEpochMs(LocalDateTime time) {
         return time.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+    }
+
+    /**
+     * 输出 ECDH-ES v1 信封下 key_algorithm 的协议 canonical 值。
+     * <p>
+     * 目录/KMS 策略可能存通用标签（如 {@code AES}，key-spec AES-256-GCM）；
+     * PAR-PROTO §7.2 规定 v1 固定 {@code AES-256}，SEC 侧 allowlist 与
+     * validateEnvelope 均硬编码 AES-256。故 wire 必须输出 canonical 值，
+     * 不在目录行上改写（避免 claim-or-reuse algorithm_mismatch）。
+     */
+    private static String canonicalKeyAlgorithm(DeviceBusinessKey directory) {
+        if (directory == null || directory.getAlgorithm() == null
+                || directory.getAlgorithm().isBlank()) {
+            return "";
+        }
+        String algorithm = directory.getAlgorithm();
+        if ("AES".equals(algorithm)) {
+            return KeyprovConstants.KEY_ALGORITHM_ECDH_ES_V1;
+        }
+        return algorithm;
     }
 }
