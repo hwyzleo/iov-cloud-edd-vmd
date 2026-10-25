@@ -15,7 +15,11 @@
         <result column="recipient_cert_fingerprint_digest" property="recipientCertFingerprintDigest" />
         <result column="envelope_format" property="envelopeFormat" />
         <result column="wrapping_suite" property="wrappingSuite" />
-        <result column="envelope_digest" property="envelopeDigest" />
+        <result column="core_envelope_digest" property="coreEnvelopeDigest" />
+        <result column="wire_envelope_digest" property="wireEnvelopeDigest" />
+        <result column="aad_profile_id" property="aadProfileId" />
+        <result column="parameters_digest" property="parametersDigest" />
+        <result column="wrapped_key_digest" property="wrappedKeyDigest" />
         <result column="key_check_value" property="keyCheckValue" />
         <result column="recipient_cert_digest" property="recipientCertDigest" />
         <result column="device_result" property="deviceResult" />
@@ -32,7 +36,8 @@
     <sql id="baseColumnList">
         id, provisioning_id, purpose, key_id, business_key_version, directory_key_id,
         operation_id, root_key_version, derivation_version, recipient_cert_fingerprint_digest,
-        envelope_format, wrapping_suite, envelope_digest, key_check_value, recipient_cert_digest, device_result,
+        envelope_format, wrapping_suite, core_envelope_digest, wire_envelope_digest, aad_profile_id,
+        parameters_digest, wrapped_key_digest, key_check_value, recipient_cert_digest, device_result,
         import_proof_digest, confirmed_at, create_time, create_by, modify_time, modify_by, row_version, row_valid
     </sql>
 
@@ -40,13 +45,15 @@
         INSERT INTO tb_business_key_provisioning_item (
             provisioning_id, purpose, key_id, business_key_version, directory_key_id,
             operation_id, root_key_version, derivation_version, recipient_cert_fingerprint_digest,
-            envelope_format, wrapping_suite, envelope_digest, key_check_value, recipient_cert_digest, device_result,
+            envelope_format, wrapping_suite, core_envelope_digest, wire_envelope_digest, aad_profile_id,
+            parameters_digest, wrapped_key_digest, key_check_value, recipient_cert_digest, device_result,
             import_proof_digest, confirmed_at, create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
         VALUES (
             #{provisioningId}, #{purpose}, #{keyId}, #{businessKeyVersion}, #{directoryKeyId},
             #{operationId}, #{rootKeyVersion}, #{derivationVersion}, #{recipientCertFingerprintDigest},
-            #{envelopeFormat}, #{wrappingSuite}, #{envelopeDigest}, #{keyCheckValue}, #{recipientCertDigest}, #{deviceResult},
+            #{envelopeFormat}, #{wrappingSuite}, #{coreEnvelopeDigest}, #{wireEnvelopeDigest}, #{aadProfileId},
+            #{parametersDigest}, #{wrappedKeyDigest}, #{keyCheckValue}, #{recipientCertDigest}, #{deviceResult},
             #{importProofDigest}, #{confirmedAt}, now(), #{createBy}, now(), #{modifyBy}, 1, 1
         )
     </insert>
@@ -55,14 +62,16 @@
         INSERT INTO tb_business_key_provisioning_item (
             provisioning_id, purpose, key_id, business_key_version, directory_key_id,
             operation_id, root_key_version, derivation_version, recipient_cert_fingerprint_digest,
-            envelope_format, wrapping_suite, envelope_digest, key_check_value, recipient_cert_digest, device_result,
+            envelope_format, wrapping_suite, core_envelope_digest, wire_envelope_digest, aad_profile_id,
+            parameters_digest, wrapped_key_digest, key_check_value, recipient_cert_digest, device_result,
             import_proof_digest, confirmed_at, create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
         VALUES
         <foreach collection="list" item="item" separator=",">
             (#{item.provisioningId}, #{item.purpose}, #{item.keyId}, #{item.businessKeyVersion}, #{item.directoryKeyId},
              #{item.operationId}, #{item.rootKeyVersion}, #{item.derivationVersion}, #{item.recipientCertFingerprintDigest},
-             #{item.envelopeFormat}, #{item.wrappingSuite}, #{item.envelopeDigest}, #{item.keyCheckValue}, #{item.recipientCertDigest}, #{item.deviceResult},
+             #{item.envelopeFormat}, #{item.wrappingSuite}, #{item.coreEnvelopeDigest}, #{item.wireEnvelopeDigest}, #{item.aadProfileId},
+             #{item.parametersDigest}, #{item.wrappedKeyDigest}, #{item.keyCheckValue}, #{item.recipientCertDigest}, #{item.deviceResult},
              #{item.importProofDigest}, #{item.confirmedAt}, now(), #{item.createBy}, now(), #{item.modifyBy}, 1, 1)
         </foreach>
     </insert>
@@ -99,8 +108,20 @@
         <if test="wrappingSuite != null and wrappingSuite != ''">
             t.wrapping_suite = #{wrappingSuite},
         </if>
-        <if test="envelopeDigest != null">
-            t.envelope_digest = #{envelopeDigest},
+        <if test="coreEnvelopeDigest != null">
+            t.core_envelope_digest = #{coreEnvelopeDigest},
+        </if>
+        <if test="wireEnvelopeDigest != null">
+            t.wire_envelope_digest = #{wireEnvelopeDigest},
+        </if>
+        <if test="aadProfileId != null and aadProfileId != ''">
+            t.aad_profile_id = #{aadProfileId},
+        </if>
+        <if test="parametersDigest != null">
+            t.parameters_digest = #{parametersDigest},
+        </if>
+        <if test="wrappedKeyDigest != null">
+            t.wrapped_key_digest = #{wrappedKeyDigest},
         </if>
         <if test="keyCheckValue != null">
             t.key_check_value = #{keyCheckValue},

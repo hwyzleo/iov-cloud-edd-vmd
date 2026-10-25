@@ -1,5 +1,6 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 
+import com.google.protobuf.InvalidProtocolBufferException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyDerivationRejectedException;
@@ -104,6 +105,8 @@ public class BusinessKeyProvisioningBatchAppService {
     private final BusinessKeyMaterialRouter materialRouter;
     private final BusinessKeyProvisioningDomainService domainService;
     private final KeyprovEnvelopeAdapter envelopeAdapter;
+    private final ParProtoWireMapperV1 wireMapper;
+    private final KeyProvisioningResponseStore responseStore;
     private final TboxEcdhCertificateEligibilityGate tboxEcdhCertificateEligibilityGate;
     private final BusinessKeyDerivedMaterialService derivedMaterialService;
     private final BusinessKeyProvisioningMetrics metrics;
@@ -225,6 +228,22 @@ public class BusinessKeyProvisioningBatchAppService {
                 log.warn("keyprov requestId 摘要冲突: requestId={}", requestId);
                 return conflict(requestId, KeyprovConstants.ERR_IDEMPOTENCY_CONFLICT, "同requestId不同请求摘要");
             }
+            // CR-068 RD-068-3：同 requestId 且已持久化最终 Response → 字节级重放原 bytes，
+            // 不重新 derive/serialize/map、不重新组装；Adapter 升级不改变存量 in-flight 响应。
+            if (existing.hasPersistedResponse()) {
+                byte[] replayed = responseStore.load(requestId);
+                if (replayed != null) {
+                    try {
+                        KeyProvisioningResponse replay = KeyProvisioningResponse.parseFrom(replayed);
+                        log.info("keyprov Response 字节级重放: requestId={}, bytes={}", requestId, replayed.length);
+                        return replay;
+                    } catch (InvalidProtocolBufferException e) {
+                        log.error("keyprov 持久化 Response 损坏，fail-closed 拒绝重放: requestId={}", requestId, e);
+                        return rejected(requestId, KeyprovConstants.ERR_ENVELOPE_INTEGRITY, false,
+                                "持久化Response损坏，拒绝重放");
+                    }
+                }
+            }
             if (existing.getStatus() != BusinessKeyProvisioningState.COMPLETED && !existing.getStatus().canAdvance()) {
                 return rejected(requestId, KeyprovConstants.ERR_STATE_NOT_ALLOWED, false, "批次状态不允许继续申请");
             }
@@ -243,9 +262,9 @@ public class BusinessKeyProvisioningBatchAppService {
             }
         }
 
-        Map<String, DerivedWrappedKey> derived;
+        Map<String, ParProtoWireMapperV1.WireMappedItem> mapped;
         try {
-            derived = prepareAndDerive(batch, request, identity, domain, normalizedVin, activeCert, requestId, fingerprintDigest);
+            mapped = prepareAndDerive(batch, request, identity, domain, normalizedVin, activeCert, requestId, fingerprintDigest);
         } catch (CryptoOperationOutcomeUnknownException e) {
             // VMD-DSN-CR-067 §4.1b：批次已持久化、operation 可能已执行——恢复动作只能是 Status 对账
             // （ERR_RECONCILE_REQUIRED/QUERY_STATUS_LATER），不得再以 ERR_UNAVAILABLE 引导重发 Request。
@@ -323,8 +342,11 @@ public class BusinessKeyProvisioningBatchAppService {
             markBatchFailed(batch, truncate(e.getMessage()));
             return rejected(requestId, KeyprovConstants.ERR_DERIVATION_UNSUPPORTED, false, "业务密钥派生或封装失败");
         }
-        return buildResponse(provisioningRepository.selectByRequestId(requestId), identity, request,
-                activeCert, derived);
+        KeyProvisioningResponse response = buildResponse(provisioningRepository.selectByRequestId(requestId),
+                identity, request, activeCert, mapped);
+        // CR-068：最终 Response bytes 首次发送前持久化（幂等键=requestId）；失败 fail-closed 不下发
+        responseStore.persist(requestId, response.toByteArray());
+        return response;
     }
 
     private BusinessKeyProvisioning createOrLoadBatch(String requestId, BoundDeviceIdentity identity, String domain,
@@ -368,17 +390,17 @@ public class BusinessKeyProvisioningBatchAppService {
      *
      * @return purpose → 派生封装结果（Wrapped Key 仅用于本次响应）
      */
-    private Map<String, DerivedWrappedKey> prepareAndDerive(BusinessKeyProvisioning batch, KeyProvisioningRequest request,
-                                                            BoundDeviceIdentity identity, String domain, String normalizedVin,
-                                                            ActiveDeviceCertificate activeCert, String requestId,
-                                                            String fingerprintDigest) {
+    private Map<String, ParProtoWireMapperV1.WireMappedItem> prepareAndDerive(BusinessKeyProvisioning batch, KeyProvisioningRequest request,
+                                                                    BoundDeviceIdentity identity, String domain, String normalizedVin,
+                                                                    ActiveDeviceCertificate activeCert, String requestId,
+                                                                    String fingerprintDigest) {
         BizType bizType = bizTypeMapper.resolveBizType(domain);
         // 显式路由：非 DERIVED_ROOT 一律拒绝（禁隐式回退到随机材料）
         KeyProvisioningTemplate template = materialRouter.requireDerivedRoot(bizType);
         KeyAnchor anchor = KeyAnchor.vin(normalizedVin);
 
         Map<String, Long> currentVersions = domainService.extractCurrentVersions(request);
-        Map<String, DerivedWrappedKey> derived = new HashMap<>();
+        Map<String, ParProtoWireMapperV1.WireMappedItem> mapped = new HashMap<>();
 
         for (String purpose : KeyprovConstants.V2C_PURPOSES) {
             BusinessKeyProvisioningItem item = provisioningItemRepository
@@ -458,9 +480,10 @@ public class BusinessKeyProvisioningBatchAppService {
                 throw new BusinessKeyLogicalIdentityConflict(
                         "canonical 目录行不存在: id=" + canonicalId + ", purpose=" + purpose);
             }
-            // CR-066 §6.2：保存 item 元数据（envelope/KCV/root/derivation/收件指纹）
-            updateItemMetadata(item, canonical, result, fingerprintDigest, activeCert);
-            derived.put(purpose, result);
+            // CR-066 §6.2：保存 item 元数据（wire/core digest、parameters/wrappedKey digest、profile、KCV、root/derivation、收件指纹；CR-068）
+            ParProtoWireMapperV1.WireMappedItem mappedItem = updateItemMetadata(item, canonical, result,
+                    fingerprintDigest, activeCert, requestId, domain);
+            mapped.put(purpose, mappedItem);
         }
 
         tx().executeWithoutResult(status -> {
@@ -474,7 +497,7 @@ public class BusinessKeyProvisioningBatchAppService {
         });
         log.info("keyprov 批次进入WAIT_DEVICE_ACK（根派生）: requestId={}, deviceSn={}, domain={}",
                 batch.getRequestId(), identity.deviceSn(), domain);
-        return derived;
+        return mapped;
     }
 
     /**
@@ -648,12 +671,15 @@ public class BusinessKeyProvisioningBatchAppService {
     }
 
     /**
-     * 派生后保存 item 元数据（envelope/KCV/root/derivation/收件指纹；CR-062 §4）。
+     * 派生后保存 item 元数据（wire/core digest、parameters/wrappedKey digest、profile、KCV、root/derivation、收件指纹；CR-062/CR-068）。
      * <p>含 CR-063 §10 冻结一致性：envelope view 收件方证书摘要必须等于 ACTIVE 证书 leafCertificateDigest。
+     * <p>CR-068：Wire Mapper 在此处计算 9 字段 wireEnvelopeDigest 并组装 canonical item（envelope_digest=wire），
+     * core digest 仅作内部审计、不进入 wire；返回映射结果供 Response 组装复用（避免二次计算）。
      */
-    private void updateItemMetadata(BusinessKeyProvisioningItem item, DeviceBusinessKey canonical,
-                                    DerivedWrappedKey result, String fingerprintDigest,
-                                    ActiveDeviceCertificate activeCert) {
+    private ParProtoWireMapperV1.WireMappedItem updateItemMetadata(BusinessKeyProvisioningItem item, DeviceBusinessKey canonical,
+                                                                    DerivedWrappedKey result, String fingerprintDigest,
+                                                                    ActiveDeviceCertificate activeCert, String requestId,
+                                                                    String businessDomain) {
         DerivedWrappedKeyEnvelopeView view = result.envelope();
         if (view == null) {
             throw new KeyprovEnvelopeIntegrityException("派生结果缺少结构化 envelope 视图，禁止落库 envelope v1 元数据");
@@ -667,6 +693,10 @@ public class BusinessKeyProvisioningBatchAppService {
                         "envelope view recipientCertificateDigest 与 ACTIVE 证书 leafCertificateDigest 不一致（CR-063 冻结校验失败）");
             }
         }
+        // CR-068：Wire Mapper 校验 view/core digest、构建 deterministic parameters、断言 canonical AAD 一致性，
+        // 计算 9 字段 wire digest 并组装 canonical item（envelope_digest=wire，非 core）
+        ParProtoWireMapperV1.WireMappedItem mapped = wireMapper.map(result,
+                new KeyProvisioningWireContext(requestId, businessDomain), canonical);
         item.setKeyId(canonical.getKeyId());
         item.setBusinessKeyVersion(canonical.getBusinessKeyVersion());
         item.setDirectoryKeyId(canonical.getId());
@@ -676,7 +706,13 @@ public class BusinessKeyProvisioningBatchAppService {
         item.setRecipientCertFingerprintDigest(fingerprintDigest);
         item.setEnvelopeFormat(view.envelopeFormat());
         item.setWrappingSuite(view.wrappingSuite() == null ? null : view.wrappingSuite().name());
-        item.setEnvelopeDigest(view.envelopeDigest());
+        // CR-068 双摘要：core（FW 内部完整性/审计）+ wire（Response/ACK/proof 权威）
+        item.setCoreEnvelopeDigest(mapped.coreEnvelopeDigest() != null ? mapped.coreEnvelopeDigest()
+                : view.envelopeDigest());
+        item.setWireEnvelopeDigest(mapped.wireEnvelopeDigest());
+        item.setAadProfileId(mapped.aadProfileId());
+        item.setParametersDigest(mapped.parametersDigest());
+        item.setWrappedKeyDigest(mapped.wrappedKeyDigest());
         item.setKeyCheckValue(view.keyCheckValue());
         item.setRecipientCertDigest(recipientCertDigest);
         if (item.getDeviceResult() == null) {
@@ -684,23 +720,20 @@ public class BusinessKeyProvisioningBatchAppService {
         }
         item.setModifyTime(LocalDateTime.now());
         tx().executeWithoutResult(status -> provisioningItemRepository.update(item));
+        return mapped;
     }
 
     private KeyProvisioningResponse buildResponse(BusinessKeyProvisioning batch, BoundDeviceIdentity identity,
                                                   KeyProvisioningRequest request, ActiveDeviceCertificate activeCert,
-                                                  Map<String, DerivedWrappedKey> derived) {
+                                                  Map<String, ParProtoWireMapperV1.WireMappedItem> mapped) {
         List<BusinessKeyProvisioningItem> items = provisioningItemRepository.selectByProvisioningId(batch.getId());
         List<WrappedKeyItem> wrappedItems = new ArrayList<>();
         for (BusinessKeyProvisioningItem item : items) {
-            DeviceBusinessKey directory = deviceBusinessKeyRepository.selectById(item.getDirectoryKeyId());
-            if (directory == null || directory.getKeyId() == null) {
+            ParProtoWireMapperV1.WireMappedItem mappedItem = mapped.get(item.getPurpose());
+            if (mappedItem == null || mappedItem.item() == null) {
                 continue;
             }
-            DerivedWrappedKey wrapped = derived.get(item.getPurpose());
-            if (wrapped == null) {
-                continue;
-            }
-            wrappedItems.add(envelopeAdapter.toWrappedKeyItem(item.getPurpose(), directory, wrapped));
+            wrappedItems.add(mappedItem.item());
         }
         long expireAt = request.getExpireAtMs() > 0 ? request.getExpireAtMs() : defaultBundleExpireAt();
         KeyProvisioningResponse.Builder builder = KeyProvisioningResponse.newBuilder()

@@ -71,6 +71,9 @@ vmd:
         max-payload-bytes: 16384
         protocol-release: test-release-v1
         descriptor-set-hash: test-descriptor-set-hash
+      # CR-068 集成测试：Response 字节级重放存储密钥（Base64 AES-256，测试固定值）
+      response-store:
+        key: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
       bundle-ttl-seconds: 3600
       ack-timeout-seconds: 900
       reconcile-alert-seconds: 86400

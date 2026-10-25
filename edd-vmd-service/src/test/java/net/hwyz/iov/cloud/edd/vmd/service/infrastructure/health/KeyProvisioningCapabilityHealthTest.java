@@ -4,8 +4,13 @@ import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.adapter.KeyProvisioningSer
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.BusinessKeyPolicyRegistry;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.DerivedKeyProviderReadinessGate;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.KeyprovConstants;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.KeyProvisioningResponseStore;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.ParProtoKeyprovAadEncoderV1;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.ParProtoWireMapperV1;
 import net.hwyz.iov.cloud.framework.security.crypto.ImportProofVerifier;
 import net.hwyz.iov.cloud.framework.security.crypto.codec.DerivedEnvelopeDigestVerifier;
+import net.hwyz.iov.cloud.framework.security.crypto.provider.EnvelopeAadEncoderRegistry;
+import net.hwyz.iov.cloud.framework.security.crypto.provider.OperationResultStore;
 import net.hwyz.iov.cloud.framework.security.crypto.resolver.CertificateReferenceDirectory;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -47,6 +52,10 @@ class KeyProvisioningCapabilityHealthTest {
     private DerivedKeyProviderReadinessGate derivedKeyProviderReadinessGate;
     private ObjectProvider<DerivedEnvelopeDigestVerifier> envelopeVerifierProvider;
     private ObjectProvider<ImportProofVerifier> importProofVerifierProvider;
+    private ObjectProvider<EnvelopeAadEncoderRegistry> aadRegistryProvider;
+    private ObjectProvider<OperationResultStore> resultStoreProvider;
+    private ObjectProvider<ParProtoWireMapperV1> wireMapperProvider;
+    private ObjectProvider<KeyProvisioningResponseStore> responseStoreProvider;
 
     @SuppressWarnings("unchecked")
     @BeforeEach
@@ -59,16 +68,22 @@ class KeyProvisioningCapabilityHealthTest {
         derivedKeyProviderReadinessGate = mock(DerivedKeyProviderReadinessGate.class);
         envelopeVerifierProvider = mock(ObjectProvider.class);
         importProofVerifierProvider = mock(ObjectProvider.class);
+        aadRegistryProvider = mock(ObjectProvider.class);
+        resultStoreProvider = mock(ObjectProvider.class);
+        wireMapperProvider = mock(ObjectProvider.class);
+        responseStoreProvider = mock(ObjectProvider.class);
     }
 
     private KeyProvisioningCapabilityHealthIndicator indicator(boolean enabled) {
         KeyProvisioningCapabilityHealthIndicator indicator =
                 new KeyProvisioningCapabilityHealthIndicator(adapterProvider, policyRegistry, jdbcProvider,
                         certificateDirectoryProvider, derivedKeyProviderReadinessGate,
-                        envelopeVerifierProvider, importProofVerifierProvider);
+                        envelopeVerifierProvider, importProofVerifierProvider,
+                        aadRegistryProvider, resultStoreProvider, wireMapperProvider, responseStoreProvider);
         ReflectionTestUtils.setField(indicator, "keyprovEnabled", enabled);
         ReflectionTestUtils.setField(indicator, "protocolRelease", "test-release-v1");
         ReflectionTestUtils.setField(indicator, "descriptorSetHash", "test-descriptor-set-hash");
+        ReflectionTestUtils.setField(indicator, "aadProfileId", ParProtoKeyprovAadEncoderV1.PROFILE_ID);
         return indicator;
     }
 
@@ -81,7 +96,7 @@ class KeyProvisioningCapabilityHealthTest {
     }
 
     @Test
-    @DisplayName("enabled=true 且能力齐备 → READY/UP")
+    @DisplayName("enabled=true 且能力齐备（含 CR-068 AAD profile/Wire Mapper/Response store/官方向量）→ READY/UP")
     void readyState() {
         when(adapterProvider.getIfAvailable()).thenReturn(mock(KeyProvisioningServiceAdapter.class));
         when(certificateDirectoryProvider.getIfAvailable()).thenReturn(mock(CertificateReferenceDirectory.class));
@@ -93,6 +108,17 @@ class KeyProvisioningCapabilityHealthTest {
         when(jdbcProvider.getIfAvailable()).thenReturn(jdbcTemplate);
         when(jdbcTemplate.query(anyString(), any(org.springframework.jdbc.core.ResultSetExtractor.class)))
                 .thenReturn(null);
+        // CR-068：真实 AAD encoder 注册进 FW registry（registry 构造期 probe 校验确定性）
+        EnvelopeAadEncoderRegistry aadRegistry =
+                EnvelopeAadEncoderRegistry.of(new ParProtoKeyprovAadEncoderV1());
+        when(aadRegistryProvider.getIfAvailable()).thenReturn(aadRegistry);
+        OperationResultStore resultStore = mock(OperationResultStore.class);
+        when(resultStore.productionReady()).thenReturn(true);
+        when(resultStoreProvider.getIfAvailable()).thenReturn(resultStore);
+        when(wireMapperProvider.getIfAvailable()).thenReturn(mock(ParProtoWireMapperV1.class));
+        KeyProvisioningResponseStore responseStore = mock(KeyProvisioningResponseStore.class);
+        when(responseStore.productionReady()).thenReturn(true);
+        when(responseStoreProvider.getIfAvailable()).thenReturn(responseStore);
 
         Health health = indicator(true).health();
         assertEquals("UP", health.getStatus().getCode());
@@ -113,6 +139,11 @@ class KeyProvisioningCapabilityHealthTest {
         when(jdbcProvider.getIfAvailable()).thenReturn(jdbcTemplate);
         when(jdbcTemplate.query(anyString(), any(org.springframework.jdbc.core.ResultSetExtractor.class)))
                 .thenReturn(null);
+        // CR-068 组件：AAD registry / ResultStore / Wire Mapper / Response store 均缺失
+        when(aadRegistryProvider.getIfAvailable()).thenReturn(null);
+        when(resultStoreProvider.getIfAvailable()).thenReturn(null);
+        when(wireMapperProvider.getIfAvailable()).thenReturn(null);
+        when(responseStoreProvider.getIfAvailable()).thenReturn(null);
 
         Health health = indicator(true).health();
         assertEquals("DOWN", health.getStatus().getCode());
@@ -121,6 +152,38 @@ class KeyProvisioningCapabilityHealthTest {
         assertEquals("DOWN", health.getDetails().get("certificateDirectory"));
         assertEquals("DOWN", health.getDetails().get("derivedKeyProvider"));
         assertEquals("DOWN", health.getDetails().get("policy"));
+        assertEquals("DOWN", health.getDetails().get("externalAadProfileReady"));
+        assertEquals("DOWN", health.getDetails().get("wireMapperV1"));
+        assertEquals("DOWN", health.getDetails().get("responseReplayStore"));
+    }
+
+    @Test
+    @DisplayName("CR-068：Response 重放存储密钥未注入 → KEYPROV_RESPONSE_REPLAY_STORE_READY DOWN（fail-closed）")
+    void cr068ResponseStoreKeyMissingDown() {
+        when(adapterProvider.getIfAvailable()).thenReturn(mock(KeyProvisioningServiceAdapter.class));
+        when(certificateDirectoryProvider.getIfAvailable()).thenReturn(mock(CertificateReferenceDirectory.class));
+        when(derivedKeyProviderReadinessGate.isReady()).thenReturn(true);
+        when(envelopeVerifierProvider.getIfAvailable()).thenReturn(mock(DerivedEnvelopeDigestVerifier.class));
+        when(importProofVerifierProvider.getIfAvailable()).thenReturn(mock(ImportProofVerifier.class));
+        when(policyRegistry.resolvePurposes(KeyprovConstants.BUSINESS_DOMAIN_V2C))
+                .thenReturn(Optional.of(KeyprovConstants.V2C_PURPOSE_SET));
+        when(jdbcProvider.getIfAvailable()).thenReturn(jdbcTemplate);
+        when(jdbcTemplate.query(anyString(), any(org.springframework.jdbc.core.ResultSetExtractor.class)))
+                .thenReturn(null);
+        EnvelopeAadEncoderRegistry aadRegistry =
+                EnvelopeAadEncoderRegistry.of(new ParProtoKeyprovAadEncoderV1());
+        when(aadRegistryProvider.getIfAvailable()).thenReturn(aadRegistry);
+        OperationResultStore resultStore = mock(OperationResultStore.class);
+        when(resultStore.productionReady()).thenReturn(true);
+        when(resultStoreProvider.getIfAvailable()).thenReturn(resultStore);
+        when(wireMapperProvider.getIfAvailable()).thenReturn(mock(ParProtoWireMapperV1.class));
+        // Response store 未装配（密钥未注入场景）
+        when(responseStoreProvider.getIfAvailable()).thenReturn(null);
+
+        Health health = indicator(true).health();
+        assertEquals("DOWN", health.getStatus().getCode());
+        assertEquals("DOWN", health.getDetails().get("responseReplayStore"),
+                "Response 重放存储未就绪时必须 DOWN（fail-closed）");
     }
 
     @Test

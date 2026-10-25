@@ -65,8 +65,20 @@ public class BusinessKeyProvisioningItemPo extends BasePo {
     @TableField("wrapping_suite")
     private String wrappingSuite;
 
-    @TableField("envelope_digest")
-    private byte[] envelopeDigest;
+    @TableField("core_envelope_digest")
+    private byte[] coreEnvelopeDigest;
+
+    @TableField("wire_envelope_digest")
+    private byte[] wireEnvelopeDigest;
+
+    @TableField("aad_profile_id")
+    private String aadProfileId;
+
+    @TableField("parameters_digest")
+    private byte[] parametersDigest;
+
+    @TableField("wrapped_key_digest")
+    private byte[] wrappedKeyDigest;
 
     @TableField("key_check_value")
     private byte[] keyCheckValue;

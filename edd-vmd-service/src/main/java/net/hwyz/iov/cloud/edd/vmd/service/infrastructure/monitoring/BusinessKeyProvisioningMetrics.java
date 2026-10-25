@@ -112,6 +112,19 @@ public class BusinessKeyProvisioningMetrics {
         counter("vmd_keyprov_invalid_error_tuple_total", "reason", nvl(reason)).increment();
     }
 
+    /**
+     * 记录 CR-068 Response 字节级重放/持久化审计：vmd_keyprov_response_store_total{action,profile,result}。
+     * <p>仅记录低基数 profile/version、结果；不记录 AAD、parameters、wrappedKey、完整 digest 或 proof。
+     *
+     * @param action  persist（发送前持久化）/ replay（同 requestId 字节级重放）
+     * @param profile AAD/profile 版本（PAR_PROTO_KEYPROV_AAD_V1）
+     * @param result  success / failure
+     */
+    public void recordResponseStore(String action, String profile, String result) {
+        counter("vmd_keyprov_response_store_total",
+                "action", nvl(action), "profile", nvl(profile), "result", nvl(result)).increment();
+    }
+
     private Counter counter(String name, String... tags) {
         String key = name + "|" + String.join("|", tags);
         return counterCache.computeIfAbsent(key, k -> io.micrometer.core.instrument.Counter.builder(name)

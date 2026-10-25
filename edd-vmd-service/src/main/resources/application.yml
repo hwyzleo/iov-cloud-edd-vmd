@@ -31,6 +31,15 @@ crypto:
       provider: ${CRYPTO_PROVISIONING_DERIVED_KEY_PROVIDER}
       require-ready-at-startup: ${CRYPTO_PROVISIONING_DERIVED_KEY_REQUIRE_READY_AT_STARTUP:true}
       derivation-version: ${CRYPTO_PROVISIONING_DERIVED_KEY_DERIVATION_VERSION:v1}
+      # CR-068 / FW-SEC-DSN-CR-020：外部 AAD profile——FW 在 AES-GCM 加密前调用 VMD 注册的 encoder。
+      # 固定 PAR_PROTO_KEYPROV_AAD_V1；缺失/不一致时 keyprov Health 的 FW_EXTERNAL_AAD_PROFILE_READY 为 DOWN。
+      aad-profile-id: ${CRYPTO_PROVISIONING_DERIVED_KEY_AAD_PROFILE_ID:PAR_PROTO_KEYPROV_AAD_V1}
+      # CR-068 / FW-SEC-DSN-CR-020：Operation Result Store（字节级幂等重放）。生产必须使用持久化 store；
+      # allow-in-memory 仅限 dev/test（进程重启不保留）。
+      result-store:
+        enabled: ${CRYPTO_PROVISIONING_DERIVED_KEY_RESULT_STORE_ENABLED:true}
+        ttl: ${CRYPTO_PROVISIONING_DERIVED_KEY_RESULT_STORE_TTL:24h}
+        allow-in-memory: ${CRYPTO_PROVISIONING_DERIVED_KEY_RESULT_STORE_ALLOW_IN_MEMORY:true}
       # 根映射声明：与 FW-SEC 编译期 allowlist 一致（TransitDerivedKeyProvider 启动校验必需）；
       # 不开放 allowlist 之外任意 root/HMAC/context（CR-064 §4.1）。
       roots:
@@ -173,6 +182,10 @@ vmd:
         descriptor-set-hash: ${VMD_BUSINESS_KEY_KEYPROV_DESCRIPTOR_SET_HASH:}
         # canonical payload 大小上限（bytes）
         max-payload-bytes: ${VMD_BUSINESS_KEY_KEYPROV_MAX_PAYLOAD_BYTES:16384}
+      # CR-068：Response 字节级幂等重放存储密钥（Base64 AES-256，经 Secret 注入，Nacos 不保存明文）。
+      # 未注入时 keyprov Health 的 KEYPROV_RESPONSE_REPLAY_STORE_READY 为 DOWN，禁止新流量。
+      response-store:
+        key: ${KEYPROV_RESPONSE_STORE_KEY:}
       # Wrapped Key bundle 可接受期限（秒）
       bundle-ttl-seconds: ${VMD_BUSINESS_KEY_BUNDLE_TTL_SECONDS:3600}
       # WAIT_DEVICE_ACK 超时转 EXPIRED（秒）

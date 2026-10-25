@@ -302,4 +302,37 @@ class FlywayMigrationTest {
         assertTrue(content.contains("idx_superseded_by_id"), "应新增 superseded_by_id 索引");
         assertFalse(content.contains("DROP INDEX"), "不得删除既有约束（uk_key_id 保留）");
     }
+
+    @Test
+    @DisplayName("V64迁移脚本文件应存在（CR-068）")
+    void v64MigrationScript_shouldExist() {
+        Path migrationFile = Paths.get(MIGRATION_PATH, "V64__Alter_business_key_provisioning_cr068.sql");
+        assertTrue(Files.exists(migrationFile), "V64迁移脚本文件应该存在");
+    }
+
+    @Test
+    @DisplayName("V64迁移脚本应显式拆分 core/wire 摘要并新增批次级 Response 重放字段（CR-068）")
+    void v64MigrationScript_shouldSplitDigestsAndAddResponseStore() throws IOException {
+        Path migrationFile = Paths.get(MIGRATION_PATH, "V64__Alter_business_key_provisioning_cr068.sql");
+        String content = Files.readString(migrationFile);
+        // item 表：envelope_digest 显式 RENAME → core_envelope_digest（不得静默把历史 core 值解释为 wire 值）
+        assertTrue(content.contains("RENAME COLUMN `envelope_digest` TO `core_envelope_digest`"),
+                "必须显式迁移 envelope_digest 语义为 core_envelope_digest");
+        assertTrue(content.contains("`wire_envelope_digest`"), "应新增 wire_envelope_digest 列");
+        assertTrue(content.contains("`aad_profile_id`"), "应新增 aad_profile_id 列");
+        assertTrue(content.contains("`parameters_digest`"), "应新增 parameters_digest 列");
+        assertTrue(content.contains("`wrapped_key_digest`"), "应新增 wrapped_key_digest 列");
+        // 批次表：Response 字节级重放（幂等键=requestId，存储粒度与幂等键一致）
+        assertTrue(content.contains("`response_payload`"), "应新增 response_payload（加密 BLOB）列");
+        assertTrue(content.contains("`response_ref`"), "应新增 response_ref 列");
+        assertTrue(content.contains("`response_digest`"), "应新增 response_digest 列");
+        assertTrue(content.contains("`response_codec_version`"), "应新增 response_codec_version 列");
+        assertTrue(content.contains("`response_persisted_at`"), "应新增 response_persisted_at 列");
+        // item 表不得承载最终 Response 本体（存储粒度=批次表）：提取 item ALTER 段精确断言
+        int itemAlterStart = content.indexOf("ALTER TABLE `tb_business_key_provisioning_item`");
+        int batchAlterStart = content.indexOf("ALTER TABLE `tb_business_key_provisioning`", itemAlterStart);
+        assertTrue(itemAlterStart >= 0 && batchAlterStart > itemAlterStart, "迁移脚本应包含两段 ALTER");
+        String itemAlterSegment = content.substring(itemAlterStart, batchAlterStart);
+        assertFalse(itemAlterSegment.contains("`response_payload`"), "Response 本体不得落在 item 表（批次表承载）");
+    }
 }

@@ -120,16 +120,21 @@ class BusinessKeyProvisioningBatchAppServiceTest {
         ObjectProvider<DerivedEnvelopeDigestVerifier> verifierProvider = mock(ObjectProvider.class);
         lenient().when(verifierProvider.getIfAvailable())
                 .thenReturn(CanonicalDerivedEnvelopeDigestVerifier.instance());
-        envelopeAdapter = new KeyprovEnvelopeAdapter(verifierProvider);
-        LogicalKeyGenerationPolicy generationPolicy = new LogicalKeyGenerationPolicy();
+        ParProtoWireMapperV1 wireMapper = new ParProtoWireMapperV1(verifierProvider);
+        envelopeAdapter = new KeyprovEnvelopeAdapter(wireMapper);
         metrics = mock(BusinessKeyProvisioningMetrics.class);
+        KeyProvisioningResponseStore responseStore = new KeyProvisioningResponseStore(provisioningRepository,
+                metrics);
+        ReflectionTestUtils.setField(responseStore, "base64EncryptionKey",
+                java.util.Base64.getEncoder().encodeToString(new byte[32]));
+        LogicalKeyGenerationPolicy generationPolicy = new LogicalKeyGenerationPolicy();
         BusinessKeyDerivedMaterialService derivedMaterialService = new BusinessKeyDerivedMaterialService(
                 deviceBusinessKeyRepository, provisioningItemRepository, generationPolicy, metrics);
         service = new BusinessKeyProvisioningBatchAppService(deviceBusinessKeyRepository, provisioningRepository,
                 provisioningItemRepository, boundDeviceIdentityResolver, activeDeviceCertificateResolver,
                 authorizationPolicy, policyRegistry, bizTypeMapper, materialRouter,
-                new BusinessKeyProvisioningDomainService(), envelopeAdapter, tboxEcdhCertificateEligibilityGate,
-                derivedMaterialService, metrics, transactionManager);
+                new BusinessKeyProvisioningDomainService(), envelopeAdapter, wireMapper, responseStore,
+                tboxEcdhCertificateEligibilityGate, derivedMaterialService, metrics, transactionManager);
         ReflectionTestUtils.setField(service, "bundleTtlSeconds", 3600L);
         ReflectionTestUtils.setField(service, "derivationVersion", "v1");
 

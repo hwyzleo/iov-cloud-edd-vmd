@@ -8,6 +8,11 @@
         <result column="request_id" property="requestId" />
         <result column="request_digest" property="requestDigest" />
         <result column="ack_digest" property="ackDigest" />
+        <result column="response_payload" property="responsePayload" />
+        <result column="response_ref" property="responseRef" />
+        <result column="response_digest" property="responseDigest" />
+        <result column="response_codec_version" property="responseCodecVersion" />
+        <result column="response_persisted_at" property="responsePersistedAt" />
         <result column="device_sn" property="deviceSn" />
         <result column="binding_id" property="bindingId" />
         <result column="part_id" property="partId" />
@@ -30,6 +35,7 @@
     <sql id="baseColumnList">
         id, request_id, request_digest, ack_digest, device_sn, binding_id, part_id, hsm_uid_digest,
         certificate_sn_digest, business_domain, status, fail_reason, started_at, acknowledged_at, completed_at,
+        response_payload, response_ref, response_digest, response_codec_version, response_persisted_at,
         create_time, create_by, modify_time, modify_by, row_version, row_valid
     </sql>
 
@@ -67,6 +73,21 @@
         </if>
         <if test="ackDigest != null and ackDigest != ''">
             t.ack_digest = #{ackDigest},
+        </if>
+        <if test="responsePayload != null">
+            t.response_payload = #{responsePayload},
+        </if>
+        <if test="responseRef != null and responseRef != ''">
+            t.response_ref = #{responseRef},
+        </if>
+        <if test="responseDigest != null and responseDigest != ''">
+            t.response_digest = #{responseDigest},
+        </if>
+        <if test="responseCodecVersion != null and responseCodecVersion != ''">
+            t.response_codec_version = #{responseCodecVersion},
+        </if>
+        <if test="responsePersistedAt != null">
+            t.response_persisted_at = #{responsePersistedAt},
         </if>
         <if test="deviceSn != null and deviceSn != ''">
             t.device_sn = #{deviceSn},

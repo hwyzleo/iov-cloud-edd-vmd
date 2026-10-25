@@ -47,6 +47,38 @@ public class BusinessKeyProvisioning extends BaseDo<Long> {
     private String ackDigest;
 
     /**
+     * 最终 KeyProvisioningResponse 字节（AES-GCM 加密 BLOB，首次发送前持久化；VMD-DSN-CR-068）
+     */
+    private byte[] responsePayload;
+
+    /**
+     * 不可变受控对象引用（与 responsePayload 二选一；VMD-DSN-CR-068）
+     */
+    private String responseRef;
+
+    /**
+     * SHA-256(final response bytes) hex，重放完整性校验（VMD-DSN-CR-068）
+     */
+    private String responseDigest;
+
+    /**
+     * 响应 codec/profile 版本（固定 PAR_PROTO_KEYPROV_AAD_V1；VMD-DSN-CR-068）
+     */
+    private String responseCodecVersion;
+
+    /**
+     * 首次持久化时间（重放不更新；VMD-DSN-CR-068）
+     */
+    private LocalDateTime responsePersistedAt;
+
+    /**
+     * 是否已持久化最终 Response 事实（payload/ref 任一生效）
+     */
+    public boolean hasPersistedResponse() {
+        return responsePayload != null || (responseRef != null && !responseRef.isBlank());
+    }
+
+    /**
      * TBOX 序列号
      */
     private String deviceSn;

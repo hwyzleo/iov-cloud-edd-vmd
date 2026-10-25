@@ -85,9 +85,29 @@ public class BusinessKeyProvisioningItem extends BaseDo<Long> {
     private String wrappingSuite;
 
     /**
-     * canonical envelope 摘要（32 字节，不可日志化；VMD-DSN-CR-062）
+     * FW-SEC core envelope 摘要（32 字节，FW 内部完整性/审计，不参与 ACK；VMD-DSN-CR-068）
      */
-    private byte[] envelopeDigest;
+    private byte[] coreEnvelopeDigest;
+
+    /**
+     * PAR-PROTO 9 字段 wire envelope 摘要（32 字节，Response/ACK/proof 权威；VMD-DSN-CR-068）
+     */
+    private byte[] wireEnvelopeDigest;
+
+    /**
+     * AAD profile（固定 PAR_PROTO_KEYPROV_AAD_V1；VMD-DSN-CR-068）
+     */
+    private String aadProfileId;
+
+    /**
+     * deterministic parameters 字节摘要（32 字节；VMD-DSN-CR-068）
+     */
+    private byte[] parametersDigest;
+
+    /**
+     * wrappedKey（ciphertext）字节摘要（32 字节；VMD-DSN-CR-068）
+     */
+    private byte[] wrappedKeyDigest;
 
     /**
      * 密钥校验值 KCV（3 字节，不可作认证依据；VMD-DSN-CR-062）

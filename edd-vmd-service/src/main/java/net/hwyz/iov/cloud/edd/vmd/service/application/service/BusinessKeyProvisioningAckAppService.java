@@ -31,6 +31,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.security.MessageDigest;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -317,7 +318,9 @@ public class BusinessKeyProvisioningAckAppService {
     }
 
     /**
-     * 成功 item 与原 Response/批次持久化信封元数据逐项绑定（CR-062 §4.3）。
+     * 成功 item 与原 Response/批次持久化信封元数据逐项绑定（CR-062 §4.3 / CR-068 §5）。
+     * <p>CR-068：envelope_digest 的 wire 语义固定为已保存的 {@code wireEnvelopeDigest}，
+     * 常量时间比较；core digest 不得进入 ACK DTO 或 proof verifier 请求。
      *
      * @return 不匹配字段名；全部匹配返回 {@code null}
      */
@@ -326,13 +329,16 @@ public class BusinessKeyProvisioningAckAppService {
                 || ackItem.getEnvelopeFormat() != KeyEnvelopeFormat.KEY_ENVELOPE_FORMAT_ECDH_ES_P256_V1) {
             return "envelopeFormat";
         }
-        if (!Arrays.equals(batchItem.getEnvelopeDigest(), ackItem.getEnvelopeDigest().toByteArray())) {
-            return "envelopeDigest";
+        // wire 权威：ack.envelopeDigest == stored wireEnvelopeDigest（常量时间比较）
+        byte[] storedWire = batchItem.getWireEnvelopeDigest();
+        byte[] ackDigest = ackItem.getEnvelopeDigest().toByteArray();
+        if (storedWire == null || !MessageDigest.isEqual(storedWire, ackDigest)) {
+            return "envelopeDigest(wire)";
         }
-        if (!Arrays.equals(batchItem.getKeyCheckValue(), ackItem.getKeyCheckValue().toByteArray())) {
+        if (!MessageDigest.isEqual(batchItem.getKeyCheckValue(), ackItem.getKeyCheckValue().toByteArray())) {
             return "keyCheckValue";
         }
-        if (!Arrays.equals(batchItem.getRecipientCertDigest(),
+        if (!MessageDigest.isEqual(batchItem.getRecipientCertDigest(),
                 ackItem.getRecipientCertificateDigest().toByteArray())) {
             return "recipientCertificateDigest";
         }
@@ -388,7 +394,8 @@ public class BusinessKeyProvisioningAckAppService {
                     KeyPurpose.valueOf(item.getPurpose()),
                     item.getKeyId(),
                     item.getBusinessKeyVersion() == null ? 0L : item.getBusinessKeyVersion(),
-                    ackItem.getEnvelopeDigest().toByteArray(),
+                    // CR-068：proofInputV1 segment[7] 绑定 stored wireEnvelopeDigest（已由 envelopeMismatch 与 ack digest 常量时间比对一致）
+                    item.getWireEnvelopeDigest(),
                     ackItem.getKeyCheckValue().toByteArray());
             verifier.verify(request);
         }

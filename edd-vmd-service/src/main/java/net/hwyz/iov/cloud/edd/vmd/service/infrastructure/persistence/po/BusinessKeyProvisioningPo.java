@@ -41,6 +41,21 @@ public class BusinessKeyProvisioningPo extends BasePo {
     @TableField("ack_digest")
     private String ackDigest;
 
+    @TableField("response_payload")
+    private byte[] responsePayload;
+
+    @TableField("response_ref")
+    private String responseRef;
+
+    @TableField("response_digest")
+    private String responseDigest;
+
+    @TableField("response_codec_version")
+    private String responseCodecVersion;
+
+    @TableField("response_persisted_at")
+    private LocalDateTime responsePersistedAt;
+
     @TableField("device_sn")
     private String deviceSn;
 

@@ -35,6 +35,7 @@ import static org.mockito.Mockito.when;
 class KeyprovEnvelopeAdapterTest {
 
     private ObjectProvider<DerivedEnvelopeDigestVerifier> verifierProvider;
+    private ParProtoWireMapperV1 wireMapper;
     private KeyprovEnvelopeAdapter adapter;
 
     @BeforeEach
@@ -42,7 +43,8 @@ class KeyprovEnvelopeAdapterTest {
     void setUp() {
         verifierProvider = mock(ObjectProvider.class);
         when(verifierProvider.getIfAvailable()).thenReturn(CanonicalDerivedEnvelopeDigestVerifier.instance());
-        adapter = new KeyprovEnvelopeAdapter(verifierProvider);
+        wireMapper = new ParProtoWireMapperV1(verifierProvider);
+        adapter = new KeyprovEnvelopeAdapter(wireMapper);
     }
 
     private DeviceBusinessKey directory() {
@@ -89,7 +91,7 @@ class KeyprovEnvelopeAdapterTest {
     void toWrappedKeyItem_mapsLosslessly() throws Exception {
         DerivedWrappedKey source = KeyprovEnvelopeTestFixtures.derivedWrappedKey(
                 "logical-uplink", KeyPurpose.UPLINK_AEAD, 3L, 7L, "v1", "op-1");
-        WrappedKeyItem item = adapter.toWrappedKeyItem("UPLINK_AEAD", directory(), source);
+        WrappedKeyItem item = adapter.toWrappedKeyItem("CR068-REQ-0001", "V2C_COMM", directory(), source);
 
         EcdhEsP256EnvelopeViewV1 view = (EcdhEsP256EnvelopeViewV1) source.envelope();
         assertEquals(view.logicalKeyId(), item.getKeyId());
@@ -102,7 +104,16 @@ class KeyprovEnvelopeAdapterTest {
                         .WRAPPING_SUITE_ECDH_ES_P256_HKDF_SHA256_AES256GCM,
                 item.getWrappingSuite());
         assertArrayEquals(view.ciphertext(), item.getWrappedKey().toByteArray(), "wrappedKey = ciphertext");
-        assertArrayEquals(view.envelopeDigest(), item.getEnvelopeDigest().toByteArray());
+        // CR-068：envelope_digest = PAR-PROTO 9 字段 wire digest（非 FW core digest）
+        byte[] wireDigest = ParProtoWireCanonical.wireEnvelopeDigest(
+                1, "CR068-REQ-0001", "V2C_COMM",
+                view.purpose() == KeyPurpose.UPLINK_AEAD ? 1 : 2,
+                view.logicalKeyId(), view.businessKeyVersion(), 2,
+                view.ciphertext(), item.getParameters().toByteArray());
+        assertArrayEquals(wireDigest, item.getEnvelopeDigest().toByteArray(),
+                "envelope_digest 必须是 wire digest（非 core）");
+        assertFalse(java.util.Arrays.equals(view.coreEnvelopeDigest(), item.getEnvelopeDigest().toByteArray()),
+                "core digest 不得进入 wire envelope_digest");
         assertArrayEquals(view.keyCheckValue(), item.getKeyCheckValue().toByteArray());
         assertTrue(item.getValidFromMs() > 0, "目录有效期必须下发 valid_from_ms（缺失=0 会被 SEC 拒）");
         assertTrue(item.getValidToMs() > item.getValidFromMs(), "valid_to_ms 必须大于 valid_from_ms");
@@ -124,7 +135,7 @@ class KeyprovEnvelopeAdapterTest {
         DerivedWrappedKey legacy = new DerivedWrappedKey("k", "r", 1L, "v1",
                 WrappingSuite.ECDH_ES_P256_HKDF_SHA256_AES256GCM, new byte[]{1}, new byte[32], new byte[3], "op");
         assertThrows(KeyprovEnvelopeIntegrityException.class,
-                () -> adapter.toWrappedKeyItem("UPLINK_AEAD", directory(), legacy));
+                () -> adapter.toWrappedKeyItem("CR068-REQ-0001", "V2C_COMM", directory(), legacy));
     }
 
     @Test
@@ -143,7 +154,7 @@ class KeyprovEnvelopeAdapterTest {
                 good.derivationVersion(), good.wrappingSuite(), bad, null, tampered, good.keyCheckValue(),
                 good.operationId());
         assertThrows(DerivedEnvelopeIntegrityException.class,
-                () -> adapter.toWrappedKeyItem("UPLINK_AEAD", directory(), source));
+                () -> adapter.toWrappedKeyItem("CR068-REQ-0001", "V2C_COMM", directory(), source));
     }
 
     @Test
@@ -153,7 +164,7 @@ class KeyprovEnvelopeAdapterTest {
         DerivedWrappedKey source = KeyprovEnvelopeTestFixtures.derivedWrappedKey(
                 "logical-uplink", KeyPurpose.UPLINK_AEAD, 3L, 7L, "v1", "op-1");
         assertThrows(KeyprovEnvelopeIntegrityException.class,
-                () -> adapter.toWrappedKeyItem("UPLINK_AEAD", directory(), source));
+                () -> adapter.toWrappedKeyItem("CR068-REQ-0001", "V2C_COMM", directory(), source));
     }
 
     @Test
@@ -163,7 +174,7 @@ class KeyprovEnvelopeAdapterTest {
                 "logical-uplink", KeyPurpose.UPLINK_AEAD, 3L, 7L, "v1", "op-1");
         DeviceBusinessKey noValidity = DeviceBusinessKey.builder().keyId("k").algorithm("AES").build();
         KeyprovEnvelopeIntegrityException e = assertThrows(KeyprovEnvelopeIntegrityException.class,
-                () -> adapter.toWrappedKeyItem("UPLINK_AEAD", noValidity, source));
+                () -> adapter.toWrappedKeyItem("CR068-REQ-0001", "V2C_COMM", noValidity, source));
         assertTrue(e.getMessage().contains("有效期"), "异常信息应指明缺有效期");
     }
 }
