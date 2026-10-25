@@ -289,6 +289,24 @@
         LIMIT 1
     </select>
 
+    <!-- 查询同逻辑材料、已带 keyId 证据的可恢复行（CR-066 §6.4 复用；CR-068 修复：
+         无 ACTIVE 时优先恢复复用既有行，避免新建重复版本行后派生撞 uk_key_id 走
+         claim-or-reuse 重挂，导致 operationId 与版本分离、重试触发 FW 结果存储摘要冲突） -->
+    <select id="selectRecoverablePoByContext" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList" />
+        FROM tb_device_business_key
+        WHERE device_sn = #{deviceSn}
+          AND business_domain = #{businessDomain}
+          AND purpose = #{purpose}
+          AND key_id IS NOT NULL
+          AND material_model = 'DERIVED_ROOT'
+          AND derivation_version = #{derivationVersion}
+          AND key_state IN ('FAILED', 'PENDING_RECOVERY', 'RECONCILE_REQUIRED')
+          AND row_valid = 1
+        ORDER BY business_key_version DESC
+        LIMIT 1
+    </select>
+
     <!-- 查询上下文的当前最大业务版本 -->
     <select id="selectMaxBusinessKeyVersion" resultType="java.lang.Long">
         SELECT MAX(business_key_version)

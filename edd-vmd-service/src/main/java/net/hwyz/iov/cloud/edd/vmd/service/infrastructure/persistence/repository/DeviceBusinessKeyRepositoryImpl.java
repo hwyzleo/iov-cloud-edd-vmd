@@ -90,6 +90,14 @@ public class DeviceBusinessKeyRepositoryImpl implements DeviceBusinessKeyReposit
     }
 
     @Override
+    public DeviceBusinessKey selectRecoverableByContext(String deviceSn, String businessDomain, String purpose,
+                                                        String derivationVersion) {
+        DeviceBusinessKeyPo po = deviceBusinessKeyMapper.selectRecoverablePoByContext(
+                deviceSn, businessDomain, purpose, derivationVersion);
+        return po != null ? DeviceBusinessKeyConverter.INSTANCE.toDomain(po) : null;
+    }
+
+    @Override
     public Long maxBusinessKeyVersion(String deviceSn, String businessDomain, String purpose) {
         Long max = deviceBusinessKeyMapper.selectMaxBusinessKeyVersion(deviceSn, businessDomain, purpose);
         return max != null ? max : 0L;

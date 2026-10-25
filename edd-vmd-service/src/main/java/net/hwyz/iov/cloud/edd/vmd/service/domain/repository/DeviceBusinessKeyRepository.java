@@ -106,6 +106,23 @@ public interface DeviceBusinessKeyRepository {
     DeviceBusinessKey selectByContextAndVersion(String deviceSn, String businessDomain, String purpose, Long businessKeyVersion);
 
     /**
+     * 查询同逻辑材料、已带 keyId 证据的可恢复行（CR-066 §6.4 复用；CR-068 修复）。
+     * <p>
+     * 无 ACTIVE 时优先恢复并复用既有行（沿用其 businessKeyVersion），避免新建重复版本行后
+     * 派生撞 uk_key_id 走 claim-or-reuse 重挂，导致 operationId 与版本分离、重试触发
+     * FW 结果存储摘要冲突（同 operation 不同业务版本，FW-SEC-DSN-CR-020 §4）。
+     * 仅命中同代际（derivation_version 一致）的 DERIVED_ROOT 证据行。
+     *
+     * @param deviceSn          设备实例序列号
+     * @param businessDomain    业务域
+     * @param purpose           用途
+     * @param derivationVersion 当前派生格式版本（仅复用同代际材料）
+     * @return 可恢复目录行（FAILED/PENDING_RECOVERY/RECONCILE_REQUIRED 且 key_id 非空），不存在返回 null
+     */
+    DeviceBusinessKey selectRecoverableByContext(String deviceSn, String businessDomain, String purpose,
+                                                 String derivationVersion);
+
+    /**
      * 查询上下文的当前最大业务版本（无记录返回 0）
      *
      * @param deviceSn       设备实例序列号

@@ -103,6 +103,10 @@ class BusinessKeyCr068IntegrationTest extends BaseTest {
     }
 
     private void clean() {
+        // CR-068 集成测试：Outbox 表不随批次清理，历史运行会残留完成事件，需一并清除
+        // （否则事件计数断言随运行次数累积失败；注意 tb_vmd_outbox 与批次表 collation 不一致，
+        // 不能跨表子查询，按本测试固定 requestId 字面量删除）
+        jdbcTemplate.execute("DELETE FROM tb_vmd_outbox WHERE source_ref_id = 'CR068_REQ_001'");
         jdbcTemplate.execute("DELETE FROM tb_business_key_provisioning_item WHERE provisioning_id IN "
                 + "(SELECT id FROM tb_business_key_provisioning WHERE device_sn = '" + DEVICE_SN + "')");
         jdbcTemplate.execute("DELETE FROM tb_business_key_provisioning WHERE device_sn = '" + DEVICE_SN + "'");

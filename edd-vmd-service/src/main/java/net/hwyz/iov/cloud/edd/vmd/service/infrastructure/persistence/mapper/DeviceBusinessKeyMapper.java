@@ -110,6 +110,20 @@ public interface DeviceBusinessKeyMapper extends BaseDao<DeviceBusinessKeyPo, Lo
                                                     @Param("businessKeyVersion") Long businessKeyVersion);
 
     /**
+     * 查询同逻辑材料、已带 keyId 证据的可恢复行（CR-066 §6.4 复用；CR-068 修复）
+     *
+     * @param deviceSn          设备实例序列号
+     * @param businessDomain    业务域
+     * @param purpose           用途
+     * @param derivationVersion 当前派生格式版本（仅复用同代际材料）
+     * @return PO，不存在返回 null
+     */
+    DeviceBusinessKeyPo selectRecoverablePoByContext(@Param("deviceSn") String deviceSn,
+                                                     @Param("businessDomain") String businessDomain,
+                                                     @Param("purpose") String purpose,
+                                                     @Param("derivationVersion") String derivationVersion);
+
+    /**
      * 查询上下文的当前最大业务版本
      *
      * @param deviceSn       设备实例序列号

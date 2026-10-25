@@ -2,6 +2,7 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.BusinessKeyDerivationRejectedException;
 import net.hwyz.iov.cloud.edd.vmd.service.support.KeyprovEnvelopeTestFixtures;
+import net.hwyz.iov.cloud.edd.vmd.service.common.util.DerivedKeyOperationIds;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.monitoring.BusinessKeyProvisioningMetrics;
 import net.hwyz.iov.cloud.framework.security.crypto.codec.CanonicalDerivedEnvelopeDigestVerifier;
 import net.hwyz.iov.cloud.framework.security.crypto.codec.DerivedEnvelopeDigestVerifier;
@@ -625,6 +626,99 @@ class BusinessKeyProvisioningBatchAppServiceTest {
         verify(deviceBusinessKeyRepository, atLeastOnce()).confirmRecovery(any(), any());
         verify(deviceBusinessKeyRepository, atLeastOnce()).markPlaceholderSuperseded(any(), any(), any());
         verify(metrics, atLeastOnce()).recordRetryLoopPrevented(eq("claim_converged"));
+    }
+
+    @Test
+    @DisplayName("CR-068：Response 重放存储未就绪（KEYPROV_RESPONSE_STORE_KEY 未注入）→ 入口 fail-closed，不派生不落库")
+    void provision_responseStoreNotReady_failsClosedBeforeDerivation() {
+        // 模拟部署未注入密钥：置空存储密钥
+        KeyProvisioningResponseStore store = (KeyProvisioningResponseStore) ReflectionTestUtils.getField(service,
+                "responseStore");
+        ReflectionTestUtils.setField(store, "base64EncryptionKey", "");
+
+        KeyProvisioningResponse response = service.provision(request(), ctx());
+
+        assertEquals(KeyProvisioningResult.KEY_PROVISIONING_RESULT_RETRYABLE_FAILURE, response.getResult());
+        assertEquals(KeyprovConstants.ERR_UNAVAILABLE, response.getError().getCode());
+        assertTrue(response.getError().getRetryable());
+        assertEquals("RETRY_SAME_REQUEST_ID", response.getError().getAction());
+        // 任何派生/批次/目录行为均不得发生（避免"派生成功后持久化失败→重试撞 FW 摘要冲突"）
+        verify(derivedTemplate, never()).deriveAndWrap(any(), any(), any(), any(), any(), any(), any());
+        verify(provisioningRepository, never()).insert(any());
+        verify(deviceBusinessKeyRepository, never()).insert(any());
+    }
+
+    @Test
+    @DisplayName("CR-068：无 ACTIVE 但存在同逻辑材料 FAILED 证据行 → 恢复复用既有行（沿用版本），不新建重复版本行")
+    void provision_recoverableFailedRow_reusedWithoutNewVersion() {
+        when(boundDeviceIdentityResolver.resolveByHsmUid(HSM_UID, null)).thenReturn(identity);
+        // 前一次失败批次遗留的 FAILED 证据行（同逻辑材料，keyId 确定性相同，derivationVersion 同代际）
+        keyStore.put(100L, completeMaterialRow(100L, "UPLINK_AEAD", 1L, "KEY-UPLINK_AEAD",
+                BusinessKeyState.FAILED, "PREV-REQ-1"));
+        keyStore.put(200L, completeMaterialRow(200L, "DOWNLINK_AEAD", 1L, "KEY-DOWNLINK_AEAD",
+                BusinessKeyState.FAILED, "PREV-REQ-2"));
+        // 无 ACTIVE：命中 recoverable 复用路径（CR-066 §6.4）
+        when(deviceBusinessKeyRepository.selectRecoverableByContext(eq(DEVICE_SN), eq(DOMAIN), any(), eq("v1")))
+                .thenAnswer(inv -> {
+                    String purpose = inv.getArgument(2);
+                    return keyStore.values().stream()
+                            .filter(k -> purpose.equals(k.getPurpose()))
+                            .findFirst().orElse(null);
+                });
+        when(deviceBusinessKeyRepository.markPendingRecovery(any(), any())).thenReturn(1);
+        when(deviceBusinessKeyRepository.confirmRecovery(any(), any())).thenReturn(1);
+
+        KeyProvisioningResponse response = service.provision(request(), ctx());
+
+        assertEquals(KeyProvisioningResult.KEY_PROVISIONING_RESULT_SUCCEEDED, response.getResult());
+        assertEquals(2, response.getItemsCount());
+        // 不新建任何目录版本行：复用既有 FAILED 行及其版本（杜绝版本分裂）
+        verify(deviceBusinessKeyRepository, never()).insert(any());
+        assertEquals(2, keyStore.size());
+        // 恢复既有行：FAILED→PENDING_RECOVERY→PENDING
+        verify(deviceBusinessKeyRepository, atLeastOnce()).markPendingRecovery(any(), any());
+        verify(deviceBusinessKeyRepository, atLeastOnce()).confirmRecovery(any(), any());
+        // item 版本/operationId 与复用版本一致（不变量 operationId == f(requestId,purpose,version)）
+        assertEquals(2, itemStore.size());
+        for (BusinessKeyProvisioningItem item : itemStore) {
+            assertEquals(1L, item.getBusinessKeyVersion());
+            assertEquals(DerivedKeyOperationIds.operationId(REQUEST_ID, item.getPurpose(), 1L),
+                    item.getOperationId());
+        }
+    }
+
+    @Test
+    @DisplayName("CR-068：存量分裂批次（item operationId 与目录版本分离）→ 重试重算对齐 operationId，重派生成功且不再撞冲突")
+    void provision_retryWithSplitOperationId_recomputesAndAligns() {
+        when(boundDeviceIdentityResolver.resolveByHsmUid(HSM_UID, null)).thenReturn(identity);
+        // 首次开通成功（一致状态），随后模拟 persist 失败（无已持久化 Response）
+        KeyProvisioningResponse first = service.provision(request(), ctx());
+        assertEquals(KeyProvisioningResult.KEY_PROVISIONING_RESULT_SUCCEEDED, first.getResult());
+        batchRef.setResponsePayload(null);
+        // 模拟 claim-or-reuse 缺陷遗留的分裂状态：item operationId 按错误版本（9）计算，目录版本为 1
+        for (BusinessKeyProvisioningItem item : itemStore) {
+            item.setOperationId(DerivedKeyOperationIds.operationId(REQUEST_ID, item.getPurpose(), 9L));
+        }
+
+        KeyProvisioningResponse second = service.provision(request(), ctx());
+
+        assertEquals(KeyProvisioningResult.KEY_PROVISIONING_RESULT_SUCCEEDED, second.getResult());
+        assertEquals(2, second.getItemsCount());
+        // operationId 已按目录版本（1）重算并对齐落库
+        for (BusinessKeyProvisioningItem item : itemStore) {
+            assertEquals(DerivedKeyOperationIds.operationId(REQUEST_ID, item.getPurpose(), 1L),
+                    item.getOperationId());
+        }
+        // deriveAndWrap 使用对齐后的 operationId（f(requestId,purpose,1)）
+        ArgumentCaptor<KeyPurpose> purposeCaptor = ArgumentCaptor.forClass(KeyPurpose.class);
+        ArgumentCaptor<String> opIdCaptor = ArgumentCaptor.forClass(String.class);
+        verify(derivedTemplate, atLeast(2)).deriveAndWrap(any(), any(), purposeCaptor.capture(), any(), any(),
+                opIdCaptor.capture(), any());
+        for (int i = 0; i < purposeCaptor.getAllValues().size(); i++) {
+            assertEquals(DerivedKeyOperationIds.operationId(REQUEST_ID,
+                            purposeCaptor.getAllValues().get(i).name(), 1L),
+                    opIdCaptor.getAllValues().get(i));
+        }
     }
 
     @Test

@@ -297,12 +297,12 @@ class BusinessKeyCr066IntegrationTest extends BaseTest {
         assertNotNull(validity.get("valid_from"), "恢复复用的既有行应兜底补齐 valid_from");
         assertNotNull(validity.get("valid_to"), "恢复复用的既有行应兜底补齐 valid_to");
 
-        // 本批次占位行 SUPERSEDED 且保留证据 + 指向 canonical
+        // CR-068 修复：无 ACTIVE 时直接恢复并复用既有 FAILED 证据行（沿用其版本派生），
+        // 不新建占位版本行（杜绝 operationId/版本分裂），故不应产生 SUPERSEDED 占位行
         Integer superseded = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM tb_device_business_key WHERE device_sn = ? AND key_state = 'SUPERSEDED' "
-                        + "AND superseded_by_id IS NOT NULL AND key_id IS NULL",
+                "SELECT COUNT(*) FROM tb_device_business_key WHERE device_sn = ? AND key_state = 'SUPERSEDED'",
                 Integer.class, DEVICE_SN);
-        assertEquals(2, superseded, "两用途占位行应 SUPERSEDED 并记录 superseded_by_id");
+        assertEquals(0, superseded, "恢复复用路径不新建占位行，不应产生 SUPERSEDED");
 
         // item 重挂 canonical 行
         Long rebound = jdbcTemplate.queryForObject(

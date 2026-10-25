@@ -141,6 +141,15 @@ public class BusinessKeyProvisioningBatchAppService {
         if (ctx == null || !ctx.hasIdentity()) {
             return rejected(requestId, KeyprovConstants.ERR_PROTOCOL_INVALID, false, "缺少已认证会话身份");
         }
+        // CR-068 fail-closed 入口守卫：Response 字节级重放存储密钥未注入（KEYPROV_RESPONSE_STORE_KEY）
+        // 时禁止进入派生流程——否则首次请求在派生成功后才因持久化失败返回 806100，
+        // 客户端同 requestId 重试将撞 FW 结果存储摘要冲突（同 operation 不同业务版本）。
+        if (!responseStore.productionReady()) {
+            log.warn("keyprov Response 重放存储未就绪（KEYPROV_RESPONSE_STORE_KEY 未注入），fail-closed 拒绝 Request: requestId={}",
+                    requestId);
+            return retryable(requestId, KeyprovConstants.ERR_UNAVAILABLE,
+                    "Response重放存储未就绪（KEYPROV_RESPONSE_STORE_KEY 未配置），禁止下发");
+        }
         String domain = domainService.upper(request.getBusinessDomain());
         Set<String> requestPurposes = domainService.normalizePurposes(request);
         Set<String> policyPurposes = policyRegistry.resolvePurposes(domain).orElse(Set.of());
@@ -449,9 +458,22 @@ public class BusinessKeyProvisioningBatchAppService {
                 item = insertItemIdentity(batch.getId(), target, purpose, preOperationId);
             }
 
-            // 同 requestId 绝不重新分配目录行、版本或 operationId
-            String operationId = item.getOperationId() != null ? item.getOperationId()
-                    : DerivedKeyOperationIds.operationId(requestId, purpose, target.getBusinessKeyVersion());
+            // 同 requestId 绝不重新分配目录行、版本或 operationId；
+            // 但 operationId 必须与最终目录版本保持一致（CR-066 §6.2 不变量）：
+            // claim-or-reuse 重挂后旧 operationId（按占位版本派生）与 item 版本分离，
+            // 重试会触发 FW 结果存储摘要冲突（同 operation 不同业务版本，FW-SEC-DSN-CR-020 §4）。
+            // 此处按解析后目标版本重算并对齐落库（对存量分裂批次自愈）。
+            String expectedOperationId = DerivedKeyOperationIds.operationId(
+                    requestId, purpose, target.getBusinessKeyVersion());
+            String operationId = expectedOperationId;
+            if (item.getOperationId() != null && !item.getOperationId().equals(expectedOperationId)) {
+                log.warn("keyprov item operationId 与目录版本不一致，重算对齐: requestId={}, purpose={}, "
+                                + "oldOperationId={}, newOperationId={}, businessKeyVersion={}",
+                        requestId, purpose, item.getOperationId(), expectedOperationId,
+                        target.getBusinessKeyVersion());
+                item.setOperationId(expectedOperationId);
+                provisioningItemRepository.update(item);
+            }
             String idemKey = DerivedKeyOperationIds.idempotencyKey(requestId, identity.deviceSn(), purpose,
                     target.getBusinessKeyVersion(), derivationVersion);
             Map<String, String> audit = new HashMap<>();
@@ -514,6 +536,27 @@ public class BusinessKeyProvisioningBatchAppService {
             throw new BusinessKeyDerivationRejectedException(
                     "历史ACTIVE业务密钥材料来源未知（material_model IS NULL），须走专项迁移批次，禁止自动轮换/重建: purpose="
                             + purpose);
+        }
+        // CR-068 修复（对齐 CR-066 §6.4）：无 ACTIVE 但存在同逻辑材料、已带 keyId 证据的
+        // 可恢复行时，恢复并复用既有行（沿用其 businessKeyVersion），不得新建重复版本行——
+        // 否则派生后撞 uk_key_id 走 claim-or-reuse 重挂，导致 operationId 与版本分离、
+        // 重试触发 FW 结果存储摘要冲突（同 operation 不同业务版本）。
+        if (active == null) {
+            DeviceBusinessKey recoverable = deviceBusinessKeyRepository.selectRecoverableByContext(
+                    identity.deviceSn(), domain, purpose, derivationVersion);
+            if (recoverable != null) {
+                // 恢复既有行（FAILED→PENDING_RECOVERY→PENDING）；恢复会递增 row_version，
+                // 须重读最新行（含 rowVersion/有效期），否则后续 ensureDirectoryValidity 乐观锁更新失配
+                recoverTargetIfNeeded(recoverable, requestId);
+                DeviceBusinessKey refreshed = deviceBusinessKeyRepository.selectById(recoverable.getId());
+                DeviceBusinessKey target = refreshed != null ? refreshed : recoverable;
+                metrics.recordVersionDecision("recover_reuse", "claimed_existing");
+                log.info("keyprov 复用既有同逻辑材料可恢复行（不新建版本）: deviceSn={}, purpose={}, "
+                                + "id={}, businessKeyVersion={}, state={}",
+                        identity.deviceSn(), purpose, target.getId(), target.getBusinessKeyVersion(),
+                        target.getKeyState() == null ? null : target.getKeyState().name());
+                return target;
+            }
         }
         BusinessKeyProvisioningIntent intent = domainService.deriveIntent(active,
                 currentVersions.getOrDefault(purpose, 0L), derivationVersion);
