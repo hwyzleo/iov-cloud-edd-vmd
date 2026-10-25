@@ -86,6 +86,12 @@ public class BusinessKeyProvisioningItemPo extends BasePo {
     @TableField("recipient_cert_digest")
     private byte[] recipientCertDigest;
 
+    @TableField("item_wire_offset")
+    private Integer itemWireOffset;
+
+    @TableField("item_wire_length")
+    private Integer itemWireLength;
+
     @TableField("device_result")
     private String deviceResult;
 

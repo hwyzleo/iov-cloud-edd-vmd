@@ -72,10 +72,53 @@ public class BusinessKeyProvisioning extends BaseDo<Long> {
     private LocalDateTime responsePersistedAt;
 
     /**
+     * KL1 生命周期 profile（KEYPROV-LIFECYCLE-1；NULL=存量未迁移；VMD-DSN-CR-069）
+     */
+    private String lifecycleProfile;
+
+    /**
+     * KL1 F：首次完整双用途响应原子持久化时间（不可滑动；VMD-DSN-CR-069）
+     */
+    private LocalDateTime firstIssuedAt;
+
+    /**
+     * KL1 B：固定 ACK 截止 = F + 300s（重放不延 B；VMD-DSN-CR-069）
+     */
+    private LocalDateTime ackDeadlineAt;
+
+    /**
+     * KL1：响应去掉唯一外层 field4 后原始内容 C 的 SHA-256 hex（续签不变；VMD-DSN-CR-069）
+     */
+    private String immutableContentDigest;
+
+    /**
+     * KL1：当前最大交付租约序号（原子递增；VMD-DSN-CR-069）
+     */
+    private Integer leaseSeq;
+
+    /**
+     * 终态治理原因（ACK_TIMEOUT / QUARANTINE_MIGRATION 等；公开 Status 仍既有枚举；VMD-DSN-CR-069）
+     */
+    private String terminalReason;
+
+    /**
+     * 终态治理时间（VMD-DSN-CR-069）
+     */
+    private LocalDateTime terminalAt;
+
+    /**
      * 是否已持久化最终 Response 事实（payload/ref 任一生效）
      */
     public boolean hasPersistedResponse() {
         return responsePayload != null || (responseRef != null && !responseRef.isBlank());
+    }
+
+    /**
+     * 是否已启用 KL1（lifecycle_profile=KEYPROV-LIFECYCLE-1 且 F/B 已建立）
+     */
+    public boolean isKl1() {
+        return net.hwyz.iov.cloud.edd.vmd.service.application.service.Kl1Constants.PROFILE.equals(lifecycleProfile)
+                && firstIssuedAt != null && ackDeadlineAt != null;
     }
 
     /**
@@ -209,6 +252,36 @@ public class BusinessKeyProvisioning extends BaseDo<Long> {
     public void markExpired(String reason) {
         this.status = BusinessKeyProvisioningState.EXPIRED;
         this.failReason = reason;
+    }
+
+    /**
+     * KL1：到期未激活 → FAILED(ACK_TIMEOUT)（VMD-DSN-CR-069 §4）。
+     * <p>
+     * 公开 Status 仍为既有 FAILED，不臆造新枚举/错误码字段；ACK_TIMEOUT 仅写入内部审计
+     * terminal_reason。FAILED 为终态，迟到 ACK 绝不复活。
+     */
+    public void markAckTimeout(java.time.LocalDateTime now) {
+        this.status = BusinessKeyProvisioningState.FAILED;
+        this.failReason = net.hwyz.iov.cloud.edd.vmd.service.application.service.Kl1Constants.TERMINAL_REASON_ACK_TIMEOUT;
+        this.terminalReason = net.hwyz.iov.cloud.edd.vmd.service.application.service.Kl1Constants.TERMINAL_REASON_ACK_TIMEOUT;
+        this.terminalAt = now;
+        this.modifyTime = now;
+    }
+
+    /**
+     * KL1：迁移隔离（quarantine）标记——保留只读证据并停止新 bundle，不重 derive 救场（VMD-DSN-CR-069 §5）。
+     */
+    public void markMigrationQuarantine(java.time.LocalDateTime now) {
+        this.terminalReason = net.hwyz.iov.cloud.edd.vmd.service.application.service.Kl1Constants.TERMINAL_REASON_MIGRATION_QUARANTINE;
+        this.terminalAt = now;
+        this.modifyTime = now;
+    }
+
+    /**
+     * 是否处于迁移隔离（停止新 bundle 交付）
+     */
+    public boolean isMigrationQuarantined() {
+        return net.hwyz.iov.cloud.edd.vmd.service.application.service.Kl1Constants.TERMINAL_REASON_MIGRATION_QUARANTINE.equals(terminalReason);
     }
 
     /**

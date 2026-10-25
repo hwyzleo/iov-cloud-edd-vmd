@@ -56,6 +56,27 @@ public class BusinessKeyProvisioningPo extends BasePo {
     @TableField("response_persisted_at")
     private LocalDateTime responsePersistedAt;
 
+    @TableField("lifecycle_profile")
+    private String lifecycleProfile;
+
+    @TableField("first_issued_at")
+    private LocalDateTime firstIssuedAt;
+
+    @TableField("ack_deadline_at")
+    private LocalDateTime ackDeadlineAt;
+
+    @TableField("immutable_content_digest")
+    private String immutableContentDigest;
+
+    @TableField("lease_seq")
+    private Integer leaseSeq;
+
+    @TableField("terminal_reason")
+    private String terminalReason;
+
+    @TableField("terminal_at")
+    private LocalDateTime terminalAt;
+
     @TableField("device_sn")
     private String deviceSn;
 

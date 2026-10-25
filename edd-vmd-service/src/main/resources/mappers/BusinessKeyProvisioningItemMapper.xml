@@ -22,6 +22,8 @@
         <result column="wrapped_key_digest" property="wrappedKeyDigest" />
         <result column="key_check_value" property="keyCheckValue" />
         <result column="recipient_cert_digest" property="recipientCertDigest" />
+        <result column="item_wire_offset" property="itemWireOffset" />
+        <result column="item_wire_length" property="itemWireLength" />
         <result column="device_result" property="deviceResult" />
         <result column="import_proof_digest" property="importProofDigest" />
         <result column="confirmed_at" property="confirmedAt" />
@@ -37,7 +39,7 @@
         id, provisioning_id, purpose, key_id, business_key_version, directory_key_id,
         operation_id, root_key_version, derivation_version, recipient_cert_fingerprint_digest,
         envelope_format, wrapping_suite, core_envelope_digest, wire_envelope_digest, aad_profile_id,
-        parameters_digest, wrapped_key_digest, key_check_value, recipient_cert_digest, device_result,
+        parameters_digest, wrapped_key_digest, key_check_value, recipient_cert_digest, item_wire_offset, item_wire_length, device_result,
         import_proof_digest, confirmed_at, create_time, create_by, modify_time, modify_by, row_version, row_valid
     </sql>
 
@@ -128,6 +130,12 @@
         </if>
         <if test="recipientCertDigest != null">
             t.recipient_cert_digest = #{recipientCertDigest},
+        </if>
+        <if test="itemWireOffset != null">
+            t.item_wire_offset = #{itemWireOffset},
+        </if>
+        <if test="itemWireLength != null">
+            t.item_wire_length = #{itemWireLength},
         </if>
         <if test="deviceResult != null and deviceResult != ''">
             t.device_result = #{deviceResult},

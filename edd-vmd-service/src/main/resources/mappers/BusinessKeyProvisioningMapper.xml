@@ -13,6 +13,13 @@
         <result column="response_digest" property="responseDigest" />
         <result column="response_codec_version" property="responseCodecVersion" />
         <result column="response_persisted_at" property="responsePersistedAt" />
+        <result column="lifecycle_profile" property="lifecycleProfile" />
+        <result column="first_issued_at" property="firstIssuedAt" />
+        <result column="ack_deadline_at" property="ackDeadlineAt" />
+        <result column="immutable_content_digest" property="immutableContentDigest" />
+        <result column="lease_seq" property="leaseSeq" />
+        <result column="terminal_reason" property="terminalReason" />
+        <result column="terminal_at" property="terminalAt" />
         <result column="device_sn" property="deviceSn" />
         <result column="binding_id" property="bindingId" />
         <result column="part_id" property="partId" />
@@ -36,6 +43,7 @@
         id, request_id, request_digest, ack_digest, device_sn, binding_id, part_id, hsm_uid_digest,
         certificate_sn_digest, business_domain, status, fail_reason, started_at, acknowledged_at, completed_at,
         response_payload, response_ref, response_digest, response_codec_version, response_persisted_at,
+        lifecycle_profile, first_issued_at, ack_deadline_at, immutable_content_digest, lease_seq, terminal_reason, terminal_at,
         create_time, create_by, modify_time, modify_by, row_version, row_valid
     </sql>
 
@@ -88,6 +96,27 @@
         </if>
         <if test="responsePersistedAt != null">
             t.response_persisted_at = #{responsePersistedAt},
+        </if>
+        <if test="lifecycleProfile != null and lifecycleProfile != ''">
+            t.lifecycle_profile = #{lifecycleProfile},
+        </if>
+        <if test="firstIssuedAt != null">
+            t.first_issued_at = #{firstIssuedAt},
+        </if>
+        <if test="ackDeadlineAt != null">
+            t.ack_deadline_at = #{ackDeadlineAt},
+        </if>
+        <if test="immutableContentDigest != null and immutableContentDigest != ''">
+            t.immutable_content_digest = #{immutableContentDigest},
+        </if>
+        <if test="leaseSeq != null">
+            t.lease_seq = #{leaseSeq},
+        </if>
+        <if test="terminalReason != null and terminalReason != ''">
+            t.terminal_reason = #{terminalReason},
+        </if>
+        <if test="terminalAt != null">
+            t.terminal_at = #{terminalAt},
         </if>
         <if test="deviceSn != null and deviceSn != ''">
             t.device_sn = #{deviceSn},

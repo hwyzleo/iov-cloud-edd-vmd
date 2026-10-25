@@ -120,6 +120,16 @@ public class BusinessKeyProvisioningItem extends BaseDo<Long> {
     private byte[] recipientCertDigest;
 
     /**
+     * 原响应序列化中该 item 子消息 body 的字节偏移（无损切片证据；VMD-DSN-CR-069）
+     */
+    private Integer itemWireOffset;
+
+    /**
+     * 原响应序列化中该 item 子消息 body 的字节长度（无损切片证据；VMD-DSN-CR-069）
+     */
+    private Integer itemWireLength;
+
+    /**
      * 设备导入结果
      */
     private ProvisioningDeviceResult deviceResult;

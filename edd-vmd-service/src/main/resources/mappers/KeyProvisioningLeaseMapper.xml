@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.KeyProvisioningLeaseMapper">
+
+    <resultMap id="baseResultMap" type="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.KeyProvisioningLeasePo">
+        <id column="id" property="id" />
+        <result column="provisioning_id" property="provisioningId" />
+        <result column="lease_seq" property="leaseSeq" />
+        <result column="issued_at" property="issuedAt" />
+        <result column="expire_at" property="expireAt" />
+        <result column="message_id" property="messageId" />
+        <result column="correlation_id" property="correlationId" />
+        <result column="delivery_payload_digest" property="deliveryPayloadDigest" />
+        <result column="content_digest" property="contentDigest" />
+        <result column="payload" property="payload" />
+        <result column="payload_ref" property="payloadRef" />
+        <result column="create_time" property="createTime" />
+        <result column="modify_time" property="modifyTime" />
+        <result column="row_version" property="rowVersion" />
+        <result column="row_valid" property="rowValid" />
+    </resultMap>
+
+    <sql id="baseColumnList">
+        id, provisioning_id, lease_seq, issued_at, expire_at, message_id, correlation_id,
+        delivery_payload_digest, content_digest, payload, payload_ref,
+        create_time, create_by, modify_time, modify_by, row_version, row_valid
+    </sql>
+
+    <insert id="insertPo" useGeneratedKeys="true" keyProperty="id">
+        INSERT INTO tb_keyprov_delivery_lease (
+            provisioning_id, lease_seq, issued_at, expire_at, message_id, correlation_id,
+            delivery_payload_digest, content_digest, payload, payload_ref,
+            create_time, create_by, modify_time, modify_by, row_version, row_valid
+        )
+        VALUES (
+            #{provisioningId}, #{leaseSeq}, #{issuedAt}, #{expireAt}, #{messageId}, #{correlationId},
+            #{deliveryPayloadDigest}, #{contentDigest}, #{payload}, #{payloadRef},
+            now(), #{createBy}, now(), #{modifyBy}, 1, 1
+        )
+    </insert>
+
+    <select id="selectPoById" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList" />
+        FROM tb_keyprov_delivery_lease
+        WHERE id = #{id} AND row_valid = 1
+        LIMIT 1
+    </select>
+
+    <select id="selectPoByProvisioningIdAndSeq" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList" />
+        FROM tb_keyprov_delivery_lease
+        WHERE provisioning_id = #{provisioningId} AND lease_seq = #{leaseSeq} AND row_valid = 1
+        LIMIT 1
+    </select>
+
+    <select id="selectPoByMessageId" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList" />
+        FROM tb_keyprov_delivery_lease
+        WHERE message_id = #{messageId} AND row_valid = 1
+        LIMIT 1
+    </select>
+
+    <select id="selectPoListByProvisioningId" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList" />
+        FROM tb_keyprov_delivery_lease
+        WHERE provisioning_id = #{provisioningId} AND row_valid = 1
+        ORDER BY lease_seq ASC
+    </select>
+
+    <select id="selectMaxLeaseSeq" resultType="java.lang.Integer">
+        SELECT COALESCE(MAX(lease_seq), 0)
+        FROM tb_keyprov_delivery_lease
+        WHERE provisioning_id = #{provisioningId} AND row_valid = 1
+    </select>
+</mapper>
