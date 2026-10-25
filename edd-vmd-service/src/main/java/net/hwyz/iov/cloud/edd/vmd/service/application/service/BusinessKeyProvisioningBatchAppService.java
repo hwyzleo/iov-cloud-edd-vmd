@@ -245,6 +245,12 @@ public class BusinessKeyProvisioningBatchAppService {
                 log.warn("keyprov requestId 摘要冲突: requestId={}", requestId);
                 return conflict(requestId, KeyprovConstants.ERR_IDEMPOTENCY_CONFLICT, "同requestId不同请求摘要");
             }
+            // KL1 迁移隔离（quarantine）：保留只读证据并停止新 bundle，不重 derive 救场（VMD-DSN-CR-069 §5）
+            if (existing.isMigrationQuarantined()) {
+                log.warn("keyprov 批次迁移隔离，停止交付（只读）: requestId={}", requestId);
+                return rejected(requestId, KeyprovConstants.ERR_STATE_NOT_ALLOWED, false,
+                        "批次迁移隔离中（证据不可验），停止新bundle交付");
+            }
             // KL1（VMD-DSN-CR-069 §2）：批次已启用 KL1 → 内容幂等 + 租约重放路径。
             // 同 rid 绝不 Provider 调用/重 wrap；LC07 同内容 → 新 E，LC08 内容变 → 806095（已由 requestDigest 判定）。
             if (existing.isKl1()) {

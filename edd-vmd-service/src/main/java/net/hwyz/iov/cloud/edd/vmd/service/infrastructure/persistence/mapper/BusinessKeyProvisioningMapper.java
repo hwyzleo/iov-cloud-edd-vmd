@@ -57,4 +57,9 @@ public interface BusinessKeyProvisioningMapper extends BaseDao<BusinessKeyProvis
      */
     List<BusinessKeyProvisioningPo> selectKl1PoListPendingBeforeDeadline(@Param("now") LocalDateTime now,
                                                                          @Param("limit") int limit);
+
+    /**
+     * KL1 存量迁移候选：非 KL1 未终结批次且已持久化最终 Response（VMD-DSN-CR-069 §5）
+     */
+    List<BusinessKeyProvisioningPo> selectKl1PoListMigrationCandidates(@Param("limit") int limit);
 }

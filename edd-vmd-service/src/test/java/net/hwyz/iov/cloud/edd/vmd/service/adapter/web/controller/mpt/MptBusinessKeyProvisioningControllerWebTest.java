@@ -6,6 +6,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.CertificateProv
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ProvisioningBlockingDiagnosisResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ProvisioningTerminationResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.BusinessKeyProvisioningMaintenanceAppService;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.Kl1LegacyMigrationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -41,13 +42,15 @@ class MptBusinessKeyProvisioningControllerWebTest {
 
     private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
     private BusinessKeyProvisioningMaintenanceAppService maintenanceAppService;
+    private Kl1LegacyMigrationService kl1LegacyMigrationService;
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         maintenanceAppService = mock(BusinessKeyProvisioningMaintenanceAppService.class);
+        kl1LegacyMigrationService = mock(Kl1LegacyMigrationService.class);
         mockMvc = MockMvcBuilders.standaloneSetup(
-                new MptBusinessKeyProvisioningController(maintenanceAppService)).build();
+                new MptBusinessKeyProvisioningController(maintenanceAppService, kl1LegacyMigrationService)).build();
     }
 
     @Test

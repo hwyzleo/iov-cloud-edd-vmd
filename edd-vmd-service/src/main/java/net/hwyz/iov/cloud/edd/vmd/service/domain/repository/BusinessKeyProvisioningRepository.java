@@ -58,6 +58,11 @@ public interface BusinessKeyProvisioningRepository {
     List<BusinessKeyProvisioning> selectKl1PendingBeforeDeadline(LocalDateTime now, int limit);
 
     /**
+     * KL1 存量迁移候选：非 KL1 未终结批次且已持久化最终 Response（VMD-DSN-CR-069 §5）
+     */
+    List<BusinessKeyProvisioning> selectKl1MigrationCandidates(int limit);
+
+    /**
      * 插入批次
      */
     int insert(BusinessKeyProvisioning entity);

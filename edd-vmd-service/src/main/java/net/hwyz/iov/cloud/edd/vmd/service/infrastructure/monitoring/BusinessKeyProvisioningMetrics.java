@@ -125,6 +125,46 @@ public class BusinessKeyProvisioningMetrics {
                 "action", nvl(action), "profile", nvl(profile), "result", nvl(result)).increment();
     }
 
+    /**
+     * KL1 交付租约签发审计：vmd_keyprov_kl1_lease_total{action,decision}（VMD-DSN-CR-069 §6）。
+     *
+     * @param action   issue（签发新租约）/ replay_act（ACTIVE 重放）/ expired（EXPIRED 无 items）/ terminal（终态拒绝）
+     * @param decision FRESH_RESPONSE / EXPIRED_NO_ITEMS / SECURITY_BLOCKED / ACTIVE / FAILED_ACK_TIMEOUT 等
+     */
+    public void recordKl1Lease(String action, String decision) {
+        counter("vmd_keyprov_kl1_lease_total", "action", nvl(action), "decision", nvl(decision)).increment();
+    }
+
+    /**
+     * KL1 双层摘要观测：vmd_keyprov_kl1_digest_total{layer,kind}（CR-069 §6：content 不变、delivery 变化）。
+     *
+     * @param layer content / delivery
+     * @param kind  unchanged / changed / mismatch
+     */
+    public void recordKl1Digest(String layer, String kind) {
+        counter("vmd_keyprov_kl1_digest_total", "layer", nvl(layer), "kind", nvl(kind)).increment();
+    }
+
+    /**
+     * KL1 终态 CAS 冲突与治理：vmd_keyprov_kl1_terminal_total{action,reason}（CR-069 §4/§6）。
+     *
+     * @param action ack_timeout / quarantine / cas_conflict / sweeper
+     * @param reason 低基数原因（ACK_TIMEOUT / QUARANTINE_MIGRATION / state_changed 等）
+     */
+    public void recordKl1Terminal(String action, String reason) {
+        counter("vmd_keyprov_kl1_terminal_total", "action", nvl(action), "reason", nvl(reason)).increment();
+    }
+
+    /**
+     * KL1 存量迁移审计：vmd_keyprov_kl1_migration_total{action,outcome}（CR-069 §5）。
+     *
+     * @param action  backfill（幂等回填 KL1）/ quarantine（隔离）/ ack_timeout（到期受控终结）/ skipped（已迁移/不可验）
+     * @param outcome backfilled / quarantined / ack_timeout / already_kl1 / evidence_invalid / dry_run
+     */
+    public void recordKl1Migration(String action, String outcome) {
+        counter("vmd_keyprov_kl1_migration_total", "action", nvl(action), "outcome", nvl(outcome)).increment();
+    }
+
     private Counter counter(String name, String... tags) {
         String key = name + "|" + String.join("|", tags);
         return counterCache.computeIfAbsent(key, k -> io.micrometer.core.instrument.Counter.builder(name)

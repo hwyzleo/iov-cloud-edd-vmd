@@ -9,6 +9,8 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.CertificateProv
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ProvisioningBlockingDiagnosisResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ProvisioningTerminationResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.BusinessKeyProvisioningMaintenanceAppService;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.Kl1LegacyMigrationService;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.Kl1LegacyMigrationService.MigrationReport;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.BusinessKeyProvisioningState;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.TerminationReasonCode;
 import net.hwyz.iov.cloud.framework.audit.annotation.Log;
@@ -52,6 +54,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class MptBusinessKeyProvisioningController extends BaseController {
 
     private final BusinessKeyProvisioningMaintenanceAppService maintenanceAppService;
+    private final Kl1LegacyMigrationService kl1LegacyMigrationService;
 
     /**
      * 证书维度寻址开通批次（只读桥接，VMD-DSN-CR-065 §6.2，方案 A）。
@@ -74,6 +77,30 @@ public class MptBusinessKeyProvisioningController extends BaseController {
                 certificateRequestId, businessDomain, includeTerminal);
         return ApiResponse.ok(maintenanceAppService.resolveByCertificateRequest(
                 certificateRequestId, businessDomain, includeTerminal));
+    }
+
+    /**
+     * KL1 存量迁移 dry-run（只读计数与影子读取差异，不落库；VMD-DSN-CR-069 §5.2）
+     */
+    @RequiresPermissions("vmd:security:businessKey:provisioning:query")
+    @GetMapping("/kl1-migration/dry-run")
+    public ApiResponse<MigrationReport> kl1MigrationDryRun(
+            @RequestParam(value = "limit", defaultValue = "200") int limit) {
+        log.info("MPT请求KL1存量迁移dry-run: limit={}", limit);
+        return ApiResponse.ok(kl1LegacyMigrationService.dryRun(limit));
+    }
+
+    /**
+     * KL1 存量迁移（幂等回填/受控终结/quarantine；重跑不重置 F/B/lease_seq；VMD-DSN-CR-069 §5）
+     */
+    @Log(title = "KL1存量批次迁移", businessType = BusinessType.UPDATE, operatorType = OperatorType.MANAGE,
+            isSaveRequestData = true, isSaveResponseData = true)
+    @RequiresPermissions("vmd:security:businessKey:provisioning:terminate")
+    @PostMapping("/kl1-migration")
+    public ApiResponse<MigrationReport> kl1Migration(
+            @RequestParam(value = "limit", defaultValue = "200") int limit) {
+        log.info("MPT请求KL1存量迁移: limit={}", limit);
+        return ApiResponse.ok(kl1LegacyMigrationService.migrate(limit));
     }
 
     /**

@@ -69,6 +69,12 @@ public class KeyProvisioningCapabilityHealthIndicator implements HealthIndicator
     private String descriptorSetHash;
 
     /**
+     * KL1 capability 开关（kill-switch；开启时校验 KL1 必要表结构，VMD-DSN-CR-069 §6）
+     */
+    @Value("${vmd.business-key.provisioning.kl1.enabled:false}")
+    private boolean kl1Enabled;
+
+    /**
      * AAD profile id（必须等于 PAR_PROTO_KEYPROV_AAD_V1；缺失/不一致时外部 AAD 能力 NOT_READY）
      */
     @Value("${crypto.provisioning.derived-key.aad-profile-id:}")
@@ -161,6 +167,23 @@ public class KeyProvisioningCapabilityHealthIndicator implements HealthIndicator
         if (responseStore == null || !responseStore.productionReady()) {
             down = down(builder, "responseReplayStore", "KEYPROV_RESPONSE_REPLAY_STORE_READY: "
                     + "Response 重放存储未装配或加密密钥未注入");
+        }
+        // CR-069 §6：KL1 生命周期能力（开启时校验 V65 必要表结构/列；kill-switch 关闭时不阻塞）
+        if (kl1Enabled) {
+            JdbcTemplate kl1Jdbc = jdbcTemplateProvider.getIfAvailable();
+            if (kl1Jdbc == null) {
+                down = down(builder, "kl1", "KL1 就绪检查无法执行（JdbcTemplate 缺失）");
+            } else {
+                try {
+                    kl1Jdbc.query("SELECT 1 FROM tb_keyprov_delivery_lease LIMIT 1", rs -> null);
+                    kl1Jdbc.query("SELECT lifecycle_profile, first_issued_at, ack_deadline_at, "
+                            + "immutable_content_digest, lease_seq FROM tb_business_key_provisioning LIMIT 1", rs -> null);
+                    kl1Jdbc.query("SELECT item_wire_offset, item_wire_length "
+                            + "FROM tb_business_key_provisioning_item LIMIT 1", rs -> null);
+                } catch (RuntimeException e) {
+                    down = down(builder, "kl1", "KL1 必要表结构缺失（V65 未迁移）: tb_keyprov_delivery_lease / KL1 列");
+                }
+            }
         }
         Set<String> purposes = policyRegistry.resolvePurposes(KeyprovConstants.BUSINESS_DOMAIN_V2C).orElse(Set.of());
         if (!KeyprovConstants.isCompleteV2cPurposeSet(purposes)) {

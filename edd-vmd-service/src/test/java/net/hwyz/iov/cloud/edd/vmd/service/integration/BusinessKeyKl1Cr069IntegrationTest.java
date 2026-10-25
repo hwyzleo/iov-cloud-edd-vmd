@@ -30,6 +30,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.annotation.Rollback;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.security.MessageDigest;
 import java.time.Duration;
@@ -53,6 +54,7 @@ import static org.mockito.Mockito.when;
  * @since 2026-10-25
  */
 @Rollback
+@Transactional
 @TestPropertySource(properties = {
         "vmd.business-key.provisioning.kl1.enabled=true",
         "vmd.business-key.provisioning.kl1.sweeper.enabled=false"
@@ -347,5 +349,28 @@ class BusinessKeyKl1Cr069IntegrationTest extends BaseTest {
         // 重扫幂等：不再处理
         assertEquals(0, kl1BatchSweepAppService.sweep(100));
         assertEquals("FAILED", statusOf(REQ), "FAILED 终态不可复活");
+    }
+
+    @Test
+    @DisplayName("故障注入：重放存储 digest 篡改 → STORE_QUARANTINE，禁止重新 derive 补齐")
+    void replayStore_corruptedDigest_quarantine() {
+        requestResponse(REQ);
+        int derives = deriveCount.get();
+        // 篡改 response_digest → responseStore.load 完整性校验失败（LC24 存储隔离）
+        jdbcTemplate.update("UPDATE tb_business_key_provisioning SET response_digest = 'tampered-digest' "
+                + "WHERE request_id = ?", REQ);
+
+        KeyProvisioningOperationResult result = requestOperation(REQ);
+        assertNotEquals(VmdKeyProvisioningOutcome.SUCCESS, result.getOutcome(), "digest 损坏 fail-closed");
+        assertEquals(derives, deriveCount.get(), "同 rid 重放绝不 Provider 调用（隔离后也不重 derive 补齐）");
+        assertNotNull(result.getDownlinkPayload());
+        try {
+            KeyProvisioningResponse response = KeyProvisioningResponse.parseFrom(result.getDownlinkPayload());
+            assertEquals(KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED, response.getResult());
+            assertEquals("KEYPROV_ENVELOPE_INTEGRITY", response.getError().getCode(), "存储隔离错误码");
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+        assertEquals("WAIT_DEVICE_ACK", statusOf(REQ), "存储隔离不终结批次（保留只读证据，待治理）");
     }
 }

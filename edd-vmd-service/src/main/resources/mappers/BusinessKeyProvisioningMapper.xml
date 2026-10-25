@@ -241,6 +241,17 @@
         LIMIT #{limit}
     </select>
 
+    <select id="selectKl1PoListMigrationCandidates" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList" />
+        FROM tb_business_key_provisioning
+        WHERE (lifecycle_profile IS NULL OR lifecycle_profile = '')
+          AND status IN ('PREPARING','WAIT_DEVICE_ACK','RECONCILE_REQUIRED')
+          AND (response_payload IS NOT NULL OR (response_ref IS NOT NULL AND response_ref != ''))
+          AND row_valid = 1
+        ORDER BY id ASC
+        LIMIT #{limit}
+    </select>
+
     <select id="selectPoById" parameterType="Long" resultMap="baseResultMap">
         SELECT <include refid="baseColumnList"/>
         FROM tb_business_key_provisioning t
