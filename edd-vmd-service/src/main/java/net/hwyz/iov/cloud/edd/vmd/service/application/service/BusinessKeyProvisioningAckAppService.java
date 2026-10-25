@@ -72,6 +72,7 @@ public class BusinessKeyProvisioningAckAppService {
     private final TboxV2cKeyProvisionedPublisher tboxV2cKeyProvisionedPublisher;
     private final BusinessKeyProvisioningDomainService domainService;
     private final ObjectProvider<ImportProofVerifier> importProofVerifierProvider;
+    private final Kl1BatchTerminator kl1BatchTerminator;
     private final PlatformTransactionManager transactionManager;
 
     private volatile TransactionTemplate transactionTemplate;
@@ -90,7 +91,12 @@ public class BusinessKeyProvisioningAckAppService {
     }
 
     /**
-     * 处理 canonical KeyProvisioningAck。
+     * 处理 canonical KeyProvisioningAck（VMD-DSN-CR-069 §4 三阶段线性化）。
+     * <p>
+     * 阶段1（锁内）：身份/状态/B 到期/ACK 绑定校验，明确失败与未知缺项落库；COMPLETED 精确重复
+     * proof 幂等；KL1 批次 now≥B 未激活 → FAILED(ACK_TIMEOUT)（释放 claims）。
+     * 阶段2（锁外）：两用途 Import Attestation 真实 ECDSA 验签（耗时计算不持锁）。
+     * 阶段3（锁内）：重验状态/版本/now&lt;B/两用途齐全 → 批次 ACTIVE + 两用途目录 ACTIVE + 唯一 outbox 同事务。
      */
     public KeyProvisioningAckResult confirmImport(KeyProvisioningAck ack, KeyprovAuthenticatedContext ctx) {
         String requestId = ack.getRequestId();
@@ -99,45 +105,81 @@ public class BusinessKeyProvisioningAckAppService {
                     KeyprovConstants.ERR_PROTOCOL_INVALID, false, "缺少已认证会话身份");
         }
         String ackDigest = domainService.buildAckDigest(ack);
+        ActivateContext act;
         try {
-            return tx().execute(status -> doConfirm(ack, ctx, requestId, ackDigest));
+            act = tx().execute(status -> doPrecheckAndValidate(ack, ctx, requestId, ackDigest));
         } catch (BatchSignal signal) {
             log.warn("keyprov ACK 完成事务回滚: requestId={}, code={}", requestId, signal.code);
             return failed(requestId, signal.result, signal.code, signal.retryable, signal.message);
         }
+        if (act == null || act.terminalResult != null) {
+            return act != null ? act.terminalResult
+                    : failed(requestId, KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED,
+                            KeyprovConstants.ERR_STATE_NOT_ALLOWED, false, "批次状态不允许确认");
+        }
+        // 阶段2：锁外真实验签（任一失败由门面映射为 806 码；不在此处捕获为成功）
+        try {
+            verifyImportProofs(act.batch, act.batchItems, act.ackItemByPurpose, act.certSn);
+        } catch (RuntimeException e) {
+            log.warn("keyprov ACK 导入证明验签失败（锁外）: requestId={}, type={}",
+                    requestId, e.getClass().getSimpleName(), e);
+            throw e;
+        }
+        // 阶段3：锁内重验并原子激活
+        try {
+            return tx().execute(status -> doActivate(act.batch.getRequestId(), act.ackItemByPurpose, ctx, ackDigest));
+        } catch (BatchSignal signal) {
+            log.warn("keyprov ACK 激活事务回滚: requestId={}, code={}", requestId, signal.code);
+            return failed(requestId, signal.result, signal.code, signal.retryable, signal.message);
+        }
     }
 
-    private KeyProvisioningAckResult doConfirm(KeyProvisioningAck ack, KeyprovAuthenticatedContext ctx,
-                                               String requestId, String ackDigest) {
+    /**
+     * 阶段1：锁内预检与校验；返回激活上下文或终态结果。
+     */
+    private ActivateContext doPrecheckAndValidate(KeyProvisioningAck ack, KeyprovAuthenticatedContext ctx,
+                                                  String requestId, String ackDigest) {
         BusinessKeyProvisioning batch = provisioningRepository.selectByRequestIdForUpdate(requestId);
         if (batch == null) {
-            return failed(requestId, KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED,
-                    KeyprovConstants.ERR_NOT_FOUND, false, "开通批次不存在");
+            return terminal(failed(requestId, KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED,
+                    KeyprovConstants.ERR_NOT_FOUND, false, "开通批次不存在"));
         }
         String sessionDigest = domainService.digestHsmUid(ctx.hsmUid());
         if (batch.getHsmUidDigest() == null || !batch.getHsmUidDigest().equals(sessionDigest)) {
-            return failed(requestId, KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED,
-                    KeyprovConstants.ERR_DEVICE_NOT_ELIGIBLE, false, "会话身份与开通批次不一致");
+            return terminal(failed(requestId, KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED,
+                    KeyprovConstants.ERR_DEVICE_NOT_ELIGIBLE, false, "会话身份与开通批次不一致"));
         }
-
-        // 幂等：已完成
+        // 锁内先判已有 ACTIVE（精确重复 proof 幂等；错 proof 拒绝），再判 B 到期；FAILED 不可复活（LC04/LC05/LC19）
         if (batch.getStatus() == BusinessKeyProvisioningState.COMPLETED) {
             if (ackDigest.equals(batch.getAckDigest())) {
-                return succeeded(requestId);
+                if (batch.isKl1() && !kl1AckProofsMatch(batch, ack)) {
+                    log.error("keyprov ACTIVE 重复 ACK proof 不匹配（安全告警）: requestId={}", requestId);
+                    return terminal(failed(requestId, KeyProvisioningResult.KEY_PROVISIONING_RESULT_CONFLICT,
+                            KeyprovConstants.ERR_ACK_CONFLICT, false, "ACTIVE重复ACK proof不匹配，拒绝"));
+                }
+                return terminal(succeeded(requestId));
             }
             log.warn("keyprov ACK 摘要冲突（已完成批次）: requestId={}", requestId);
-            return failed(requestId, KeyProvisioningResult.KEY_PROVISIONING_RESULT_CONFLICT,
-                    KeyprovConstants.ERR_ACK_CONFLICT, false, "ACK摘要冲突，已记录安全告警");
+            return terminal(failed(requestId, KeyProvisioningResult.KEY_PROVISIONING_RESULT_CONFLICT,
+                    KeyprovConstants.ERR_ACK_CONFLICT, false, "ACK摘要冲突，已记录安全告警"));
         }
-        if (!batch.getStatus().canAdvance()) {
-            return failed(requestId, KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED,
-                    KeyprovConstants.ERR_STATE_NOT_ALLOWED, false, "批次状态不允许确认");
+        if (batch.isKl1()) {
+            // KL1：B 到期未激活 → FAILED(ACK_TIMEOUT)（锁内 CAS + 释放 claims）；迟到 ACK 绝不复活
+            kl1BatchTerminator.terminateIfDeadlinePassed(batch, LocalDateTime.now());
+            if (batch.getStatus() == BusinessKeyProvisioningState.FAILED
+                    || batch.getStatus() == BusinessKeyProvisioningState.EXPIRED) {
+                return terminal(failed(requestId, KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED,
+                        KeyprovConstants.ERR_STATE_NOT_ALLOWED, false, "批次已终结，迟到ACK不可复活"));
+            }
+        } else if (!batch.getStatus().canAdvance()) {
+            return terminal(failed(requestId, KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED,
+                    KeyprovConstants.ERR_STATE_NOT_ALLOWED, false, "批次状态不允许确认"));
         }
         // 已记录 ACK 摘要且不一致 → 安全冲突，不改状态
         if (batch.getAckDigest() != null && !batch.getAckDigest().equals(ackDigest)) {
             log.error("keyprov ACK 摘要冲突（安全告警）: requestId={}, deviceSn={}", requestId, batch.getDeviceSn());
-            return failed(requestId, KeyProvisioningResult.KEY_PROVISIONING_RESULT_CONFLICT,
-                    KeyprovConstants.ERR_ACK_CONFLICT, false, "ACK摘要冲突，已记录安全告警");
+            return terminal(failed(requestId, KeyProvisioningResult.KEY_PROVISIONING_RESULT_CONFLICT,
+                    KeyprovConstants.ERR_ACK_CONFLICT, false, "ACK摘要冲突，已记录安全告警"));
         }
 
         List<BusinessKeyProvisioningItem> batchItems = provisioningItemRepository.selectByProvisioningId(batch.getId());
@@ -148,15 +190,15 @@ public class BusinessKeyProvisioningAckAppService {
         for (KeyImportItemResult item : ack.getItemsList()) {
             String code = KeyprovConstants.purposeCode(item.getPurpose());
             if (code == null || ackItemByPurpose.put(code, item) != null) {
-                return failed(requestId, KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED,
-                        KeyprovConstants.ERR_ITEM_MISMATCH, false, "ACK purpose 非法或重复");
+                return terminal(failed(requestId, KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED,
+                        KeyprovConstants.ERR_ITEM_MISMATCH, false, "ACK purpose 非法或重复"));
             }
         }
 
         for (String extra : ackItemByPurpose.keySet()) {
             if (!batchItemByPurpose.containsKey(extra)) {
-                return failed(requestId, KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED,
-                        KeyprovConstants.ERR_ITEM_MISMATCH, false, "ACK item 不属于该批次");
+                return terminal(failed(requestId, KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED,
+                        KeyprovConstants.ERR_ITEM_MISMATCH, false, "ACK item 不属于该批次"));
             }
         }
         Set<String> missing = batchItemByPurpose.keySet().stream()
@@ -166,21 +208,21 @@ public class BusinessKeyProvisioningAckAppService {
             KeyImportItemResult ackItem = e.getValue();
             String mismatch = identityMismatch(batchItem, ackItem);
             if (mismatch != null) {
-                return failed(requestId, KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED,
-                        KeyprovConstants.ERR_ITEM_MISMATCH, false, "ACK item 与批次不匹配: " + mismatch);
+                return terminal(failed(requestId, KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED,
+                        KeyprovConstants.ERR_ITEM_MISMATCH, false, "ACK item 与批次不匹配: " + mismatch));
             }
             // CR-062 §4.3：仅成功 item 必须与原 Response 全字段绑定并携带合法 Import Attestation
             if (ackItem.getResult() == KeyImportResult.KEY_IMPORT_RESULT_IMPORTED) {
                 String envelopeMismatch = envelopeMismatch(batchItem, ackItem);
                 if (envelopeMismatch != null) {
-                    return failed(requestId, KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED,
+                    return terminal(failed(requestId, KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED,
                             KeyprovConstants.ERR_ITEM_MISMATCH, false,
-                            "ACK item 与原Response不匹配: " + envelopeMismatch);
+                            "ACK item 与原Response不匹配: " + envelopeMismatch));
                 }
                 String proofIssue = importProofIssue(ackItem);
                 if (proofIssue != null) {
-                    return failed(requestId, KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED,
-                            KeyprovConstants.ERR_IMPORT_PROOF_INVALID, false, "ACK 导入证明字段非法: " + proofIssue);
+                    return terminal(failed(requestId, KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED,
+                            KeyprovConstants.ERR_IMPORT_PROOF_INVALID, false, "ACK 导入证明字段非法: " + proofIssue));
                 }
             }
         }
@@ -204,8 +246,8 @@ public class BusinessKeyProvisioningAckAppService {
             batch.markFailed("设备导入明确失败");
             batch.setModifyTime(now);
             provisioningRepository.update(batch);
-            return failed(requestId, KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED,
-                    KeyprovConstants.ERR_IMPORT_FAILED, false, "设备导入失败");
+            return terminal(failed(requestId, KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED,
+                    KeyprovConstants.ERR_IMPORT_FAILED, false, "设备导入失败"));
         }
 
         // 未知或缺项 → 待对账（新目标版本保持 PENDING，不发事件）
@@ -216,18 +258,11 @@ public class BusinessKeyProvisioningAckAppService {
             batch.markReconcileRequired("ACK存在未知或缺失用途");
             batch.setModifyTime(LocalDateTime.now());
             provisioningRepository.update(batch);
-            return failed(requestId, KeyProvisioningResult.KEY_PROVISIONING_RESULT_RETRYABLE_FAILURE,
-                    KeyprovConstants.ERR_RECONCILE_REQUIRED, true, "ACK未知或用途不完整，待以原requestId对账");
+            return terminal(failed(requestId, KeyProvisioningResult.KEY_PROVISIONING_RESULT_RETRYABLE_FAILURE,
+                    KeyprovConstants.ERR_RECONCILE_REQUIRED, true, "ACK未知或用途不完整，待以原requestId对账"));
         }
 
-        return complete(batch, batchItems, ackItemByPurpose, ctx, ackDigest);
-    }
-
-    private KeyProvisioningAckResult complete(BusinessKeyProvisioning batch,
-                                              List<BusinessKeyProvisioningItem> batchItems,
-                                              Map<String, KeyImportItemResult> ackItemByPurpose,
-                                              KeyprovAuthenticatedContext ctx, String ackDigest) {
-        // 1) 重新校验当前 active 绑定与证书（fail-closed）
+        // 激活前置：重新校验当前 active 绑定与证书（fail-closed，锁内）
         BoundDeviceIdentity identity;
         String certSn;
         try {
@@ -243,8 +278,8 @@ public class BusinessKeyProvisioningAckAppService {
             batch.markFailed("完成前设备绑定或证书失效");
             batch.setModifyTime(LocalDateTime.now());
             provisioningRepository.update(batch);
-            return failed(batch.getRequestId(), KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED,
-                    KeyprovConstants.ERR_DEVICE_NOT_ELIGIBLE, false, "设备绑定或证书失效");
+            return terminal(failed(batch.getRequestId(), KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED,
+                    KeyprovConstants.ERR_DEVICE_NOT_ELIGIBLE, false, "设备绑定或证书失效"));
         }
         String certDigest = domainService.sha256Hex(domainService.utf8(certSn));
         if (batch.getCertificateSnDigest() != null && !batch.getCertificateSnDigest().equals(certDigest)) {
@@ -252,14 +287,68 @@ public class BusinessKeyProvisioningAckAppService {
             batch.markFailed("完成前设备证书失效或轮换");
             batch.setModifyTime(LocalDateTime.now());
             provisioningRepository.update(batch);
-            return failed(batch.getRequestId(), KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED,
-                    KeyprovConstants.ERR_DEVICE_NOT_ELIGIBLE, false, "设备证书失效或轮换");
+            return terminal(failed(batch.getRequestId(), KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED,
+                    KeyprovConstants.ERR_DEVICE_NOT_ELIGIBLE, false, "设备证书失效或轮换"));
         }
+        return new ActivateContext(batch, batchItems, ackItemByPurpose, certSn, null);
+    }
 
-        // CR-062 §4.3/RD-062-8：两用途均经 FW-SEC 真实 ECDSA 验签后，才允许进入激活事务
-        verifyImportProofs(batch, batchItems, ackItemByPurpose, certSn);
+    /**
+     * KL1：ACTIVE 批次重复 ACK 快速路径——精确比较持久化两用途 proof 摘要（LC05）。
+     *
+     * @return true 表示全部成功 item 的 import_proof_digest 与持久化证据一致
+     */
+    private boolean kl1AckProofsMatch(BusinessKeyProvisioning batch, KeyProvisioningAck ack) {
+        Map<String, BusinessKeyProvisioningItem> items = provisioningItemRepository.selectByProvisioningId(batch.getId())
+                .stream().collect(Collectors.toMap(BusinessKeyProvisioningItem::getPurpose, i -> i, (a, b) -> a));
+        for (KeyImportItemResult ackItem : ack.getItemsList()) {
+            String code = KeyprovConstants.purposeCode(ackItem.getPurpose());
+            if (code == null) {
+                return false;
+            }
+            BusinessKeyProvisioningItem stored = items.get(code);
+            if (stored == null || stored.getImportProofDigest() == null) {
+                return false;
+            }
+            String proofDigest = domainService.digestImportProof(ackItem.getImportProof().toByteArray());
+            if (!stored.getImportProofDigest().equals(proofDigest)) {
+                return false;
+            }
+        }
+        return true;
+    }
 
-        // 2) 原子切换目标版本（PENDING→ACTIVE）+ 逐项确认 + 完成批次 + 专用事件
+    /**
+     * 阶段3：锁内重验（状态/版本/now&lt;B/两用途齐全）后原子激活。
+     */
+    private KeyProvisioningAckResult doActivate(String requestId, Map<String, KeyImportItemResult> ackItemByPurpose,
+                                                KeyprovAuthenticatedContext ctx, String ackDigest) {
+        BusinessKeyProvisioning batch = provisioningRepository.selectByRequestIdForUpdate(requestId);
+        if (batch == null) {
+            throw new BatchSignal(KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED,
+                    KeyprovConstants.ERR_NOT_FOUND, false, "批次不存在");
+        }
+        // 锁内重验：状态未变 + KL1 now<B + 两用途齐全（VMD-DSN-CR-069 §4：ACL 与 sweeper 并发只可能 ACTIVE 或 FAILED）
+        if (batch.getStatus() != BusinessKeyProvisioningState.WAIT_DEVICE_ACK) {
+            throw new BatchSignal(KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED,
+                    KeyprovConstants.ERR_STATE_NOT_ALLOWED, false, "激活前批次状态已变");
+        }
+        if (batch.isKl1()) {
+            LocalDateTime now = LocalDateTime.now();
+            if (batch.getAckDeadlineAt() != null && !now.isBefore(batch.getAckDeadlineAt())) {
+                kl1BatchTerminator.terminateIfDeadlinePassed(batch, now);
+                throw new BatchSignal(KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED,
+                        KeyprovConstants.ERR_STATE_NOT_ALLOWED, false, "激活前已跨B，ACK_TIMEOUT");
+            }
+        }
+        if (ackItemByPurpose.size() < 2
+                || !KeyprovConstants.isCompleteV2cPurposeSet(ackItemByPurpose.keySet())) {
+            throw new BatchSignal(KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED,
+                    KeyprovConstants.ERR_ITEM_MISMATCH, false, "激活前两用途不齐全");
+        }
+        List<BusinessKeyProvisioningItem> batchItems = provisioningItemRepository.selectByProvisioningId(batch.getId());
+
+        // 原子切换目标版本（PENDING→ACTIVE）+ 逐项确认 + 完成批次 + 唯一 outbox 事件
         List<BusinessKeyProvisioningItem> succeeded = new ArrayList<>();
         LocalDateTime now = LocalDateTime.now();
         for (BusinessKeyProvisioningItem batchItem : batchItems) {
@@ -438,6 +527,33 @@ public class BusinessKeyProvisioningAckAppService {
                         .setMessage(message == null ? "" : message)
                         .build())
                 .build();
+    }
+
+    /**
+     * 阶段1→阶段3 传递的激活上下文。
+     */
+    private static final class ActivateContext {
+        private final BusinessKeyProvisioning batch;
+        private final List<BusinessKeyProvisioningItem> batchItems;
+        private final Map<String, KeyImportItemResult> ackItemByPurpose;
+        private final String certSn;
+        private final KeyProvisioningAckResult terminalResult;
+
+        private ActivateContext(BusinessKeyProvisioning batch,
+                                List<BusinessKeyProvisioningItem> batchItems,
+                                Map<String, KeyImportItemResult> ackItemByPurpose,
+                                String certSn, KeyProvisioningAckResult terminalResult) {
+            this.batch = batch;
+            this.batchItems = batchItems;
+            this.ackItemByPurpose = ackItemByPurpose;
+            this.certSn = certSn;
+            this.terminalResult = terminalResult;
+        }
+    }
+
+    private static ActivateContext terminal(KeyProvisioningAckResult result) {
+        return new ActivateContext(null, java.util.Collections.emptyList(),
+                java.util.Collections.emptyMap(), null, result);
     }
 
     /**

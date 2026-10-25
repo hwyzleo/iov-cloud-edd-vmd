@@ -4,6 +4,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * KL1 内容摘要与受限 wire patch 核心（PAR-PROTO-DSN-CR-010 §8.6.2 / VMD-DSN-CR-069 §2）。
@@ -217,6 +218,36 @@ public final class Kl1WireCodec {
         }
     }
 
+    /**
+     * 扫描顶层 length-delimited 字段（field3 = WrappedKeyItem items）的 body 切片。
+     * 用于记录每用途 item 在原响应中的无损切片证据（offset/length）。
+     */
+    static List<BodySlice> locateField3Items(byte[] wire) {
+        if (wire == null || wire.length == 0) {
+            return java.util.Collections.emptyList();
+        }
+        List<BodySlice> out = new java.util.ArrayList<>();
+        int index = 0;
+        while (index < wire.length) {
+            long tag = readVarint(wire, index);
+            int tagLen = varintLen(wire, index);
+            index += tagLen;
+            int fieldNumber = (int) (tag >>> 3);
+            int wireType = (int) (tag & 0x07);
+            if (fieldNumber == 3 && wireType == 2) {
+                long length = readVarint(wire, index);
+                int len = varintLen(wire, index);
+                checkBounds(wire, index + len, (int) length, 0);
+                index += len;
+                out.add(new BodySlice(index, (int) length));
+                index += (int) length;
+            } else {
+                index = skipField(wire, index, wireType, 0);
+            }
+        }
+        return out;
+    }
+
     /** field4 完整 tag + varint 的字节区间。 */
     static final class Slice {
         final int tagStart;
@@ -230,6 +261,22 @@ public final class Kl1WireCodec {
         @Override
         public String toString() {
             return "Slice[tagStart=" + tagStart + ", valueEnd=" + valueEnd + "]";
+        }
+    }
+
+    /** length-delimited 字段 body 切片（offset 指向内容起点，length 为内容长度）。 */
+    static final class BodySlice {
+        final int offset;
+        final int length;
+
+        BodySlice(int offset, int length) {
+            this.offset = offset;
+            this.length = length;
+        }
+
+        @Override
+        public String toString() {
+            return "BodySlice[offset=" + offset + ", length=" + length + "]";
         }
     }
 }

@@ -230,6 +230,17 @@
         LIMIT #{limit}
     </select>
 
+    <select id="selectKl1PoListPendingBeforeDeadline" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList" />
+        FROM tb_business_key_provisioning
+        WHERE lifecycle_profile = 'KEYPROV-LIFECYCLE-1'
+          AND status IN ('PREPARING','WAIT_DEVICE_ACK','RECONCILE_REQUIRED')
+          AND ack_deadline_at &lt;= #{now}
+          AND row_valid = 1
+        ORDER BY ack_deadline_at ASC
+        LIMIT #{limit}
+    </select>
+
     <select id="selectPoById" parameterType="Long" resultMap="baseResultMap">
         SELECT <include refid="baseColumnList"/>
         FROM tb_business_key_provisioning t

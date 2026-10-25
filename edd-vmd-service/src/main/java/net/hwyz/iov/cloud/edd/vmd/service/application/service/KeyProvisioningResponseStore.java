@@ -85,6 +85,51 @@ public class KeyProvisioningResponseStore {
     }
 
     /**
+     * KL1：首次完整双用途响应原子持久化并建立 F/B 与不可变内容摘要（VMD-DSN-CR-069 §1/§5）。
+     * <p>
+     * 原 response_payload/response_digest/codec/persisted_at 不覆盖；F=首次持久化时间（不可滑动），
+     * B=F+300s；immutable_content_digest 从已验证原始 bytes 计算（去掉唯一外层 field4 的 C）。
+     * 重跑迁移/续签均不重置 F/B。
+     *
+     * @throws KeyprovEnvelopeIntegrityException 批次不存在、密钥未配置、加密失败或响应缺失 field4
+     */
+    public void persistKl1(String requestId, byte[] responseBytes, LocalDateTime now) {
+        if (responseBytes == null || responseBytes.length == 0) {
+            throw new KeyprovEnvelopeIntegrityException("KL1 Response 字节为空，拒绝持久化");
+        }
+        BusinessKeyProvisioning batch = provisioningRepository.selectByRequestId(requestId);
+        if (batch == null) {
+            throw new KeyprovEnvelopeIntegrityException("KL1 Response 持久化失败：批次不存在 requestId=" + requestId);
+        }
+        byte[] digest = Kl1WireCodec.immutableContentDigest(responseBytes);
+        batch.setResponsePayload(encrypt(responseBytes));
+        batch.setResponseDigest(hex(ParProtoWireCanonical.sha256(responseBytes)));
+        batch.setResponseCodecVersion(ParProtoWireCanonical.AAD_PROFILE);
+        batch.setResponsePersistedAt(now);
+        batch.setLifecycleProfile(Kl1Constants.PROFILE);
+        batch.setFirstIssuedAt(now);
+        batch.setAckDeadlineAt(now.plus(java.time.Duration.ofMillis(Kl1Constants.BATCH_MS)));
+        batch.setImmutableContentDigest(hex(digest));
+        batch.setModifyTime(now);
+        provisioningRepository.update(batch);
+        metrics.recordResponseStore("persist_kl1", ParProtoWireCanonical.AAD_PROFILE, "success");
+    }
+
+    /**
+     * 受保护 payload 加密（租约表复用同一密钥；与批次 response_payload 同一受控策略）。
+     */
+    public byte[] seal(byte[] plain) {
+        return encrypt(plain);
+    }
+
+    /**
+     * 受保护 payload 解密。
+     */
+    public byte[] open(byte[] sealed) {
+        return decrypt(sealed);
+    }
+
+    /**
      * 按 requestId 读取原 Response 字节（重放）。返回 {@code null} 表示批次不存在或尚无持久化响应。
      *
      * @throws KeyprovEnvelopeIntegrityException 解密失败或 digest 校验不一致（fail-closed，禁止伪造重放）

@@ -130,6 +130,11 @@ public class BusinessKeyMaintenanceAppService {
             if (current == null || current.getStatus() != BusinessKeyProvisioningState.WAIT_DEVICE_ACK) {
                 return;
             }
+            // KL1 批次由固定 B（ack_deadline_at）经 Kl1BatchSweeper 驱动 FAILED(ACK_TIMEOUT)，
+            // 不在此按 modify_time 900s 转 EXPIRED（VMD-DSN-CR-069 §4 共享到期规则）。
+            if (current.isKl1()) {
+                return;
+            }
             LocalDateTime now = LocalDateTime.now();
             for (BusinessKeyProvisioningItem item : businessKeyProvisioningItemRepository.selectByProvisioningId(current.getId())) {
                 DeviceBusinessKey directory = deviceBusinessKeyRepository.selectById(item.getDirectoryKeyId());

@@ -111,9 +111,17 @@ public class BusinessKeyProvisioningBatchAppService {
     private final BusinessKeyDerivedMaterialService derivedMaterialService;
     private final BusinessKeyProvisioningMetrics metrics;
     private final PlatformTransactionManager transactionManager;
+    private final Kl1LeaseIssuanceService kl1LeaseIssuanceService;
+    private final Kl1BatchTerminator kl1BatchTerminator;
 
     @Value("${vmd.business-key.provisioning.bundle-ttl-seconds:3600}")
     private long bundleTtlSeconds = 3600;
+
+    /**
+     * KL1 capability 开关（默认关闭 fail-closed；VMD-DSN-CR-069 §6 kill-switch）
+     */
+    @Value("${vmd.business-key.provisioning.kl1.enabled:false}")
+    private boolean kl1Enabled;
 
     @Value("${crypto.provisioning.derived-key.derivation-version:v1}")
     private String derivationVersion = "v1";
@@ -237,6 +245,11 @@ public class BusinessKeyProvisioningBatchAppService {
                 log.warn("keyprov requestId 摘要冲突: requestId={}", requestId);
                 return conflict(requestId, KeyprovConstants.ERR_IDEMPOTENCY_CONFLICT, "同requestId不同请求摘要");
             }
+            // KL1（VMD-DSN-CR-069 §2）：批次已启用 KL1 → 内容幂等 + 租约重放路径。
+            // 同 rid 绝不 Provider 调用/重 wrap；LC07 同内容 → 新 E，LC08 内容变 → 806095（已由 requestDigest 判定）。
+            if (existing.isKl1()) {
+                return kl1Replay(existing, requestId, identity, activeCert, gateResult);
+            }
             // CR-068 RD-068-3：同 requestId 且已持久化最终 Response → 字节级重放原 bytes，
             // 不重新 derive/serialize/map、不重新组装；Adapter 升级不改变存量 in-flight 响应。
             if (existing.hasPersistedResponse()) {
@@ -353,9 +366,113 @@ public class BusinessKeyProvisioningBatchAppService {
         }
         KeyProvisioningResponse response = buildResponse(provisioningRepository.selectByRequestId(requestId),
                 identity, request, activeCert, mapped);
+        byte[] responseBytes = response.toByteArray();
         // CR-068：最终 Response bytes 首次发送前持久化（幂等键=requestId）；失败 fail-closed 不下发
-        responseStore.persist(requestId, response.toByteArray());
+        if (kl1Enabled) {
+            LocalDateTime now = LocalDateTime.now();
+            // KL1：原子持久化并建立 F/B 与 immutable_content_digest（VMD-DSN-CR-069 §1/§5）
+            responseStore.persistKl1(requestId, responseBytes, now);
+            // 每用途原响应无损切片证据（offset/length，指向 items 子消息 body）
+            recordItemWireSlices(batch.getId(), responseBytes);
+            // 首次完整响应与 F/B 落库后签发首个交付租约（seq=1；不得“已发送但无证据”）
+            BusinessKeyProvisioning refreshed = provisioningRepository.selectByRequestId(requestId);
+            return kl1LeaseIssuanceService.issue(refreshed, now, true).response();
+        }
+        responseStore.persist(requestId, responseBytes);
         return response;
+    }
+
+    /**
+     * KL1：同 requestId 租约重放路径（VMD-DSN-CR-069 §2）。
+     * <p>
+     * 锁内 lazy expiry（now≥B → FAILED(ACK_TIMEOUT) + 释放 claims）→ 终态判定（ACTIVE 重放原
+     * 成功 bytes 不交付新 bundle；FAILED/EXPIRED 终态拒绝）→ WAIT_DEVICE_ACK 签发新租约。
+     * 同 rid 重放绝不调用 Provider/重 wrap；安全期限不覆盖拟签发 E 时停止交付。
+     */
+    private KeyProvisioningResponse kl1Replay(BusinessKeyProvisioning existing, String requestId,
+                                              BoundDeviceIdentity identity, ActiveDeviceCertificate activeCert,
+                                              TboxEcdhCertificateEligibilityGate.GateResult gateResult) {
+        try {
+            return tx().execute(status -> doKl1Replay(existing, requestId, identity, activeCert, gateResult));
+        } catch (KeyprovEnvelopeIntegrityException e) {
+            log.warn("KL1 重放存储隔离（STORE_QUARANTINE）: requestId={}, reason={}", requestId, e.getMessage());
+            return rejected(requestId, KeyprovConstants.ERR_ENVELOPE_INTEGRITY, false,
+                    "KL1重放存储隔离（fail-closed，禁止重新derive补齐）");
+        }
+    }
+
+    private KeyProvisioningResponse doKl1Replay(BusinessKeyProvisioning existing, String requestId,
+                                                BoundDeviceIdentity identity, ActiveDeviceCertificate activeCert,
+                                                TboxEcdhCertificateEligibilityGate.GateResult gateResult) {
+        BusinessKeyProvisioning batch = provisioningRepository.selectByRequestIdForUpdate(requestId);
+        if (batch == null || !batch.isKl1()) {
+            return rejected(requestId, KeyprovConstants.ERR_STATE_NOT_ALLOWED, false, "批次状态不允许");
+        }
+        LocalDateTime now = LocalDateTime.now();
+        // lazy expiry：now≥B 且未 ACTIVE → FAILED(ACK_TIMEOUT) + 释放本批次 pending claim
+        boolean terminated = kl1BatchTerminator.terminateIfDeadlinePassed(batch, now);
+        switch (batch.getStatus()) {
+            case COMPLETED: {
+                // ACTIVE：不交付新 bundle；重放原成功响应 bytes（无新租约签发）
+                byte[] original = responseStore.load(requestId);
+                if (original == null) {
+                    return rejected(requestId, KeyprovConstants.ERR_STATE_NOT_ALLOWED, false, "ACTIVE批次无原响应");
+                }
+                try {
+                    return KeyProvisioningResponse.parseFrom(original);
+                } catch (com.google.protobuf.InvalidProtocolBufferException e) {
+                    return rejected(requestId, KeyprovConstants.ERR_ENVELOPE_INTEGRITY, false, "原响应损坏");
+                }
+            }
+            case FAILED:
+            case EXPIRED: {
+                // 终态：按既有结果终态响应，不交付新 bundle
+                return rejected(requestId, KeyprovConstants.ERR_STATE_NOT_ALLOWED, false, "批次已终结，不交付新bundle");
+            }
+            default:
+                break;
+        }
+        if (batch.getStatus() != BusinessKeyProvisioningState.WAIT_DEVICE_ACK) {
+            return rejected(requestId, KeyprovConstants.ERR_STATE_NOT_ALLOWED, false, "批次状态不允许租约签发");
+        }
+        // 安全期限：复用证书前置门禁（gate 不通过 → 停止交付新 E，不人为延密钥期限；VMD-DSN-CR-069 §2.2）
+        boolean safetyValid = gateResult != null && gateResult.eligible();
+        if (!safetyValid) {
+            log.warn("KL1 续签安全期限不覆盖拟签发 E，停止交付: requestId={}, retryable={}",
+                    requestId, gateResult != null && gateResult.retryable());
+            if (gateResult != null && gateResult.retryable()) {
+                return retryable(requestId, KeyprovConstants.ERR_UNAVAILABLE, "证书/材料安全期限检查未就绪，停止交付");
+            }
+            return rejected(requestId, KeyprovConstants.ERR_CERTIFICATE_INVALID, false, "证书/材料安全期限不覆盖拟签发E，拒绝交付");
+        }
+        Kl1LeaseIssuanceService.LeaseIssueResult issued = kl1LeaseIssuanceService.issue(batch, now, true);
+        return issued.response();
+    }
+
+    /**
+     * KL1：记录每用途 item 在原响应序列化中的无损切片证据（offset/length，指向 items 子消息 body）。
+     * <p>
+     * items 在响应中按 purpose 枚举值升序排列（UPLINK=1、DOWNLINK=2），与 buildResponse 排序一致。
+     */
+    private void recordItemWireSlices(Long provisioningId, byte[] responseBytes) {
+        try {
+            List<Kl1WireCodec.BodySlice> slices = Kl1WireCodec.locateField3Items(responseBytes);
+            List<BusinessKeyProvisioningItem> items = provisioningItemRepository.selectByProvisioningId(provisioningId);
+            items.sort(java.util.Comparator.comparingInt(i ->
+                    KeyprovConstants.purposeProto(i.getPurpose()).getNumber()));
+            LocalDateTime now = LocalDateTime.now();
+            for (int i = 0; i < Math.min(slices.size(), items.size()); i++) {
+                Kl1WireCodec.BodySlice s = slices.get(i);
+                BusinessKeyProvisioningItem item = items.get(i);
+                item.setItemWireOffset(s.offset);
+                item.setItemWireLength(s.length);
+                item.setModifyTime(now);
+                provisioningItemRepository.update(item);
+            }
+        } catch (IllegalArgumentException e) {
+            log.warn("KL1 item 无损切片记录失败（保留 digests 证据，不阻断下发）: provisioningId={}, reason={}",
+                    provisioningId, e.getMessage());
+        }
     }
 
     private BusinessKeyProvisioning createOrLoadBatch(String requestId, BoundDeviceIdentity identity, String domain,
@@ -778,7 +895,13 @@ public class BusinessKeyProvisioningBatchAppService {
             }
             wrappedItems.add(mappedItem.item());
         }
-        long expireAt = request.getExpireAtMs() > 0 ? request.getExpireAtMs() : defaultBundleExpireAt();
+        long expireAt;
+        if (kl1Enabled) {
+            // KL1：首次签发 E = now + 60s（B=now+300s 已由 persistKl1 建立，E=min(now+60s,B-30s)）
+            expireAt = System.currentTimeMillis() + Kl1Constants.RESPONSE_TTL_MS;
+        } else {
+            expireAt = request.getExpireAtMs() > 0 ? request.getExpireAtMs() : defaultBundleExpireAt();
+        }
         KeyProvisioningResponse.Builder builder = KeyProvisioningResponse.newBuilder()
                 .setRequestId(batch.getRequestId())
                 .setResult(KeyProvisioningResult.KEY_PROVISIONING_RESULT_SUCCEEDED)

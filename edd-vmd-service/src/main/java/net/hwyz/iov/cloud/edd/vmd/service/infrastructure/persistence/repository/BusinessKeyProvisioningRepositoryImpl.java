@@ -81,6 +81,16 @@ public class BusinessKeyProvisioningRepositoryImpl implements BusinessKeyProvisi
     }
 
     @Override
+    public List<BusinessKeyProvisioning> selectKl1PendingBeforeDeadline(LocalDateTime now, int limit) {
+        List<BusinessKeyProvisioningPo> poList = businessKeyProvisioningMapper
+                .selectKl1PoListPendingBeforeDeadline(now, limit);
+        if (poList == null || poList.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return BusinessKeyProvisioningConverter.INSTANCE.toDomainList(poList);
+    }
+
+    @Override
     public int insert(BusinessKeyProvisioning entity) {
         BusinessKeyProvisioningPo po = BusinessKeyProvisioningConverter.INSTANCE.fromDomain(entity);
         int rows = businessKeyProvisioningMapper.insertPo(po);

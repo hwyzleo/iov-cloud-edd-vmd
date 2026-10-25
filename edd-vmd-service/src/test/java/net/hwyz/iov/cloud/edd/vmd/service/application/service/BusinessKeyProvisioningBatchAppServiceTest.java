@@ -135,7 +135,8 @@ class BusinessKeyProvisioningBatchAppServiceTest {
                 provisioningItemRepository, boundDeviceIdentityResolver, activeDeviceCertificateResolver,
                 authorizationPolicy, policyRegistry, bizTypeMapper, materialRouter,
                 new BusinessKeyProvisioningDomainService(), envelopeAdapter, wireMapper, responseStore,
-                tboxEcdhCertificateEligibilityGate, derivedMaterialService, metrics, transactionManager);
+                tboxEcdhCertificateEligibilityGate, derivedMaterialService, metrics, transactionManager,
+                mock(Kl1LeaseIssuanceService.class), mock(Kl1BatchTerminator.class));
         ReflectionTestUtils.setField(service, "bundleTtlSeconds", 3600L);
         ReflectionTestUtils.setField(service, "derivationVersion", "v1");
 

@@ -53,6 +53,11 @@ public interface BusinessKeyProvisioningRepository {
     List<BusinessKeyProvisioning> selectListByStatusBefore(BusinessKeyProvisioningState status, LocalDateTime before, int limit);
 
     /**
+     * KL1：扫描未终结且 ack_deadline_at ≤ now 的批次（sweeper ≤5s，VMD-DSN-CR-069 §4）
+     */
+    List<BusinessKeyProvisioning> selectKl1PendingBeforeDeadline(LocalDateTime now, int limit);
+
+    /**
      * 插入批次
      */
     int insert(BusinessKeyProvisioning entity);
