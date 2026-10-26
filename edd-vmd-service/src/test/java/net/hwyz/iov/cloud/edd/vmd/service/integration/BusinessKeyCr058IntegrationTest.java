@@ -268,6 +268,26 @@ class BusinessKeyCr058IntegrationTest extends BaseTest {
         assertEquals(0, events, "缺项不得发布完成事件");
     }
 
+    @Test
+    @DisplayName("请求携带短 expire_at（模拟车端 now+11s 截止）时 Response 租约由服务端签发，不回显请求截止")
+    void responseLeaseServerIssued_notRequestDeadline() {
+        // 车端 TSP 在 Request 中发送 expire_at_ms = now + request_timeout + 1s（约 now+11s），
+        // 该字段语义是请求处理期限而非 Response bundle 租约。若 VMD 回显该值，设备收到时
+        // E-U 已不足 KL1 import_min(15s) -> lease_too_short 拒绝导入 -> WAIT_DEVICE_ACK 死锁。
+        KeyProvisioningRequest req = request("CR058_REQ_LEASE_001").toBuilder()
+                .setExpireAtMs(System.currentTimeMillis() + 11_000L)
+                .build();
+        KeyProvisioningOperationResult result = keyProvisioningApplicationFacade.request(CALLER, ctx(),
+                KeyprovConstants.PAYLOAD_TYPE_REQUEST, "keyprov-v1", req.toByteArray(), sha256(req.toByteArray()),
+                "test-release-v1", "test-descriptor-set-hash");
+        assertEquals(VmdKeyProvisioningOutcome.SUCCESS, result.getOutcome(), "request 应成功");
+        KeyProvisioningResponse response = parse(result, KeyProvisioningResponse::parseFrom);
+        assertEquals(2, response.getItemsCount());
+        assertTrue(response.getExpireAtMs() >= System.currentTimeMillis() + 120_000L,
+                "Response E 必须由服务端签发并满足车端 KL1 准入（E-U >= 15s），"
+                        + "不得回显请求截止: E=" + response.getExpireAtMs());
+    }
+
     private KeyProvisioningResponse requestResponse(String requestId) {
         KeyProvisioningOperationResult result = requestOperation(requestId);
         assertEquals(VmdKeyProvisioningOutcome.SUCCESS, result.getOutcome(), "request 应成功");

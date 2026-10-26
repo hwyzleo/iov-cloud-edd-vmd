@@ -118,6 +118,12 @@ public class BusinessKeyProvisioningBatchAppService {
     private long bundleTtlSeconds = 3600;
 
     /**
+     * 非 KL1 响应租约下限：E - now 至少覆盖车端 KL1 导入准入（import_min 15s）与
+     * 传输/处理余量，防止 bundle-ttl-seconds 被配置过短时再次触发 lease_too_short 死锁。
+     */
+    private static final long MIN_RESPONSE_LEASE_MS = 120_000L;
+
+    /**
      * KL1 capability 开关（默认关闭 fail-closed；VMD-DSN-CR-069 §6 kill-switch）
      */
     @Value("${vmd.business-key.provisioning.kl1.enabled:false}")
@@ -906,7 +912,14 @@ public class BusinessKeyProvisioningBatchAppService {
             // KL1：首次签发 E = now + 60s（B=now+300s 已由 persistKl1 建立，E=min(now+60s,B-30s)）
             expireAt = System.currentTimeMillis() + Kl1Constants.RESPONSE_TTL_MS;
         } else {
-            expireAt = request.getExpireAtMs() > 0 ? request.getExpireAtMs() : defaultBundleExpireAt();
+            // 非 KL1 兼容路径：Response bundle 租约必须由服务端签发，禁止回显请求截止时间。
+            // 车端 KL1 准入要求 E-U >= Kl1Constants.IMPORT_MIN_MS（15s）；请求 expire_at_ms
+            // 仅是请求处理期限（TSP 发送 now+request_timeout+1s，约 now+11s），回显进 Response
+            // 后设备收到时 E-U 已不足 15s -> lease_too_short 拒绝导入 -> 批次永久停在
+            // WAIT_DEVICE_ACK 等待永不到来的 ACK（车云死锁）。此处以服务端 bundle TTL 签发
+            // （默认 3600s），并设下限保证 E-U 始终满足车端准入。
+            expireAt = Math.max(defaultBundleExpireAt(),
+                    System.currentTimeMillis() + MIN_RESPONSE_LEASE_MS);
         }
         KeyProvisioningResponse.Builder builder = KeyProvisioningResponse.newBuilder()
                 .setRequestId(batch.getRequestId())
