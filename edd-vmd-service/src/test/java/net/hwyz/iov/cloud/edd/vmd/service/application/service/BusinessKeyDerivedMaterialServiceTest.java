@@ -146,6 +146,25 @@ class BusinessKeyDerivedMaterialServiceTest {
     }
 
     @Test
+    @DisplayName("复用行有效期已过期（CR-068：多次复用可恢复行后 valid_to < now）→ 按策略续签，防止车端 SEC 以 WRAPPED_KEY_INVALID 拒绝导入")
+    void claimOrReuse_expiredValidity_reissues() {
+        when(repository.attachDerivedMaterial(any())).thenThrow(new DuplicateKeyException("uk_key_id"));
+        DeviceBusinessKey existing = existingRow(BusinessKeyState.ACTIVE, ROOT_VERSION, KMS_REF);
+        // 旧行有效期已过期（首次 attach 距今 > policy.validity()）
+        existing.setValidFrom(LocalDateTime.now().minus(Duration.ofDays(400)));
+        existing.setValidTo(LocalDateTime.now().minus(Duration.ofDays(35)));
+        when(repository.selectByKeyIdForUpdate(KEY_ID)).thenReturn(existing);
+        when(itemRepository.selectByDirectoryKeyId(5L)).thenReturn(null);
+
+        service.persistOrClaimDerivedMaterial(pendingRow(), result(), policy(), "OP-1", 100L, ctx());
+
+        verify(repository).update(argThat(a ->
+                a.getValidFrom() != null && a.getValidTo() != null
+                        && a.getValidTo().isAfter(LocalDateTime.now())
+                        && a.getValidTo().isAfter(a.getValidFrom())));
+    }
+
+    @Test
     @DisplayName("DuplicateKey + 完全一致既有 ACTIVE 行 → claim-or-reuse：item 重挂 canonical + 占位 SUPERSEDED")
     void duplicateKey_identicalExisting_reuse() {
         when(repository.attachDerivedMaterial(any())).thenThrow(new DuplicateKeyException("uk_key_id"));

@@ -124,23 +124,30 @@ public class BusinessKeyDerivedMaterialService {
     }
 
     /**
-     * 目录行有效期兜底回填（CR-066 实现缺陷修复）。
+     * 目录行有效期兜底回填/续签（CR-066 实现缺陷修复 + CR-068 复用行过期修复）。
      * <p>
      * attach 历史缺陷（未回填 validFrom/validTo）或旧路径派生前失败遗留的 FAILED 行可能缺失有效期；
      * 此类行经 claim-or-reuse/恢复/REIMPORT 复用时若不补齐，KeyprovEnvelopeAdapter 将不下发
      * valid_from_ms/valid_to_ms（=0），车端 SEC validate_structure 以 WRAPPED_KEY_INVALID 拒绝导入。
      * 按策略有效期补齐（valid_to = valid_from + policy.validity()）；updatePo 乐观锁失配仅告警，
      * 由 KeyprovEnvelopeAdapter 的 fail-closed 守卫在 envelope 构建时兜底拦截。
+     * <p>
+     * CR-068 修复：PENDING 占位行首次 attach 时签发有效期（当时时间 + policy.validity()），
+     * 后续 requestId 复用同逻辑材料可恢复行时若行有效期已过期（valid_to < now），不得沿用过期值——
+     * 否则响应 item 携带过期 valid_to_ms，车端 SEC 以 WRAPPED_KEY_INVALID（now > valid_to /
+     * valid_to < E）拒绝导入（现场：设备多次复用 id=7/id=8 可恢复行后导入持续失败）。
+     * 复用即视为重新交付：缺失或已过期一律按策略重新签发。
      */
     private void ensureDirectoryValidity(DeviceBusinessKey row, BusinessKeyPolicyEntry policy) {
-        if (row.getValidFrom() != null && row.getValidTo() != null) {
-            return;
+        LocalDateTime now = LocalDateTime.now();
+        if (row.getValidFrom() != null && row.getValidTo() != null
+                && row.getValidTo().isAfter(now)) {
+            return;  // 有效期未过期且未缺失：保持不变
         }
-        LocalDateTime validFrom = LocalDateTime.now();
-        row.setValidFrom(validFrom);
-        row.setValidTo(validFrom.plus(policy.validity()));
+        row.setValidFrom(now);
+        row.setValidTo(now.plus(policy.validity()));
         if (deviceBusinessKeyRepository.update(row) == 0) {
-            log.warn("keyprov 目录行有效期兜底回填未生效（行已被并发修改）: keyId={}", row.getKeyId());
+            log.warn("keyprov 目录行有效期兜底回填/续签未生效（行已被并发修改）: keyId={}", row.getKeyId());
         }
     }
 
