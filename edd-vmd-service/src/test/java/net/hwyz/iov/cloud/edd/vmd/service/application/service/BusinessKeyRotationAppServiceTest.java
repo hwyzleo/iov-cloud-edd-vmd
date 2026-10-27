@@ -189,7 +189,7 @@ class BusinessKeyRotationAppServiceTest {
         stubCommonForDerived(BizType.TBOX_DEVICE_ROOT, old);
         when(activeDeviceCertificateResolver.resolveActive(identity))
                 .thenReturn(new ActiveDeviceCertificate("CR061-CERT-0001", "PKI-REQ-ROT-1", "a".repeat(64)));
-        when(derivedTemplate.deriveAndWrap(any(), any(), any(), any(), any(), any(), any()))
+        when(derivedTemplate.deriveAndWrap(any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(KeyprovEnvelopeTestFixtures.derivedWrappedKey(NEW_KEY_ID,
                         net.hwyz.iov.cloud.framework.security.crypto.model.KeyPurpose.UPLINK_AEAD,
                         3L, 3L, "v1", "OP-1"));
@@ -221,7 +221,7 @@ class BusinessKeyRotationAppServiceTest {
         ArgumentCaptor<KeyPurpose> purposeCaptor = ArgumentCaptor.forClass(KeyPurpose.class);
         ArgumentCaptor<RecipientRef> recipientCaptor = ArgumentCaptor.forClass(RecipientRef.class);
         verify(derivedTemplate).deriveAndWrap(any(), anchorCaptor.capture(), purposeCaptor.capture(),
-                recipientCaptor.capture(), any(), any(), any());
+                recipientCaptor.capture(), any(), any(), any(), any(), any());
         assertEquals(KeyAnchor.AnchorType.UID, anchorCaptor.getValue().type());
         assertEquals(DEVICE_SN, anchorCaptor.getValue().value());
         assertEquals(KeyPurpose.UPLINK_AEAD, purposeCaptor.getValue());
@@ -256,7 +256,7 @@ class BusinessKeyRotationAppServiceTest {
         });
         when(activeDeviceCertificateResolver.resolveActive(v2cIdentity))
                 .thenReturn(new ActiveDeviceCertificate("C", "PKI", "a".repeat(64)));
-        when(derivedTemplate.deriveAndWrap(any(), any(), any(), any(), any(), any(), any()))
+        when(derivedTemplate.deriveAndWrap(any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(KeyprovEnvelopeTestFixtures.derivedWrappedKey(NEW_KEY_ID,
                         net.hwyz.iov.cloud.framework.security.crypto.model.KeyPurpose.UPLINK_AEAD,
                         3L, 3L, "v1", "OP-2"));
@@ -268,7 +268,7 @@ class BusinessKeyRotationAppServiceTest {
         service.rotate(cmd(V2C_DOMAIN));
 
         ArgumentCaptor<KeyAnchor> anchorCaptor = ArgumentCaptor.forClass(KeyAnchor.class);
-        verify(derivedTemplate).deriveAndWrap(any(), anchorCaptor.capture(), any(), any(), any(), any(), any());
+        verify(derivedTemplate).deriveAndWrap(any(), anchorCaptor.capture(), any(), any(), any(), any(), any(), any(), any());
         assertEquals(KeyAnchor.AnchorType.VIN, anchorCaptor.getValue().type());
         assertEquals("HWYZTEST900000001", anchorCaptor.getValue().value(), "锚必须为规范化 VIN");
     }
@@ -284,7 +284,7 @@ class BusinessKeyRotationAppServiceTest {
         when(repository.selectActiveByContextForUpdate(DEVICE_SN, DOMAIN, PURPOSE)).thenReturn(null);
 
         assertThrows(BusinessKeyNotExistException.class, () -> service.rotate(cmd()));
-        verify(derivedTemplate, never()).deriveAndWrap(any(), any(), any(), any(), any(), any(), any());
+        verify(derivedTemplate, never()).deriveAndWrap(any(), any(), any(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -298,7 +298,7 @@ class BusinessKeyRotationAppServiceTest {
         when(repository.selectActiveByContextForUpdate(DEVICE_SN, DOMAIN, PURPOSE)).thenReturn(oldActive(null));
 
         assertThrows(BusinessKeyDerivationRejectedException.class, () -> service.rotate(cmd()));
-        verify(derivedTemplate, never()).deriveAndWrap(any(), any(), any(), any(), any(), any(), any());
+        verify(derivedTemplate, never()).deriveAndWrap(any(), any(), any(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -313,7 +313,7 @@ class BusinessKeyRotationAppServiceTest {
                 .thenReturn(oldActive(KeyMaterialModel.RANDOM_MATERIAL.name()));
 
         assertThrows(BusinessKeyDerivationRejectedException.class, () -> service.rotate(cmd()));
-        verify(derivedTemplate, never()).deriveAndWrap(any(), any(), any(), any(), any(), any(), any());
+        verify(derivedTemplate, never()).deriveAndWrap(any(), any(), any(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -336,7 +336,7 @@ class BusinessKeyRotationAppServiceTest {
         stubCommonForDerived(BizType.TBOX_DEVICE_ROOT, old);
         when(activeDeviceCertificateResolver.resolveActive(identity))
                 .thenReturn(new ActiveDeviceCertificate("C", "PKI", "a".repeat(64)));
-        when(derivedTemplate.deriveAndWrap(any(), any(), any(), any(), any(), any(), any()))
+        when(derivedTemplate.deriveAndWrap(any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenThrow(new CryptoDependencyUnavailableException("transit down"));
         when(repository.selectById(2L)).thenAnswer(inv -> newRow);
 
@@ -357,7 +357,7 @@ class BusinessKeyRotationAppServiceTest {
         stubCommonForDerived(BizType.TBOX_DEVICE_ROOT, old);
         when(activeDeviceCertificateResolver.resolveActive(identity))
                 .thenReturn(new ActiveDeviceCertificate("C", "PKI", "a".repeat(64)));
-        when(derivedTemplate.deriveAndWrap(any(), any(), any(), any(), any(), any(), any()))
+        when(derivedTemplate.deriveAndWrap(any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(KeyprovEnvelopeTestFixtures.derivedWrappedKey(NEW_KEY_ID,
                         net.hwyz.iov.cloud.framework.security.crypto.model.KeyPurpose.UPLINK_AEAD,
                         3L, 3L, "v1", "OP-3"));
@@ -405,7 +405,7 @@ class BusinessKeyRotationAppServiceTest {
         assertEquals(NEW_KEY_ID, result.getNewKeyId());
         verify(randomTemplate).create(any(BusinessKeyCreateRequest.class));
         verify(randomTemplate).wrap(any(BusinessKeyRef.class), any(RecipientRef.class), any(WrapContext.class));
-        verify(derivedTemplate, never()).deriveAndWrap(any(), any(), any(), any(), any(), any(), any());
+        verify(derivedTemplate, never()).deriveAndWrap(any(), any(), any(), any(), any(), any(), any(), any(), any());
         verify(publisher).publish(any(DeviceBusinessKey.class), eq("ROTATED"));
     }
 
@@ -417,7 +417,7 @@ class BusinessKeyRotationAppServiceTest {
         when(activeDeviceCertificateResolver.resolveActive(identity))
                 .thenReturn(new ActiveDeviceCertificate("C", "PKI", "a".repeat(64)));
         // Provider 返回与当前 ACTIVE 相同的 keyId（rootKeyVersion/derivationVersion/anchor 未变）
-        when(derivedTemplate.deriveAndWrap(any(), any(), any(), any(), any(), any(), any()))
+        when(derivedTemplate.deriveAndWrap(any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(KeyprovEnvelopeTestFixtures.derivedWrappedKey(OLD_KEY_ID,
                         net.hwyz.iov.cloud.framework.security.crypto.model.KeyPurpose.UPLINK_AEAD,
                         3L, 3L, "v1", "OP-SAME"));

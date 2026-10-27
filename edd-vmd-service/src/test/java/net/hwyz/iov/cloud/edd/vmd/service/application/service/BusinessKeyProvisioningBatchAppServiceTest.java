@@ -240,7 +240,7 @@ class BusinessKeyProvisioningBatchAppServiceTest {
         lenient().when(tboxEcdhCertificateEligibilityGate.evaluate(any()))
                 .thenReturn(new TboxEcdhCertificateEligibilityGate.GateResult(true, false, "ok"));
 
-        lenient().when(derivedTemplate.deriveAndWrap(any(), any(), any(), any(), any(), any(), any()))
+        lenient().when(derivedTemplate.deriveAndWrap(any(), any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenAnswer(inv -> {
                     net.hwyz.iov.cloud.framework.security.crypto.model.KeyPurpose purpose = inv.getArgument(2);
                     String name = purpose == null ? "NULL" : purpose.name();
@@ -295,7 +295,7 @@ class BusinessKeyProvisioningBatchAppServiceTest {
         ArgumentCaptor<String> idemCaptor = ArgumentCaptor.forClass(String.class);
         verify(derivedTemplate, times(2)).deriveAndWrap(bizTypeCaptor.capture(), anchorCaptor.capture(),
                 purposeCaptor.capture(), recipientCaptor.capture(), ctxCaptor.capture(),
-                opIdCaptor.capture(), idemCaptor.capture());
+                opIdCaptor.capture(), idemCaptor.capture(), any(), any());
 
         assertTrue(bizTypeCaptor.getAllValues().stream().allMatch(b -> b == BizType.V2C_COMM_ROOT));
         assertTrue(anchorCaptor.getAllValues().stream().allMatch(a -> a.type() == KeyAnchor.AnchorType.VIN
@@ -346,7 +346,7 @@ class BusinessKeyProvisioningBatchAppServiceTest {
         assertEquals(KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED, response.getResult());
         assertEquals(KeyprovConstants.ERR_VIN_BINDING_INVALID, response.getError().getCode());
         assertFalse(response.getError().getMessage().contains("BAD-VIN"), "错误正文不得回显 VIN 原文");
-        verify(derivedTemplate, never()).deriveAndWrap(any(), any(), any(), any(), any(), any(), any());
+        verify(derivedTemplate, never()).deriveAndWrap(any(), any(), any(), any(), any(), any(), any(), any(), any());
         verify(deviceBusinessKeyRepository, never()).insert(any());
         verify(provisioningRepository, never()).insert(any());
     }
@@ -370,7 +370,7 @@ class BusinessKeyProvisioningBatchAppServiceTest {
 
         assertEquals(KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED, response.getResult());
         assertEquals(KeyprovConstants.ERR_DERIVATION_UNSUPPORTED, response.getError().getCode());
-        verify(derivedTemplate, never()).deriveAndWrap(any(), any(), any(), any(), any(), any(), any());
+        verify(derivedTemplate, never()).deriveAndWrap(any(), any(), any(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -384,7 +384,7 @@ class BusinessKeyProvisioningBatchAppServiceTest {
 
         assertEquals(KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED, response.getResult());
         assertEquals(KeyprovConstants.ERR_DERIVATION_UNSUPPORTED, response.getError().getCode());
-        verify(derivedTemplate, never()).deriveAndWrap(any(), any(), any(), any(), any(), any(), any());
+        verify(derivedTemplate, never()).deriveAndWrap(any(), any(), any(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -392,7 +392,7 @@ class BusinessKeyProvisioningBatchAppServiceTest {
     void provision_providerNotReady_retryable() {
         when(boundDeviceIdentityResolver.resolveByHsmUid(HSM_UID, null)).thenReturn(identity);
         doThrow(new BusinessKeyDerivedProviderUnavailableException("Transit root 未就绪"))
-                .when(derivedTemplate).deriveAndWrap(any(), any(), any(), any(), any(), any(), any());
+                .when(derivedTemplate).deriveAndWrap(any(), any(), any(), any(), any(), any(), any(), any(), any());
 
         KeyProvisioningResponse response = service.provision(request(), ctx());
 
@@ -415,7 +415,7 @@ class BusinessKeyProvisioningBatchAppServiceTest {
         when(boundDeviceIdentityResolver.resolveByHsmUid(HSM_UID, null)).thenReturn(identity);
         doThrow(new CertificateEvidenceMismatchException(
                 "Resolved certificate serial does not match the requested certSerial"))
-                .when(derivedTemplate).deriveAndWrap(any(), any(), any(), any(), any(), any(), any());
+                .when(derivedTemplate).deriveAndWrap(any(), any(), any(), any(), any(), any(), any(), any(), any());
 
         // 关键：不得被 catch(CryptoException) 吞成 806108 协议响应，必须上抛由门面映射 806102/DO_NOT_RETRY
         assertThrows(CertificateEvidenceMismatchException.class, () -> service.provision(request(), ctx()));
@@ -433,7 +433,7 @@ class BusinessKeyProvisioningBatchAppServiceTest {
     void provision_certificateMaterialUnavailable_propagates_keepsBatchOpen() {
         when(boundDeviceIdentityResolver.resolveByHsmUid(HSM_UID, null)).thenReturn(identity);
         doThrow(new CertificateMaterialUnavailableException("pkiRequestId locator 缺失"))
-                .when(derivedTemplate).deriveAndWrap(any(), any(), any(), any(), any(), any(), any());
+                .when(derivedTemplate).deriveAndWrap(any(), any(), any(), any(), any(), any(), any(), any(), any());
 
         assertThrows(CertificateMaterialUnavailableException.class, () -> service.provision(request(), ctx()));
 
@@ -458,7 +458,7 @@ class BusinessKeyProvisioningBatchAppServiceTest {
             net.hwyz.iov.cloud.framework.security.crypto.model.DerivationContext context = inv.getArgument(4);
             return KeyprovEnvelopeTestFixtures.derivedWrappedKey("KEY-" + purpose.name(), purpose,
                     context.businessKeyVersion(), 3L, "v1", inv.getArgument(5));
-        }).when(derivedTemplate).deriveAndWrap(any(), any(), any(), any(), any(), any(), any());
+        }).when(derivedTemplate).deriveAndWrap(any(), any(), any(), any(), any(), any(), any(), any(), any());
 
         KeyProvisioningRequest request = request();
         KeyProvisioningResponse first = service.provision(request, ctx());
@@ -481,7 +481,7 @@ class BusinessKeyProvisioningBatchAppServiceTest {
         ArgumentCaptor<KeyPurpose> purposeCaptor = ArgumentCaptor.forClass(KeyPurpose.class);
         ArgumentCaptor<String> opIdCaptor = ArgumentCaptor.forClass(String.class);
         verify(derivedTemplate, times(3)).deriveAndWrap(any(), any(), purposeCaptor.capture(), any(), any(),
-                opIdCaptor.capture(), any());
+                opIdCaptor.capture(), any(), any(), any());
         Map<KeyPurpose, Set<String>> opIdsByPurpose = new HashMap<>();
         for (int i = 0; i < purposeCaptor.getAllValues().size(); i++) {
             opIdsByPurpose.computeIfAbsent(purposeCaptor.getAllValues().get(i), k -> new HashSet<>())
@@ -496,7 +496,7 @@ class BusinessKeyProvisioningBatchAppServiceTest {
     void provision_newRequestIdWhileOtherOpenBatchExists_rejected() {
         when(boundDeviceIdentityResolver.resolveByHsmUid(HSM_UID, null)).thenReturn(identity);
         doThrow(new CryptoDependencyUnavailableException("derive and wrap derived key unavailable (request not sent)"))
-                .when(derivedTemplate).deriveAndWrap(any(), any(), any(), any(), any(), any(), any());
+                .when(derivedTemplate).deriveAndWrap(any(), any(), any(), any(), any(), any(), any(), any(), any());
         assertEquals(KeyProvisioningResult.KEY_PROVISIONING_RESULT_RETRYABLE_FAILURE,
                 service.provision(request(), ctx()).getResult(), "首次申请依赖不可用，批次保持未终结");
         BusinessKeyProvisioning open = batchRef;
@@ -515,7 +515,7 @@ class BusinessKeyProvisioningBatchAppServiceTest {
         assertTrue(response.getError().getMessage().contains("原requestId"), "应引导以原 requestId 继续");
         assertEquals(1, keyStore.size(), "不得为新 requestId 落任何目录版本");
         assertEquals(1, itemStore.size(), "item 身份仅属于首个 requestId，不得聚合到新批次");
-        verify(derivedTemplate, times(1)).deriveAndWrap(any(), any(), any(), any(), any(), any(), any());
+        verify(derivedTemplate, times(1)).deriveAndWrap(any(), any(), any(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -523,7 +523,7 @@ class BusinessKeyProvisioningBatchAppServiceTest {
     void provision_outcomeUnknown_reconcile() {
         when(boundDeviceIdentityResolver.resolveByHsmUid(HSM_UID, null)).thenReturn(identity);
         doThrow(new CryptoOperationOutcomeUnknownException("timeout"))
-                .when(derivedTemplate).deriveAndWrap(any(), any(), any(), any(), any(), any(), any());
+                .when(derivedTemplate).deriveAndWrap(any(), any(), any(), any(), any(), any(), any(), any(), any());
 
         KeyProvisioningResponse response = service.provision(request(), ctx());
 
@@ -552,7 +552,7 @@ class BusinessKeyProvisioningBatchAppServiceTest {
         // §8.2：gate DOWN 时 Repository createBatch 次数为 0、Provider 调用次数为 0
         assertNull(batchRef, "批次前失败不得创建批次");
         verify(provisioningRepository, never()).insert(any(BusinessKeyProvisioning.class));
-        verify(derivedTemplate, never()).deriveAndWrap(any(), any(), any(), any(), any(), any(), any());
+        verify(derivedTemplate, never()).deriveAndWrap(any(), any(), any(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -644,7 +644,7 @@ class BusinessKeyProvisioningBatchAppServiceTest {
         assertTrue(response.getError().getRetryable());
         assertEquals("RETRY_SAME_REQUEST_ID", response.getError().getAction());
         // 任何派生/批次/目录行为均不得发生（避免"派生成功后持久化失败→重试撞 FW 摘要冲突"）
-        verify(derivedTemplate, never()).deriveAndWrap(any(), any(), any(), any(), any(), any(), any());
+        verify(derivedTemplate, never()).deriveAndWrap(any(), any(), any(), any(), any(), any(), any(), any(), any());
         verify(provisioningRepository, never()).insert(any());
         verify(deviceBusinessKeyRepository, never()).insert(any());
     }
@@ -714,7 +714,7 @@ class BusinessKeyProvisioningBatchAppServiceTest {
         ArgumentCaptor<KeyPurpose> purposeCaptor = ArgumentCaptor.forClass(KeyPurpose.class);
         ArgumentCaptor<String> opIdCaptor = ArgumentCaptor.forClass(String.class);
         verify(derivedTemplate, atLeast(2)).deriveAndWrap(any(), any(), purposeCaptor.capture(), any(), any(),
-                opIdCaptor.capture(), any());
+                opIdCaptor.capture(), any(), any(), any());
         for (int i = 0; i < purposeCaptor.getAllValues().size(); i++) {
             assertEquals(DerivedKeyOperationIds.operationId(REQUEST_ID,
                             purposeCaptor.getAllValues().get(i).name(), 1L),
@@ -766,7 +766,7 @@ class BusinessKeyProvisioningBatchAppServiceTest {
         assertEquals(KeyProvisioningResult.KEY_PROVISIONING_RESULT_REJECTED, response.getResult());
         assertEquals(KeyprovConstants.ERR_VERSION_GENERATION_MISMATCH, response.getError().getCode());
         assertFalse(response.getError().getRetryable());
-        verify(derivedTemplate, never()).deriveAndWrap(any(), any(), any(), any(), any(), any(), any());
+        verify(derivedTemplate, never()).deriveAndWrap(any(), any(), any(), any(), any(), any(), any(), any(), any());
         // 不创建任何新版本行
         assertEquals(2, keyStore.size());
     }

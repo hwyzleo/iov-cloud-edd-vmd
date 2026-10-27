@@ -196,7 +196,9 @@ public class BusinessKeyRotationAppService {
                             activeCert.sha256Fingerprint(), audit),
                     DerivationContext.of(derivationVersion, newRow.getBusinessKeyVersion()),
                     operationId,
-                    idemKey);
+                    idemKey,
+                    cmd.getRequestId(),
+                    cmd.getBusinessDomain());
         } catch (CryptoOperationOutcomeUnknownException e) {
             failNewRow(newRow, "framework派生结果未知，待对账");
             throw new BusinessKeyOutcomeUnknownException("轮换派生结果未知: requestId=" + cmd.getRequestId());

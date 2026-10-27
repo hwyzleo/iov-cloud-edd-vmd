@@ -618,7 +618,9 @@ public class BusinessKeyProvisioningBatchAppService {
                     // CR-062/FW-SEC CR-014：业务版本参与 Provider 幂等摘要，必须显式传入目标版本
                     DerivationContext.of(derivationVersion, target.getBusinessKeyVersion()),
                     operationId,
-                    idemKey);
+                    idemKey,
+                    requestId,
+                    domain);
 
             // CR-066 §6.3：persistOrClaimDerivedMaterial（撞 uk_key_id → 确定性 claim-or-reuse，不再落可重试 806100）
             Long canonicalId = derivedMaterialService.persistOrClaimDerivedMaterial(

@@ -92,7 +92,7 @@ class BusinessKeyCr062IntegrationTest extends BaseTest {
         jdbcTemplate.execute("DELETE FROM tb_vmd_outbox WHERE event_type = 'TboxV2cKeyProvisionedEvent' AND source_ref_id = 'CR062_REQ_001'");
         insertFixture();
 
-        when(keyProvisioningTemplate.deriveAndWrap(any(), any(), any(), any(), any(), any(), any())).thenAnswer(inv -> {
+        when(keyProvisioningTemplate.deriveAndWrap(any(), any(), any(), any(), any(), any(), any(), any(), any())).thenAnswer(inv -> {
             deriveCount.incrementAndGet();
             net.hwyz.iov.cloud.framework.security.crypto.model.KeyPurpose purpose = inv.getArgument(2);
             net.hwyz.iov.cloud.framework.security.crypto.model.DerivationContext context = inv.getArgument(4);
@@ -235,7 +235,7 @@ class BusinessKeyCr062IntegrationTest extends BaseTest {
         assertEquals(VmdKeyProvisioningOutcome.REJECTED, result.getOutcome());
         assertEquals(VmdErrorCode.KEYPROV_ENVELOPE_UNSUPPORTED, result.getErrorCode());
         assertFalse(result.isRetryable());
-        verify(keyProvisioningTemplate, never()).deriveAndWrap(any(), any(), any(), any(), any(), any(), any());
+        verify(keyProvisioningTemplate, never()).deriveAndWrap(any(), any(), any(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -245,7 +245,7 @@ class BusinessKeyCr062IntegrationTest extends BaseTest {
                 requestOperation("CR062_REQ_001", true, RELEASE, "wrong-hash").getErrorCode());
         assertEquals(VmdErrorCode.KEYPROV_REQUEST_INVALID,
                 requestOperation("CR062_REQ_001", true, null, null).getErrorCode());
-        verify(keyProvisioningTemplate, never()).deriveAndWrap(any(), any(), any(), any(), any(), any(), any());
+        verify(keyProvisioningTemplate, never()).deriveAndWrap(any(), any(), any(), any(), any(), any(), any(), any(), any());
     }
 
     @Test

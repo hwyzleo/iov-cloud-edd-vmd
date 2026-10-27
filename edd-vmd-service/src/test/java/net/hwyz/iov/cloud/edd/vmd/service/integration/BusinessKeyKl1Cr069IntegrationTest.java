@@ -96,7 +96,7 @@ class BusinessKeyKl1Cr069IntegrationTest extends BaseTest {
     void setUp() {
         clean();
         insertFixture();
-        when(keyProvisioningTemplate.deriveAndWrap(any(), any(), any(), any(), any(), any(), any())).thenAnswer(inv -> {
+        when(keyProvisioningTemplate.deriveAndWrap(any(), any(), any(), any(), any(), any(), any(), any(), any())).thenAnswer(inv -> {
             deriveCount.incrementAndGet();
             net.hwyz.iov.cloud.framework.security.crypto.model.KeyPurpose purpose = inv.getArgument(2);
             net.hwyz.iov.cloud.framework.security.crypto.model.DerivationContext context = inv.getArgument(4);

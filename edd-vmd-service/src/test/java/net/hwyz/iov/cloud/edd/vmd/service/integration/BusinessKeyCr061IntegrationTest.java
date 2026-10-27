@@ -118,7 +118,7 @@ class BusinessKeyCr061IntegrationTest extends BaseTest {
         insertFixture(INVALID_VIN, INVALID_DEVICE_SN, INVALID_HSM_UID, INVALID_PART_CODE, INVALID_CERT_SN);
 
         // 根派生：logicalKeyId 按 purpose 稳定（满足 uk_key_id + 幂等重放字节一致），Wrapped Key 仅瞬时存在
-        when(keyProvisioningTemplate.deriveAndWrap(any(), any(), any(), any(), any(), any(), any())).thenAnswer(inv -> {
+        when(keyProvisioningTemplate.deriveAndWrap(any(), any(), any(), any(), any(), any(), any(), any(), any())).thenAnswer(inv -> {
             deriveCount.incrementAndGet();
             net.hwyz.iov.cloud.framework.security.crypto.model.KeyPurpose purpose = inv.getArgument(2);
             net.hwyz.iov.cloud.framework.security.crypto.model.DerivationContext context = inv.getArgument(4);
@@ -300,7 +300,7 @@ class BusinessKeyCr061IntegrationTest extends BaseTest {
         }
 
         verify(keyProvisioningTemplate, org.mockito.Mockito.times(2))
-                .deriveAndWrap(any(), any(), any(), any(), any(), any(), any());
+                .deriveAndWrap(any(), any(), any(), any(), any(), any(), any(), any(), any());
 
         // 申请阶段不发布完成事件
         Integer events = jdbcTemplate.queryForObject(
@@ -333,7 +333,7 @@ class BusinessKeyCr061IntegrationTest extends BaseTest {
         String requestId = "CR061_REQ_005";
         doThrow(new CryptoDependencyUnavailableException(
                 "derive and wrap derived key unavailable (request not sent)"))
-                .when(keyProvisioningTemplate).deriveAndWrap(any(), any(), any(), any(), any(), any(), any());
+                .when(keyProvisioningTemplate).deriveAndWrap(any(), any(), any(), any(), any(), any(), any(), any(), any());
 
         KeyProvisioningOperationResult first = requestOperation(requestId, HSM_UID);
         assertEquals(VmdKeyProvisioningOutcome.UNAVAILABLE, first.getOutcome(), "依赖不可用应为 UNAVAILABLE（非结果未知）");
@@ -359,7 +359,7 @@ class BusinessKeyCr061IntegrationTest extends BaseTest {
             String operationId = inv.getArgument(5);
             return KeyprovEnvelopeTestFixtures.derivedWrappedKey("CR061-KEY-" + purpose.name(), purpose,
                     context.businessKeyVersion(), ROOT_KEY_VERSION, DERIVATION_VERSION, operationId);
-        }).when(keyProvisioningTemplate).deriveAndWrap(any(), any(), any(), any(), any(), any(), any());
+        }).when(keyProvisioningTemplate).deriveAndWrap(any(), any(), any(), any(), any(), any(), any(), any(), any());
         KeyProvisioningResponse retry = requestResponse(requestId, HSM_UID);
 
         assertEquals(2, retry.getItemsCount(), "重试应完成两用途下发");
@@ -393,7 +393,7 @@ class BusinessKeyCr061IntegrationTest extends BaseTest {
         assertEquals(VmdKeyProvisioningOutcome.REJECTED, result.getOutcome(), "VIN 非法应为安全拒绝");
         assertEquals(VmdErrorCode.KEYPROV_VIN_BINDING_INVALID, result.getErrorCode(),
                 "应映射为 806106 VIN/绑定无效");
-        verify(keyProvisioningTemplate, never()).deriveAndWrap(any(), any(), any(), any(), any(), any(), any());
+        verify(keyProvisioningTemplate, never()).deriveAndWrap(any(), any(), any(), any(), any(), any(), any(), any(), any());
 
         Integer rows = jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM tb_device_business_key WHERE device_sn = ?", Integer.class, INVALID_DEVICE_SN);

@@ -123,7 +123,7 @@ class BusinessKeyCr065IntegrationTest extends BaseTest {
                 vin, DEVICE_SN);
         insertCertificate(CERT_SN_F1);
 
-        when(keyProvisioningTemplate.deriveAndWrap(any(), any(), any(), any(), any(), any(), any())).thenAnswer(inv -> {
+        when(keyProvisioningTemplate.deriveAndWrap(any(), any(), any(), any(), any(), any(), any(), any(), any())).thenAnswer(inv -> {
             net.hwyz.iov.cloud.framework.security.crypto.model.KeyPurpose purpose = inv.getArgument(2);
             net.hwyz.iov.cloud.framework.security.crypto.model.DerivationContext context = inv.getArgument(4);
             String operationId = inv.getArgument(5);

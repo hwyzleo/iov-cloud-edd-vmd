@@ -117,7 +117,7 @@ class BusinessKeyCr066IntegrationTest extends BaseTest {
 
         insertFixture();
 
-        when(keyProvisioningTemplate.deriveAndWrap(any(), any(), any(), any(), any(), any(), any())).thenAnswer(inv -> {
+        when(keyProvisioningTemplate.deriveAndWrap(any(), any(), any(), any(), any(), any(), any(), any(), any())).thenAnswer(inv -> {
             deriveCount.incrementAndGet();
             net.hwyz.iov.cloud.framework.security.crypto.model.KeyPurpose purpose = inv.getArgument(2);
             net.hwyz.iov.cloud.framework.security.crypto.model.DerivationContext context = inv.getArgument(4);
@@ -344,7 +344,7 @@ class BusinessKeyCr066IntegrationTest extends BaseTest {
         assertEquals(VmdKeyProvisioningOutcome.REJECTED, result.getOutcome());
         assertEquals(VmdErrorCode.KEYPROV_VERSION_GENERATION_MISMATCH, result.getErrorCode(), "应映射 806131");
         assertFalse(result.isRetryable());
-        verify(keyProvisioningTemplate, never()).deriveAndWrap(any(), any(), any(), any(), any(), any(), any());
+        verify(keyProvisioningTemplate, never()).deriveAndWrap(any(), any(), any(), any(), any(), any(), any(), any(), any());
         assertEquals(2, jdbcTemplate.queryForObject(
                 "SELECT COUNT(*) FROM tb_device_business_key WHERE device_sn = ?", Integer.class, DEVICE_SN),
                 "不得创建任何新版本行");
