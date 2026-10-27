@@ -34,8 +34,10 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * 与 KafkaAdminOperations（连接预热 / 有界 describe，超时与预热参数见 iov.kafka.topic-provisioning），
  * 在 {@link KafkaTopicsReadyEvent} 后完成：
  * <ol>
- *   <li>对三个 PRODUCER_OWNED 生产 Topic 做既有校验（分区数 / 副本数 / cleanup.policy），
- *       漂移仅上报（指标 + 日志）并置 TopicReadiness=DOWN，不自动修改拓扑</li>
+ *   <li>对全部 PRODUCER_OWNED 生产 Topic 做既有校验（分区数 / 副本数 / cleanup.policy），
+ *       漂移仅上报（指标 + 日志）并置 TopicReadiness=DOWN，不自动修改拓扑；
+ *       校验目录由 {@link VmdKafkaLogicalTopic} role=PRODUCER_OWNED 条目驱动，
+ *       保证与 FW-KAFKA 创建目录一致（CR-055/056 遗漏回归修复）</li>
  *   <li>对 CONSUMER_ONLY 观测 Topic 做可访问性探测，独立健康项，短时不存在不触发创建</li>
  * </ol>
  * 多实例并发创建幂等由 FW-KAFKA 的 TopicExistsException 处理承担，本组件回读校验。
@@ -137,13 +139,13 @@ public class VmdKafkaTopicInitializer {
     }
 
     /**
-     * 构造三个 PRODUCER_OWNED Topic 规格。
+     * 构造全部 PRODUCER_OWNED Topic 规格（SSOT 驱动，与 FW-KAFKA 创建目录保持一致）。
      */
     private List<VmdKafkaTopicSpec> producerSpecs() {
-        return List.of(
-                spec(VmdKafkaLogicalTopic.PART_BINDING_CHANGED),
-                spec(VmdKafkaLogicalTopic.VEHICLE_PRODUCE),
-                spec(VmdKafkaLogicalTopic.SOFTWARE_INVENTORY_CHANGED));
+        return java.util.Arrays.stream(VmdKafkaLogicalTopic.values())
+                .filter(logical -> logical.role() == VmdKafkaTopicRole.PRODUCER_OWNED)
+                .map(this::spec)
+                .toList();
     }
 
     private VmdKafkaTopicSpec spec(VmdKafkaLogicalTopic logical) {
@@ -157,7 +159,7 @@ public class VmdKafkaTopicInitializer {
     }
 
     /**
-     * 对三个生产 Topic 执行既有校验；漂移仅上报，不自动修改。
+     * 对全部生产 Topic 执行既有校验；漂移仅上报，不自动修改。
      */
     private void validateProducerTopics() {
         List<VmdKafkaTopicSpec> specs = producerSpecs();
