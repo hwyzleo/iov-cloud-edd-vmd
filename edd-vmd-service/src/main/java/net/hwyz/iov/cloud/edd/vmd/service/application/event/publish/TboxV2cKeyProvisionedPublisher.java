@@ -1,6 +1,7 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.event.publish;
 
-import cn.hutool.json.JSONUtil;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.TboxV2cKeyProvisionedEvent;
@@ -22,6 +23,10 @@ import java.util.UUID;
  * 在完成事务内写入 vmd_outbox；eventId 生成后进入 payload，Relay 不注入 header。
  * 同一 requestId 最多产生一个逻辑成功事件；payload 不含 VIN、HSM UID、kmsKeyRef、
  * Wrapped Key、证书或密钥材料。
+ * <p>
+ * payload 采用 Jackson 序列化，时间字段 occurredAt 输出 ISO-8601（UTC）字符串
+ * （如 {@code 2026-10-27T14:57:34.340Z}），与消费端 Jackson 反序列化契约一致，
+ * 避免 hutool 默认将 {@code Instant} 序列化为 epoch 毫秒数字导致的单位歧义。
  *
  * @author hwyz_leo
  * @since 2026-10-12
@@ -38,6 +43,7 @@ public class TboxV2cKeyProvisionedPublisher {
 
     private final VmdOutboxRepository vmdOutboxRepository;
     private final VmdKafkaTopicRoutes topicRoutes;
+    private final ObjectMapper objectMapper;
 
     /**
      * 写入专用完成事件（须在完成事务内调用）
@@ -63,6 +69,14 @@ public class TboxV2cKeyProvisionedPublisher {
         TboxV2cKeyProvisionedEvent event = new TboxV2cKeyProvisionedEvent(
                 eventId, requestId, deviceSn, businessDomain, keys, RESULT_SUCCEEDED, Instant.now());
 
+        String payload;
+        try {
+            payload = objectMapper.writeValueAsString(event);
+        } catch (JsonProcessingException e) {
+            log.error("TboxV2cKeyProvisioned 事件序列化失败，跳过发布: requestId={}, deviceSn={}", requestId, deviceSn, e);
+            return;
+        }
+
         VmdOutbox outbox = VmdOutbox.builder()
                 .eventId(eventId)
                 .eventType(EVENT_TYPE)
@@ -71,7 +85,7 @@ public class TboxV2cKeyProvisionedPublisher {
                 .aggregateVersion(System.currentTimeMillis())
                 .topic(topicRoutes.topicName(VmdKafkaLogicalTopic.TBOX_V2C_KEY_PROVISIONED))
                 .messageKey(deviceSn)
-                .payload(JSONUtil.toJsonStr(event))
+                .payload(payload)
                 .publishState("PENDING")
                 .retryCount(0)
                 .sourceType(SOURCE_TYPE)
