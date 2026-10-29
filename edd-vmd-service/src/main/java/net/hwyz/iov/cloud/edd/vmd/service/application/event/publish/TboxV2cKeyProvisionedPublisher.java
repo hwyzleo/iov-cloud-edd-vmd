@@ -1,13 +1,12 @@
 package net.hwyz.iov.cloud.edd.vmd.service.application.event.publish;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.TboxV2cKeyProvisionedEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.BusinessKeyProvisioningItem;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VmdOutbox;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VmdOutboxRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.config.VmdEventJsonCodec;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging.kafka.VmdKafkaLogicalTopic;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging.kafka.VmdKafkaTopicRoutes;
 import org.springframework.stereotype.Component;
@@ -24,16 +23,17 @@ import java.util.UUID;
  * 同一 requestId 最多产生一个逻辑成功事件；payload 不含 VIN、HSM UID、kmsKeyRef、
  * Wrapped Key、证书或密钥材料。
  * <p>
- * payload 采用 Jackson 序列化，时间字段 occurredAt 输出 ISO-8601（UTC）字符串
- * （如 {@code 2026-10-27T14:57:34.340Z}），与消费端 Jackson 反序列化契约一致，
- * 避免 hutool 默认将 {@code Instant} 序列化为 epoch 毫秒数字导致的单位歧义。
+ * payload 采用受控专用 ISO codec（VMD-DSN-CR-070 既有边界例外，见
+ * {@code VmdEventJsonCodec}）序列化：时间字段 occurredAt 固定输出 ISO-8601（UTC）字符串
+ * （如 {@code 2026-10-27T14:57:34.340Z}），与消费端 TSP（TSP-DSN-CR-013 双读）契约一致，
+ * 避免 hutool 默认将 {@code Instant} 序列化为 epoch 毫秒数字导致的单位歧义；
+ * 不随全局 date-format=epoch-millis 模式退回数字（CR-070 §5.10.2 例外登记）。
  *
  * @author hwyz_leo
  * @since 2026-10-12
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class TboxV2cKeyProvisionedPublisher {
 
     private static final String EVENT_TYPE = "TboxV2cKeyProvisionedEvent";
@@ -43,7 +43,15 @@ public class TboxV2cKeyProvisionedPublisher {
 
     private final VmdOutboxRepository vmdOutboxRepository;
     private final VmdKafkaTopicRoutes topicRoutes;
-    private final ObjectMapper objectMapper;
+    private final VmdEventJsonCodec eventJsonCodec;
+
+    public TboxV2cKeyProvisionedPublisher(VmdOutboxRepository vmdOutboxRepository,
+                                          VmdKafkaTopicRoutes topicRoutes,
+                                          VmdEventJsonCodec eventJsonCodec) {
+        this.vmdOutboxRepository = vmdOutboxRepository;
+        this.topicRoutes = topicRoutes;
+        this.eventJsonCodec = eventJsonCodec;
+    }
 
     /**
      * 写入专用完成事件（须在完成事务内调用）
@@ -71,7 +79,7 @@ public class TboxV2cKeyProvisionedPublisher {
 
         String payload;
         try {
-            payload = objectMapper.writeValueAsString(event);
+            payload = eventJsonCodec.writeAsString(event);
         } catch (JsonProcessingException e) {
             log.error("TboxV2cKeyProvisioned 事件序列化失败，跳过发布: requestId={}, deviceSn={}", requestId, deviceSn, e);
             return;

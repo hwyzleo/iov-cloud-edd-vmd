@@ -1,7 +1,18 @@
-mybatis-plus:
-  type-aliases-package: net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po
-
+# VMD-DSN-CR-070：JSON java.time 时间契约治理（兼容阶段，FW-WEB-DSN-CR-001 框架 P1）
+# 统一框架决策：FW-WEB-DSN-CR-001；需求 FR-070-1~5（VMD-REQ-CR-070）。
+# 兼容阶段策略（写单一、读兼容）：
+#   - date-format=epoch-millis：显式冻结存量毫秒数字输出（旧框架 epoch serializer 行为），不输出数组/秒小数；
+#   - 双读始终生效（IovJavaTimeReadModule：ISO 字符串 + 10 位 epoch 秒 + 13 位 epoch 毫秒，非法输入 fail-closed）；
+#   - zone-id：业务 ZoneId（LocalDateTime/OffsetDateTime 数字路径语义）。缺省为空 → 启动探针阻断，
+#     禁止猜值通过；注入值须经生产实例 ZoneId.systemDefault()/-Duser.timezone/容器 TZ 与 DB→JDBC→Java→JSON
+#     对账链核验（P0 门禁，见 docs/vmd-dsn-cr070-json-time-inventory.md）。
+#   - ISO 输出切换：留待各消费方双读部署并签收后逐依赖边灰度（本 CR 不切全局 ISO）。
+# 排除面不变：Keyprov Proto bytes、canonical/wire digest、签名、证书 DER、KL1 租约与冻结 Outbox payload 原样。
 iov:
+  web:
+    jackson:
+      date-format: epoch-millis
+      zone-id: ${VMD_JACKSON_ZONE_ID:}
   kafka:
     topic-provisioning:
       # 服务启动后检查并创建 VMD 作为生产者输出的三个标准 Kafka Topic

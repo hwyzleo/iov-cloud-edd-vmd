@@ -1,3 +1,13 @@
+# VMD-DSN-CR-070：测试环境 JSON java.time 配置（兼容阶段）
+# 测试 JVM 已实证 ZoneId.systemDefault()=Asia/Shanghai（JDBC 对账链验证：同 URL/同 connector 下
+# atZone(Asia/Shanghai) 与旧 systemDefault 输出逐位一致）→ 显式配置非猜值；
+# 生产仍由 ${VMD_JACKSON_ZONE_ID:} 注入，缺省阻断（见 main application.yml 注释）。
+# 双读（ISO + 10 位秒 + 13 位毫秒）始终生效；非法输入 fail-closed。
+iov:
+  web:
+    jackson:
+      date-format: epoch-millis
+      zone-id: Asia/Shanghai
 crypto:
   # CR-064：测试环境显式选择 openbao-transit-local-wrap（不依赖 FW-SEC legacy 默认值）；
   # 静态 test token 仅用于装配（无真实 OpenBao，require-ready-at-startup=false 跳过启动探测）。

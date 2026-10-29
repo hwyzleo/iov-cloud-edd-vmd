@@ -2,11 +2,10 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.event.publish;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.DeviceBusinessKey;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VmdOutbox;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VmdOutboxRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.config.VmdEventJsonCodec;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging.kafka.VmdKafkaLogicalTopic;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging.kafka.VmdKafkaTopicRoutes;
 import org.junit.jupiter.api.BeforeEach;
@@ -53,11 +52,10 @@ class BusinessKeyChangedPublisherTest {
 
     @BeforeEach
     void setUp() {
-        // 模拟 Spring Boot 默认 ObjectMapper：JavaTimeModule + 关闭 WRITE_DATES_AS_TIMESTAMPS
-        objectMapper = new ObjectMapper()
-                .registerModule(new JavaTimeModule())
-                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-        publisher = new BusinessKeyChangedPublisher(vmdOutboxRepository, topicRoutes, objectMapper);
+        // 使用真实生产 codec（VmdEventJsonCodec，VMD-DSN-CR-070 既有边界例外），
+        // 而非测试内临时构造的理想化 mapper——锁定受控专用 ISO codec 的真实行为。
+        objectMapper = new VmdEventJsonCodec().mapper();
+        publisher = new BusinessKeyChangedPublisher(vmdOutboxRepository, topicRoutes, new VmdEventJsonCodec());
         lenient().when(topicRoutes.topicName(VmdKafkaLogicalTopic.BUSINESS_KEY_CHANGED)).thenReturn(TOPIC);
     }
 
