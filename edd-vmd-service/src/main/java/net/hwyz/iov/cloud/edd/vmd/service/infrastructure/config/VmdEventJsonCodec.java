@@ -29,7 +29,7 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
  *   <li>历史 Outbox payload 由 Relay 原样重发，本 codec 不对其重编码。</li>
  * </ul>
  * 例外登记：本 codec 属于 CR-070「兼容阶段保持旧输出」通用条款的显式例外，已回写
- * VMD-DSN-CR-070 与字段清单（docs/vmd-dsn-cr070-json-time-inventory.md）；
+ * VMD-DSN-CR-070（Notion 实现与验证记录）与字段清单；
  * 待办 P0：线上 Topic 实际格式核验 + 全部真实消费方签收证据（生产事实，由部署方提供）。
  *
  * @author hwyz_leo
