@@ -62,6 +62,47 @@ class VehImportReplayExtractorTest {
     }
 
     @Test
+    @DisplayName("EOL新格式ECU_BASELINE应提取候选零件（ASSEMBLY_PART_NO + SN，CR-043）")
+    void extractEolEcuBaselineCandidates() {
+        String data = "{\"REQUEST\":{\"DATA\":{\"ITEMS\":[{\"VIN\":\"vin-g\",\"EOL_TIME\":1784391702000,\"ECU_BASELINE\":["
+                + "{\"VEHICLE_NODE\":\"TBOX_5G\",\"SN\":\"00000002AA00000001\",\"ASSEMBLY_PART_NO\":\"00000001AA\",\"HARDWARE_PART_NO\":\"00000002AA\"},"
+                + "{\"VEHICLE_NODE\":\"DCU_COCKPIT_SA8295P\",\"SN\":\"00000005AA00000001\",\"ASSEMBLY_PART_NO\":\"00000004AA\"},"
+                + "{\"VEHICLE_NODE\":\"CCU_GEN1\",\"SN\":\"00000008AA00000001\",\"HARDWARE_PART_NO\":\"00000008AA\"}]}]}}}";
+
+        List<VehImportReplayExtractor.VehCandidate> candidates = extractor.extractCandidates(data, "EOL");
+
+        assertEquals(1, candidates.size());
+        VehImportReplayExtractor.VehCandidate candidate = candidates.get(0);
+        assertEquals("VIN-G", candidate.vin());
+        assertEquals(Instant.ofEpochMilli(1784391702000L), candidate.eolTime());
+        assertEquals(3, candidate.parts().size());
+        // ASSEMBLY_PART_NO 优先于 HARDWARE_PART_NO
+        assertEquals("00000001AA", candidate.parts().get(0).partCode());
+        assertEquals("00000002AA00000001", candidate.parts().get(0).sn());
+        // 仅 ASSEMBLY_PART_NO 时正常提取
+        assertEquals("00000004AA", candidate.parts().get(1).partCode());
+        assertEquals("00000005AA00000001", candidate.parts().get(1).sn());
+        // ASSEMBLY_PART_NO 为空时兑底 HARDWARE_PART_NO
+        assertEquals("00000008AA", candidate.parts().get(2).partCode());
+        assertEquals("00000008AA00000001", candidate.parts().get(2).sn());
+    }
+
+    @Test
+    @DisplayName("EOL新格式ECU_BASELINE零件编码或SN为空应跳过")
+    void extractEolEcuBaselineSkipBlank() {
+        String data = "{\"REQUEST\":{\"DATA\":{\"ITEMS\":[{\"VIN\":\"vin-h\",\"ECU_BASELINE\":["
+                + "{\"VEHICLE_NODE\":\"TBOX_5G\",\"SN\":\"SN001\",\"ASSEMBLY_PART_NO\":\"\"},"
+                + "{\"VEHICLE_NODE\":\"CCU_GEN1\",\"SN\":\"\",\"ASSEMBLY_PART_NO\":\"PN003\"},"
+                + "{\"VEHICLE_NODE\":\"DCU_ADAS_GEN1\",\"SN\":\"SN004\",\"ASSEMBLY_PART_NO\":\"PN004\"}]}]}}}";
+
+        List<VehImportReplayExtractor.VehCandidate> candidates = extractor.extractCandidates(data, "EOL");
+
+        assertEquals(1, candidates.size());
+        assertEquals(1, candidates.get(0).parts().size());
+        assertEquals("PN004", candidates.get(0).parts().get(0).partCode());
+    }
+
+    @Test
     @DisplayName("EOL报文EOL_TIME缺失时兼容EOL_DATE yyyyMMdd")
     void extractEolDateFallback() {
         String data = "{\"REQUEST\":{\"DATA\":{\"ITEMS\":[{\"VIN\":\"vin-c\",\"EOL_DATE\":\"20260617\",\"PARTS\":[]}]}}}";

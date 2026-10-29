@@ -21,6 +21,8 @@ import java.util.Map;
  * <p>
  * 从 veh_import_data.data 原始报文只读提取并去重候选 VIN（PRODUCE/TOL/EOL），
  * TOL/EOL 同时提取每辆车的候选零件 (partCode, sn) 与 EOL 原批次时间。
+ * EOL 兼容两种报文格式：旧格式 ITEMS[].PARTS（PART_NO/PART_SN）与
+ * EOL V1.0 新格式 ITEMS[].ECU_BASELINE（ASSEMBLY_PART_NO/HARDWARE_PART_NO + SN，CR-043）。
  * <p>
  * 注意：本提取器不调用 ImportDataParserRegistry / 具体 *Parser / 六步内核，
  * 不执行字段校验或主体落库；原始报文仅负责候选集识别，payload 一律从当前事实构造。
@@ -103,6 +105,24 @@ public class VehImportReplayExtractor {
                     }
                 }
 
+                // EOL V1.0 新格式（CR-043）：零件清单位于 ECU_BASELINE，
+                // 字段映射与 EolDataParserV1_0.bindEcuBaselineParts 保持一致（ASSEMBLY_PART_NO→partCode、SN→sn）
+                if ("EOL".equals(importType)) {
+                    JSONArray ecuBaseline = itemJson.getJSONArray("ECU_BASELINE");
+                    if (ecuBaseline != null) {
+                        for (Object ecu : ecuBaseline) {
+                            JSONObject ecuJson = JSONUtil.parseObj(ecu);
+                            String partCode = extractEcuPartCode(ecuJson);
+                            String sn = ecuJson.getStr("SN");
+                            if (StrUtil.isBlank(partCode) || StrUtil.isBlank(sn)) {
+                                log.warn("原始报文存在空零件编码或SN的ECU基线记录，跳过: vin={}", vin);
+                                continue;
+                            }
+                            parts.add(new PartCandidate(partCode.trim(), sn.trim()));
+                        }
+                    }
+                }
+
                 // EOL 原批次时间：优先 EOL_TIME 毫秒时间戳，兼容 EOL_DATE yyyyMMdd
                 Instant itemEolTime = extractEolTime(itemJson);
                 if (itemEolTime != null && eolTime == null) {
@@ -134,6 +154,17 @@ public class VehImportReplayExtractor {
             return assemblyPartNo;
         }
         return partJson.getStr("HARDWARE_PART_NO");
+    }
+
+    /**
+     * 提取 EOL V1.0（CR-043）ECU_BASELINE 格式零件编码（ASSEMBLY_PART_NO 优先、HARDWARE_PART_NO 兜底）
+     */
+    private String extractEcuPartCode(JSONObject ecuJson) {
+        String assemblyPartNo = ecuJson.getStr("ASSEMBLY_PART_NO");
+        if (StrUtil.isNotBlank(assemblyPartNo)) {
+            return assemblyPartNo;
+        }
+        return ecuJson.getStr("HARDWARE_PART_NO");
     }
 
     /**
