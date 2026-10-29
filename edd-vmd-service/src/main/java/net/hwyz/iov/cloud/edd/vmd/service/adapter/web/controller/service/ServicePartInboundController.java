@@ -65,6 +65,8 @@ public class ServicePartInboundController {
                 .deviceItem(item.getDeviceItem())
                 .supplierCode(item.getSupplierCode())
                 .batchNum(batchNo)
+                // CR-071 §4.3：外层批次号贯通为 inboundBatchNo（入站批次）
+                .inboundBatchNo(batchNo)
                 .sourceEventId(item.getSourceEventId())
                 .extraFields(item.getExtraFields())
                 .build();

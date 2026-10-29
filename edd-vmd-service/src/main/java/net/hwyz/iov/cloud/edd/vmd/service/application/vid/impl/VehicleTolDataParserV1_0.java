@@ -21,6 +21,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleBasicInfo;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleNode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehiclePart;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.InboundSourceType;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.InboundSourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.PartInstanceState;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.VehiclePartBindResult;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmPartRepository;
@@ -49,6 +50,7 @@ public class VehicleTolDataParserV1_0 extends BaseProcessor implements VehicleIm
     private final VehBasicInfoRepository vehBasicInfoRepository;
     private final VehicleNodeAppService vehicleNodeAppService;
     private final PartInfoAppService partInfoAppService;
+    private final net.hwyz.iov.cloud.edd.vmd.service.application.service.PartInfoMutationAppService partInfoMutationAppService;
     private final VehiclePartAppService vehiclePartAppService;
     private final VehiclePublish vehiclePublish;
     private final MdmPartRepository mdmPartRepository;
@@ -173,9 +175,20 @@ public class VehicleTolDataParserV1_0 extends BaseProcessor implements VehicleIm
                             .supplierCode(supplierCode)
                             .hardwareVer(hardwareVersion)
                             .hardwarePn(hardwarePartNo)
+                            .source(InboundSourceType.TOL)
                             .instanceState(PartInstanceState.IN_USE.value)
                             .build();
-                    partInfoAppService.upsertPartInfo(partInfo);
+                    // CR-071：经统一变更写服务（TOL 通道，治理字段 + 属性历史同事务）
+                    partInfoMutationAppService.create(partInfo,
+                            net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.PartInfoPatchCmd.builder()
+                                    .changeType("INBOUND")
+                                    .operationSource("VEHICLE_IMPORT")
+                                    .operatorId("SYSTEM")
+                                    .source("TOL")
+                                    .operationId("NONE")
+                                    .phase("BINDING")
+                                    .seq(1)
+                                    .build());
 
                     // 校验零件实例 ID 是否有效
                     if (partInfo.getId() == null) {

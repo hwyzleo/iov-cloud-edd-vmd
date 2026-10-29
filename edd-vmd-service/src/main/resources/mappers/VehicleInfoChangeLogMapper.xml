@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.VehicleInfoChangeLogMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="baseResultMap" type="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VehicleInfoChangeLogPo">
+        <id column="id" property="id" />
+        <result column="vehicle_id" property="vehicleId" />
+        <result column="vin" property="vin" />
+        <result column="change_type" property="changeType" />
+        <result column="before_json" property="beforeJson" />
+        <result column="after_json" property="afterJson" />
+        <result column="changed_fields" property="changedFields" />
+        <result column="source" property="source" />
+        <result column="operation_source" property="operationSource" />
+        <result column="operator_id" property="operatorId" />
+        <result column="operator_name" property="operatorName" />
+        <result column="change_time" property="changeTime" />
+        <result column="source_event_time" property="sourceEventTime" />
+        <result column="source_event_id" property="sourceEventId" />
+        <result column="operation_id" property="operationId" />
+        <result column="mutation_key" property="mutationKey" />
+        <result column="row_version" property="rowVersion" />
+        <result column="metadata_json" property="metadataJson" />
+        <result column="description" property="description" />
+        <result column="create_time" property="createTime" />
+        <result column="create_by" property="createBy" />
+        <result column="modify_time" property="modifyTime" />
+        <result column="modify_by" property="modifyBy" />
+        <result column="row_valid" property="rowValid" />
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="baseColumnList">
+        id, vehicle_id, vin, change_type, before_json, after_json, changed_fields, source, operation_source,
+        operator_id, operator_name, change_time, source_event_time, source_event_id, operation_id,
+        mutation_key, row_version, metadata_json,
+        description, create_time, create_by, modify_time, modify_by, row_version, row_valid
+    </sql>
+
+    <!-- 按车辆基础信息ID与业务版本查询 -->
+    <select id="selectByVehicleIdAndRowVersion" parameterType="map" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList"/>
+        FROM tb_vehicle_info_change_log t
+        WHERE t.row_valid = 1
+          AND t.vehicle_id = #{vehicleId}
+          AND t.row_version = #{rowVersion}
+        LIMIT 1
+    </select>
+
+</mapper>

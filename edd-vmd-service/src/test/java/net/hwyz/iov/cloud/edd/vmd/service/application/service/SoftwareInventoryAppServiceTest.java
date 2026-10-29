@@ -96,7 +96,7 @@ class SoftwareInventoryAppServiceTest {
                 "digest1", null, "INITIAL",
                 SOURCE, "evt-001", Instant.parse("2026-09-08T10:00:00Z"),
                 Instant.parse("2026-09-08T10:00:00Z"), true,
-                true, "obs-001", 1, "sha-001", Instant.parse("2026-09-08T10:01:00Z"));
+                true, "obs-001", 1, "sha-001", Instant.parse("2026-09-08T10:01:00Z"), null);
 
         // Then
         assertTrue(result.applied());
@@ -161,7 +161,7 @@ class SoftwareInventoryAppServiceTest {
                 PART_ID, BINDING_ID, VIN, TARGET, "SW-PN", "1.0.0",
                 null, "B", "UPGRADE", SOURCE, "evt-003",
                 Instant.parse("2026-09-08T12:00:00Z"), Instant.parse("2026-09-08T12:00:00Z"), true,
-                true, "obs-002", 1, "sha-002", null);
+                true, "obs-002", 1, "sha-002", null, null);
 
         // Then：active 槽切换不被同版本忽略，执行写入并重置其他槽 active 标记
         assertTrue(result.applied());
@@ -184,7 +184,7 @@ class SoftwareInventoryAppServiceTest {
                 PART_ID, BINDING_ID, VIN, TARGET, "SW-PN", "1.0.0",
                 null, "A", "INITIAL", SOURCE, "evt-004",
                 Instant.parse("2026-09-08T11:00:00Z"), Instant.parse("2026-09-08T11:00:00Z"), true,
-                true, "obs-003", 1, "sha-003", null);
+                true, "obs-003", 1, "sha-003", null, null);
 
         // Then
         assertFalse(result.applied());
@@ -203,14 +203,14 @@ class SoftwareInventoryAppServiceTest {
                 PART_ID, BINDING_ID, VIN, TARGET, "SW-PN", "1.0.0",
                 null, "A", "INITIAL", SOURCE, "evt-A",
                 Instant.parse("2026-09-08T10:00:00Z"), Instant.parse("2026-09-08T10:00:00Z"), true,
-                true, "obs-A", 1, "sha-A", null);
+                true, "obs-A", 1, "sha-A", null, null);
 
         when(repository.selectActiveByPartIdTargetCodeAndSlot(PART_ID, TARGET, "B")).thenReturn(null);
         SoftwareInventoryAppService.ApplyManifestResult resultB = appService.applyManifest(
                 PART_ID, BINDING_ID, VIN, TARGET, "SW-PN", "1.0.0",
                 null, "B", "INITIAL", SOURCE, "evt-B",
                 Instant.parse("2026-09-08T10:00:00Z"), Instant.parse("2026-09-08T10:00:00Z"), true,
-                false, "obs-B", 1, "sha-B", null);
+                false, "obs-B", 1, "sha-B", null, null);
 
         // Then：A active 写入时不 reset（无其他槽），B standby 写入时不 reset
         assertTrue(resultA.applied());

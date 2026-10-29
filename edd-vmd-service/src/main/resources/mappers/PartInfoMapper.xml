@@ -18,6 +18,16 @@
         <result column="extra" property="extra" />
         <result column="instance_state" property="instanceState" />
         <result column="first_seen_time" property="firstSeenTime" />
+        <result column="source" property="source" />
+        <result column="part_type" property="partType" />
+        <result column="inbound_batch_no" property="inboundBatchNo" />
+        <result column="source_event_id" property="sourceEventId" />
+        <result column="last_inbound_time" property="lastInboundTime" />
+        <result column="software_snapshot_state" property="softwareSnapshotState" />
+        <result column="software_snapshot_installation_id" property="softwareSnapshotInstallationId" />
+        <result column="software_snapshot_target" property="softwareSnapshotTarget" />
+        <result column="software_snapshot_slot" property="softwareSnapshotSlot" />
+        <result column="software_snapshot_inventory_version" property="softwareSnapshotInventoryVersion" />
         <result column="description" property="description" />
         <result column="create_time" property="createTime" />
         <result column="create_by" property="createBy" />
@@ -31,6 +41,8 @@
     <!-- 通用查询结果列 -->
     <sql id="baseColumnList">
         id, part_code, sn, vehicle_node_code, config_word, supplier_code, batch_num, hardware_ver, software_ver, hardware_pn, software_pn, extra, instance_state, first_seen_time,
+        source, part_type, inbound_batch_no, source_event_id, last_inbound_time,
+        software_snapshot_state, software_snapshot_installation_id, software_snapshot_target, software_snapshot_slot, software_snapshot_inventory_version,
         description, create_time, create_by, modify_time, modify_by, row_version, row_valid
     </sql>
 
@@ -38,10 +50,14 @@
     <insert id="insertPo" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO tb_part_info (
             id, part_code, sn, vehicle_node_code, config_word, supplier_code, batch_num, hardware_ver, software_ver, hardware_pn, software_pn, extra, instance_state, first_seen_time,
+            source, part_type, inbound_batch_no, source_event_id, last_inbound_time,
+            software_snapshot_state, software_snapshot_installation_id, software_snapshot_target, software_snapshot_slot, software_snapshot_inventory_version,
             description, create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
         VALUES (
             #{id}, #{partCode}, #{sn}, #{vehicleNodeCode}, #{configWord}, #{supplierCode}, #{batchNum}, #{hardwareVer}, #{softwareVer}, #{hardwarePn}, #{softwarePn}, #{extra}, #{instanceState}, #{firstSeenTime},
+            #{source}, #{partType}, #{inboundBatchNo}, #{sourceEventId}, #{lastInboundTime},
+            #{softwareSnapshotState}, #{softwareSnapshotInstallationId}, #{softwareSnapshotTarget}, #{softwareSnapshotSlot}, #{softwareSnapshotInventoryVersion},
             #{description}, now(), #{createBy}, now(), #{modifyBy}, 1, 1
         )
     </insert>
@@ -50,12 +66,16 @@
     <insert id="batchInsertPo" useGeneratedKeys="true" keyProperty="id" parameterType="java.util.List">
         INSERT INTO tb_part_info (
             id, part_code, sn, vehicle_node_code, config_word, supplier_code, batch_num, hardware_ver, software_ver, hardware_pn, software_pn, extra, instance_state, first_seen_time,
+            source, part_type, inbound_batch_no, source_event_id, last_inbound_time,
+            software_snapshot_state, software_snapshot_installation_id, software_snapshot_target, software_snapshot_slot, software_snapshot_inventory_version,
             description, create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
         VALUES
         <foreach collection="list" item="item" index="index" separator=",">
         (
             #{item.id}, #{item.partCode}, #{item.sn}, #{item.vehicleNodeCode}, #{item.configWord}, #{item.supplierCode}, #{item.batchNum}, #{item.hardwareVer}, #{item.softwareVer}, #{item.hardwarePn}, #{item.softwarePn}, #{item.extra}, #{item.instanceState}, #{item.firstSeenTime},
+            #{item.source}, #{item.partType}, #{item.inboundBatchNo}, #{item.sourceEventId}, #{item.lastInboundTime},
+            #{item.softwareSnapshotState}, #{item.softwareSnapshotInstallationId}, #{item.softwareSnapshotTarget}, #{item.softwareSnapshotSlot}, #{item.softwareSnapshotInventoryVersion},
             #{item.description}, now(), #{item.createBy}, now(), #{item.modifyBy}, 1, 1
         )
         </foreach>
@@ -100,6 +120,36 @@
         <if test="instanceState != null">
             t.instance_state = #{instanceState},
         </if>
+        <if test="source != null and source != ''">
+            t.source = #{source},
+        </if>
+        <if test="partType != null and partType != ''">
+            t.part_type = #{partType},
+        </if>
+        <if test="inboundBatchNo != null and inboundBatchNo != ''">
+            t.inbound_batch_no = #{inboundBatchNo},
+        </if>
+        <if test="sourceEventId != null and sourceEventId != ''">
+            t.source_event_id = #{sourceEventId},
+        </if>
+        <if test="lastInboundTime != null">
+            t.last_inbound_time = #{lastInboundTime},
+        </if>
+        <if test="softwareSnapshotState != null and softwareSnapshotState != ''">
+            t.software_snapshot_state = #{softwareSnapshotState},
+        </if>
+        <if test="softwareSnapshotInstallationId != null">
+            t.software_snapshot_installation_id = #{softwareSnapshotInstallationId},
+        </if>
+        <if test="softwareSnapshotTarget != null and softwareSnapshotTarget != ''">
+            t.software_snapshot_target = #{softwareSnapshotTarget},
+        </if>
+        <if test="softwareSnapshotSlot != null and softwareSnapshotSlot != ''">
+            t.software_snapshot_slot = #{softwareSnapshotSlot},
+        </if>
+        <if test="softwareSnapshotInventoryVersion != null">
+            t.software_snapshot_inventory_version = #{softwareSnapshotInventoryVersion},
+        </if>
         <if test="description != null and description != ''">
             t.description = #{description},
         </if>
@@ -109,6 +159,98 @@
         t.row_version = t.row_version + 1,
         t.modify_time = now()
         WHERE id = #{id}
+    </update>
+
+    <!-- CAS 补丁更新（CR-071）：按期望版本更新白名单字段；投影列可显式置 null -->
+    <update id="patchPoByExpectedVersion" parameterType="map">
+        UPDATE tb_part_info t SET
+        <if test="po.vehicleNodeCode != null">
+            t.vehicle_node_code = #{po.vehicleNodeCode},
+        </if>
+        <if test="po.configWord != null">
+            t.config_word = #{po.configWord},
+        </if>
+        <if test="po.supplierCode != null">
+            t.supplier_code = #{po.supplierCode},
+        </if>
+        <if test="po.batchNum != null">
+            t.batch_num = #{po.batchNum},
+        </if>
+        <if test="po.hardwareVer != null">
+            t.hardware_ver = #{po.hardwareVer},
+        </if>
+        <if test="po.softwareVer != null">
+            t.software_ver = #{po.softwareVer},
+        </if>
+        <if test="po.hardwarePn != null">
+            t.hardware_pn = #{po.hardwarePn},
+        </if>
+        <if test="po.softwarePn != null">
+            t.software_pn = #{po.softwarePn},
+        </if>
+        <if test="po.extra != null">
+            t.extra = #{po.extra},
+        </if>
+        <if test="po.instanceState != null">
+            t.instance_state = #{po.instanceState},
+        </if>
+        <if test="po.source != null">
+            t.source = #{po.source},
+        </if>
+        <if test="po.partType != null">
+            t.part_type = #{po.partType},
+        </if>
+        <if test="po.inboundBatchNo != null">
+            t.inbound_batch_no = #{po.inboundBatchNo},
+        </if>
+        <if test="po.sourceEventId != null">
+            t.source_event_id = #{po.sourceEventId},
+        </if>
+        <if test="po.lastInboundTime != null">
+            t.last_inbound_time = #{po.lastInboundTime},
+        </if>
+        <if test="po.softwareSnapshotState != null">
+            t.software_snapshot_state = #{po.softwareSnapshotState},
+        </if>
+        <if test="po.softwareSnapshotInstallationId != null">
+            t.software_snapshot_installation_id = #{po.softwareSnapshotInstallationId},
+        </if>
+        <if test="po.softwareSnapshotTarget != null">
+            t.software_snapshot_target = #{po.softwareSnapshotTarget},
+        </if>
+        <if test="po.softwareSnapshotSlot != null">
+            t.software_snapshot_slot = #{po.softwareSnapshotSlot},
+        </if>
+        <if test="po.softwareSnapshotInventoryVersion != null">
+            t.software_snapshot_inventory_version = #{po.softwareSnapshotInventoryVersion},
+        </if>
+        <!-- 显式置 null 字段（软件投影元数据/值在不可判定时清空） -->
+        <if test="nullFields != null and nullFields.contains('softwareVer')">
+            t.software_ver = null,
+        </if>
+        <if test="nullFields != null and nullFields.contains('softwarePn')">
+            t.software_pn = null,
+        </if>
+        <if test="nullFields != null and nullFields.contains('softwareSnapshotInstallationId')">
+            t.software_snapshot_installation_id = null,
+        </if>
+        <if test="nullFields != null and nullFields.contains('softwareSnapshotTarget')">
+            t.software_snapshot_target = null,
+        </if>
+        <if test="nullFields != null and nullFields.contains('softwareSnapshotSlot')">
+            t.software_snapshot_slot = null,
+        </if>
+        <if test="nullFields != null and nullFields.contains('softwareSnapshotInventoryVersion')">
+            t.software_snapshot_inventory_version = null,
+        </if>
+        <if test="po.modifyBy != null">
+            t.modify_by = #{po.modifyBy},
+        </if>
+        t.row_version = t.row_version + 1,
+        t.modify_time = now()
+        WHERE t.id = #{po.id}
+          AND t.row_valid = 1
+          AND t.row_version = #{expectedRowVersion}
     </update>
 
     <!-- 逻辑删除 -->

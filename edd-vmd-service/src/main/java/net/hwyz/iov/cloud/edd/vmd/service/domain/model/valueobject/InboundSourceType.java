@@ -21,7 +21,11 @@ public enum InboundSourceType {
     MANUAL("MANUAL", "手动导入"),
     WMS("WMS", "仓储管理系统"),
     IQC("IQC", "来料检验"),
-    OTHER("OTHER", "其他");
+    OTHER("OTHER", "其他"),
+    // CR-071 §4.3：新增车辆导入通道来源（经确认的该导入通道、原生产系统未命名）
+    EOL("EOL", "电检下线"),
+    TOL("TOL", "试制下线"),
+    PRODUCE("PRODUCE", "生产上线");
 
     private final String value;
     private final String label;

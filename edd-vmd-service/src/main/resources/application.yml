@@ -232,6 +232,17 @@ vmd:
     changed:
       kafka:
         # 软件清单变更事件经 vmd_outbox → OutboxRelay 发布（Key=VIN）；topic 由 vmd.kafka.topics.software-inventory-changed 提供
+    snapshot:
+      # CR-071 §5.1：主软件判定 = 该零件所有 confirmed ACTIVE（active slot）候选中
+      # SOFTWARE_TYPE 优先级最高者（列表顺序 = 优先级，0 最主）；投影其 software_pn/ver + 元数据。
+      # 优先级未配置的类型不参与主选 → 投影 AMBIGUOUS(PRIMARY_TYPE_UNMAPPED)，绝不取 SOFTWARE[0]。
+      # 前提：SSOT（tb_part_software_installation.software_type）已由 EOL 链路写入 SOFTWARE_TYPE。
+      # 生产建议经 Nacos（application.yaml）下发并受治理。
+      primary-software-types:
+        # - APP
+        # - CALIBRATION
+        # - BOOT
+        []
 
 # MDM同步配置（VMD-DSN-CR-052：Topic 名称统一由 vmd.kafka.topics.mdm.* 提供，归 EDD-MDM 管理）
 # 迁移映射（旧名 → 目录名，REQ §3.1.3；观察期结束后清理旧配置，代码/测试已零引用）:

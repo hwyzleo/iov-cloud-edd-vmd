@@ -3,247 +3,120 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.vid.impl;
 import cn.hutool.json.JSONArray;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
-import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.VehicleEolPartBoundEvent;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.PartInfoPatchCmd;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartInfoAppService;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartInfoMutationAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleNodeAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehiclePartAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartInfo;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleNode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehiclePart;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartInfoRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+/**
+ * 车辆零件绑定组件单元测试（CR-071 §4.2/§4.4 已绑同件补列/不同件拒绝）
+ *
+ * @author hwyz_leo
+ * @since 2026-10-29
+ */
 @ExtendWith(MockitoExtension.class)
 class VehiclePartBinderTest {
 
     @Mock
     private PartInfoAppService partInfoAppService;
-
     @Mock
     private VehiclePartAppService vehiclePartAppService;
-
     @Mock
     private VehicleNodeAppService vehicleNodeAppService;
+    @Mock
+    private PartInfoRepository partInfoRepository;
+    @Mock
+    private PartInfoMutationAppService partInfoMutationAppService;
 
-    @InjectMocks
     private VehiclePartBinder binder;
 
-    private static final String VIN = "HWYZTEST000000001";
-    private static final String BATCH_NUM = "BATCH001";
+    @BeforeEach
+    void setUp() {
+        binder = new VehiclePartBinder(partInfoAppService, vehiclePartAppService,
+                vehicleNodeAppService, partInfoRepository, partInfoMutationAppService);
+    }
 
-    @Test
-    void bindParts_validParts_bindsAndReturnsMetaList() {
-        JSONArray parts = new JSONArray();
+    private JSONArray parts(String sn, String pn) {
         JSONObject part = new JSONObject();
-        part.set("DEVICE_CODE", "TBOX001");
-        part.set("VIN", VIN);
-        part.set("PART_NO", "PN001");
-        part.set("PART_SN", "SN001");
-        part.set("SUPPLIER_CODE", "SUP001");
-        part.set("CONFIG_WORD", "CW01");
-        part.set("HARDWARE_VERSION", "HW1.0");
-        part.set("SOFTWARE_VERSION", "SW1.0");
-        part.set("HARDWARE_PN", "HPN001");
-        part.set("SOFTWARE_PN", "SPN001");
-        part.set("ICCID1", "IC001");
-        part.set("ICCID2", "IC002");
-        parts.add(part);
-
-        VehicleNode device = VehicleNode.builder().code("TBOX001").deviceCategory("TBOX").build();
-        when(vehicleNodeAppService.getVehicleNodeByCode("TBOX001")).thenReturn(device);
-
-        List<VehicleEolPartBoundEvent.PartMeta> result = binder.bindParts(parts, VIN, BATCH_NUM);
-
-        assertEquals(1, result.size());
-        VehicleEolPartBoundEvent.PartMeta meta = result.get(0);
-        assertEquals("SN001", meta.getSn());
-        assertEquals("PN001", meta.getCode());
-        assertEquals("TBOX001", meta.getVehicleNodeCode());
-        assertEquals("TBOX", meta.getDeviceItem());
-        verify(partInfoAppService).upsertPartInfo(any(PartInfo.class));
-        verify(vehiclePartAppService).bindVehiclePart(any(VehiclePart.class));
+        part.set("VIN", "VIN001");
+        part.set("DEVICE_CODE", "TBOX_5G");
+        part.set("PART_NO", pn);
+        part.set("PART_SN", sn);
+        part.set("HARDWARE_PN", "HW1");
+        part.set("HARDWARE_VERSION", "H1.0");
+        JSONArray array = new JSONArray();
+        array.add(part);
+        return array;
     }
 
     @Test
-    void bindParts_blankDeviceCode_skipsPart() {
-        JSONArray parts = new JSONArray();
-        JSONObject part = new JSONObject();
-        part.set("DEVICE_CODE", "");
-        part.set("VIN", VIN);
-        parts.add(part);
+    @DisplayName("已绑同件：经 mutation 补列（FILL_MISSING），不重复绑定")
+    void alreadyBoundSamePart_patchColumnsWithoutRebind() {
+        PartInfo partInfo = PartInfo.builder().id(1L).partCode("PN1").sn("SN1").build();
+        VehiclePart binding = VehiclePart.builder().id(10L).partId(1L).bindState(1).build();
+        when(vehiclePartAppService.findByVinAndPosition("VIN001", "TBOX_5G")).thenReturn(binding);
+        when(partInfoRepository.selectByPartCodeAndSn("PN1", "SN1")).thenReturn(partInfo);
+        when(partInfoMutationAppService.patch(any()))
+                .thenReturn(new PartInfoMutationAppService.MutationResult("APPLIED", 2, java.util.Map.of("hardwareVer", "H1.0")));
 
-        List<VehicleEolPartBoundEvent.PartMeta> result = binder.bindParts(parts, VIN, BATCH_NUM);
+        binder.bindParts(parts("SN1", "PN1"), "VIN001", "BATCH-1");
 
-        assertTrue(result.isEmpty());
-        verify(partInfoAppService, never()).upsertPartInfo(any());
+        ArgumentCaptor<PartInfoPatchCmd> captor = ArgumentCaptor.forClass(PartInfoPatchCmd.class);
+        verify(partInfoMutationAppService).patch(captor.capture());
+        assertThat(captor.getValue().getHardwareVer()).isEqualTo("H1.0");
+        assertThat(captor.getValue().getRepairPolicy()).isEqualTo(PartInfoMutationAppService.POLICY_FILL_MISSING);
+        // 不重复绑定
         verify(vehiclePartAppService, never()).bindVehiclePart(any());
     }
 
     @Test
-    void bindParts_vinMismatch_skipsPart() {
-        JSONArray parts = new JSONArray();
-        JSONObject part = new JSONObject();
-        part.set("DEVICE_CODE", "TBOX001");
-        part.set("VIN", "DIFFERENT_VIN");
-        parts.add(part);
+    @DisplayName("已绑不同实例：拒绝补列/换绑")
+    void alreadyBoundDifferentPart_reject() {
+        VehiclePart binding = VehiclePart.builder().id(10L).partId(99L).bindState(1).build();
+        when(vehiclePartAppService.findByVinAndPosition("VIN001", "TBOX_5G")).thenReturn(binding);
+        when(partInfoRepository.selectByPartCodeAndSn("PN1", "SN1")).thenReturn(
+                PartInfo.builder().id(1L).partCode("PN1").sn("SN1").build());
 
-        List<VehicleEolPartBoundEvent.PartMeta> result = binder.bindParts(parts, VIN, BATCH_NUM);
+        binder.bindParts(parts("SN1", "PN1"), "VIN001", "BATCH-1");
 
-        assertTrue(result.isEmpty());
-        verify(partInfoAppService, never()).upsertPartInfo(any());
+        verify(partInfoMutationAppService, never()).patch(any());
         verify(vehiclePartAppService, never()).bindVehiclePart(any());
-    }
-
-    @Test
-    void bindParts_deviceNotFound_stillBindsWithNullDeviceItem() {
-        JSONArray parts = new JSONArray();
-        JSONObject part = new JSONObject();
-        part.set("DEVICE_CODE", "UNKNOWN");
-        part.set("VIN", VIN);
-        part.set("PART_NO", "PN001");
-        part.set("PART_SN", "SN001");
-        parts.add(part);
-
-        when(vehicleNodeAppService.getVehicleNodeByCode("UNKNOWN")).thenReturn(null);
-
-        List<VehicleEolPartBoundEvent.PartMeta> result = binder.bindParts(parts, VIN, BATCH_NUM);
-
-        assertEquals(1, result.size());
-        assertNull(result.get(0).getDeviceItem());
-        verify(partInfoAppService).upsertPartInfo(any(PartInfo.class));
-        verify(vehiclePartAppService).bindVehiclePart(any(VehiclePart.class));
-    }
-
-    @Test
-    void testCompensateBinding_skipIfAlreadyBound() {
-        JSONArray parts = new JSONArray();
-        JSONObject part = new JSONObject();
-        part.set("DEVICE_CODE", "TBOX001");
-        part.set("VIN", VIN);
-        part.set("PART_NO", "PN001");
-        part.set("PART_SN", "SN001");
-        part.set("SUPPLIER_CODE", "SUP001");
-        part.set("CONFIG_WORD", "CW01");
-        part.set("HARDWARE_VERSION", "HW1.0");
-        part.set("SOFTWARE_VERSION", "SW1.0");
-        part.set("HARDWARE_PN", "HPN001");
-        part.set("SOFTWARE_PN", "SPN001");
-        part.set("ICCID1", "IC001");
-        part.set("ICCID2", "IC002");
-        parts.add(part);
-
-        VehicleNode device = VehicleNode.builder().code("TBOX001").deviceCategory("TBOX").build();
-        when(vehicleNodeAppService.getVehicleNodeByCode("TBOX001")).thenReturn(device);
-
-        VehiclePart existingBinding = VehiclePart.builder().vin(VIN).vehicleNodeCode("TBOX001").bindState(1).build();
-        when(vehiclePartAppService.findByVinAndPosition(VIN, "TBOX001")).thenReturn(existingBinding);
-
-        List<VehicleEolPartBoundEvent.PartMeta> result = binder.bindParts(parts, VIN, BATCH_NUM);
-
-        assertEquals(1, result.size());
         verify(partInfoAppService, never()).upsertPartInfo(any());
-        verify(vehiclePartAppService, never()).bindVehiclePart(any());
-        verify(partInfoAppService).updateExtraFields(eq("PN001"), eq("SN001"), anyMap());
     }
 
     @Test
-    void testCompensateBinding_bindIfNotBound() {
-        JSONArray parts = new JSONArray();
-        JSONObject part = new JSONObject();
-        part.set("DEVICE_CODE", "TBOX001");
-        part.set("VIN", VIN);
-        part.set("PART_NO", "PN001");
-        part.set("PART_SN", "SN001");
-        part.set("SUPPLIER_CODE", "SUP001");
-        parts.add(part);
+    @DisplayName("未绑定：走 mutation create + 绑定（含来源通道）")
+    void notBound_upsertAndBind() {
+        when(vehiclePartAppService.findByVinAndPosition("VIN001", "TBOX_5G")).thenReturn(null);
+        when(partInfoMutationAppService.create(any(), any())).thenAnswer(invocation -> {
+            PartInfo partInfo = invocation.getArgument(0);
+            partInfo.setId(1L);
+            return new PartInfoMutationAppService.MutationResult("APPLIED", 1, java.util.Map.of());
+        });
 
-        VehicleNode device = VehicleNode.builder().code("TBOX001").deviceCategory("TBOX").build();
-        when(vehicleNodeAppService.getVehicleNodeByCode("TBOX001")).thenReturn(device);
+        binder.bindParts(parts("SN1", "PN1"), "VIN001", "BATCH-1");
 
-        when(vehiclePartAppService.findByVinAndPosition(VIN, "TBOX001")).thenReturn(null);
-
-        List<VehicleEolPartBoundEvent.PartMeta> result = binder.bindParts(parts, VIN, BATCH_NUM);
-
-        assertEquals(1, result.size());
-        verify(partInfoAppService).upsertPartInfo(any(PartInfo.class));
-        verify(vehiclePartAppService).bindVehiclePart(any(VehiclePart.class));
+        verify(partInfoMutationAppService).create(any(PartInfo.class), any());
+        verify(vehiclePartAppService).bindVehiclePart(any());
     }
 
-    @Test
-    void testBackfillPartDetails() {
-        JSONArray parts = new JSONArray();
-        JSONObject part = new JSONObject();
-        part.set("DEVICE_CODE", "TBOX001");
-        part.set("VIN", VIN);
-        part.set("PART_NO", "PN001");
-        part.set("PART_SN", "SN001");
-        part.set("SUPPLIER_CODE", "SUP001");
-        part.set("CONFIG_WORD", "CW01");
-        part.set("HARDWARE_VERSION", "HW1.0");
-        part.set("SOFTWARE_VERSION", "SW1.0");
-        part.set("HARDWARE_PN", "HPN001");
-        part.set("SOFTWARE_PN", "SPN001");
-        part.set("ICCID1", "IC001");
-        part.set("ICCID2", "IC002");
-        parts.add(part);
-
-        VehicleNode device = VehicleNode.builder().code("TBOX001").deviceCategory("TBOX").build();
-        when(vehicleNodeAppService.getVehicleNodeByCode("TBOX001")).thenReturn(device);
-
-        VehiclePart existingBinding = VehiclePart.builder().vin(VIN).vehicleNodeCode("TBOX001").bindState(1).build();
-        when(vehiclePartAppService.findByVinAndPosition(VIN, "TBOX001")).thenReturn(existingBinding);
-
-        List<VehicleEolPartBoundEvent.PartMeta> result = binder.bindParts(parts, VIN, BATCH_NUM);
-
-        assertEquals(1, result.size());
-        verify(partInfoAppService).updateExtraFields(eq("PN001"), eq("SN001"), argThat(extra ->
-                "CW01".equals(extra.get("configWord")) &&
-                "HW1.0".equals(extra.get("hardwareVersion")) &&
-                "SW1.0".equals(extra.get("softwareVersion")) &&
-                "HPN001".equals(extra.get("hardwarePn")) &&
-                "SPN001".equals(extra.get("softwarePn")) &&
-                "IC001".equals(extra.get("iccid1")) &&
-                "IC002".equals(extra.get("iccid2"))
-        ));
-    }
-
-    @Test
-    void bindParts_bindException_continuesWithNextPart() {
-        JSONArray parts = new JSONArray();
-        JSONObject part1 = new JSONObject();
-        part1.set("DEVICE_CODE", "DEV1");
-        part1.set("VIN", VIN);
-        part1.set("PART_NO", "PN1");
-        part1.set("PART_SN", "SN1");
-        parts.add(part1);
-
-        JSONObject part2 = new JSONObject();
-        part2.set("DEVICE_CODE", "DEV2");
-        part2.set("VIN", VIN);
-        part2.set("PART_NO", "PN2");
-        part2.set("PART_SN", "SN2");
-        parts.add(part2);
-
-        VehicleNode device1 = VehicleNode.builder().code("DEV1").deviceCategory("TBOX").build();
-        VehicleNode device2 = VehicleNode.builder().code("DEV2").deviceCategory("CCU").build();
-        when(vehicleNodeAppService.getVehicleNodeByCode("DEV1")).thenReturn(device1);
-        when(vehicleNodeAppService.getVehicleNodeByCode("DEV2")).thenReturn(device2);
-        doThrow(new RuntimeException("bind error")).when(vehiclePartAppService).bindVehiclePart(any());
-
-        List<VehicleEolPartBoundEvent.PartMeta> result = binder.bindParts(parts, VIN, BATCH_NUM);
-
-        // Both parts still added to meta list (add happens before bind attempt)
-        assertEquals(2, result.size());
-        verify(partInfoAppService, times(2)).upsertPartInfo(any(PartInfo.class));
-        verify(vehiclePartAppService, times(2)).bindVehiclePart(any(VehiclePart.class));
-    }
 }

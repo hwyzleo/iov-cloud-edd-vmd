@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.PartInfoChangeLogMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="baseResultMap" type="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.PartInfoChangeLogPo">
+        <id column="id" property="id" />
+        <result column="part_id" property="partId" />
+        <result column="change_type" property="changeType" />
+        <result column="before_json" property="beforeJson" />
+        <result column="after_json" property="afterJson" />
+        <result column="changed_fields" property="changedFields" />
+        <result column="source" property="source" />
+        <result column="operation_source" property="operationSource" />
+        <result column="operator_id" property="operatorId" />
+        <result column="operator_name" property="operatorName" />
+        <result column="change_time" property="changeTime" />
+        <result column="source_event_time" property="sourceEventTime" />
+        <result column="source_event_id" property="sourceEventId" />
+        <result column="inbound_batch_no" property="inboundBatchNo" />
+        <result column="operation_id" property="operationId" />
+        <result column="mutation_key" property="mutationKey" />
+        <result column="row_version" property="rowVersion" />
+        <result column="metadata_json" property="metadataJson" />
+        <result column="description" property="description" />
+        <result column="create_time" property="createTime" />
+        <result column="create_by" property="createBy" />
+        <result column="modify_time" property="modifyTime" />
+        <result column="modify_by" property="modifyBy" />
+        <result column="row_version" property="rowVersion" />
+        <result column="row_valid" property="rowValid" />
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="baseColumnList">
+        id, part_id, change_type, before_json, after_json, changed_fields, source, operation_source,
+        operator_id, operator_name, change_time, source_event_time, source_event_id, inbound_batch_no,
+        operation_id, mutation_key, row_version, metadata_json,
+        description, create_time, create_by, modify_time, modify_by, row_version, row_valid
+    </sql>
+
+    <!-- 按零件实例与业务版本查询 -->
+    <select id="selectByPartIdAndRowVersion" parameterType="map" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList"/>
+        FROM tb_part_info_change_log t
+        WHERE t.row_valid = 1
+          AND t.part_id = #{partId}
+          AND t.row_version = #{rowVersion}
+        LIMIT 1
+    </select>
+
+</mapper>

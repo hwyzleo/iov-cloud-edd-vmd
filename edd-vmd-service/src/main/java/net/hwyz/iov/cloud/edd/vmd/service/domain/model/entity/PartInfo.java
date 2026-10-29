@@ -123,6 +123,31 @@ public class PartInfo implements DomainObj<PartInfo> {
     private Instant lastInboundTime;
 
     /**
+     * 软件兼容投影状态（CR-071）：CURRENT/AMBIGUOUS/PROVISIONAL/UNAVAILABLE/LEGACY_UNVERIFIED
+     */
+    private String softwareSnapshotState;
+
+    /**
+     * 主软件投影来源安装记录ID（tb_part_software_installation.id）
+     */
+    private Long softwareSnapshotInstallationId;
+
+    /**
+     * 主软件投影来源 Target
+     */
+    private String softwareSnapshotTarget;
+
+    /**
+     * 主软件投影来源槽位
+     */
+    private String softwareSnapshotSlot;
+
+    /**
+     * 主软件投影来源清单版本
+     */
+    private Long softwareSnapshotInventoryVersion;
+
+    /**
      * 零件名称（来自零件定义表）
      */
     private String partName;
@@ -131,5 +156,15 @@ public class PartInfo implements DomainObj<PartInfo> {
      * 创建时间
      */
     private Date createTime;
+
+    /**
+     * 记录版本（乐观锁，对应 tb_part_info.row_version）
+     */
+    private Integer rowVersion;
+
+    /**
+     * 修改者
+     */
+    private String modifyBy;
 
 }

@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.mdm.api.service.SupplierService;
 import net.hwyz.iov.cloud.edd.mdm.api.vo.response.SupplierResponse;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.PartInfoPatchCmd;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.PartInboundValidateFailedException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.PartNotActiveException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.PartNotFoundException;
@@ -40,6 +41,7 @@ public class PartInboundAppService {
     private final VehiclePartAppService vehiclePartAppService;
     private final MdmPartRepository mdmPartRepository;
     private final SupplierService supplierService;
+    private final PartInfoMutationAppService partInfoMutationAppService;
 
     /**
      * 零件入站处理结果
@@ -95,8 +97,8 @@ public class PartInboundAppService {
                 // 步骤2: 标准化
                 PartInfo partInfo = normalizeRecord(record, source);
 
-                // 步骤3: 幂等upsert
-                partInfoAppService.upsertPartInfo(partInfo);
+                // 步骤3: 幂等upsert（CR-071：经统一变更写服务，治理列贯通 + 属性历史同事务）
+                upsertViaMutation(partInfo, record, source);
 
                 // 步骤4+5: 去重 + 建立绑定（如果VIN就绪）
                 if (StrUtil.isNotBlank(vin) && partInfo.getId() != null) {
@@ -143,8 +145,8 @@ public class PartInboundAppService {
         // 步骤2: 标准化
         PartInfo partInfo = normalizeRecord(record, source);
 
-        // 步骤3: 幂等upsert
-        partInfoAppService.upsertPartInfo(partInfo);
+        // 步骤3: 幂等upsert（CR-071：经统一变更写服务）
+        upsertViaMutation(partInfo, record, source);
 
         // 步骤4+5: 建立绑定
         if (StrUtil.isNotBlank(vin) && partInfo.getId() != null) {
@@ -250,6 +252,24 @@ public class PartInboundAppService {
                 .sourceEventId(record.getSourceEventId())
                 .lastInboundTime(Instant.now())
                 .build();
+    }
+
+    /**
+     * 幂等 upsert（CR-071）：存在则 FILL_MISSING 补丁，否则创建；均写属性历史
+     */
+    private void upsertViaMutation(PartInfo partInfo, PartInboundRecord record, InboundSourceType source) {
+        PartInfoPatchCmd ctx = PartInfoPatchCmd.builder()
+                .changeType("INBOUND")
+                .operationSource("PART_INBOUND")
+                .operatorId("SYSTEM")
+                .source(source.getValue())
+                .sourceEventId(record.getSourceEventId())
+                .inboundBatchNo(record.getInboundBatchNo())
+                .operationId("NONE")
+                .phase("BASIC")
+                .seq(1)
+                .build();
+        partInfoMutationAppService.create(partInfo, ctx);
     }
 
     /**

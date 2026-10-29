@@ -24,11 +24,13 @@
         <result column="pdi_time" property="pdiTime" />
         <result column="order_num" property="orderNum" />
         <result column="vehicle_base_version" property="vehicleBaseVersion" />
+        <result column="eol_result" property="eolResult" />
     </resultMap>
 
     <!-- 通用查询结果列 -->
     <sql id="baseColumnList">
         id, vin, plant_code, brand_code, platform_code, car_line_code, model_code, variant_code, configuration_code, eol_time, pdi_time, order_num, vehicle_base_version,
+        eol_result,
         description, create_time, create_by, modify_time, modify_by, row_version, row_valid
     </sql>
 
@@ -95,6 +97,9 @@
         <if test="vehicleBaseVersion != null and vehicleBaseVersion != ''">
             t.vehicle_base_version = #{vehicleBaseVersion},
         </if>
+        <if test="eolResult != null and eolResult != ''">
+            t.eol_result = #{eolResult},
+        </if>
         <if test="description != null and description != ''">
             t.description = #{description},
         </if>
@@ -104,6 +109,55 @@
         t.row_version = t.row_version + 1,
         t.modify_time = now()
         WHERE vin = #{vin}
+    </update>
+
+    <!-- CAS 补丁更新（CR-071）：按期望版本更新白名单字段 -->
+    <update id="patchPoByExpectedVersion" parameterType="map">
+        UPDATE tb_veh_basic_info t SET
+        <if test="po.plantCode != null">
+            t.plant_code = #{po.plantCode},
+        </if>
+        <if test="po.brandCode != null">
+            t.brand_code = #{po.brandCode},
+        </if>
+        <if test="po.platformCode != null">
+            t.platform_code = #{po.platformCode},
+        </if>
+        <if test="po.carLineCode != null">
+            t.car_line_code = #{po.carLineCode},
+        </if>
+        <if test="po.modelCode != null">
+            t.model_code = #{po.modelCode},
+        </if>
+        <if test="po.variantCode != null">
+            t.variant_code = #{po.variantCode},
+        </if>
+        <if test="po.configurationCode != null">
+            t.configuration_code = #{po.configurationCode},
+        </if>
+        <if test="po.eolTime != null">
+            t.eol_time = #{po.eolTime},
+        </if>
+        <if test="po.pdiTime != null">
+            t.pdi_time = #{po.pdiTime},
+        </if>
+        <if test="po.orderNum != null">
+            t.order_num = #{po.orderNum},
+        </if>
+        <if test="po.vehicleBaseVersion != null">
+            t.vehicle_base_version = #{po.vehicleBaseVersion},
+        </if>
+        <if test="po.eolResult != null">
+            t.eol_result = #{po.eolResult},
+        </if>
+        <if test="po.modifyBy != null">
+            t.modify_by = #{po.modifyBy},
+        </if>
+        t.row_version = t.row_version + 1,
+        t.modify_time = now()
+        WHERE t.id = #{po.id}
+          AND t.row_valid = 1
+          AND t.row_version = #{expectedRowVersion}
     </update>
 
     <!-- 逻辑删除 -->

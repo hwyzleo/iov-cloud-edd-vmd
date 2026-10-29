@@ -22,6 +22,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParserRegist
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleBasicInfo;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleDetail;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehiclePart;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.InboundSourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
 import net.hwyz.iov.cloud.framework.common.util.StrUtil;
 import org.springframework.stereotype.Component;
@@ -281,18 +282,15 @@ public class EolDataParserV1_0 extends BaseProcessor implements VehicleImportDat
             part.set("HARDWARE_VERSION", ecu.getStr("HARDWARE_VERSION"));
             part.set("ICCID1", ecu.getStr("ICCID1"));
             part.set("ICCID2", ecu.getStr("ICCID2"));
-            JSONArray softwareList = ecu.getJSONArray("SOFTWARE");
-            if (softwareList != null && !softwareList.isEmpty()) {
-                JSONObject sw = JSONUtil.parseObj(softwareList.get(0));
-                part.set("SOFTWARE_PN", sw.getStr("SOFTWARE_PART_NO"));
-                part.set("SOFTWARE_VERSION", sw.getStr("SOFTWARE_VERSION"));
-            }
+            // CR-071 §4.4：移除 SOFTWARE[0] 直写 SOFTWARE_PN/SOFTWARE_VERSION 兼容列；
+            // 软件实装由 processSoftwareInventory → applyManifest → SSOT 投影链路写入。
             bindParts.add(part);
         }
         if (bindParts.isEmpty()) {
             return;
         }
-        List<VehicleEolPartBoundEvent.PartMeta> partMetaList = vehiclePartBinder.bindParts(bindParts, vin, batchNum);
+        List<VehicleEolPartBoundEvent.PartMeta> partMetaList = vehiclePartBinder.bindParts(bindParts, vin, batchNum,
+                InboundSourceType.EOL);
         if (!partMetaList.isEmpty()) {
             vehiclePublish.eolPartBound(vin, partMetaList);
         }
@@ -371,7 +369,9 @@ public class EolDataParserV1_0 extends BaseProcessor implements VehicleImportDat
                                     buildSourceEventId(batchNum, vin, ecuSn, softwarePartNo),  // sourceEventId
                                     Instant.now(),  // sourceEventTime
                                     Instant.now(),  // reportedAt
-                                    true  // isConfirmed (EOL 为 confirmed)
+                                    true,  // isConfirmed (EOL 为 confirmed)
+                                    null, null, null, null, null,
+                                    softwareType  // CR-071：SOFTWARE_TYPE 写入 SSOT（主软件判定依据）
                             );
                         } catch (Exception e) {
                             log.warn("软件实装回写失败: vin={}, ecuSn={}, swPartNo={}, error={}", 

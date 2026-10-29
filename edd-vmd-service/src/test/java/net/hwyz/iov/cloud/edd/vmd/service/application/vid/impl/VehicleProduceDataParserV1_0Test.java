@@ -5,6 +5,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ImportResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.publish.VehiclePublish;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleSecurityPresetAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParserRegistry;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleInfoMutationAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleBasicInfo;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleOption;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
@@ -58,15 +59,22 @@ class VehicleProduceDataParserV1_0Test {
     @Mock
     private VmdKafkaTopicRoutes topicRoutes;
 
+    @Mock
+    private net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleInfoMutationAppService vehicleInfoMutationAppService;
+
     private VehicleProduceDataParserV1_0 parser;
 
     @BeforeEach
     void setUp() {
         parser = new VehicleProduceDataParserV1_0(
-                vehiclePublish, vehBasicInfoRepository, parserRegistry, vehicleSecurityPresetAppService, vehicleOptionRepository, vmdOutboxRepository, topicRoutes);
+                vehiclePublish, vehBasicInfoRepository, vehicleInfoMutationAppService,
+                parserRegistry, vehicleSecurityPresetAppService, vehicleOptionRepository, vmdOutboxRepository, topicRoutes);
         // VMD-DSN-CR-051: 车辆生产事件标准 Topic 来自路由注册表
         lenient().when(topicRoutes.topicName(VmdKafkaLogicalTopic.VEHICLE_PRODUCE))
                 .thenReturn("vmd.vehicle-produce");
+        // CR-071: 统一变更写服务默认 APPLIED
+        lenient().when(vehicleInfoMutationAppService.create(any(), any()))
+                .thenReturn(new VehicleInfoMutationAppService.MutationResult("APPLIED", 1, java.util.Map.of()));
         // VMD-DSN-CR-050: 预置成功默认返回 true（各测试可覆盖为 false 模拟预置失败）
         lenient().when(vehicleSecurityPresetAppService.preset(any(), any())).thenReturn(true);
     }
@@ -80,7 +88,8 @@ class VehicleProduceDataParserV1_0Test {
         JSONObject dataJson = buildDataJson(vin);
 
         when(vehBasicInfoRepository.selectByVin(vin)).thenReturn(null);
-        when(vehBasicInfoRepository.insert(any(VehicleBasicInfo.class))).thenReturn(1);
+        when(vehicleInfoMutationAppService.create(any(VehicleBasicInfo.class), any()))
+                .thenReturn(new VehicleInfoMutationAppService.MutationResult("APPLIED", 1, java.util.Map.of()));
 
         // When
         ImportResult result = parser.parse(batchNum, dataJson);
@@ -91,7 +100,7 @@ class VehicleProduceDataParserV1_0Test {
         assertEquals(0, result.getFailureCount());
         assertEquals(0, result.getInvalidCount());
 
-        verify(vehBasicInfoRepository).insert(any(VehicleBasicInfo.class));
+        verify(vehicleInfoMutationAppService).create(any(VehicleBasicInfo.class), any());
         verify(vehiclePublish).produce(vin, batchNum);
         verify(vehicleSecurityPresetAppService).preset(vin, batchNum);
     }
@@ -105,7 +114,8 @@ class VehicleProduceDataParserV1_0Test {
         JSONObject dataJson = buildDataJson(vin);
 
         when(vehBasicInfoRepository.selectByVin(vin)).thenReturn(null);
-        when(vehBasicInfoRepository.insert(any(VehicleBasicInfo.class))).thenReturn(1);
+        when(vehicleInfoMutationAppService.create(any(VehicleBasicInfo.class), any()))
+                .thenReturn(new VehicleInfoMutationAppService.MutationResult("APPLIED", 1, java.util.Map.of()));
         doReturn(false).when(vehicleSecurityPresetAppService).preset(any(), any());
 
         // When
@@ -172,7 +182,8 @@ class VehicleProduceDataParserV1_0Test {
         JSONObject dataJson = buildDataJsonWithMultipleVins(vin1, vin2, vin3);
 
         when(vehBasicInfoRepository.selectByVin(vin1)).thenReturn(null);
-        when(vehBasicInfoRepository.insert(any(VehicleBasicInfo.class))).thenReturn(1);
+        when(vehicleInfoMutationAppService.create(any(VehicleBasicInfo.class), any()))
+                .thenReturn(new VehicleInfoMutationAppService.MutationResult("APPLIED", 1, java.util.Map.of()));
         when(vehBasicInfoRepository.selectByVin(vin2)).thenThrow(new RuntimeException("DB error"));
         // vin3 is empty string - will be invalid
 
@@ -197,7 +208,8 @@ class VehicleProduceDataParserV1_0Test {
         JSONObject dataJson = buildDataJsonWithOptions(vin);
 
         when(vehBasicInfoRepository.selectByVin(vin)).thenReturn(null);
-        when(vehBasicInfoRepository.insert(any(VehicleBasicInfo.class))).thenReturn(1);
+        when(vehicleInfoMutationAppService.create(any(VehicleBasicInfo.class), any()))
+                .thenReturn(new VehicleInfoMutationAppService.MutationResult("APPLIED", 1, java.util.Map.of()));
 
         // When
         ImportResult result = parser.parse(batchNum, dataJson);
@@ -225,7 +237,8 @@ class VehicleProduceDataParserV1_0Test {
         JSONObject dataJson = buildDataJson(vin);
 
         when(vehBasicInfoRepository.selectByVin(vin)).thenReturn(null);
-        when(vehBasicInfoRepository.insert(any(VehicleBasicInfo.class))).thenReturn(1);
+        when(vehicleInfoMutationAppService.create(any(VehicleBasicInfo.class), any()))
+                .thenReturn(new VehicleInfoMutationAppService.MutationResult("APPLIED", 1, java.util.Map.of()));
 
         // When
         ImportResult result = parser.parse(batchNum, dataJson);
@@ -244,7 +257,8 @@ class VehicleProduceDataParserV1_0Test {
         JSONObject dataJson = buildDataJsonWithOptions(vin);
 
         when(vehBasicInfoRepository.selectByVin(vin)).thenReturn(null);
-        when(vehBasicInfoRepository.insert(any(VehicleBasicInfo.class))).thenReturn(1);
+        when(vehicleInfoMutationAppService.create(any(VehicleBasicInfo.class), any()))
+                .thenReturn(new VehicleInfoMutationAppService.MutationResult("APPLIED", 1, java.util.Map.of()));
         doThrow(new RuntimeException("DB batch upsert error"))
                 .when(vehicleOptionRepository).batchUpsert(any());
 
@@ -271,7 +285,8 @@ class VehicleProduceDataParserV1_0Test {
         JSONObject dataJson = buildDataJsonWithEmptyOptions(vin);
 
         when(vehBasicInfoRepository.selectByVin(vin)).thenReturn(null);
-        when(vehBasicInfoRepository.insert(any(VehicleBasicInfo.class))).thenReturn(1);
+        when(vehicleInfoMutationAppService.create(any(VehicleBasicInfo.class), any()))
+                .thenReturn(new VehicleInfoMutationAppService.MutationResult("APPLIED", 1, java.util.Map.of()));
 
         // When
         ImportResult result = parser.parse(batchNum, dataJson);
@@ -290,7 +305,8 @@ class VehicleProduceDataParserV1_0Test {
         JSONObject dataJson = buildDataJsonWithMissingFamilyCode(vin);
 
         when(vehBasicInfoRepository.selectByVin(vin)).thenReturn(null);
-        when(vehBasicInfoRepository.insert(any(VehicleBasicInfo.class))).thenReturn(1);
+        when(vehicleInfoMutationAppService.create(any(VehicleBasicInfo.class), any()))
+                .thenReturn(new VehicleInfoMutationAppService.MutationResult("APPLIED", 1, java.util.Map.of()));
 
         // When
         ImportResult result = parser.parse(batchNum, dataJson);
@@ -309,7 +325,8 @@ class VehicleProduceDataParserV1_0Test {
         JSONObject dataJson = buildDataJsonWithMissingCode(vin);
 
         when(vehBasicInfoRepository.selectByVin(vin)).thenReturn(null);
-        when(vehBasicInfoRepository.insert(any(VehicleBasicInfo.class))).thenReturn(1);
+        when(vehicleInfoMutationAppService.create(any(VehicleBasicInfo.class), any()))
+                .thenReturn(new VehicleInfoMutationAppService.MutationResult("APPLIED", 1, java.util.Map.of()));
 
         // When
         ImportResult result = parser.parse(batchNum, dataJson);
@@ -328,7 +345,8 @@ class VehicleProduceDataParserV1_0Test {
         JSONObject dataJson = buildDataJsonWithMixedOptions(vin);
 
         when(vehBasicInfoRepository.selectByVin(vin)).thenReturn(null);
-        when(vehBasicInfoRepository.insert(any(VehicleBasicInfo.class))).thenReturn(1);
+        when(vehicleInfoMutationAppService.create(any(VehicleBasicInfo.class), any()))
+                .thenReturn(new VehicleInfoMutationAppService.MutationResult("APPLIED", 1, java.util.Map.of()));
 
         // When
         ImportResult result = parser.parse(batchNum, dataJson);
@@ -537,7 +555,8 @@ class VehicleProduceDataParserV1_0Test {
         JSONObject dataJson = buildDataJsonWithDuplicateVins(vin1, vin2);
 
         when(vehBasicInfoRepository.selectByVin(vin1)).thenReturn(null);
-        when(vehBasicInfoRepository.insert(any(VehicleBasicInfo.class))).thenReturn(1);
+        when(vehicleInfoMutationAppService.create(any(VehicleBasicInfo.class), any()))
+                .thenReturn(new VehicleInfoMutationAppService.MutationResult("APPLIED", 1, java.util.Map.of()));
         when(vehBasicInfoRepository.selectByVin(vin2)).thenReturn(null);
 
         // When
@@ -550,7 +569,7 @@ class VehicleProduceDataParserV1_0Test {
         assertEquals(0, result.getFailureCount());
 
         // 重复 VIN 不产生第二次副作用（落库/produce/预置均只针对首次记录与另一 VIN）
-        verify(vehBasicInfoRepository, times(2)).insert(any(VehicleBasicInfo.class));
+        verify(vehicleInfoMutationAppService, times(2)).create(any(VehicleBasicInfo.class), any());
         verify(vehiclePublish).produce(vin1, batchNum);
         verify(vehiclePublish).produce(vin2, batchNum);
         verify(vehicleSecurityPresetAppService).preset(vin1, batchNum);

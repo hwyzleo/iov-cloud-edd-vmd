@@ -2,6 +2,8 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.VehicleInfoPatchCmd;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleInfoMutationAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleBasicInfo;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
 import org.springframework.stereotype.Service;
@@ -12,7 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>
  * 处理EOL_RESULT放行门禁逻辑：
  * 1. 解析EOL_RESULT状态（PASS/NG/REWORK）
- * 2. 写入veh_basic_info.eol_result字段
+ * 2. 写入veh_basic_info.eol_result字段（CR-071：经统一变更写服务，同事务写属性历史）
  * 3. NG/REWORK状态抑制后续放行，但不阻断落库
  *
  * @author hwyz_leo
@@ -23,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class EolResultGateService {
 
     private final VehBasicInfoRepository vehBasicInfoRepository;
+    private final VehicleInfoMutationAppService vehicleInfoMutationAppService;
 
     /**
      * 处理EOL_RESULT放行门禁
@@ -42,9 +45,18 @@ public class EolResultGateService {
             return false;
         }
         
-        // 2. 更新eol_result字段
-        vehicleBasicInfo.setEolResult(eolResult);
-        vehBasicInfoRepository.update(vehicleBasicInfo);
+        // 2. 更新eol_result字段（CR-071：经统一变更写服务 + 属性历史；门禁写最新放行结论）
+        vehicleInfoMutationAppService.patch(VehicleInfoPatchCmd.builder()
+                .vin(vin)
+                .eolResult(eolResult)
+                .repairPolicy(VehicleInfoMutationAppService.POLICY_CORRECT_EXPLICIT)
+                .changeType("STATE_CHANGE")
+                .operationSource("EOL_GATE")
+                .operatorId("SYSTEM")
+                .source("EOL")
+                .phase("BASIC")
+                .seq(1)
+                .build());
         
         // 3. 判断是否允许后续放行
         boolean allowRelease = "PASS".equalsIgnoreCase(eolResult);

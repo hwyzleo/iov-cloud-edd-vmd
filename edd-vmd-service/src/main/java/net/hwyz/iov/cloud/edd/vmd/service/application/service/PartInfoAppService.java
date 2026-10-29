@@ -11,6 +11,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartInfoRepository;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Service;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.PartInfoCmd;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.PartInfoPatchCmd;
 
 import java.time.Instant;
 import java.util.HashMap;
@@ -28,6 +29,7 @@ import java.util.Map;
 public class PartInfoAppService {
 
     private final PartInfoRepository partInfoRepository;
+    private final PartInfoMutationAppService partInfoMutationAppService;
 
     /**
      * 查询物理零件实例信息
@@ -99,7 +101,7 @@ public class PartInfoAppService {
     }
 
     /**
-     * 新增物理零件实例
+     * 新增物理零件实例（CR-071：经统一变更写服务 + 属性历史）
      *
      * @param partInfoCmd 物理零件实例信息 DTO
      * @param userId 操作用户ID
@@ -107,20 +109,50 @@ public class PartInfoAppService {
      */
     public int createPartInfo(PartInfoCmd partInfoCmd, String userId) {
         PartInfo partInfo = PartInfoAssembler.INSTANCE.toDomain(partInfoCmd);
-        partInfo.setFirstSeenTime(Instant.now());
-        return partInfoRepository.insert(partInfo);
+        PartInfoMutationAppService.MutationResult result = partInfoMutationAppService.create(partInfo,
+                PartInfoPatchCmd.builder()
+                        .changeType("INBOUND")
+                        .operationSource("APP")
+                        .operatorId(userId != null ? userId : "SYSTEM")
+                        .source("MANUAL")
+                        .operationId("NONE")
+                        .phase("BASIC")
+                        .seq(1)
+                        .build());
+        return result.isApplied() ? 1 : 0;
     }
 
     /**
-     * 修改物理零件实例
+     * 修改物理零件实例（CR-071：经统一变更写服务，同事务写属性历史）
      *
      * @param partInfoCmd 物理零件实例信息 DTO
      * @param userId 操作用户ID
-     * @return 结果
+     * @return 结果（1=已变更，0=无差异/未变更，异常=版本冲突）
      */
     public int modifyPartInfo(PartInfoCmd partInfoCmd, String userId) {
-        PartInfo partInfo = PartInfoAssembler.INSTANCE.toDomain(partInfoCmd);
-        return partInfoRepository.update(partInfo);
+        PartInfoPatchCmd patchCmd = PartInfoPatchCmd.builder()
+                .partId(partInfoCmd.getId())
+                .partCode(partInfoCmd.getPartCode())
+                .sn(partInfoCmd.getSn())
+                .vehicleNodeCode(partInfoCmd.getVehicleNodeCode())
+                .configWord(partInfoCmd.getConfigWord())
+                .supplierCode(partInfoCmd.getSupplierCode())
+                .batchNum(partInfoCmd.getBatchNum())
+                .hardwareVer(partInfoCmd.getHardwareVer())
+                .softwareVer(partInfoCmd.getSoftwareVer())
+                .hardwarePn(partInfoCmd.getHardwarePn())
+                .softwarePn(partInfoCmd.getSoftwarePn())
+                .extra(partInfoCmd.getExtra())
+                .instanceState(partInfoCmd.getInstanceState())
+                .repairPolicy(PartInfoMutationAppService.POLICY_CORRECT_EXPLICIT)
+                .changeType("ATTRIBUTE_UPDATE")
+                .operationSource("APP")
+                .operatorId(userId != null ? userId : "SYSTEM")
+                .phase("BASIC")
+                .seq(1)
+                .build();
+        PartInfoMutationAppService.MutationResult result = partInfoMutationAppService.patch(patchCmd);
+        return result.isApplied() ? 1 : 0;
     }
 
     /**

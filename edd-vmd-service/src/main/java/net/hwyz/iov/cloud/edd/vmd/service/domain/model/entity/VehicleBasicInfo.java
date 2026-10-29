@@ -93,4 +93,14 @@ public class VehicleBasicInfo implements DomainObj<VehicleBasicInfo> {
      */
     private String eolResult;
 
+    /**
+     * 记录版本（乐观锁，对应 tb_veh_basic_info.row_version）
+     */
+    private Integer rowVersion;
+
+    /**
+     * 修改者
+     */
+    private String modifyBy;
+
 }

@@ -63,6 +63,15 @@ public interface VehBasicInfoRepository {
     int update(VehicleBasicInfo vehicleBasicInfo);
 
     /**
+     * CAS 补丁更新（CR-071）：按期望版本更新白名单字段，防止丢失更新
+     *
+     * @param vehicleBasicInfo 更新目标字段
+     * @param expectedRowVersion 期望当前版本
+     * @return 影响行数（0=版本冲突）
+     */
+    int patchByExpectedVersion(VehicleBasicInfo vehicleBasicInfo, Integer expectedRowVersion);
+
+    /**
      * 批量物理删除车辆基础信息
      *
      * @param ids 主键ID数组

@@ -144,6 +144,36 @@ public class PartInfoPo extends BasePo {
     private Instant lastInboundTime;
 
     /**
+     * 软件兼容投影状态（CR-071）
+     */
+    @TableField("software_snapshot_state")
+    private String softwareSnapshotState;
+
+    /**
+     * 主软件投影来源安装记录ID
+     */
+    @TableField("software_snapshot_installation_id")
+    private Long softwareSnapshotInstallationId;
+
+    /**
+     * 主软件投影来源 Target
+     */
+    @TableField("software_snapshot_target")
+    private String softwareSnapshotTarget;
+
+    /**
+     * 主软件投影来源槽位
+     */
+    @TableField("software_snapshot_slot")
+    private String softwareSnapshotSlot;
+
+    /**
+     * 主软件投影来源清单版本
+     */
+    @TableField("software_snapshot_inventory_version")
+    private Long softwareSnapshotInventoryVersion;
+
+    /**
      * 零件名称（关联tb_mdm_part.name，非本表字段）
      */
     @TableField(exist = false)

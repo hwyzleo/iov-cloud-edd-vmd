@@ -65,6 +65,12 @@ public class VehBasicInfoRepositoryImpl implements VehBasicInfoRepository {
     }
 
     @Override
+    public int patchByExpectedVersion(VehicleBasicInfo vehicleBasicInfo, Integer expectedRowVersion) {
+        return vehBasicInfoMapper.patchPoByExpectedVersion(
+                VehicleInfoConverter.INSTANCE.fromBasicDomain(vehicleBasicInfo), expectedRowVersion);
+    }
+
+    @Override
     public int batchPhysicalDelete(Long[] ids) {
         return vehBasicInfoMapper.batchPhysicalDeletePo(ids);
     }

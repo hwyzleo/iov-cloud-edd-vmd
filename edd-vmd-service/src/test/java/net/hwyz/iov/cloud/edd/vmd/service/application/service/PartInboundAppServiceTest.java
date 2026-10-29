@@ -39,13 +39,16 @@ class PartInboundAppServiceTest {
     @Mock
     private SupplierService supplierService;
 
+    @Mock
+    private PartInfoMutationAppService partInfoMutationAppService;
+
     private PartInboundAppService partInboundAppService;
 
     @BeforeEach
     void setUp() {
         partInboundAppService = new PartInboundAppService(
                 partInfoAppService, vehiclePartAppService,
-                mdmPartRepository, supplierService);
+                mdmPartRepository, supplierService, partInfoMutationAppService);
     }
 
     @Test
@@ -61,7 +64,7 @@ class PartInboundAppServiceTest {
                 .build();
 
         when(mdmPartRepository.selectByCode("PN001")).thenReturn(Part.builder().status("ACTIVE").partType("BTM").build());
-        when(partInfoAppService.upsertPartInfo(any(PartInfo.class))).thenReturn(1);
+        when(partInfoMutationAppService.create(any(PartInfo.class), any())).thenReturn(new PartInfoMutationAppService.MutationResult("APPLIED", 1, java.util.Map.of()));
 
         // When
         PartInboundResult result = partInboundAppService.processInbound(
@@ -72,7 +75,7 @@ class PartInboundAppServiceTest {
         assertEquals(1, result.getSuccessCount());
         assertEquals(0, result.getFailureCount());
         assertEquals(0, result.getInvalidCount());
-        verify(partInfoAppService).upsertPartInfo(any(PartInfo.class));
+        verify(partInfoMutationAppService).create(any(PartInfo.class), any());
     }
 
     @Test
@@ -93,7 +96,7 @@ class PartInboundAppServiceTest {
                 .build();
 
         when(mdmPartRepository.selectByCode("SIM001")).thenReturn(Part.builder().status("ACTIVE").partType("SIM").build());
-        when(partInfoAppService.upsertPartInfo(any(PartInfo.class))).thenReturn(1);
+        when(partInfoMutationAppService.create(any(PartInfo.class), any())).thenReturn(new PartInfoMutationAppService.MutationResult("APPLIED", 1, java.util.Map.of()));
 
         // When
         PartInboundResult result = partInboundAppService.processInbound(
@@ -102,9 +105,9 @@ class PartInboundAppServiceTest {
         // Then
         assertEquals(1, result.getTotalCount());
         assertEquals(1, result.getSuccessCount());
-        verify(partInfoAppService).upsertPartInfo(argThat(partInfo ->
+        verify(partInfoMutationAppService).create(argThat(partInfo ->
                 "ICCID001".equals(partInfo.getSn()) &&
-                "SIM".equals(partInfo.getPartType())));
+                "SIM".equals(partInfo.getPartType())), any());
     }
 
     @Test
@@ -125,7 +128,7 @@ class PartInboundAppServiceTest {
         assertEquals(0, result.getSuccessCount());
         assertEquals(0, result.getFailureCount());
         assertEquals(1, result.getInvalidCount());
-        verify(partInfoAppService, never()).upsertPartInfo(any());
+        verify(partInfoMutationAppService, never()).create(any(), any());
     }
 
     @Test
@@ -140,10 +143,10 @@ class PartInboundAppServiceTest {
                 .build();
 
         when(mdmPartRepository.selectByCode("PN001")).thenReturn(Part.builder().status("ACTIVE").partType("TBOX").build());
-        when(partInfoAppService.upsertPartInfo(any(PartInfo.class))).thenAnswer(invocation -> {
+        when(partInfoMutationAppService.create(any(PartInfo.class), any())).thenAnswer(invocation -> {
             PartInfo partInfo = invocation.getArgument(0);
             partInfo.setId(1L);
-            return 1;
+            return new PartInfoMutationAppService.MutationResult("APPLIED", 1, java.util.Map.of());
         });
 
         // When
@@ -173,7 +176,7 @@ class PartInboundAppServiceTest {
                 .build();
 
         when(mdmPartRepository.selectByCode("PN001")).thenReturn(Part.builder().status("ACTIVE").partType("BTM").build());
-        when(partInfoAppService.upsertPartInfo(any(PartInfo.class))).thenReturn(1);
+        when(partInfoMutationAppService.create(any(PartInfo.class), any())).thenReturn(new PartInfoMutationAppService.MutationResult("APPLIED", 1, java.util.Map.of()));
 
         // When
         PartInboundResult result = partInboundAppService.processInbound(
@@ -204,10 +207,10 @@ class PartInboundAppServiceTest {
                 .build();
 
         when(mdmPartRepository.selectByCode("TEST_PART_001")).thenReturn(mdmPart);
-        when(partInfoAppService.upsertPartInfo(any(PartInfo.class))).thenAnswer(invocation -> {
+        when(partInfoMutationAppService.create(any(PartInfo.class), any())).thenAnswer(invocation -> {
             PartInfo partInfo = invocation.getArgument(0);
             partInfo.setId(1L);
-            return 1;
+            return new PartInfoMutationAppService.MutationResult("APPLIED", 1, java.util.Map.of());
         });
 
         // When
@@ -232,10 +235,10 @@ class PartInboundAppServiceTest {
                 .build();
 
         when(mdmPartRepository.selectByCode("PN001")).thenReturn(Part.builder().status("ACTIVE").partType("TBOX").build());
-        when(partInfoAppService.upsertPartInfo(any(PartInfo.class))).thenAnswer(invocation -> {
+        when(partInfoMutationAppService.create(any(PartInfo.class), any())).thenAnswer(invocation -> {
             PartInfo partInfo = invocation.getArgument(0);
             partInfo.setId(1L);
-            return 1;
+            return new PartInfoMutationAppService.MutationResult("APPLIED", 1, java.util.Map.of());
         });
 
         // When

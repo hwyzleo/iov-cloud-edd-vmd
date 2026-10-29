@@ -49,6 +49,7 @@ public class SoftwareInventoryAppService {
     private final PartInfoRepository partInfoRepository;
     private final VehiclePartRepository vehiclePartRepository;
     private final VmdKafkaTopicRoutes topicRoutes;
+    private final PartSoftwareSnapshotProjectionService softwareSnapshotProjectionService;
 
     /**
      * 来源优先级（数值越小优先级越高）
@@ -67,7 +68,7 @@ public class SoftwareInventoryAppService {
     /**
      * 应用软件清单（CR-045 兼容签名，委托全量签名）
      *
-     * @see #applyManifest(Long, Long, String, String, String, String, String, String, String, String, String, Instant, Instant, Boolean, Boolean, String, Integer, String, Instant)
+     * @see #applyManifest(Long, Long, String, String, String, String, String, String, String, String, String, Instant, Instant, Boolean, Boolean, String, Integer, String, Instant, String)
      */
     @Transactional(rollbackFor = Exception.class)
     public ApplyManifestResult applyManifest(
@@ -90,7 +91,7 @@ public class SoftwareInventoryAppService {
                 softwareTargetCode, softwarePartNo, softwareVersion,
                 artifactHash, slot, changeType, source, sourceEventId,
                 sourceEventTime, reportedAt, isConfirmed,
-                null, null, null, null, null);
+                null, null, null, null, null, null);
     }
 
     /**
@@ -144,7 +145,8 @@ public class SoftwareInventoryAppService {
             String observationKey,
             Integer canonicalizationVersion,
             String canonicalDigest,
-            Instant sourceAcceptedAt) {
+            Instant sourceAcceptedAt,
+            String softwareType) {
 
         log.debug("应用软件清单消解: partId={}, targetCode={}, slot={}, version={}, source={}, isConfirmed={}, isActiveSlot={}",
                 partId, softwareTargetCode, slot, softwareVersion, source, isConfirmed, isActiveSlot);
@@ -164,6 +166,8 @@ public class SoftwareInventoryAppService {
                 .selectBySourceAndSourceEventId(source, sourceEventId, softwareTargetCode, slot);
         if (existingByEvent != null) {
             log.debug("幂等命中: source={}, sourceEventId={}, targetCode={}, slot={}", source, sourceEventId, softwareTargetCode, slot);
+            // CR-071 §5.2：幂等命中也重算兼容投影（从当前 SSOT，不采用被拒绝的旧输入）
+            refreshSnapshotProjection(partId, source);
             return new ApplyManifestResult(false, false, existingByEvent.getInventoryVersion());
         }
 
@@ -176,6 +180,8 @@ public class SoftwareInventoryAppService {
             if (!sourceEventTime.isAfter(currentRecord.getSourceEventTime())) {
                 log.debug("版本时序gate命中: sourceEventTime={}, currentSourceEventTime={}",
                         sourceEventTime, currentRecord.getSourceEventTime());
+                // CR-071 §5.2：stale 也刷新投影
+                refreshSnapshotProjection(partId, source);
                 return new ApplyManifestResult(false, true, currentRecord.getInventoryVersion());
             }
         }
@@ -189,6 +195,8 @@ public class SoftwareInventoryAppService {
                 if (newPriority >= currentPriority && Boolean.TRUE.equals(currentRecord.getIsConfirmed())) {
                     log.debug("来源优先级兜底: currentSource={}, newSource={}, currentPriority={}, newPriority={}",
                             currentRecord.getSource(), source, currentPriority, newPriority);
+                    // CR-071 §5.2：同版本不写 SSOT，仍刷新投影
+                    refreshSnapshotProjection(partId, source);
                     return new ApplyManifestResult(false, false, currentRecord.getInventoryVersion());
                 }
             } else {
@@ -235,6 +243,7 @@ public class SoftwareInventoryAppService {
                 .canonicalizationVersion(canonicalizationVersion)
                 .canonicalDigest(canonicalDigest)
                 .sourceAcceptedAt(sourceAcceptedAt)
+                .softwareType(softwareType)
                 .build();
 
         newRecord.init();
@@ -246,7 +255,28 @@ public class SoftwareInventoryAppService {
         // 9. SSOT 实际变化 → 经 vmd_outbox 发布 VehicleSoftwareInventoryChangedEvent（Key=VIN）
         publishChangedEventOutbox(newRecord, vinSnapshot, bindingId, partId, source, isConfirmed, newVersion);
 
+        // 10. CR-071 §5.2：SSOT 变化后从当前 SSOT 重算兼容投影（同一实例锁、同一事务）
+        refreshSnapshotProjection(partId, source);
+
         return new ApplyManifestResult(true, false, newVersion);
+    }
+
+    /**
+     * 从当前 SSOT 重算软件兼容投影（CR-071 §5.2）
+     */
+    private void refreshSnapshotProjection(Long partId, String source) {
+        try {
+            softwareSnapshotProjectionService.refreshFromCurrentSsot(partId,
+                    PartSoftwareSnapshotProjectionService.ProjectionContext.builder()
+                            .operationSource("SOFTWARE_INVENTORY")
+                            .operatorId("SYSTEM")
+                            .source(source)
+                            .seq(1)
+                            .build());
+        } catch (Exception e) {
+            // 投影失败不影响软件实装事实写入（SSOT 已更新），仅告警
+            log.error("软件兼容投影刷新失败: partId={}, source={}, error={}", partId, source, e.getMessage(), e);
+        }
     }
 
     /**

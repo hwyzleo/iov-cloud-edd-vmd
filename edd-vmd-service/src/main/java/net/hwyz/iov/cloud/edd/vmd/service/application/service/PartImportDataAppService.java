@@ -300,17 +300,24 @@ public class PartImportDataAppService {
                 }
             }
             
-            // 提取非通用字段到extraFields
+            // 提取非通用字段到extraFields（CR-071 §3.4 扁平键契约：大小写别名同值合并、异值拒绝）
             Map<String, String> extraFields = new HashMap<>();
             for (String key : itemJson.keySet()) {
                 if (!commonFields.contains(key)) {
                     String value = itemJson.getStr(key);
                     if (StrUtil.isNotBlank(value)) {
-                        extraFields.put(key.toLowerCase(), value);
+                        String lowerKey = key.toLowerCase();
+                        String existing = extraFields.get(lowerKey);
+                        if (existing != null && !existing.equals(value)) {
+                            log.warn("批次号[{}]ITEM存在大小写别名冲突[{}]，拒绝该记录", batchNum, lowerKey);
+                            throw new net.hwyz.iov.cloud.edd.vmd.service.common.exception.PartInboundValidateFailedException(
+                                    "ITEM大小写别名冲突: " + lowerKey);
+                        }
+                        extraFields.put(lowerKey, value);
                     }
                 }
             }
-            
+
             // 构建入站记录
             PartInboundAppService.PartInboundRecord record = PartInboundAppService.PartInboundRecord.builder()
                     .partCode(partCode)
@@ -319,6 +326,8 @@ public class PartImportDataAppService {
                     .deviceItem(deviceItem)
                     .supplierCode(supplier)
                     .batchNum(batchNum)
+                    // CR-071 §4.3：外层导入 batchNum 贯通为 inboundBatchNo（入站批次）
+                    .inboundBatchNo(batchNum)
                     .extraFields(extraFields.isEmpty() ? null : extraFields)
                     .build();
             

@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.ImportOperationMapper">
+
+    <!-- 通用查询映射结果 -->
+    <resultMap id="baseResultMap" type="net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.ImportOperationPo">
+        <id column="id" property="id" />
+        <result column="operation_id" property="operationId" />
+        <result column="domain" property="domain" />
+        <result column="operation_type" property="operationType" />
+        <result column="import_data_id" property="importDataId" />
+        <result column="batch_num" property="batchNum" />
+        <result column="original_import_data_id" property="originalImportDataId" />
+        <result column="payload_digest" property="payloadDigest" />
+        <result column="request_digest" property="requestDigest" />
+        <result column="plan_digest" property="planDigest" />
+        <result column="plan_json" property="planJson" />
+        <result column="operator_id" property="operatorId" />
+        <result column="operator_name" property="operatorName" />
+        <result column="operation_source" property="operationSource" />
+        <result column="reason" property="reason" />
+        <result column="ticket_no" property="ticketNo" />
+        <result column="status" property="status" />
+        <result column="counters_json" property="countersJson" />
+        <result column="legacy_replay_id" property="legacyReplayId" />
+        <result column="lease_owner" property="leaseOwner" />
+        <result column="lease_until" property="leaseUntil" />
+        <result column="fence_token" property="fenceToken" />
+        <result column="created_at" property="createdAt" />
+        <result column="started_at" property="startedAt" />
+        <result column="finished_at" property="finishedAt" />
+        <result column="description" property="description" />
+        <result column="create_time" property="createTime" />
+        <result column="create_by" property="createBy" />
+        <result column="modify_time" property="modifyTime" />
+        <result column="modify_by" property="modifyBy" />
+        <result column="row_version" property="rowVersion" />
+        <result column="row_valid" property="rowValid" />
+    </resultMap>
+
+    <!-- 通用查询结果列 -->
+    <sql id="baseColumnList">
+        id, operation_id, domain, operation_type, import_data_id, batch_num, original_import_data_id,
+        payload_digest, request_digest, plan_digest, plan_json, operator_id, operator_name, operation_source,
+        reason, ticket_no, status, counters_json, legacy_replay_id, lease_owner, lease_until, fence_token,
+        created_at, started_at, finished_at,
+        description, create_time, create_by, modify_time, modify_by, row_version, row_valid
+    </sql>
+
+    <!-- 查询同 domain+importData 的 active 操作（生成列互斥） -->
+    <select id="selectActiveByDomainAndImportDataId" parameterType="map" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList"/>
+        FROM tb_import_operation t
+        WHERE t.row_valid = 1
+          AND t.domain = #{domain}
+          AND t.active_import_id = #{importDataId}
+        LIMIT 1
+    </select>
+
+    <!-- 认领操作 -->
+    <update id="claim" parameterType="map">
+        UPDATE tb_import_operation SET
+            status = 'RUNNING',
+            lease_owner = #{owner},
+            lease_until = #{leaseUntil},
+            fence_token = fence_token + 1,
+            started_at = COALESCE(started_at, #{leaseUntil}),
+            row_version = row_version + 1,
+            modify_time = now()
+        WHERE operation_id = #{operationId}
+          AND row_valid = 1
+          AND (
+                (status = 'PENDING')
+                OR (status = 'RECOVERING' AND lease_until &lt; #{now})
+          )
+    </update>
+
+    <!-- 续租 -->
+    <update id="renewLease" parameterType="map">
+        UPDATE tb_import_operation SET
+            lease_until = #{leaseUntil},
+            row_version = row_version + 1,
+            modify_time = now()
+        WHERE operation_id = #{operationId}
+          AND row_valid = 1
+          AND lease_owner = #{owner}
+          AND status = 'RUNNING'
+    </update>
+
+    <!-- 完成操作 -->
+    <update id="finish" parameterType="map">
+        UPDATE tb_import_operation SET
+            status = #{status},
+            counters_json = #{countersJson},
+            lease_owner = NULL,
+            lease_until = NULL,
+            finished_at = #{finishedAt},
+            row_version = row_version + 1,
+            modify_time = now()
+        WHERE operation_id = #{operationId}
+          AND row_valid = 1
+          AND lease_owner = #{owner}
+          AND status IN ('RUNNING', 'RECOVERING')
+    </update>
+
+    <!-- 核验 fence -->
+    <select id="countByFence" parameterType="map" resultType="int">
+        SELECT COUNT(*)
+        FROM tb_import_operation t
+        WHERE t.operation_id = #{operationId}
+          AND t.row_valid = 1
+          AND t.lease_owner = #{owner}
+          AND t.fence_token = #{fenceToken}
+          AND t.lease_until &gt;= #{now}
+          AND t.status IN ('RUNNING', 'RECOVERING')
+    </select>
+
+    <!-- 查询失联操作（RUNNING 且租约过期） -->
+    <select id="selectExpired" parameterType="map" resultMap="baseResultMap">
+        SELECT <include refid="baseColumnList"/>
+        FROM tb_import_operation t
+        WHERE t.row_valid = 1
+          AND t.status = 'RUNNING'
+          AND t.lease_until &lt; #{now}
+        ORDER BY t.lease_until ASC
+        LIMIT 100
+    </select>
+
+</mapper>

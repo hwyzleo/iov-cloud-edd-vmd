@@ -68,6 +68,12 @@ public class PartInfoRepositoryImpl implements PartInfoRepository {
     }
 
     @Override
+    public int patchByExpectedVersion(PartInfo partInfo, Integer expectedRowVersion, java.util.List<String> nullFields) {
+        return partInfoMapper.patchPoByExpectedVersion(
+                PartInfoConverter.INSTANCE.fromDomain(partInfo), expectedRowVersion, nullFields);
+    }
+
+    @Override
     public int batchPhysicalDelete(Long[] ids) {
         return partInfoMapper.batchPhysicalDeletePo(ids);
     }

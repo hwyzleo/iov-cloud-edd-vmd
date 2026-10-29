@@ -49,6 +49,7 @@ public class VehicleProduceDataParserV1_0 extends BaseProcessor implements Vehic
 
     private final VehiclePublish vehiclePublish;
     private final VehBasicInfoRepository vehBasicInfoRepository;
+    private final net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleInfoMutationAppService vehicleInfoMutationAppService;
     private final ImportDataParserRegistry parserRegistry;
     private final VehicleSecurityPresetAppService vehicleSecurityPresetAppService;
     private final VehicleOptionRepository vehicleOptionRepository;
@@ -119,13 +120,17 @@ public class VehicleProduceDataParserV1_0 extends BaseProcessor implements Vehic
                 handleVehicleInfo(itemJson, vehicleBasicInfo, "VARIANT", "variantCode", "版本数据", batchNum, vin);
                 handleVehicleInfo(itemJson, vehicleBasicInfo, "CONFIGURATION", "configurationCode", "配置数据", batchNum, vin);
                 log.info("车辆[{}]数据设置完成: variantCode={}, configurationCode={}", vin, vehicleBasicInfo.getVariantCode(), vehicleBasicInfo.getConfigurationCode());
-                if (ObjUtil.isNull(vehicleBasicInfo.getId())) {
-                    log.info("车辆[{}]执行insert操作", vin);
-                    vehBasicInfoRepository.insert(vehicleBasicInfo);
-                } else {
-                    log.info("车辆[{}]执行update操作, id={}", vin, vehicleBasicInfo.getId());
-                    vehBasicInfoRepository.update(vehicleBasicInfo);
-                }
+                // CR-071：经统一变更写服务（PRODUCE 通道，新建 before=null 审计/已存在 FILL_MISSING 补丁）
+                vehicleInfoMutationAppService.create(vehicleBasicInfo,
+                        net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.VehicleInfoPatchCmd.builder()
+                                .source("PRODUCE")
+                                .operationSource("VEHICLE_IMPORT")
+                                .operatorId("SYSTEM")
+                                .changeType("INBOUND")
+                                .operationId("NONE")
+                                .phase("BASIC")
+                                .seq(1)
+                                .build());
                 // 提取并保存选项值快照
                 try {
                     List<VehicleOption> options = extractVehicleOptions(vin, itemJson, batchNum);

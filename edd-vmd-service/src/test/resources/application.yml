@@ -93,3 +93,9 @@ vmd:
       # VMD-DSN-CR-065 集成测试：显式启用运维终止开关
       terminate-enabled: true
       terminate-stale-threshold-seconds: 0
+
+  # CR-071 集成测试：主软件类型优先级（APP 最主）
+  software-inventory:
+    snapshot:
+      primary-software-types:
+        - APP

@@ -42,6 +42,7 @@ public class VehicleAppService {
     private final VehicleConfigRepository vehicleConfigRepository;
     private final VehicleOptionRepository vehicleOptionRepository;
     private final VehSecurityConstantRepository vehSecurityConstantRepository;
+    private final VehicleInfoMutationAppService vehicleInfoMutationAppService;
 
     /**
      * 检查车架号是否存在，不存在则抛出异常
@@ -130,23 +131,63 @@ public class VehicleAppService {
     }
 
     /**
-     * 新增车辆
+     * 新增车辆（CR-071：经统一变更写服务 + 属性历史）
      *
      * @param vehicleBasicInfo 车辆基础信息
      * @return 结果
      */
     public int createVehicle(VehicleBasicInfo vehicleBasicInfo) {
-        return vehBasicInfoRepository.insert(vehicleBasicInfo);
+        VehicleInfoMutationAppService.MutationResult result = vehicleInfoMutationAppService.create(
+                vehicleBasicInfo, buildAdminContext());
+        return result.isApplied() ? 1 : 0;
     }
 
     /**
-     * 修改车辆
+     * 修改车辆（CR-071：经统一变更写服务 + 属性历史）
      *
      * @param vehicleBasicInfo 车辆基础信息
      * @return 结果
      */
     public int modifyVehicle(VehicleBasicInfo vehicleBasicInfo) {
-        return vehBasicInfoRepository.update(vehicleBasicInfo);
+        VehicleInfoMutationAppService.MutationResult result = vehicleInfoMutationAppService.patch(
+                net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.VehicleInfoPatchCmd.builder()
+                        .vehicleId(vehicleBasicInfo.getId())
+                        .vin(vehicleBasicInfo.getVin())
+                        .plantCode(vehicleBasicInfo.getPlantCode())
+                        .brandCode(vehicleBasicInfo.getBrandCode())
+                        .platformCode(vehicleBasicInfo.getPlatformCode())
+                        .carLineCode(vehicleBasicInfo.getCarLineCode())
+                        .modelCode(vehicleBasicInfo.getModelCode())
+                        .variantCode(vehicleBasicInfo.getVariantCode())
+                        .configurationCode(vehicleBasicInfo.getConfigurationCode())
+                        .eolTime(vehicleBasicInfo.getEolTime())
+                        .pdiTime(vehicleBasicInfo.getPdiTime())
+                        .orderNum(vehicleBasicInfo.getOrderNum())
+                        .vehicleBaseVersion(vehicleBasicInfo.getVehicleBaseVersion())
+                        .eolResult(vehicleBasicInfo.getEolResult())
+                        .repairPolicy(VehicleInfoMutationAppService.POLICY_CORRECT_EXPLICIT)
+                        .changeType("ATTRIBUTE_UPDATE")
+                        .operationSource("APP")
+                        .operatorId("SYSTEM")
+                        .phase("BASIC")
+                        .seq(1)
+                        .build());
+        return result.isApplied() ? 1 : 0;
+    }
+
+    /**
+     * 管理后台写上下文
+     */
+    private net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.VehicleInfoPatchCmd buildAdminContext() {
+        return net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.VehicleInfoPatchCmd.builder()
+                .source("MANUAL")
+                .operationSource("APP")
+                .operatorId("SYSTEM")
+                .changeType("INBOUND")
+                .operationId("NONE")
+                .phase("BASIC")
+                .seq(1)
+                .build();
     }
 
     /**

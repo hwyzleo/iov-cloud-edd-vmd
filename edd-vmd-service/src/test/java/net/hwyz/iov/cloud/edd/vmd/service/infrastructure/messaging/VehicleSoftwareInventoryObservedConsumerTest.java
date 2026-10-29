@@ -98,7 +98,7 @@ class VehicleSoftwareInventoryObservedConsumerTest {
     private void stubApplyApplied() {
         when(softwareInventoryAppService.applyManifest(any(), any(), anyString(), anyString(), anyString(),
                 anyString(), any(), any(), any(), anyString(), anyString(), any(), any(), any(),
-                any(), anyString(), any(), anyString(), any()))
+                any(), anyString(), any(), anyString(), any(), any()))
                 .thenReturn(new SoftwareInventoryAppService.ApplyManifestResult(true, false, 1L));
     }
 
@@ -142,7 +142,7 @@ class VehicleSoftwareInventoryObservedConsumerTest {
 
         // Then
         verify(softwareInventoryAppService, never()).applyManifest(any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any());
+                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any());
         verify(consumeAuditRepository, never()).insert(any());
     }
 
@@ -162,7 +162,7 @@ class VehicleSoftwareInventoryObservedConsumerTest {
         // Then
         verify(kafkaTemplate).send(eq("ota.vehicle-software-inventory.observed.dlq"), eq(VIN), anyString());
         verify(softwareInventoryAppService, never()).applyManifest(any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any());
+                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -183,7 +183,7 @@ class VehicleSoftwareInventoryObservedConsumerTest {
         assertEquals("QUARANTINED", captor.getValue().getStatus());
         assertEquals(1, captor.getValue().getItemQuarantined());
         verify(softwareInventoryAppService, never()).applyManifest(any(), any(), any(), any(), any(),
-                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any());
+                any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any(), any());
         verify(kafkaTemplate, never()).send(anyString(), any(), any());
     }
 

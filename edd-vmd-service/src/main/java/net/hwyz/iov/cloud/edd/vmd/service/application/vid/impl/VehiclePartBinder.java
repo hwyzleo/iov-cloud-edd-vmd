@@ -6,14 +6,18 @@ import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.PartInfoPatchCmd;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.VehicleEolPartBoundEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartInfoAppService;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartInfoMutationAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleNodeAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehiclePartAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartInfo;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleNode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehiclePart;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.InboundSourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.PartInstanceState;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartInfoRepository;
 import net.hwyz.iov.cloud.framework.common.util.StrUtil;
 import org.springframework.stereotype.Component;
 
@@ -31,6 +35,10 @@ import java.util.Map;
  * CR-022: 两步 upsert + 乱序兜底
  * 1. 先按 (partCode, sn) upsert part_info（幂等）
  * 2. VIN + 安装位置就绪时 upsert vehicle_part 绑定
+ * <p>
+ * CR-071 §4.2/§4.4：
+ * - 已绑同件也经统一变更写服务补列（FILL_MISSING），不再仅回填 extra；
+ * - 已绑不同实例/跨 VIN 拒绝，禁止仅凭槽位更新另一实例。
  *
  * @author hwyz_leo
  */
@@ -42,6 +50,8 @@ public class VehiclePartBinder {
     private final PartInfoAppService partInfoAppService;
     private final VehiclePartAppService vehiclePartAppService;
     private final VehicleNodeAppService vehicleNodeAppService;
+    private final PartInfoRepository partInfoRepository;
+    private final PartInfoMutationAppService partInfoMutationAppService;
 
     /**
      * 绑定零件列表
@@ -52,6 +62,20 @@ public class VehiclePartBinder {
      * @return 绑定成功的零件元数据列表
      */
     public List<VehicleEolPartBoundEvent.PartMeta> bindParts(JSONArray parts, String vin, String batchNum) {
+        return bindParts(parts, vin, batchNum, null);
+    }
+
+    /**
+     * 绑定零件列表（CR-071 §4.3：显式传入来源通道）
+     *
+     * @param parts 零件 JSON 数组
+     * @param vin 车架号
+     * @param batchNum 批次号
+     * @param source 来源通道（EOL/TOL/PRODUCE；null=由调用方后续治理）
+     * @return 绑定成功的零件元数据列表
+     */
+    public List<VehicleEolPartBoundEvent.PartMeta> bindParts(JSONArray parts, String vin, String batchNum,
+                                                             InboundSourceType source) {
         List<VehicleEolPartBoundEvent.PartMeta> partMetaList = new ArrayList<>();
         for (Object part : parts) {
             JSONObject partJson = JSONUtil.parseObj(part);
@@ -88,15 +112,41 @@ public class VehiclePartBinder {
                 // 补偿绑定语义：TOL 已绑跳过、漏绑补绑
                 VehiclePart existingBinding = vehiclePartAppService.findByVinAndPosition(vin, deviceCode);
                 if (existingBinding != null && existingBinding.getBindState() == 1) {
-                    // TOL 已绑，跳过
-                    log.debug("车辆[{}]位置[{}]已绑定零件[{}]，跳过", vin, deviceCode, pn);
+                    // 已绑同件：经统一变更写服务补列（FILL_MISSING），并回填 extra
+                    PartInfo existingPartInfo = partInfoRepository.selectByPartCodeAndSn(pn, sn);
+                    if (existingPartInfo == null || !existingPartInfo.getId().equals(existingBinding.getPartId())) {
+                        // CR-071 §4.4：已绑不同实例，禁止仅凭槽位更新另一实例
+                        log.warn("车辆[{}]位置[{}]已绑定其他实例[{}]，当前候选[{}:{}]拒绝补列/换绑",
+                                vin, deviceCode, existingBinding.getPartId(), pn, sn);
+                        continue;
+                    }
+                    log.debug("车辆[{}]位置[{}]已绑定同件[{}:{}]，补列并回填extra", vin, deviceCode, pn, sn);
                     // 回填零件细节（软件版本/配置字）入 part_info.extra
                     Map<String, String> extraFields = buildExtraFields(configWord, hardwareVersion, softwareVersion, hardwarePn, softwarePn, iccid1, iccid2);
                     partInfoAppService.updateExtraFields(pn, sn, extraFields);
+                    // CR-071：已绑同件也经 mutation 补列（硬件/治理字段，FILL_MISSING）
+                    PartInfoPatchCmd patchCmd = PartInfoPatchCmd.builder()
+                            .partCode(pn)
+                            .sn(sn)
+                            .vehicleNodeCode(deviceCode)
+                            .supplierCode(supplierCode)
+                            .batchNum(batchNum)
+                            .configWord(configWord)
+                            .hardwareVer(hardwareVersion)
+                            .hardwarePn(hardwarePn)
+                            .source(source != null ? source.getValue() : null)
+                            .repairPolicy(PartInfoMutationAppService.POLICY_FILL_MISSING)
+                            .changeType("BIND")
+                            .operationSource("IMPORT_EOL")
+                            .operatorId("SYSTEM")
+                            .phase("BINDING")
+                            .seq(1)
+                            .build();
+                    partInfoMutationAppService.patch(patchCmd);
                     continue;
                 }
 
-                // 步骤1: 先按 (partCode, sn) upsert part_info（幂等）
+                // 步骤1: 先按 (partCode, sn) 建立 part_info（CR-071：经统一变更写服务，含来源通道与属性历史）
                 PartInfo partInfo = PartInfo.builder()
                         .partCode(pn)
                         .sn(sn)
@@ -109,8 +159,19 @@ public class VehiclePartBinder {
                         .hardwarePn(hardwarePn)
                         .softwarePn(softwarePn)
                         .instanceState(PartInstanceState.IN_USE.value)
+                        // CR-071 §4.3：显式来源通道（EOL/TOL/PRODUCE）
+                        .source(source)
                         .build();
-                partInfoAppService.upsertPartInfo(partInfo);
+                partInfoMutationAppService.create(partInfo,
+                        PartInfoPatchCmd.builder()
+                                .changeType("BIND")
+                                .operationSource("IMPORT_EOL")
+                                .operatorId("SYSTEM")
+                                .source(source != null ? source.getValue() : null)
+                                .operationId("NONE")
+                                .phase("BINDING")
+                                .seq(1)
+                                .build());
 
                 // 回填零件细节（软件版本、配置字/变体编码等）入 part_info.extra
                 Map<String, String> extraFields = buildExtraFields(configWord, hardwareVersion, softwareVersion, hardwarePn, softwarePn, iccid1, iccid2);

@@ -134,7 +134,8 @@ public class VehicleSoftwareInventoryObservedConsumer {
                                 event.getCollectedAt(), true,
                                 cmd.getIsActiveSlot(), cmd.getObservationKey(),
                                 cmd.getCanonicalizationVersion(), cmd.getCanonicalDigest(),
-                                event.getAcceptedAt());
+                                event.getAcceptedAt(),
+                                null); // CR-071：OTA 观测契约暂无 SOFTWARE_TYPE，主软件判定依赖 EOL 链路写入类型
 
                         if (result.applied()) {
                             applied++;

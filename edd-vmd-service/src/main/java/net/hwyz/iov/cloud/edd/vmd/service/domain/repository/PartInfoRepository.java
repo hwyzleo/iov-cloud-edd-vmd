@@ -70,6 +70,16 @@ public interface PartInfoRepository {
     int update(PartInfo partInfo);
 
     /**
+     * CAS 补丁更新（CR-071）：按期望版本更新白名单字段，防止丢失更新
+     *
+     * @param partInfo 更新目标字段（非空字段才写）
+     * @param expectedRowVersion 期望当前版本
+     * @param nullFields 需显式置 null 的字段名集合（软件投影列清空用）
+     * @return 影响行数（0=版本冲突）
+     */
+    int patchByExpectedVersion(PartInfo partInfo, Integer expectedRowVersion, java.util.List<String> nullFields);
+
+    /**
      * 批量物理删除零件实例
      *
      * @param ids 主键ID数组

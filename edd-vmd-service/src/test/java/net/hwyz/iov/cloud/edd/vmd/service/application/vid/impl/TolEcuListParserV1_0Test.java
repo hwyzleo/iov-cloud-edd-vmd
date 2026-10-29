@@ -4,6 +4,7 @@ import cn.hutool.json.JSONObject;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.ImportResult;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.publish.VehiclePublish;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartInfoAppService;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartInfoMutationAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehicleNodeAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehiclePartAppService;
 import net.hwyz.iov.cloud.edd.vmd.service.application.vid.ImportDataParserRegistry;
@@ -48,6 +49,9 @@ class TolEcuListParserV1_0Test {
     private PartInfoAppService partInfoAppService;
 
     @Mock
+    private net.hwyz.iov.cloud.edd.vmd.service.application.service.PartInfoMutationAppService partInfoMutationAppService;
+
+    @Mock
     private VehiclePartAppService vehiclePartAppService;
 
     @Mock
@@ -61,7 +65,8 @@ class TolEcuListParserV1_0Test {
     @BeforeEach
     void setUp() {
         parser = new VehicleTolDataParserV1_0(
-                parserRegistry, vehBasicInfoRepository, vehicleNodeAppService, partInfoAppService, vehiclePartAppService, vehiclePublish, mdmPartRepository);
+                parserRegistry, vehBasicInfoRepository, vehicleNodeAppService, partInfoAppService,
+                partInfoMutationAppService, vehiclePartAppService, vehiclePublish, mdmPartRepository);
     }
 
     @Test
@@ -95,8 +100,8 @@ class TolEcuListParserV1_0Test {
         doAnswer(invocation -> {
             PartInfo partInfo = invocation.getArgument(0);
             partInfo.setId(1L);
-            return 1;
-        }).when(partInfoAppService).upsertPartInfo(any(PartInfo.class));
+            return new PartInfoMutationAppService.MutationResult("APPLIED", 1, java.util.Map.of());
+        }).when(partInfoMutationAppService).create(any(PartInfo.class), any());
 
         // When
         ImportResult result = parser.parse(batchNum, dataJson);
@@ -107,7 +112,7 @@ class TolEcuListParserV1_0Test {
         assertEquals(0, result.getFailureCount());
         assertEquals(0, result.getInvalidCount());
 
-        verify(partInfoAppService).upsertPartInfo(any(PartInfo.class));
+        verify(partInfoMutationAppService).create(any(PartInfo.class), any());
         verify(vehiclePartAppService).bindVehiclePartIdempotent(any(VehiclePart.class));
     }
 
@@ -135,7 +140,7 @@ class TolEcuListParserV1_0Test {
         assertTrue(result.getDescription().contains("VIN[" + vin + "]不存在"));
 
         verify(vehicleNodeAppService, never()).getVehicleNodeByCode(any());
-        verify(partInfoAppService, never()).upsertPartInfo(any());
+        verify(partInfoMutationAppService, never()).create(any(), any());
         verify(vehiclePartAppService, never()).bindVehiclePartIdempotent(any());
     }
 
@@ -165,7 +170,7 @@ class TolEcuListParserV1_0Test {
         assertNotNull(result.getDescription());
         assertTrue(result.getDescription().contains("车载节点[" + deviceCode + "]不存在"));
 
-        verify(partInfoAppService, never()).upsertPartInfo(any());
+        verify(partInfoMutationAppService, never()).create(any(), any());
         verify(vehiclePartAppService, never()).bindVehiclePartIdempotent(any());
     }
 
@@ -184,7 +189,7 @@ class TolEcuListParserV1_0Test {
         when(vehBasicInfoRepository.selectByVin(vin)).thenReturn(vehicleBasicInfo);
         VehicleNode vehicleNode = VehicleNode.builder().code(deviceCode).deviceCategory("IBCM_TYPE").build();
         when(vehicleNodeAppService.getVehicleNodeByCode(deviceCode)).thenReturn(vehicleNode);
-        when(partInfoAppService.upsertPartInfo(any(PartInfo.class)))
+        when(partInfoMutationAppService.create(any(PartInfo.class), any()))
                 .thenThrow(new PartBindingConflictException("零件已绑定其他VIN"));
 
         // When
@@ -256,8 +261,8 @@ class TolEcuListParserV1_0Test {
         doAnswer(invocation -> {
             PartInfo partInfo = invocation.getArgument(0);
             partInfo.setId(1L);
-            return 1;
-        }).when(partInfoAppService).upsertPartInfo(any(PartInfo.class));
+            return new PartInfoMutationAppService.MutationResult("APPLIED", 1, java.util.Map.of());
+        }).when(partInfoMutationAppService).create(any(PartInfo.class), any());
 
         // When
         ImportResult result = parser.parse(batchNum, dataJson);
@@ -286,8 +291,8 @@ class TolEcuListParserV1_0Test {
         doAnswer(invocation -> {
             PartInfo partInfo = invocation.getArgument(0);
             partInfo.setId(1L);
-            return 1;
-        }).when(partInfoAppService).upsertPartInfo(any(PartInfo.class));
+            return new PartInfoMutationAppService.MutationResult("APPLIED", 1, java.util.Map.of());
+        }).when(partInfoMutationAppService).create(any(PartInfo.class), any());
 
         when(vehBasicInfoRepository.selectByVin(vin2)).thenReturn(null);
 
