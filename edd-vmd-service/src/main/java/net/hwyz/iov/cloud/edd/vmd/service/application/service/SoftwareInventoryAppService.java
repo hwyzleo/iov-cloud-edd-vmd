@@ -206,14 +206,7 @@ public class SoftwareInventoryAppService {
             log.debug("幂等命中: source={}, sourceEventId={}, targetCode={}, slot={}", source, sourceEventId, softwareTargetCode, slot);
             // 重导补数据：幂等命中但历史记录刷写结果缺失（修复前导入）而本次输入非空 → 仅回填 flash_result，
             // 不动版本/来源/时序，不新建记录；已存在值时保留不覆盖
-            boolean backfilled = false;
-            if (flashResult != null && !flashResult.isBlank()
-                    && (existingByEvent.getFlashResult() == null || existingByEvent.getFlashResult().isBlank())) {
-                partSoftwareInstallationRepository.updateFlashResult(existingByEvent.getId(), flashResult);
-                log.info("幂等命中回填flash_result: id={}, targetCode={}, slot={}, flashResult={}",
-                        existingByEvent.getId(), softwareTargetCode, slot, flashResult);
-                backfilled = true;
-            }
+            boolean backfilled = backfillFlashResultIfMissing(existingByEvent, flashResult, softwareTargetCode, slot);
             // CR-071 §5.2：幂等命中也重算兼容投影（从当前 SSOT，不采用被拒绝的旧输入）
             refreshSnapshotProjection(partId, source);
             return new ApplyManifestResult(backfilled, false, existingByEvent.getInventoryVersion());
@@ -228,9 +221,11 @@ public class SoftwareInventoryAppService {
             if (!sourceEventTime.isAfter(currentRecord.getSourceEventTime())) {
                 log.debug("版本时序gate命中: sourceEventTime={}, currentSourceEventTime={}",
                         sourceEventTime, currentRecord.getSourceEventTime());
+                // 重导补数据：时序 gate 忽略不写 SSOT，但刷写结果缺失时仍回填（fill-missing）
+                boolean backfilled = backfillFlashResultIfMissing(currentRecord, flashResult, softwareTargetCode, slot);
                 // CR-071 §5.2：stale 也刷新投影
                 refreshSnapshotProjection(partId, source);
-                return new ApplyManifestResult(false, true, currentRecord.getInventoryVersion());
+                return new ApplyManifestResult(backfilled, true, currentRecord.getInventoryVersion());
             }
         }
 
@@ -243,9 +238,11 @@ public class SoftwareInventoryAppService {
                 if (newPriority >= currentPriority && Boolean.TRUE.equals(currentRecord.getIsConfirmed())) {
                     log.debug("来源优先级兜底: currentSource={}, newSource={}, currentPriority={}, newPriority={}",
                             currentRecord.getSource(), source, currentPriority, newPriority);
+                    // 重导补数据：同版本不写 SSOT，但刷写结果缺失时仍回填（fill-missing）
+                    boolean backfilled = backfillFlashResultIfMissing(currentRecord, flashResult, softwareTargetCode, slot);
                     // CR-071 §5.2：同版本不写 SSOT，仍刷新投影
                     refreshSnapshotProjection(partId, source);
-                    return new ApplyManifestResult(false, false, currentRecord.getInventoryVersion());
+                    return new ApplyManifestResult(backfilled, false, currentRecord.getInventoryVersion());
                 }
             } else {
                 log.debug("active槽切换: currentSlot={} standby→active, targetCode={}", slot, softwareTargetCode);
@@ -313,8 +310,7 @@ public class SoftwareInventoryAppService {
     /**
      * 从当前 SSOT 重算软件兼容投影（CR-071 §5.2）
      */
-    private void refreshSnapshotProjection(Long partId, String source) {
-        try {
+    private void refreshSnapshotProjection(Long partId, String source) {        try {
             softwareSnapshotProjectionService.refreshFromCurrentSsot(partId,
                     PartSoftwareSnapshotProjectionService.ProjectionContext.builder()
                             .operationSource("SOFTWARE_INVENTORY")
@@ -326,6 +322,33 @@ public class SoftwareInventoryAppService {
             // 投影失败不影响软件实装事实写入（SSOT 已更新），仅告警
             log.error("软件兼容投影刷新失败: partId={}, source={}, error={}", partId, source, e.getMessage(), e);
         }
+    }
+
+    /**
+     * 刷写结果缺失回填（fill-missing）
+     * <p>
+     * 幂等命中/时序gate/同版本仲裁被忽略时，若目标记录 flash_result 为空（修复前导入的存量数据）
+     * 而本次输入非空，仅补该字段（不动版本/来源/时序，不新建记录，不发事件）；已存在值保留不覆盖。
+     *
+     * @param record 目标记录（幂等命中记录或当前 ACTIVE 记录）
+     * @param flashResult 本次输入刷写结果（可空）
+     * @param targetCode 软件目标代码（仅日志）
+     * @param slot 槽位（仅日志）
+     * @return 是否执行了回填
+     */
+    private boolean backfillFlashResultIfMissing(PartSoftwareInstallation record, String flashResult,
+                                                 String targetCode, String slot) {
+        if (record == null || record.getId() == null
+                || flashResult == null || flashResult.isBlank()) {
+            return false;
+        }
+        if (record.getFlashResult() != null && !record.getFlashResult().isBlank()) {
+            return false;
+        }
+        partSoftwareInstallationRepository.updateFlashResult(record.getId(), flashResult);
+        log.info("刷写结果缺失回填flash_result: id={}, targetCode={}, slot={}, flashResult={}",
+                record.getId(), targetCode, slot, flashResult);
+        return true;
     }
 
     /**

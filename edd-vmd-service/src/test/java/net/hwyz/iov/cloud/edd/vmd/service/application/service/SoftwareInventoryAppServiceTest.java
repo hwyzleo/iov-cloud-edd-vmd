@@ -171,6 +171,53 @@ class SoftwareInventoryAppServiceTest {
     }
 
     @Test
+    void applyManifest_sameVersionArbitration_shouldBackfillMissingFlashResult() {
+        // Given：幂等键未命中（新批次重传），同版本 EOL vs EOL confirmed → 仲裁忽略，但 flash_result 缺失应回填
+        when(repository.selectBySourceAndSourceEventId(any(), any(), any(), any())).thenReturn(null);
+        Instant currentTime = Instant.parse("2026-09-08T10:00:00Z");
+        when(repository.selectActiveByPartIdTargetCodeAndSlot(PART_ID, TARGET, null))
+                .thenReturn(currentRecord("1.0.0", null, true, currentTime, SOURCE));
+
+        // When：21 参签名，flashResult="OK"
+        SoftwareInventoryAppService.ApplyManifestResult result = appService.applyManifest(
+                PART_ID, BINDING_ID, VIN, TARGET, "SW-PN", "1.0.0",
+                null, null, "OK", "UPDATE",
+                SOURCE, "evt-backfill-003", Instant.parse("2026-09-08T11:00:00Z"),
+                Instant.parse("2026-09-08T11:00:00Z"), true,
+                null, null, null, null, null, null);
+
+        // Then：回填 flash_result，不新增记录、不发事件
+        assertTrue(result.applied());
+        assertFalse(result.ignoredByVersionGate());
+        verify(repository).updateFlashResult(1L, "OK");
+        verify(repository, never()).insert(any(PartSoftwareInstallation.class));
+        verify(vmdOutboxRepository, never()).insert(any());
+    }
+
+    @Test
+    void applyManifest_versionGate_shouldBackfillMissingFlashResult() {
+        // Given：新事件时间早于当前 → 时序 gate 命中，但 flash_result 缺失仍应回填
+        when(repository.selectBySourceAndSourceEventId(any(), any(), any(), any())).thenReturn(null);
+        Instant currentTime = Instant.parse("2026-09-08T11:00:00Z");
+        when(repository.selectActiveByPartIdTargetCodeAndSlot(PART_ID, TARGET, null))
+                .thenReturn(currentRecord("2.0.0", null, true, currentTime, SOURCE));
+
+        // When：21 参签名，flashResult="OK"
+        SoftwareInventoryAppService.ApplyManifestResult result = appService.applyManifest(
+                PART_ID, BINDING_ID, VIN, TARGET, "SW-PN", "2.0.0",
+                null, null, "OK", "UPDATE",
+                SOURCE, "evt-backfill-004", Instant.parse("2026-09-08T10:00:00Z"),
+                Instant.parse("2026-09-08T10:00:00Z"), true,
+                null, null, null, null, null, null);
+
+        // Then：时序 gate 仍为 ignored，但 flash_result 回填
+        assertTrue(result.applied());
+        assertTrue(result.ignoredByVersionGate());
+        verify(repository).updateFlashResult(1L, "OK");
+        verify(repository, never()).insert(any(PartSoftwareInstallation.class));
+    }
+
+    @Test
     void applyManifest_staleVersionGate_shouldIgnore() {
         // Given
         when(repository.selectBySourceAndSourceEventId(any(), any(), any(), any())).thenReturn(null);
