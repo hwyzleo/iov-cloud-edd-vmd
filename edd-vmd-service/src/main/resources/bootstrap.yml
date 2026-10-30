@@ -8,7 +8,6 @@ spring:
     locations: db/migration
     table: flyway_schema_history
     validate-on-migrate: true
-    repair-on-start: true
   cloud:
     nacos:
       discovery:
@@ -19,7 +18,6 @@ spring:
         namespace: ${NACOS_NAMESPACE:32c13f29-1aa6-468a-bacb-81be7f437dc9}
         name: edd-vmd
         file-extension: yaml
-        refresh-enabled: true
         shared-configs:
           - application.yaml
           - mysql.yaml
