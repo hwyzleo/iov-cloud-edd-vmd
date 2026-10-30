@@ -101,4 +101,15 @@ public interface PartSoftwareInstallationRepository {
      */
     PartSoftwareInstallation selectBySourceAndSourceEventId(String source, String sourceEventId,
                                                             String softwareTargetCode, String slot);
+
+    /**
+     * 回填刷写结果（幂等命中去重后仅补 flash_result，不动版本/来源/时序，row_version 乐观递增）
+     * <p>
+     * 用于 EOL 重导补数据：历史记录（修复前导入）flash_result 缺失时回填，不新建记录、不改消解结果。
+     *
+     * @param id 记录主键ID
+     * @param flashResult 刷写结果
+     * @return 影响行数
+     */
+    int updateFlashResult(Long id, String flashResult);
 }

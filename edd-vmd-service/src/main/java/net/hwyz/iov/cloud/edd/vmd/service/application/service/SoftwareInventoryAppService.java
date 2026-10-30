@@ -204,9 +204,19 @@ public class SoftwareInventoryAppService {
                 .selectBySourceAndSourceEventId(source, sourceEventId, softwareTargetCode, slot);
         if (existingByEvent != null) {
             log.debug("幂等命中: source={}, sourceEventId={}, targetCode={}, slot={}", source, sourceEventId, softwareTargetCode, slot);
+            // 重导补数据：幂等命中但历史记录刷写结果缺失（修复前导入）而本次输入非空 → 仅回填 flash_result，
+            // 不动版本/来源/时序，不新建记录；已存在值时保留不覆盖
+            boolean backfilled = false;
+            if (flashResult != null && !flashResult.isBlank()
+                    && (existingByEvent.getFlashResult() == null || existingByEvent.getFlashResult().isBlank())) {
+                partSoftwareInstallationRepository.updateFlashResult(existingByEvent.getId(), flashResult);
+                log.info("幂等命中回填flash_result: id={}, targetCode={}, slot={}, flashResult={}",
+                        existingByEvent.getId(), softwareTargetCode, slot, flashResult);
+                backfilled = true;
+            }
             // CR-071 §5.2：幂等命中也重算兼容投影（从当前 SSOT，不采用被拒绝的旧输入）
             refreshSnapshotProjection(partId, source);
-            return new ApplyManifestResult(false, false, existingByEvent.getInventoryVersion());
+            return new ApplyManifestResult(backfilled, false, existingByEvent.getInventoryVersion());
         }
 
         // 2. 获取当前 ACTIVE 记录（按 Target + Slot 锚点）

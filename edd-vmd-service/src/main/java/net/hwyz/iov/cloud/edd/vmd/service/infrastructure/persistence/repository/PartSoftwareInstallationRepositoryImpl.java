@@ -1,6 +1,7 @@
 package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.repository;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartSoftwareInstallation;
@@ -10,6 +11,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.Part
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.PartSoftwareInstallationPo;
 import org.springframework.stereotype.Repository;
 
+import java.util.Date;
 import java.util.List;
 
 /**
@@ -107,5 +109,15 @@ public class PartSoftwareInstallationRepositoryImpl implements PartSoftwareInsta
             wrapper.isNull(PartSoftwareInstallationPo::getSlot);
         }
         return PartSoftwareInstallationConverter.INSTANCE.toDomain(partSoftwareInstallationMapper.selectOne(wrapper));
+    }
+
+    @Override
+    public int updateFlashResult(Long id, String flashResult) {
+        LambdaUpdateWrapper<PartSoftwareInstallationPo> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(PartSoftwareInstallationPo::getId, id)
+               .set(PartSoftwareInstallationPo::getFlashResult, flashResult)
+               .set(PartSoftwareInstallationPo::getModifyTime, new Date())
+               .setSql("row_version = row_version + 1");
+        return partSoftwareInstallationMapper.update(null, wrapper);
     }
 }

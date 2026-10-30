@@ -126,6 +126,51 @@ class SoftwareInventoryAppServiceTest {
     }
 
     @Test
+    void applyManifest_idempotentHit_missingFlashResult_shouldBackfill() {
+        // Given：幂等命中，历史记录 flash_result 缺失（修复前导入），本次 EOL 重导携带 FLASH_RESULT
+        when(repository.selectBySourceAndSourceEventId(SOURCE, "evt-backfill-001", TARGET, null))
+                .thenReturn(currentRecord("1.0.0", null, true,
+                        Instant.parse("2026-09-08T10:00:00Z"), SOURCE));
+
+        // When：21 参全量签名，flashResult="OK"
+        SoftwareInventoryAppService.ApplyManifestResult result = appService.applyManifest(
+                PART_ID, BINDING_ID, VIN, TARGET, "SW-PN", "1.0.0",
+                null, null, "OK", "UPDATE",
+                SOURCE, "evt-backfill-001", Instant.parse("2026-09-08T12:00:00Z"),
+                Instant.parse("2026-09-08T12:00:00Z"), true,
+                null, null, null, null, null, null);
+
+        // Then：仅回填 flash_result，不新增记录、不发布事件
+        assertTrue(result.applied());
+        verify(repository).updateFlashResult(1L, "OK");
+        verify(repository, never()).insert(any(PartSoftwareInstallation.class));
+        verify(vmdOutboxRepository, never()).insert(any());
+    }
+
+    @Test
+    void applyManifest_idempotentHit_flashResultAlreadySet_shouldNotBackfill() {
+        // Given：幂等命中，历史记录 flash_result 已有值 → 保留不覆盖
+        PartSoftwareInstallation existing = currentRecord("1.0.0", null, true,
+                Instant.parse("2026-09-08T10:00:00Z"), SOURCE);
+        existing.setFlashResult("PASS");
+        when(repository.selectBySourceAndSourceEventId(SOURCE, "evt-backfill-002", TARGET, null))
+                .thenReturn(existing);
+
+        // When
+        SoftwareInventoryAppService.ApplyManifestResult result = appService.applyManifest(
+                PART_ID, BINDING_ID, VIN, TARGET, "SW-PN", "1.0.0",
+                null, null, "OK", "UPDATE",
+                SOURCE, "evt-backfill-002", Instant.parse("2026-09-08T12:00:00Z"),
+                Instant.parse("2026-09-08T12:00:00Z"), true,
+                null, null, null, null, null, null);
+
+        // Then：不回填
+        assertFalse(result.applied());
+        verify(repository, never()).updateFlashResult(any(), any());
+        verify(repository, never()).insert(any(PartSoftwareInstallation.class));
+    }
+
+    @Test
     void applyManifest_staleVersionGate_shouldIgnore() {
         // Given
         when(repository.selectBySourceAndSourceEventId(any(), any(), any(), any())).thenReturn(null);
