@@ -99,3 +99,8 @@ vmd:
     snapshot:
       primary-software-types:
         - APP
+
+  # CR-072 集成/单元测试：显式开启实例 device_category 最小快照功能（生产默认关闭）
+  part:
+    device-category:
+      enabled: true

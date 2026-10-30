@@ -335,4 +335,18 @@ class FlywayMigrationTest {
         String itemAlterSegment = content.substring(itemAlterStart, batchAlterStart);
         assertFalse(itemAlterSegment.contains("`response_payload`"), "Response 本体不得落在 item 表（批次表承载）");
     }
+
+    @Test
+    @DisplayName("V70迁移脚本应存在并添加 device_category 可空列（CR-072）")
+    void v70MigrationScript_shouldAddDeviceCategory() throws IOException {
+        Path migrationFile = Paths.get(MIGRATION_PATH, "V70__cr072_add_part_info_device_category.sql");
+        assertTrue(Files.exists(migrationFile), "V70迁移脚本文件应该存在");
+        String content = Files.readString(migrationFile);
+        assertTrue(content.contains("ALTER TABLE `tb_part_info`"), "应修改 tb_part_info");
+        assertTrue(content.contains("device_category"), "应新增 device_category 列");
+        assertTrue(content.contains("VARCHAR(20)"), "列长应对齐节点投影 VARCHAR(20)");
+        assertTrue(content.contains("NULL DEFAULT NULL"), "应为可空列");
+        assertTrue(!content.contains("DROP TABLE"), "expand-only：不应含 DROP TABLE");
+        assertTrue(!content.contains("CREATE INDEX"), "首版不建索引（CR-072）");
+    }
 }

@@ -32,6 +32,11 @@ public class PartInfoQuery {
     private String partType;
 
     /**
+     * 节点设备类别（CR-072）：精确筛选，值长≤20；空参数等同不筛选
+     */
+    private String deviceCategory;
+
+    /**
      * 入站批次号（CR-023）
      */
     private String inboundBatchNo;

@@ -5,17 +5,22 @@ import cn.hutool.json.JSONUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.PartInfoPatchCmd;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.DeviceCategoryResolveException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.PartInstanceNotExistException;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.PartNodeConflictException;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.PreviewStaleException;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartInfo;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartInfoChangeLog;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartInfoChangeLogRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartInfoRepository;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -47,6 +52,11 @@ public class PartInfoMutationAppService {
 
     private final PartInfoRepository partInfoRepository;
     private final PartInfoChangeLogRepository partInfoChangeLogRepository;
+    private final PartDeviceCategorySnapshotResolver deviceCategorySnapshotResolver;
+
+    /** CR-072 功能开关：默认关闭；部署先加列+writer升级+reader兼容，再灰度开启（启动时读取，非运行时刷新） */
+    @Value("${vmd.part.device-category.enabled:false}")
+    private boolean deviceCategoryEnabled;
 
     /** 回填策略 */
     public static final String POLICY_FILL_MISSING = "FILL_MISSING";
@@ -73,8 +83,38 @@ public class PartInfoMutationAppService {
             return MutationResult.conflict(current.getRowVersion());
         }
 
+        // 0.5 deviceCategory 派生治理（CR-072）：节点合并/冲突校验 → 类别派生（FILL_MISSING）→ 证据进审计 metadata
+        String derivedCategory = null;
+        String evidenceJson = null;
+        if (cmd.isDeriveDeviceCategory()) {
+            String finalNode = mergeFinalNode(current, cmd);
+            if (finalNode != null && isBlank(current.getDeviceCategory())) {
+                if (deviceCategoryEnabled) {
+                    PartInfoPatchCmd.DeviceCategoryEvidence evidence = deriveCategory(cmd, finalNode);
+                    if (cmd.getExpectedPlannedCategory() != null
+                            && !cmd.getExpectedPlannedCategory().equals(evidence.getDeviceCategory())) {
+                        throw new PreviewStaleException("计划候选类别[" + cmd.getExpectedPlannedCategory()
+                                + "]与当前解析[" + evidence.getDeviceCategory() + "]不一致");
+                    }
+                    derivedCategory = evidence.getDeviceCategory();
+                    evidenceJson = buildDeviceCategoryMetadata(finalNode, evidence, cmd);
+                }
+                // 开关关闭：不写类别、不清已有；重导条目标未执行由 executor 处理，普通入站节点行为不变
+            } else if (finalNode != null && !isBlank(current.getDeviceCategory())) {
+                // 已有类别非空：FILL_MISSING 保留快照；解析出不同值时仅告警，不覆盖（MDM 后变不自动追）
+                log.debug("零件[{}:{}]已有类别[{}]非空，保留快照",
+                        current.getPartCode(), current.getSn(), current.getDeviceCategory());
+            }
+        }
+        if (derivedCategory != null) {
+            cmd.setMetadataJson(evidenceJson);
+        }
+
         // 1. 计算白名单字段 diff
         Map<String, Object> changed = computeDiff(current, cmd);
+        if (derivedCategory != null) {
+            changed.put("deviceCategory", derivedCategory);
+        }
         if (changed.isEmpty()) {
             log.debug("零件[{}:{}]无字段差异，NOOP", current.getPartCode(), current.getSn());
             return MutationResult.noop(current.getRowVersion());
@@ -117,6 +157,10 @@ public class PartInfoMutationAppService {
     public MutationResult create(PartInfo partInfo, PartInfoPatchCmd ctx) {
         PartInfo existing = partInfoRepository.selectByPartCodeAndSn(partInfo.getPartCode(), partInfo.getSn());
         if (existing != null) {
+            if (ctx.isRequireNewInstance()) {
+                throw new PreviewStaleException("计划要求新实例，但零件[" + partInfo.getPartCode() + ":"
+                        + partInfo.getSn() + "]已被并发创建，需重新预览");
+            }
             // 已存在：退化为补丁更新（幂等，不重复实例）
             partInfo.setId(existing.getId()); // 回写调用方对象（后续绑定等依赖 id）
             PartInfoPatchCmd patchCmd = PartInfoPatchCmd.builder()
@@ -138,6 +182,10 @@ public class PartInfoMutationAppService {
                     .inboundBatchNo(partInfo.getInboundBatchNo())
                     .sourceEventId(partInfo.getSourceEventId())
                     .lastInboundTime(partInfo.getLastInboundTime())
+                    .deriveDeviceCategory(ctx.isDeriveDeviceCategory())
+                    .expectedPlannedCategory(ctx.getExpectedPlannedCategory())
+                    .requireNewInstance(ctx.isRequireNewInstance())
+                    .deviceCategoryEvidence(ctx.getDeviceCategoryEvidence())
                     .repairPolicy(POLICY_FILL_MISSING)
                     .changeType(ctx.getChangeType() != null ? ctx.getChangeType() : "INBOUND")
                     .operationSource(ctx.getOperationSource())
@@ -147,10 +195,23 @@ public class PartInfoMutationAppService {
                     .operationId(ctx.getOperationId())
                     .phase(ctx.getPhase() != null ? ctx.getPhase() : "BASIC")
                     .seq(ctx.getSeq() != null ? ctx.getSeq() : 1)
+                    .reason(ctx.getReason())
                     .build();
             return patch(patchCmd);
         }
 
+        // 新实例：deviceCategory 派生（CR-072）后同事务落库 + 审计 metadata
+        String evidenceJson = null;
+        if (ctx.isDeriveDeviceCategory() && deviceCategoryEnabled && !isBlank(partInfo.getVehicleNodeCode())) {
+            PartInfoPatchCmd.DeviceCategoryEvidence evidence = deriveCategory(ctx, partInfo.getVehicleNodeCode());
+            if (ctx.getExpectedPlannedCategory() != null
+                    && !ctx.getExpectedPlannedCategory().equals(evidence.getDeviceCategory())) {
+                throw new PreviewStaleException("计划候选类别[" + ctx.getExpectedPlannedCategory()
+                        + "]与当前解析[" + evidence.getDeviceCategory() + "]不一致");
+            }
+            partInfo.setDeviceCategory(evidence.getDeviceCategory());
+            evidenceJson = buildDeviceCategoryMetadata(partInfo.getVehicleNodeCode(), evidence, ctx);
+        }
         // 新实例：insert + 属性历史（before=null）
         partInfo.setFirstSeenTime(java.time.Instant.now());
         partInfoRepository.insert(partInfo);
@@ -173,12 +234,12 @@ public class PartInfoMutationAppService {
                 .inboundBatchNo(ctx.getInboundBatchNo() != null ? ctx.getInboundBatchNo() : partInfo.getInboundBatchNo())
                 .operationId(ctx.getOperationId() != null ? ctx.getOperationId() : "NONE")
                 .mutationKey(buildMutationKey(ctx, partInfo.getId()))
+                .metadataJson(evidenceJson)
                 .rowVersion(1)
                 .build();
         partInfoChangeLogRepository.insert(changeLog);
         return MutationResult.applied(1, Map.of("created", true));
     }
-
     /**
      * 按 partId 或 (partCode,sn) 定位当前实例
      */
@@ -310,6 +371,7 @@ public class PartInfoMutationAppService {
                 .inboundBatchNo(cmd.getInboundBatchNo())
                 .operationId(cmd.getOperationId() != null ? cmd.getOperationId() : "NONE")
                 .mutationKey(buildMutationKey(cmd, current.getId()))
+                .metadataJson(cmd.getMetadataJson())
                 .rowVersion(newRowVersion)
                 .build();
     }
@@ -331,6 +393,7 @@ public class PartInfoMutationAppService {
         json.set("instanceState", partInfo.getInstanceState());
         json.set("source", partInfo.getSource() != null ? partInfo.getSource().getValue() : null);
         json.set("partType", partInfo.getPartType());
+        json.set("deviceCategory", partInfo.getDeviceCategory());
         json.set("inboundBatchNo", partInfo.getInboundBatchNo());
         json.set("sourceEventId", partInfo.getSourceEventId());
         json.set("lastInboundTime", partInfo.getLastInboundTime());
@@ -391,13 +454,14 @@ public class PartInfoMutationAppService {
     }
 
     /**
-     * 可显式置 null 的投影字段白名单
+     * 可显式置 null 的投影字段白名单（deviceCategory 仅限内部受控补偿用，不开放普通调用方清空）
      */
     private boolean isProjectionNullable(String field) {
         return switch (field) {
             case "softwareVer", "softwarePn",
                  "softwareSnapshotInstallationId", "softwareSnapshotTarget",
-                 "softwareSnapshotSlot", "softwareSnapshotInventoryVersion" -> true;
+                 "softwareSnapshotSlot", "softwareSnapshotInventoryVersion",
+                 "deviceCategory" -> true;
             default -> false;
         };
     }
@@ -413,6 +477,7 @@ public class PartInfoMutationAppService {
             case "softwareSnapshotTarget" -> current.getSoftwareSnapshotTarget();
             case "softwareSnapshotSlot" -> current.getSoftwareSnapshotSlot();
             case "softwareSnapshotInventoryVersion" -> current.getSoftwareSnapshotInventoryVersion();
+            case "deviceCategory" -> current.getDeviceCategory();
             default -> null;
         };
     }
@@ -435,6 +500,7 @@ public class PartInfoMutationAppService {
             case "source" -> target.setSource(value != null
                     ? net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.InboundSourceType.valOf((String) value) : null);
             case "partType" -> target.setPartType((String) value);
+            case "deviceCategory" -> target.setDeviceCategory((String) value);
             case "inboundBatchNo" -> target.setInboundBatchNo((String) value);
             case "sourceEventId" -> target.setSourceEventId((String) value);
             case "lastInboundTime" -> target.setLastInboundTime((java.time.Instant) value);
@@ -449,6 +515,74 @@ public class PartInfoMutationAppService {
 
     private boolean isBlank(String value) {
         return value == null || value.isBlank();
+    }
+
+    // ==================== CR-072 deviceCategory 派生辅助 ====================
+
+    /**
+     * 合并最终节点（读取当前实例后执行）：
+     * 输入空 = 未提供，不清节点；当前空 + 输入非空 = 补全；两者非空且不同 = 拒绝（不部分提交）。
+     */
+    private String mergeFinalNode(PartInfo current, PartInfoPatchCmd cmd) {
+        String inputNode = trimToNull(cmd.getVehicleNodeCode());
+        String currentNode = current.getVehicleNodeCode();
+        if (inputNode == null) {
+            return currentNode;
+        }
+        if (currentNode == null) {
+            return inputNode;
+        }
+        if (!currentNode.equals(inputNode)) {
+            throw new PartNodeConflictException(current.getPartCode(), current.getSn(), currentNode, inputNode);
+        }
+        return inputNode;
+    }
+
+    /**
+     * 类别派生：优先复用调用方单次读取证据（绑定路径），否则经 resolver 本地投影解析；
+     * 失败抛出 DeviceCategoryResolveException（可重试/待治理），该项不提交。
+     */
+    private PartInfoPatchCmd.DeviceCategoryEvidence deriveCategory(PartInfoPatchCmd cmd, String finalNode) {
+        PartInfoPatchCmd.DeviceCategoryEvidence evidence = cmd.getDeviceCategoryEvidence();
+        if (evidence != null && finalNode.equals(evidence.getNodeCode())) {
+            if (isBlank(evidence.getDeviceCategory())) {
+                throw new DeviceCategoryResolveException(finalNode, false, "CATEGORY_BLANK");
+            }
+            return evidence;
+        }
+        PartDeviceCategorySnapshotResolver.ResolvedCategory resolved = deviceCategorySnapshotResolver.resolve(finalNode);
+        return PartInfoPatchCmd.DeviceCategoryEvidence.builder()
+                .nodeCode(finalNode)
+                .deviceCategory(resolved.deviceCategory())
+                .externalRefId(resolved.externalRefId())
+                .externalVersion(resolved.externalVersion())
+                .resolvedAt(Instant.now())
+                .build();
+    }
+
+    /**
+     * 构造审计 metadata（服务器构造；externalRefId/externalVersion 不可得时省略，不编造版本）
+     */
+    private String buildDeviceCategoryMetadata(String finalNode, PartInfoPatchCmd.DeviceCategoryEvidence evidence,
+                                               PartInfoPatchCmd cmd) {
+        JSONObject meta = new JSONObject();
+        meta.set("vehicleNodeCode", finalNode);
+        meta.set("deviceCategory", evidence.getDeviceCategory());
+        if (evidence.getExternalRefId() != null) {
+            meta.set("externalRefId", evidence.getExternalRefId());
+        }
+        if (evidence.getExternalVersion() != null) {
+            meta.set("externalVersion", evidence.getExternalVersion());
+        }
+        meta.set("resolvedAt", evidence.getResolvedAt() != null
+                ? evidence.getResolvedAt().toString() : Instant.now().toString());
+        meta.set("operationSource", cmd.getOperationSource());
+        meta.set("reason", cmd.getReason());
+        return meta.toString();
+    }
+
+    private String trimToNull(String value) {
+        return value == null ? null : (value.isBlank() ? null : value.trim());
     }
 
     /**

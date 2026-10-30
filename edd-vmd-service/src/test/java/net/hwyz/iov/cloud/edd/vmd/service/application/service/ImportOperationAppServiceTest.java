@@ -4,6 +4,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.ImportOperation;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehImportData;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.ImportOperationRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartImportDataRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartInfoRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehImportDataRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -48,6 +49,10 @@ class ImportOperationAppServiceTest {
     private VehImportEventReplayAppService vehImportEventReplayAppService;
     @Mock
     private PartImportPostProcessReplayAppService partImportPostProcessReplayAppService;
+    @Mock
+    private PartInfoRepository partInfoRepository;
+    @Mock
+    private PartDeviceCategorySnapshotResolver partDeviceCategorySnapshotResolver;
 
     private ImportOperationAppService service;
 
@@ -55,7 +60,8 @@ class ImportOperationAppServiceTest {
     void setUp() {
         service = new ImportOperationAppService(
                 importOperationRepository, vehImportDataRepository, partImportDataRepository,
-                importReimportExecutor, vehImportEventReplayAppService, partImportPostProcessReplayAppService);
+                importReimportExecutor, vehImportEventReplayAppService, partImportPostProcessReplayAppService,
+                partInfoRepository, partDeviceCategorySnapshotResolver);
     }
 
     private VehImportData importData() {
@@ -97,7 +103,7 @@ class ImportOperationAppServiceTest {
     }
 
     @Test
-    @DisplayName("execute REIMPORT/VEHICLE：认领执行并收敛终态")
+    @DisplayName("execute REIMPORT/VEHICLE：先预览获取批准计划摘要，再执行（CR-072 预览安全）")
     void execute_reimportRunsExecutor() {
         when(vehImportDataRepository.selectById(100L)).thenReturn(importData());
         when(importOperationRepository.selectActiveByDomainAndImportDataId("VEHICLE", 100L)).thenReturn(null);
@@ -112,15 +118,64 @@ class ImportOperationAppServiceTest {
         when(importReimportExecutor.executeVehicle(any(), anyList(), any()))
                 .thenReturn(new ImportReimportExecutor.ReimportOutcome(2, 0, 0, 0));
 
+        // CR-072：先预览获取批准计划摘要
+        var previewResult = service.preview(new ImportOperationAppService.PreviewRequest(
+                "VEHICLE", 100L, "REIMPORT", List.of("VIN001", "VIN002"), "FILL_MISSING"));
+        assertThat(previewResult.getPlanDigest()).isNotBlank();
+
         ImportOperationAppService.ExecuteRequest req = ImportOperationAppService.ExecuteRequest.builder()
                 .domain("VEHICLE").importDataId(100L).mode("REIMPORT")
                 .scope(List.of("VIN001", "VIN002")).repairPolicy("FILL_MISSING")
+                .planDigest(previewResult.getPlanDigest())
                 .reason("补全字段").operatorId("tester").build();
 
         ImportOperationAppService.ExecuteResult result = service.execute(req);
 
         assertThat(result.getOperationId()).isNotBlank();
         verify(importReimportExecutor).executeVehicle(any(), anyList(), any());
+    }
+
+    @Test
+    @DisplayName("execute REIMPORT：省略 planDigest 不能跳过批准计划校验")
+    void execute_reimportWithoutPlanDigest_rejected() {
+        when(vehImportDataRepository.selectById(100L)).thenReturn(importData());
+        when(importOperationRepository.selectActiveByDomainAndImportDataId("VEHICLE", 100L)).thenReturn(null);
+
+        ImportOperationAppService.ExecuteRequest req = ImportOperationAppService.ExecuteRequest.builder()
+                .domain("VEHICLE").importDataId(100L).mode("REIMPORT")
+                .scope(List.of("VIN001", "VIN002")).repairPolicy("FILL_MISSING")
+                .reason("补全字段").operatorId("tester").build();
+
+        assertThatThrownBy(() -> service.execute(req))
+                .isInstanceOf(ImportOperationAppService.OperationNotAllowedException.class)
+                .hasMessageContaining("planDigest");
+    }
+
+    @Test
+    @DisplayName("execute REIMPORT：执行期重扫与预览摘要不一致 → PREVIEW_STALE 拒绝陈旧计划")
+    void execute_reimportStalePlan_rejected() {
+        when(vehImportDataRepository.selectById(100L)).thenReturn(importData());
+        when(importOperationRepository.selectActiveByDomainAndImportDataId("VEHICLE", 100L)).thenReturn(null);
+
+        ImportOperationAppService.ExecuteRequest req = ImportOperationAppService.ExecuteRequest.builder()
+                .domain("VEHICLE").importDataId(100L).mode("REIMPORT")
+                .scope(List.of("VIN001", "VIN002")).repairPolicy("FILL_MISSING")
+                .planDigest("0000000000000000000000000000000000000000000000000000000000000000")
+                .reason("补全字段").operatorId("tester").build();
+
+        assertThatThrownBy(() -> service.execute(req))
+                .isInstanceOf(net.hwyz.iov.cloud.edd.vmd.service.common.exception.PreviewStaleException.class)
+                .hasMessageContaining("请重新预览");
+    }
+
+    @Test
+    @DisplayName("preview/execute REIMPORT CORRECT_EXPLICIT：第一阶段明确拒绝，不静默降级")
+    void reimportCorrectExplicit_rejected() {
+        when(vehImportDataRepository.selectById(100L)).thenReturn(importData());
+        assertThatThrownBy(() -> service.preview(new ImportOperationAppService.PreviewRequest(
+                "VEHICLE", 100L, "REIMPORT", List.of("VIN001"), "CORRECT_EXPLICIT")))
+                .isInstanceOf(ImportOperationAppService.OperationNotAllowedException.class)
+                .hasMessageContaining("第一阶段待实施");
     }
 
     @Test

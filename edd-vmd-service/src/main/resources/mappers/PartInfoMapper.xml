@@ -20,6 +20,7 @@
         <result column="first_seen_time" property="firstSeenTime" />
         <result column="source" property="source" />
         <result column="part_type" property="partType" />
+        <result column="device_category" property="deviceCategory" />
         <result column="inbound_batch_no" property="inboundBatchNo" />
         <result column="source_event_id" property="sourceEventId" />
         <result column="last_inbound_time" property="lastInboundTime" />
@@ -41,7 +42,7 @@
     <!-- 通用查询结果列 -->
     <sql id="baseColumnList">
         id, part_code, sn, vehicle_node_code, config_word, supplier_code, batch_num, hardware_ver, software_ver, hardware_pn, software_pn, extra, instance_state, first_seen_time,
-        source, part_type, inbound_batch_no, source_event_id, last_inbound_time,
+        source, part_type, device_category, inbound_batch_no, source_event_id, last_inbound_time,
         software_snapshot_state, software_snapshot_installation_id, software_snapshot_target, software_snapshot_slot, software_snapshot_inventory_version,
         description, create_time, create_by, modify_time, modify_by, row_version, row_valid
     </sql>
@@ -50,13 +51,13 @@
     <insert id="insertPo" useGeneratedKeys="true" keyProperty="id">
         INSERT INTO tb_part_info (
             id, part_code, sn, vehicle_node_code, config_word, supplier_code, batch_num, hardware_ver, software_ver, hardware_pn, software_pn, extra, instance_state, first_seen_time,
-            source, part_type, inbound_batch_no, source_event_id, last_inbound_time,
+            source, part_type, device_category, inbound_batch_no, source_event_id, last_inbound_time,
             software_snapshot_state, software_snapshot_installation_id, software_snapshot_target, software_snapshot_slot, software_snapshot_inventory_version,
             description, create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
         VALUES (
             #{id}, #{partCode}, #{sn}, #{vehicleNodeCode}, #{configWord}, #{supplierCode}, #{batchNum}, #{hardwareVer}, #{softwareVer}, #{hardwarePn}, #{softwarePn}, #{extra}, #{instanceState}, #{firstSeenTime},
-            #{source}, #{partType}, #{inboundBatchNo}, #{sourceEventId}, #{lastInboundTime},
+            #{source}, #{partType}, #{deviceCategory}, #{inboundBatchNo}, #{sourceEventId}, #{lastInboundTime},
             #{softwareSnapshotState}, #{softwareSnapshotInstallationId}, #{softwareSnapshotTarget}, #{softwareSnapshotSlot}, #{softwareSnapshotInventoryVersion},
             #{description}, now(), #{createBy}, now(), #{modifyBy}, 1, 1
         )
@@ -66,7 +67,7 @@
     <insert id="batchInsertPo" useGeneratedKeys="true" keyProperty="id" parameterType="java.util.List">
         INSERT INTO tb_part_info (
             id, part_code, sn, vehicle_node_code, config_word, supplier_code, batch_num, hardware_ver, software_ver, hardware_pn, software_pn, extra, instance_state, first_seen_time,
-            source, part_type, inbound_batch_no, source_event_id, last_inbound_time,
+            source, part_type, device_category, inbound_batch_no, source_event_id, last_inbound_time,
             software_snapshot_state, software_snapshot_installation_id, software_snapshot_target, software_snapshot_slot, software_snapshot_inventory_version,
             description, create_time, create_by, modify_time, modify_by, row_version, row_valid
         )
@@ -74,7 +75,7 @@
         <foreach collection="list" item="item" index="index" separator=",">
         (
             #{item.id}, #{item.partCode}, #{item.sn}, #{item.vehicleNodeCode}, #{item.configWord}, #{item.supplierCode}, #{item.batchNum}, #{item.hardwareVer}, #{item.softwareVer}, #{item.hardwarePn}, #{item.softwarePn}, #{item.extra}, #{item.instanceState}, #{item.firstSeenTime},
-            #{item.source}, #{item.partType}, #{item.inboundBatchNo}, #{item.sourceEventId}, #{item.lastInboundTime},
+            #{item.source}, #{item.partType}, #{item.deviceCategory}, #{item.inboundBatchNo}, #{item.sourceEventId}, #{item.lastInboundTime},
             #{item.softwareSnapshotState}, #{item.softwareSnapshotInstallationId}, #{item.softwareSnapshotTarget}, #{item.softwareSnapshotSlot}, #{item.softwareSnapshotInventoryVersion},
             #{item.description}, now(), #{item.createBy}, now(), #{item.modifyBy}, 1, 1
         )
@@ -200,6 +201,9 @@
         <if test="po.partType != null">
             t.part_type = #{po.partType},
         </if>
+        <if test="po.deviceCategory != null">
+            t.device_category = #{po.deviceCategory},
+        </if>
         <if test="po.inboundBatchNo != null">
             t.inbound_batch_no = #{po.inboundBatchNo},
         </if>
@@ -242,6 +246,9 @@
         </if>
         <if test="nullFields != null and nullFields.contains('softwareSnapshotInventoryVersion')">
             t.software_snapshot_inventory_version = null,
+        </if>
+        <if test="nullFields != null and nullFields.contains('deviceCategory')">
+            t.device_category = null,
         </if>
         <if test="po.modifyBy != null">
             t.modify_by = #{po.modifyBy},
@@ -330,6 +337,7 @@
     <select id="selectPoByMap" parameterType="java.util.Map" resultMap="baseResultMap">
         SELECT t.id, t.part_code, t.sn, t.vehicle_node_code, t.config_word, t.supplier_code, t.batch_num,
                t.hardware_ver, t.software_ver, t.hardware_pn, t.software_pn, t.extra, t.instance_state,
+               t.source, t.part_type, t.device_category, t.inbound_batch_no, t.source_event_id, t.last_inbound_time,
                t.first_seen_time, t.description, t.create_time, t.create_by, t.modify_time, t.modify_by,
                t.row_version, t.row_valid, p.name AS part_name
         FROM tb_part_info t
@@ -347,6 +355,9 @@
         </if>
         <if test="instanceState != null">
             AND t.instance_state = #{instanceState}
+        </if>
+        <if test="deviceCategory != null and deviceCategory != ''">
+            AND t.device_category = #{deviceCategory}
         </if>
         ORDER BY t.id DESC
     </select>

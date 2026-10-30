@@ -52,6 +52,7 @@ public class MptPartInfoController extends BaseController {
                 .sn(partInfo.getSn())
                 .vehicleNodeCode(partInfo.getVehicleNodeCode())
                 .instanceState(partInfo.getInstanceState())
+                .deviceCategory(partInfo.getDeviceCategory())
                 .beginTime(getBeginTime(partInfo))
                 .endTime(getEndTime(partInfo))
                 .build();
@@ -96,6 +97,9 @@ public class MptPartInfoController extends BaseController {
     @PostMapping
     public ApiResponse<Void> add(@Validated @RequestBody PartInfoRequest partInfo) {
         log.info("管理后台用户[{}]新增物理零件实例[{}:{}]", SecurityContextHolder.getUserName(), partInfo.getPartCode(), partInfo.getSn());
+        if (isDeviceCategoryCorrectionRequested(partInfo)) {
+            return ApiResponse.fail("deviceCategory 第一阶段仅服务器派生补缺，不支持人工填写/显式纠错（VMD-DSN-CR-072 待实施）");
+        }
         if (!partInfoAppService.checkPartCodeAndSnUnique(partInfo.getId(), partInfo.getPartCode(), partInfo.getSn())) {
             return ApiResponse.fail("新增物理零件实例'" + partInfo.getPartCode() + "'失败，物理零件实例已存在");
         }
@@ -114,11 +118,21 @@ public class MptPartInfoController extends BaseController {
     @PutMapping
     public ApiResponse<Void> edit(@Validated @RequestBody PartInfoRequest partInfo) {
         log.info("管理后台用户[{}]修改保存物理零件实例[{}:{}]", SecurityContextHolder.getUserName(), partInfo.getPartCode(), partInfo.getSn());
+        if (isDeviceCategoryCorrectionRequested(partInfo)) {
+            return ApiResponse.fail("deviceCategory 第一阶段仅服务器派生补缺，不支持人工填写/显式纠错（VMD-DSN-CR-072 待实施）");
+        }
         if (!partInfoAppService.checkPartCodeAndSnUnique(partInfo.getId(), partInfo.getPartCode(), partInfo.getSn())) {
             return ApiResponse.fail("修改保存物理零件实例'" + partInfo.getPartCode() + "'失败，物理零件实例已存在");
         }
         partInfoAppService.modifyPartInfo(MptPartInfoAssembler.INSTANCE.toCmd(partInfo), SecurityUtils.getUserId().toString());
         return ApiResponse.ok();
+    }
+
+    /**
+     * CR-072：deviceCategory 仅识别用——显式赋值或清空请求（含 JSON null/空串）均明确拒绝，不静默降级
+     */
+    private boolean isDeviceCategoryCorrectionRequested(PartInfoRequest partInfo) {
+        return partInfo.isDeviceCategoryProvided() || partInfo.getDeviceCategory() != null;
     }
 
     /**

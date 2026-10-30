@@ -159,7 +159,15 @@ public enum VmdErrorCode implements ErrorCode {
     // ================= CR-066 逻辑材料身份与版本代际冲突域（806130～806131） =================
     // 落地 VMD-DSN-CR-066：保留 uk_key_id，同 keyId 不可变元数据冲突 / 声明版本与实际代际不一致，均为不可重试。
     KEYPROV_LOGICAL_IDENTITY_CONFLICT("806130", "Keyprov同keyId不可变元数据冲突（上下文/root/derivation/kmsKeyRef/算法/KCV），数据一致性或安全冲突"),
-    KEYPROV_VERSION_GENERATION_MISMATCH("806131", "Keyprov声明的businessKeyVersion与实际密码学代际不一致");
+    KEYPROV_VERSION_GENERATION_MISMATCH("806131", "Keyprov声明的businessKeyVersion与实际密码学代际不一致"),
+
+    // ================= CR-072 实例 device_category 最小快照域（806132～806136） =================
+    // 落地 VMD-DSN-CR-072 第一阶段：节点-类别成对一致性、解析失败（可重试/数据）、预览陈旧、显式纠错拒绝、功能开关未启用。
+    DEVICE_CATEGORY_NODE_CONFLICT("806132", "零件实例车载节点与输入节点均非空且不同，拒绝本次变更（节点-类别成对一致性）"),
+    DEVICE_CATEGORY_RESOLVE_FAILED("806133", "车载节点设备类别解析失败（节点缺失/投影未就绪/类别空或超长）"),
+    DEVICE_CATEGORY_PREVIEW_STALE("806134", "重导预览计划已过期或与当前状态不符，需重新预览"),
+    DEVICE_CATEGORY_CORRECTION_NOT_SUPPORTED("806135", "deviceCategory 显式纠错第一阶段暂不支持，仅服务器派生补缺"),
+    DEVICE_CATEGORY_DISABLED("806136", "设备类别补缺功能未启用（vmd.part.device-category.enabled=false）");
 
     private final String code;
     private final String message;

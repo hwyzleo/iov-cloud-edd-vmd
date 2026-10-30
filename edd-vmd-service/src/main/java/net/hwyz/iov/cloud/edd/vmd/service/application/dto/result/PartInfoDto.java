@@ -34,6 +34,10 @@ public class PartInfoDto {
     private Integer instanceState;
     private Instant firstSeenTime;
     private String partName;
+    /**
+     * 节点设备类别快照（CR-072）：只读，可空；节点已知但历史未补齐时为空（非 OTHER）
+     */
+    private String deviceCategory;
     private String description;
     private Date createTime;
 

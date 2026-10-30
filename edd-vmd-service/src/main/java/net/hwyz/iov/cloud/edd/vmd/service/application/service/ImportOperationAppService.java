@@ -6,12 +6,16 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.ReplayPartImportPostProcessCmd;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.ReplayVehicleImportEventCmd;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.DeviceCategoryResolveException;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.PreviewStaleException;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.ImportOperation;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.ImportOperationItem;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartImportData;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartInfo;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehImportData;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.ImportOperationRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartImportDataRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartInfoRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehImportDataRepository;
 import org.springframework.stereotype.Service;
 
@@ -21,9 +25,13 @@ import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.HexFormat;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.TreeMap;
 import java.util.UUID;
 
 /**
@@ -47,6 +55,8 @@ public class ImportOperationAppService {
     private final ImportReimportExecutor importReimportExecutor;
     private final VehImportEventReplayAppService vehImportEventReplayAppService;
     private final PartImportPostProcessReplayAppService partImportPostProcessReplayAppService;
+    private final PartInfoRepository partInfoRepository;
+    private final PartDeviceCategorySnapshotResolver partDeviceCategorySnapshotResolver;
 
     public static final String DOMAIN_VEHICLE = "VEHICLE";
     public static final String DOMAIN_PART = "PART";
@@ -67,7 +77,7 @@ public class ImportOperationAppService {
     private static final String WORKER_ID = "import-worker-" + UUID.randomUUID().toString().substring(0, 8);
 
     /**
-     * 预检：读取冻结载荷、识别候选、生成计划摘要
+     * 预检：读取冻结载荷、识别候选、生成计划摘要（CR-072：REIMPORT 计划含类别计划，digest 确定性编码）
      */
     public PreviewResult preview(PreviewRequest request) {
         Object importData = loadImportData(request.getDomain(), request.getImportDataId());
@@ -83,7 +93,9 @@ public class ImportOperationAppService {
         if (scope.isEmpty()) {
             throw new OperationNotAllowedException("候选范围内无匹配项");
         }
-        String planJson = buildPlanJson(request, scope);
+        rejectUnsupportedCorrection(request);
+        Map<String, Object> plan = buildPlan(request, scope, importData);
+        String planJson = ImportPlanCoder.toCanonicalJson(plan);
         String planDigest = hex(sha256(planJson));
         log.info("导入操作预检: domain={}, importDataId={}, mode={}, candidates={}, planDigest={}",
                 request.getDomain(), request.getImportDataId(), request.getMode(), scope.size(), planDigest);
@@ -97,6 +109,8 @@ public class ImportOperationAppService {
 
     /**
      * 执行操作（幂等：同 operationId 同 requestDigest 返回原结果）
+     * CR-072 预览安全：REIMPORT 必须关联批准计划（planDigest），客户端省略 digest 不能跳过校验；
+     * 执行期重扫与预览摘要不一致 → PREVIEW_STALE；执行仅提交获批计划候选，不扩展范围。
      */
     public ExecuteResult execute(ExecuteRequest request) {
         // 1. 摘要校验与幂等
@@ -117,8 +131,38 @@ public class ImportOperationAppService {
             throw new InProgressException("同 domain+importData 存在进行中操作[" + active.getOperationId() + "]");
         }
 
-        // 3. 创建操作（PENDING；operationId 复用调用方提供值以支持幂等重试）
+        // 2.5 REIMPORT：批准计划校验（重扫 + 摘要比对 + 存储获批计划）
         Object importData = loadImportData(request.getDomain(), request.getImportDataId());
+        String planJsonToStore = null;
+        byte[] planDigestToStore = null;
+        List<String> effectiveScope = request.getScope();
+        if (MODE_REIMPORT.equals(request.getMode())) {
+            rejectUnsupportedCorrection(new PreviewRequest(request.getDomain(), request.getImportDataId(),
+                    request.getMode(), request.getScope(), request.getRepairPolicy()));
+            if (request.getPlanDigest() == null || request.getPlanDigest().isBlank()) {
+                throw new OperationNotAllowedException("REIMPORT 需先预览并提交 planDigest（服务端批准计划），不能跳过预览校验");
+            }
+            List<String> candidates = extractCandidates(request.getDomain(), importData);
+            List<String> scope = new ArrayList<>(candidates);
+            if (request.getScope() != null && !request.getScope().isEmpty()) {
+                scope.retainAll(request.getScope());
+            }
+            if (scope.isEmpty()) {
+                throw new OperationNotAllowedException("候选范围内无匹配项");
+            }
+            Map<String, Object> plan = buildPlan(new PreviewRequest(request.getDomain(), request.getImportDataId(),
+                    request.getMode(), request.getScope(), request.getRepairPolicy()), scope, importData);
+            String planJson = ImportPlanCoder.toCanonicalJson(plan);
+            byte[] digest = sha256(planJson);
+            if (!java.util.Arrays.equals(digest, decodeHex(request.getPlanDigest()))) {
+                throw new PreviewStaleException("预览计划已过期：执行期重扫与预览摘要不一致，请重新预览");
+            }
+            planJsonToStore = planJson;
+            planDigestToStore = digest;
+            effectiveScope = planCandidates(plan);
+        }
+
+        // 3. 创建操作（PENDING；operationId 复用调用方提供值以支持幂等重试）
         ImportOperation operation = ImportOperation.builder()
                 .operationId(request.getOperationId() != null
                         ? request.getOperationId() : UUID.randomUUID().toString())
@@ -128,9 +172,12 @@ public class ImportOperationAppService {
                 .batchNum(extractBatchNum(request.getDomain(), importData))
                 .payloadDigest(sha256(importData.toString()))
                 .requestDigest(decodeHex(requestDigest))
-                .planDigest(decodeHex(request.getPlanDigest() != null ? request.getPlanDigest() : ""))
-                .planJson(buildPlanJson(new PreviewRequest(request.getDomain(), request.getImportDataId(),
-                        request.getMode(), request.getScope(), request.getRepairPolicy()), extractCandidates(request.getDomain(), importData)))
+                .planDigest(planDigestToStore != null ? planDigestToStore
+                        : decodeHex(request.getPlanDigest() != null ? request.getPlanDigest() : ""))
+                .planJson(planJsonToStore != null ? planJsonToStore
+                        : buildPlanJson(new PreviewRequest(request.getDomain(), request.getImportDataId(),
+                                request.getMode(), request.getScope(), request.getRepairPolicy()),
+                                extractCandidates(request.getDomain(), importData)))
                 .operatorId(request.getOperatorId())
                 .operatorName(request.getOperatorName())
                 .operationSource("MPT_" + request.getMode())
@@ -160,8 +207,8 @@ public class ImportOperationAppService {
                     .build();
             if (MODE_REIMPORT.equals(request.getMode())) {
                 ImportReimportExecutor.ReimportOutcome outcome = DOMAIN_VEHICLE.equals(request.getDomain())
-                        ? importReimportExecutor.executeVehicle(operation, request.getScope(), ctx)
-                        : importReimportExecutor.executePart(operation, request.getScope(), ctx);
+                        ? importReimportExecutor.executeVehicle(operation, effectiveScope, ctx)
+                        : importReimportExecutor.executePart(operation, effectiveScope, ctx);
                 changed = outcome.changed();
                 unchanged = outcome.unchanged();
                 skipped = outcome.skipped();
@@ -196,27 +243,62 @@ public class ImportOperationAppService {
     }
 
     /**
-     * 重试（仅 PENDING/RECOVERING/FAILED_RETRYABLE 语义；当前实现重新执行同摘要）
+     * 重试（CR-072 预览安全）：按 operationId 加载原冻结计划与检查点，只处理未提交条目；
+     * 已提交条目按检查点返回原结果（不因自身 rowVersion 变化误判陈旧），未提交条目仍验证原批准条件。
+     * 不再重新生成计划/悄悄扩大范围；老操作无类别计划时也不自动获得新增类别补缺能力。
      */
     public ExecuteResult retry(String operationId, String operatorId) {
         ImportOperation operation = importOperationRepository.selectByOperationId(operationId);
         if (operation == null) {
             throw new OperationNotAllowedException("操作不存在: " + operationId);
         }
-        if (!List.of(STATUS_PENDING, STATUS_FAILED).contains(operation.getStatus())) {
+        // CR-072：允许 FAILED_RETRYABLE 条目所在的 PARTIAL_FAILED 状态按检查点恢复
+        if (!List.of(STATUS_PENDING, STATUS_FAILED, STATUS_PARTIAL_FAILED).contains(operation.getStatus())) {
             throw new OperationNotAllowedException("当前状态[" + operation.getStatus() + "]不可重试");
         }
-        ExecuteRequest request = ExecuteRequest.builder()
-                .domain(operation.getDomain())
-                .importDataId(operation.getImportDataId())
-                .mode(operation.getOperationType())
-                .scope(null)
-                .repairPolicy("FILL_MISSING")
-                .reason("retry:" + operation.getReason())
+        // 冻结计划（服务端已保存；不重新生成）
+        Map<String, Object> plan = parsePlan(operation.getPlanJson());
+        List<String> candidates = planCandidates(plan);
+        if (candidates.isEmpty()) {
+            throw new OperationNotAllowedException("操作缺少冻结计划候选，无法重试");
+        }
+        // 检查点：已提交（SUCCEEDED/NOOP/FAILED_FINAL）条目返回原结果；SKIPPED/FAILED_RETRYABLE/PENDING 恢复
+        Set<String> committed = new HashSet<>();
+        int committedChanged = 0, committedUnchanged = 0, committedFailed = 0;
+        long cursor = 0L;
+        List<ImportOperationItem> items;
+        do {
+            items = importOperationRepository.selectItems(operationId, null, cursor, 200);
+            for (ImportOperationItem item : items) {
+                if (List.of("SUCCEEDED", "NOOP", "FAILED_FINAL").contains(item.getStatus())) {
+                    committed.add(item.getCandidateKey());
+                    switch (item.getStatus()) {
+                        case "SUCCEEDED" -> committedChanged++;
+                        case "NOOP" -> committedUnchanged++;
+                        case "FAILED_FINAL" -> committedFailed++;
+                    }
+                }
+                cursor = item.getId();
+            }
+        } while (items.size() == 200);
+
+        List<String> resumeScope = candidates.stream().filter(k -> !committed.contains(k)).toList();
+        ImportReimportExecutor.ExecuteContext ctx = ImportReimportExecutor.ExecuteContext.builder()
                 .operationId(operation.getOperationId())
                 .operatorId(operatorId)
                 .build();
-        return execute(request);
+        ImportReimportExecutor.ReimportOutcome outcome = DOMAIN_VEHICLE.equals(operation.getDomain())
+                ? importReimportExecutor.executeVehicle(operation, resumeScope, ctx)
+                : importReimportExecutor.executePart(operation, resumeScope, ctx);
+        int changed = committedChanged + outcome.changed();
+        int unchanged = committedUnchanged + outcome.unchanged();
+        int skipped = outcome.skipped();
+        int failed = committedFailed + outcome.failed();
+        String status = failed > 0 ? STATUS_PARTIAL_FAILED : STATUS_SUCCEEDED;
+        String countersJson = String.format("{\"changed\":%d,\"unchanged\":%d,\"skipped\":%d,\"failed\":%d}",
+                changed, unchanged, skipped, failed);
+        importOperationRepository.finish(operation.getOperationId(), WORKER_ID, status, countersJson);
+        return toExecuteResult(importOperationRepository.selectByOperationId(operationId));
     }
 
     public ImportOperation queryOperation(String operationId) {
@@ -298,6 +380,190 @@ public class ImportOperationAppService {
                 "repairPolicy", request.getRepairPolicy() != null ? request.getRepairPolicy() : "FILL_MISSING",
                 "candidates", scope,
                 "plannedAt", LocalDateTime.now(ZoneOffset.UTC).toString()));
+    }
+
+    // ==================== CR-072 类别计划（确定性编码 + 预览安全） ====================
+
+    /**
+     * 拒绝重导显式纠错（CORRECT_EXPLICIT，含 deviceCategory 服务器重算）：执行前明确拒绝、不部分执行；
+     * 仅作用于重导预览/执行入口，既有其他字段纠错（如 modifyPartInfo APP 通道）不受影响。
+     */
+    private void rejectUnsupportedCorrection(PreviewRequest request) {
+        if (MODE_REIMPORT.equals(request.getMode()) && "CORRECT_EXPLICIT".equals(request.getRepairPolicy())) {
+            throw new OperationNotAllowedException("重导显式纠错（CORRECT_EXPLICIT，含 deviceCategory 服务器重算）第一阶段待实施"
+                    + "（VMD-DSN-CR-072）；请使用 FILL_MISSING 补缺，既有其他字段纠错能力不受影响");
+        }
+    }
+
+    /**
+     * 构建确定性计划（含 REIMPORT 类别计划）；运行时间（resolvedAt/plannedAt）不进入计划内容
+     */
+    private Map<String, Object> buildPlan(PreviewRequest request, List<String> scope, Object importData) {
+        Map<String, Object> plan = new LinkedHashMap<>();
+        plan.put("schemaVersion", ImportPlanCoder.SCHEMA_VERSION);
+        plan.put("domain", request.getDomain());
+        plan.put("importDataId", request.getImportDataId());
+        plan.put("mode", request.getMode());
+        plan.put("repairPolicy", request.getRepairPolicy() != null ? request.getRepairPolicy() : "FILL_MISSING");
+        List<String> sortedCandidates = ImportPlanCoder.sortedCopy(scope);
+        plan.put("candidates", sortedCandidates);
+        if (MODE_REIMPORT.equals(request.getMode())) {
+            plan.put("categoryPlan", buildCategoryPlan(request.getDomain(), importData, sortedCandidates));
+        }
+        return plan;
+    }
+
+    /**
+     * 类别计划：PART 域逐候选条目；VEHICLE 域按 VIN 聚合（ECU_BASELINE 合法零件候选），VIN 有效 = 全部零件条目有效
+     */
+    private Map<String, Object> buildCategoryPlan(String domain, Object importData, List<String> candidates) {
+        Map<String, Object> categoryPlan = new TreeMap<>();
+        if (DOMAIN_PART.equals(domain)) {
+            cn.hutool.json.JSONObject dataJson = cn.hutool.json.JSONUtil.parseObj(((PartImportData) importData).getData());
+            cn.hutool.json.JSONObject request = dataJson.getJSONObject("REQUEST");
+            cn.hutool.json.JSONObject data = request != null ? request.getJSONObject("DATA") : dataJson;
+            cn.hutool.json.JSONArray items = data.getJSONArray("ITEMS");
+            if (items != null) {
+                for (Object item : items) {
+                    cn.hutool.json.JSONObject itemJson = cn.hutool.json.JSONUtil.parseObj(item);
+                    String partCode = itemJson.getStr("PART_CODE") != null ? itemJson.getStr("PART_CODE")
+                            : itemJson.getStr("ASSEMBLY_PART_NO");
+                    String sn = itemJson.getStr("SN");
+                    String key = partCode + ":" + sn;
+                    if (!candidates.contains(key)) {
+                        continue;
+                    }
+                    categoryPlan.put(key, buildCategoryEntry(partCode, sn, itemJson.getStr("VEHICLE_NODE_CODE"),
+                            partInfoRepository.selectByPartCodeAndSn(partCode, sn)));
+                }
+            }
+        } else if (DOMAIN_VEHICLE.equals(domain)) {
+            cn.hutool.json.JSONObject dataJson = cn.hutool.json.JSONUtil.parseObj(((VehImportData) importData).getData());
+            cn.hutool.json.JSONObject data = dataJson.getJSONObject("REQUEST") != null
+                    ? dataJson.getJSONObject("REQUEST").getJSONObject("DATA") : dataJson;
+            cn.hutool.json.JSONArray items = data.getJSONArray("ITEMS");
+            if (items != null) {
+                for (Object item : items) {
+                    cn.hutool.json.JSONObject itemJson = cn.hutool.json.JSONUtil.parseObj(item);
+                    String vin = itemJson.getStr("VIN");
+                    if (vin == null || vin.isBlank() || !candidates.contains(vin)) {
+                        continue;
+                    }
+                    Map<String, Object> parts = new TreeMap<>();
+                    cn.hutool.json.JSONArray ecuBaseline = itemJson.getJSONArray("ECU_BASELINE");
+                    boolean allValid = true;
+                    if (ecuBaseline != null) {
+                        for (Object ecuObj : ecuBaseline) {
+                            cn.hutool.json.JSONObject ecu = cn.hutool.json.JSONUtil.parseObj(ecuObj);
+                            String sn = ecu.getStr("SN");
+                            String assemblyPartNo = ecu.getStr("ASSEMBLY_PART_NO");
+                            String vehicleNode = ecu.getStr("VEHICLE_NODE");
+                            if (sn == null || sn.isBlank() || assemblyPartNo == null || assemblyPartNo.isBlank()) {
+                                continue;
+                            }
+                            String key = assemblyPartNo + ":" + sn;
+                            Map<String, Object> entry = buildCategoryEntry(assemblyPartNo, sn, vehicleNode,
+                                    partInfoRepository.selectByPartCodeAndSn(assemblyPartNo, sn));
+                            parts.put(key, entry);
+                            if (!Boolean.TRUE.equals(entry.get("candidateValid"))) {
+                                allValid = false;
+                            }
+                        }
+                    }
+                    Map<String, Object> vinEntry = new LinkedHashMap<>();
+                    vinEntry.put("parts", parts);
+                    vinEntry.put("candidateValid", allValid);
+                    if (!allValid) {
+                        vinEntry.put("invalidReason", "PART_PLAN_INVALID");
+                    }
+                    categoryPlan.put(vin, vinEntry);
+                }
+            }
+        }
+        return categoryPlan;
+    }
+
+    /**
+     * 单候选类别计划条目：finalNode（合并后）/expectedCurrentCategory（显式 null=要求当前为 NULL）/
+     * plannedCategory/expectedRowVersion（null=新实例）/expectsNewInstance/节点版本或内容指纹；
+     * 预览期已确认无效（节点冲突/解析失败）以 candidateValid=false + invalidReason 呈现，执行期不静默跳过。
+     */
+    private Map<String, Object> buildCategoryEntry(String partCode, String sn, String payloadNode, PartInfo current) {
+        Map<String, Object> e = new LinkedHashMap<>();
+        String currentCategory = current != null ? current.getDeviceCategory() : null;
+        String currentNode = current != null ? current.getVehicleNodeCode() : null;
+        String finalNode;
+        String invalidReason = null;
+        if (payloadNode == null || payloadNode.isBlank()) {
+            finalNode = currentNode; // 未提供：不清节点
+        } else if (currentNode != null && !currentNode.equals(payloadNode)) {
+            finalNode = currentNode; // 节点冲突：执行期拒绝，不借类别纠错换节点
+            invalidReason = "NODE_CONFLICT";
+        } else {
+            finalNode = payloadNode;
+        }
+        e.put("finalNode", finalNode);
+        e.put("expectedCurrentCategory", currentCategory);
+        e.put("expectedRowVersion", current != null ? current.getRowVersion() : null);
+        e.put("expectsNewInstance", current == null);
+        String plannedCategory = null;
+        if (invalidReason == null) {
+            if (finalNode != null && (currentCategory == null || currentCategory.isBlank())) {
+                e.put("fillPlanned", true);
+                try {
+                    PartDeviceCategorySnapshotResolver.ResolvedCategory rc = partDeviceCategorySnapshotResolver.resolve(finalNode);
+                    plannedCategory = rc.deviceCategory();
+                    if (rc.externalVersion() != null) {
+                        e.put("nodeExternalVersion", rc.externalVersion());
+                    }
+                    e.put("nodeFingerprint", ImportPlanCoder.nodeFingerprint(finalNode, rc.deviceCategory()));
+                } catch (DeviceCategoryResolveException ex) {
+                    invalidReason = "RESOLVE_FAILED:" + (ex.isRetryable() ? "RETRYABLE" : "FINAL")
+                            + ":" + ex.getMessage();
+                }
+            } else if (finalNode != null) {
+                e.put("fillPlanned", false);
+                plannedCategory = currentCategory; // 已有类别：FILL_MISSING 不重写
+                e.put("nodeFingerprint", ImportPlanCoder.nodeFingerprint(finalNode, currentCategory));
+            }
+        }
+        e.put("plannedCategory", plannedCategory);
+        e.put("candidateValid", invalidReason == null);
+        if (invalidReason != null) {
+            e.put("invalidReason", invalidReason);
+        }
+        return e;
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<String> planCandidates(Map<String, Object> plan) {
+        Object candidates = plan.get("candidates");
+        if (!(candidates instanceof List<?> list)) {
+            return List.of();
+        }
+        List<String> result = new ArrayList<>();
+        for (Object c : list) {
+            result.add(String.valueOf(c));
+        }
+        return result;
+    }
+
+    /**
+     * 解析冻结计划（retry 用）；老操作无 schemaVersion/类别计划时返回粗粒度候选，executor 按无类别计划处理
+     */
+    private Map<String, Object> parsePlan(String planJson) {
+        if (planJson == null || planJson.isBlank()) {
+            return Map.of();
+        }
+        try {
+            cn.hutool.json.JSONObject obj = cn.hutool.json.JSONUtil.parseObj(planJson);
+            Map<String, Object> map = new LinkedHashMap<>();
+            obj.forEach(map::put);
+            return map;
+        } catch (Exception e) {
+            log.warn("操作冻结计划解析失败: {}", e.getMessage());
+            return Map.of();
+        }
     }
 
     private String buildRequestRaw(ExecuteRequest request) {

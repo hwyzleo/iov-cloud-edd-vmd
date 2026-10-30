@@ -52,6 +52,86 @@ class PartInboundAppServiceTest {
     }
 
     @Test
+    @DisplayName("UT-072-02：载荷类别键（三种别名）被剔除，不落入 extra 形成第二权威")
+    void processInbound_payloadDeviceCategoryKey_stripped() {
+        Map<String, String> extraFields = new HashMap<>();
+        extraFields.put("device_category", "DCU");
+        extraFields.put("deviceCategory", "TBOX");
+        extraFields.put("DEVICE_CATEGORY", "DCU");
+        extraFields.put("hsm", "HSM001");
+
+        PartInboundRecord record = PartInboundRecord.builder()
+                .partCode("PN001").sn("SN001").partType("BTM")
+                .batchNum("BATCH001").extraFields(extraFields).build();
+
+        when(mdmPartRepository.selectByCode("PN001")).thenReturn(Part.builder().status("ACTIVE").partType("BTM").build());
+        when(partInfoMutationAppService.create(any(PartInfo.class), any()))
+                .thenReturn(new PartInfoMutationAppService.MutationResult("APPLIED", 1, java.util.Map.of()));
+
+        PartInboundResult result = partInboundAppService.processInbound(
+                List.of(record), InboundSourceType.MES, null);
+
+        assertEquals(1, result.getSuccessCount());
+        verify(partInfoMutationAppService).create(argThat(partInfo -> {
+            // 类别键不得进入 extra；普通字段 hsm 保留
+            String extra = partInfo.getExtra();
+            return extra != null && extra.contains("hsm") && !extra.contains("device_category")
+                    && !extra.contains("deviceCategory") && !extra.contains("DEVICE_CATEGORY");
+        }), any());
+    }
+
+    @Test
+    @DisplayName("UT-072-06：节点冲突 → invalid 计数（该项不提交，其他记录继续）")
+    void processInbound_nodeConflict_invalidCountContinues() {
+        PartInboundRecord conflicting = PartInboundRecord.builder()
+                .partCode("PN001").sn("SN001").partType("BTM")
+                .vehicleNodeCode("DCU2").batchNum("BATCH001").build();
+        PartInboundRecord valid = PartInboundRecord.builder()
+                .partCode("PN002").sn("SN002").partType("BTM")
+                .batchNum("BATCH001").build();
+
+        when(mdmPartRepository.selectByCode("PN001")).thenReturn(Part.builder().status("ACTIVE").partType("BTM").build());
+        when(mdmPartRepository.selectByCode("PN002")).thenReturn(Part.builder().status("ACTIVE").partType("BTM").build());
+        when(partInfoMutationAppService.create(any(PartInfo.class), any()))
+                .thenThrow(new net.hwyz.iov.cloud.edd.vmd.service.common.exception.PartNodeConflictException(
+                        "PN001", "SN001", "DCU1", "DCU2"))
+                .thenReturn(new PartInfoMutationAppService.MutationResult("APPLIED", 1, java.util.Map.of()));
+
+        PartInboundResult result = partInboundAppService.processInbound(
+                List.of(conflicting, valid), InboundSourceType.MES, null);
+
+        assertEquals(1, result.getInvalidCount());
+        assertEquals(1, result.getSuccessCount());
+        assertEquals(0, result.getFailureCount());
+    }
+
+    @Test
+    @DisplayName("UT-072-06：类别解析可重试（投影未就绪）→ failure；待治理（数据问题）→ invalid")
+    void processInbound_resolveFailure_classified() {
+        PartInboundRecord retryable = PartInboundRecord.builder()
+                .partCode("PN001").sn("SN001").partType("BTM")
+                .vehicleNodeCode("DCU1").batchNum("BATCH001").build();
+        PartInboundRecord finalIssue = PartInboundRecord.builder()
+                .partCode("PN002").sn("SN002").partType("BTM")
+                .vehicleNodeCode("DCU1").batchNum("BATCH001").build();
+
+        when(mdmPartRepository.selectByCode("PN001")).thenReturn(Part.builder().status("ACTIVE").partType("BTM").build());
+        when(mdmPartRepository.selectByCode("PN002")).thenReturn(Part.builder().status("ACTIVE").partType("BTM").build());
+        when(partInfoMutationAppService.create(any(PartInfo.class), any()))
+                .thenThrow(new net.hwyz.iov.cloud.edd.vmd.service.common.exception.DeviceCategoryResolveException(
+                        "DCU1", true, "NODE_PROJECTION_NOT_READY_OR_INVALID"))
+                .thenThrow(new net.hwyz.iov.cloud.edd.vmd.service.common.exception.DeviceCategoryResolveException(
+                        "DCU1", false, "CATEGORY_BLANK"));
+
+        PartInboundResult result = partInboundAppService.processInbound(
+                List.of(retryable, finalIssue), InboundSourceType.MES, null);
+
+        assertEquals(1, result.getFailureCount());   // 可重试
+        assertEquals(1, result.getInvalidCount());   // 待治理
+        assertEquals(0, result.getSuccessCount());
+    }
+
+    @Test
     void processInbound_validBtmRecord_success() {
         // Given
         PartInboundRecord record = PartInboundRecord.builder()

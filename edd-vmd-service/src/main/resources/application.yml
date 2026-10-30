@@ -243,6 +243,11 @@ vmd:
         # - CALIBRATION
         # - BOOT
         [APP]
+  # CR-072：实例 device_category 最小快照功能开关（默认关闭：部署先加列+writer升级+reader兼容，再灰度开启）。
+  # 启动时读取（非运行时刷新）；多实例关闭/任务停止/恢复步骤见 docs/VMD-DSN-CR-072-device-category-backfill-runbook.md。
+  part:
+    device-category:
+      enabled: ${VMD_PART_DEVICE_CATEGORY_ENABLED:false}
 
 # MDM同步配置（VMD-DSN-CR-052：Topic 名称统一由 vmd.kafka.topics.mdm.* 提供，归 EDD-MDM 管理）
 # 迁移映射（旧名 → 目录名，REQ §3.1.3；观察期结束后清理旧配置，代码/测试已零引用）:

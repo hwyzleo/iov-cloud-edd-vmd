@@ -108,6 +108,12 @@ public class PartInfo implements DomainObj<PartInfo> {
     private String partType;
 
     /**
+     * 车载节点设备类别快照（CR-072）：按 vehicleNodeCode 解析 MDM tb_mdm_vehicle_node.device_category；
+     * 可空最小快照，非物料分类（与 partType 语义独立），不自动追随 MDM 字典更新
+     */
+    private String deviceCategory;
+
+    /**
      * 入站批次号
      */
     private String inboundBatchNo;

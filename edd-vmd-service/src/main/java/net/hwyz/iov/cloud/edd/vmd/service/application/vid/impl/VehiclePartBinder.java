@@ -21,6 +21,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartInfoRepository;
 import net.hwyz.iov.cloud.framework.common.util.StrUtil;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -104,6 +105,18 @@ public class VehiclePartBinder {
                 log.warn("零件导入数据批次号[{}]车架号[{}]设备[{}]异常", batchNum, vin, deviceCode);
             }
             String deviceItem = vehicleNode != null ? vehicleNode.getDeviceCategory() : null;
+            // CR-072：复用本次单次本地投影读取证据（节点码/类别/来源标识/版本同一读视图），供 mutation 派生
+            PartInfoPatchCmd.DeviceCategoryEvidence categoryEvidence = null;
+            if (vehicleNode != null && vehicleNode.getDeviceCategory() != null
+                    && !vehicleNode.getDeviceCategory().isBlank()) {
+                categoryEvidence = PartInfoPatchCmd.DeviceCategoryEvidence.builder()
+                        .nodeCode(deviceCode)
+                        .deviceCategory(vehicleNode.getDeviceCategory().trim())
+                        .externalRefId(vehicleNode.getExternalRefId())
+                        .externalVersion(vehicleNode.getExternalVersion())
+                        .resolvedAt(Instant.now())
+                        .build();
+            }
             partMetaList.add(new VehicleEolPartBoundEvent.PartMeta(
                     sn, pn, deviceCode, deviceItem, supplierCode, batchNum,
                     configWord, hardwareVersion, softwareVersion, hardwarePn, softwarePn,
@@ -124,7 +137,7 @@ public class VehiclePartBinder {
                     // 回填零件细节（软件版本/配置字）入 part_info.extra
                     Map<String, String> extraFields = buildExtraFields(configWord, hardwareVersion, softwareVersion, hardwarePn, softwarePn, iccid1, iccid2);
                     partInfoAppService.updateExtraFields(pn, sn, extraFields);
-                    // CR-071：已绑同件也经 mutation 补列（硬件/治理字段，FILL_MISSING）
+                    // CR-071：已绑同件也经 mutation 补列（硬件/治理字段，FILL_MISSING）；CR-072：补 deviceCategory 快照
                     PartInfoPatchCmd patchCmd = PartInfoPatchCmd.builder()
                             .partCode(pn)
                             .sn(sn)
@@ -141,6 +154,8 @@ public class VehiclePartBinder {
                             .operatorId("SYSTEM")
                             .phase("BINDING")
                             .seq(1)
+                            .deriveDeviceCategory(true)
+                            .deviceCategoryEvidence(categoryEvidence)
                             .build();
                     partInfoMutationAppService.patch(patchCmd);
                     continue;
@@ -171,6 +186,8 @@ public class VehiclePartBinder {
                                 .operationId("NONE")
                                 .phase("BINDING")
                                 .seq(1)
+                                .deriveDeviceCategory(true)
+                                .deviceCategoryEvidence(categoryEvidence)
                                 .build());
 
                 // 回填零件细节（软件版本、配置字/变体编码等）入 part_info.extra

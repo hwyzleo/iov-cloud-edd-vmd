@@ -91,6 +91,11 @@ public class PartInfoResponse {
     private Date firstSeenTime;
 
     /**
+     * 节点设备类别（CR-072）：只读；节点已知但历史未补齐时为空（非 OTHER）
+     */
+    private String deviceCategory;
+
+    /**
      * 创建时间
      */
     private Date createTime;

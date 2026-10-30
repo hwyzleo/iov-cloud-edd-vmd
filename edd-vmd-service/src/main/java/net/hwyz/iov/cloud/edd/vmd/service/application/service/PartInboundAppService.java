@@ -6,9 +6,12 @@ import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.mdm.api.service.SupplierService;
 import net.hwyz.iov.cloud.edd.mdm.api.vo.response.SupplierResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.PartInfoPatchCmd;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.DeviceCategoryResolveException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.PartInboundValidateFailedException;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.PartNodeConflictException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.PartNotActiveException;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.PartNotFoundException;
+import net.hwyz.iov.cloud.edd.vmd.service.common.exception.PreviewStaleException;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.Part;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartInfo;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehiclePart;
@@ -72,6 +75,21 @@ public class PartInboundAppService {
         private String sourceEventId;
         private String inboundBatchNo;
         private Map<String, String> extraFields;
+        // ==================== CR-072 派生治理 / 重导计划（可选） ====================
+        /** 重导计划候选类别（执行期派生必须等于计划值，否则 PREVIEW_STALE） */
+        private String expectedPlannedCategory;
+        /** 重导计划预期实例版本（CAS） */
+        private Integer expectedRowVersion;
+        /** 重导计划要求新实例（并发已创建则 PREVIEW_STALE） */
+        private boolean requireNewInstance;
+        /** 是否服务器派生 deviceCategory（默认 true；老操作重导/开关场景可由调用方显式关闭） */
+        private Boolean deriveDeviceCategory;
+        /** 审计上下文（重导透传 operationId/来源/操作人/原因；普通入站用默认值） */
+        private String operationId;
+        private String operationSource;
+        private String operatorId;
+        private String operatorName;
+        private String reason;
     }
 
     /**
@@ -110,6 +128,27 @@ public class PartInboundAppService {
                 invalidCount++;
                 errors.add("零件[" + record.getPartCode() + ":" + record.getSn() + "]校验失败: " + e.getMessage());
                 log.warn("零件入站校验失败: {}", e.getMessage());
+            } catch (PartNodeConflictException e) {
+                // CR-072：节点/类别成对一致性——该项不部分提交，其他记录继续
+                invalidCount++;
+                errors.add("零件[" + record.getPartCode() + ":" + record.getSn() + "]节点冲突拒绝: " + e.getMessage());
+                log.warn("零件入站节点冲突拒绝: {}", e.getMessage());
+            } catch (DeviceCategoryResolveException e) {
+                // CR-072：类别解析失败分类——可重试（投影未就绪）计 failure，待治理（数据问题）计 invalid
+                if (e.isRetryable()) {
+                    failureCount++;
+                    errors.add("零件[" + record.getPartCode() + ":" + record.getSn() + "]类别解析可重试: " + e.getMessage());
+                    log.warn("零件入站类别解析可重试: {}", e.getMessage());
+                } else {
+                    invalidCount++;
+                    errors.add("零件[" + record.getPartCode() + ":" + record.getSn() + "]类别解析待治理: " + e.getMessage());
+                    log.warn("零件入站类别解析待治理: {}", e.getMessage());
+                }
+            } catch (PreviewStaleException e) {
+                // CR-072：重导计划陈旧（并发创建/类别不一致）——该项不提交
+                invalidCount++;
+                errors.add("零件[" + record.getPartCode() + ":" + record.getSn() + "]预览计划陈旧: " + e.getMessage());
+                log.warn("零件入站预览计划陈旧: {}", e.getMessage());
             } catch (Exception e) {
                 failureCount++;
                 errors.add("零件[" + record.getPartCode() + ":" + record.getSn() + "]处理异常: " + e.getMessage());
@@ -226,6 +265,14 @@ public class PartInboundAppService {
                     filtered.put(k, v);
                 }
             });
+            // CR-072：剔除载荷直传类别键（三种别名），禁止落入 extra 形成第二权威；冲突仅告警
+            for (String alias : List.of("device_category", "deviceCategory", "DEVICE_CATEGORY")) {
+                if (filtered.containsKey(alias)) {
+                    log.warn("零件[{}:{}]载荷携带类别键[{}]被剔除，类别仅由 MDM 节点解析（CR-072）",
+                            record.getPartCode(), record.getSn(), alias);
+                    filtered.remove(alias);
+                }
+            }
             // 提取映射到PartInfo专用列的字段
             hardwarePn = filtered.remove("hardware_part_no");
             hardwareVer = filtered.remove("hardware_version");
@@ -255,17 +302,24 @@ public class PartInboundAppService {
     }
 
     /**
-     * 幂等 upsert（CR-071）：存在则 FILL_MISSING 补丁，否则创建；均写属性历史
+     * 幂等 upsert（CR-071）：存在则 FILL_MISSING 补丁，否则创建；均写属性历史。
+     * CR-072：统一经 mutation 派生 deviceCategory（derive=true，节点合并/冲突校验在 mutation 内同事务完成）
      */
     private void upsertViaMutation(PartInfo partInfo, PartInboundRecord record, InboundSourceType source) {
         PartInfoPatchCmd ctx = PartInfoPatchCmd.builder()
                 .changeType("INBOUND")
-                .operationSource("PART_INBOUND")
-                .operatorId("SYSTEM")
+                .operationSource(record.getOperationSource() != null ? record.getOperationSource() : "PART_INBOUND")
+                .operatorId(record.getOperatorId() != null ? record.getOperatorId() : "SYSTEM")
+                .operatorName(record.getOperatorName())
                 .source(source.getValue())
                 .sourceEventId(record.getSourceEventId())
                 .inboundBatchNo(record.getInboundBatchNo())
-                .operationId("NONE")
+                .operationId(record.getOperationId() != null ? record.getOperationId() : "NONE")
+                .reason(record.getReason())
+                .deriveDeviceCategory(record.getDeriveDeviceCategory() != null ? record.getDeriveDeviceCategory() : true)
+                .expectedPlannedCategory(record.getExpectedPlannedCategory())
+                .expectedRowVersion(record.getExpectedRowVersion())
+                .requireNewInstance(record.isRequireNewInstance())
                 .phase("BASIC")
                 .seq(1)
                 .build();

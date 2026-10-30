@@ -126,6 +126,12 @@ public class PartInfoPo extends BasePo {
     private String partType;
 
     /**
+     * 车载节点设备类别快照（CR-072）：按 vehicle_node_code 解析 MDM tb_mdm_vehicle_node.device_category；可空，非物料分类
+     */
+    @TableField("device_category")
+    private String deviceCategory;
+
+    /**
      * 入站批次号（批次级幂等去重键）
      */
     @TableField("inbound_batch_no")

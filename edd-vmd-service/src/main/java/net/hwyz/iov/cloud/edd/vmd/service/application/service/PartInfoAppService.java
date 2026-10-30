@@ -48,6 +48,7 @@ public class PartInfoAppService {
         // CR-023: 入站特有查询条件
         map.put("source", query.getSource());
         map.put("partType", query.getPartType());
+        map.put("deviceCategory", query.getDeviceCategory());
         map.put("inboundBatchNo", query.getInboundBatchNo());
         List<PartInfo> partInfoList = partInfoRepository.selectByMap(map);
         return PageUtil.convert(partInfoList, PartInfoAssembler.INSTANCE::fromDomain);
