@@ -240,6 +240,7 @@ public class ImportReimportExecutor {
                     String softwarePartNo = sw.getStr("SOFTWARE_PART_NO");
                     String softwareVersion = sw.getStr("SOFTWARE_VERSION");
                     String softwareType = sw.getStr("SOFTWARE_TYPE");
+                    String flashResult = sw.getStr("FLASH_RESULT");
                     if (softwarePartNo == null || softwarePartNo.isBlank()
                             || softwareVersion == null || softwareVersion.isBlank()) {
                         continue;
@@ -254,6 +255,7 @@ public class ImportReimportExecutor {
                                 softwareVersion,
                                 null,
                                 null,
+                                flashResult,
                                 "UPDATE",
                                 "EOL",
                                 md5(batchNum + "_" + vin + "_" + ecuSn + "_" + softwarePartNo),

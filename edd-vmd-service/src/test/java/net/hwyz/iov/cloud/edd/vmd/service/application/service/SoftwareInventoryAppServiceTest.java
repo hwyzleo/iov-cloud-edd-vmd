@@ -218,4 +218,46 @@ class SoftwareInventoryAppServiceTest {
         verify(repository, times(2)).insert(any(PartSoftwareInstallation.class));
         verify(repository, times(1)).resetActiveSlotByPartIdAndTargetCode(PART_ID, TARGET);
     }
+
+    @Test
+    void applyManifest_eolWithFlashResult_shouldPersistFlashResult() {
+        // Given：EOL 源携带 FLASH_RESULT（BUG 修复：此前读取但未持久化）
+        when(repository.selectBySourceAndSourceEventId(any(), any(), any(), any())).thenReturn(null);
+        when(repository.selectActiveByPartIdTargetCodeAndSlot(PART_ID, TARGET, null)).thenReturn(null);
+        when(repository.selectByPartId(PART_ID)).thenReturn(List.of());
+
+        // When：21 参全量签名，flashResult="PASS"
+        SoftwareInventoryAppService.ApplyManifestResult result = appService.applyManifest(
+                PART_ID, BINDING_ID, VIN, TARGET, "SW-PN", "1.0.0",
+                null, null, "PASS", "INITIAL",
+                SOURCE, "evt-flash-001", Instant.parse("2026-09-08T10:00:00Z"),
+                Instant.parse("2026-09-08T10:00:00Z"), true,
+                null, null, null, null, null, null);
+
+        // Then：flash_result 持久化
+        assertTrue(result.applied());
+        org.mockito.ArgumentCaptor<PartSoftwareInstallation> captor =
+                org.mockito.ArgumentCaptor.forClass(PartSoftwareInstallation.class);
+        verify(repository).insert(captor.capture());
+        assertEquals("PASS", captor.getValue().getFlashResult());
+    }
+
+    @Test
+    void applyManifest_20paramCompatibility_keepsFlashResultNull() {
+        when(repository.selectBySourceAndSourceEventId(any(), any(), any(), any())).thenReturn(null);
+        when(repository.selectActiveByPartIdTargetCodeAndSlot(PART_ID, TARGET, null)).thenReturn(null);
+        when(repository.selectByPartId(PART_ID)).thenReturn(List.of());
+
+        // 20 参兼容签名（既有 OTA/Service 调用方）→ flashResult 保持 null
+        appService.applyManifest(
+                PART_ID, BINDING_ID, VIN, TARGET, "SW-PN", "1.0.0",
+                null, null, "INITIAL", SOURCE, "evt-compat-001",
+                Instant.parse("2026-09-08T10:00:00Z"), Instant.parse("2026-09-08T10:00:00Z"), true,
+                true, "obs-001", 1, "sha-001", Instant.parse("2026-09-08T10:01:00Z"), null);
+
+        org.mockito.ArgumentCaptor<PartSoftwareInstallation> captor =
+                org.mockito.ArgumentCaptor.forClass(PartSoftwareInstallation.class);
+        verify(repository).insert(captor.capture());
+        assertNull(captor.getValue().getFlashResult());
+    }
 }

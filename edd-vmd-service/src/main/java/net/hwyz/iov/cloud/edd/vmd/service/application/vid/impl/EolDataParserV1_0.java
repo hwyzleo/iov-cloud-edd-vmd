@@ -364,6 +364,7 @@ public class EolDataParserV1_0 extends BaseProcessor implements VehicleImportDat
                                     softwareVersion,
                                     null,  // artifactHash
                                     null,  // slot
+                                    flashResult,  // FLASH_RESULT（修复：此前读取但未持久化）
                                     "UPDATE",  // changeType
                                     "EOL",  // source
                                     buildSourceEventId(batchNum, vin, ecuSn, softwarePartNo),  // sourceEventId

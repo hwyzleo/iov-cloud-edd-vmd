@@ -68,7 +68,7 @@ public class SoftwareInventoryAppService {
     /**
      * 应用软件清单（CR-045 兼容签名，委托全量签名）
      *
-     * @see #applyManifest(Long, Long, String, String, String, String, String, String, String, String, String, Instant, Instant, Boolean, Boolean, String, Integer, String, Instant, String)
+     * @see #applyManifest(Long, Long, String, String, String, String, String, String, String, String, String, String, String, Instant, Instant, Boolean, Boolean, String, Integer, String, Instant, String)
      */
     @Transactional(rollbackFor = Exception.class)
     public ApplyManifestResult applyManifest(
@@ -95,7 +95,43 @@ public class SoftwareInventoryAppService {
     }
 
     /**
-     * 应用软件清单（CR-046 全量签名）
+     * 应用软件清单（CR-046 全量签名，无 flashResult——兼容既有调用方，委托 21 参全量签名）
+     *
+     * @see #applyManifest(Long, Long, String, String, String, String, String, String, String, String, String, String, String, Instant, Instant, Boolean, Boolean, String, Integer, String, Instant, String)
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public ApplyManifestResult applyManifest(
+            Long partId,
+            Long bindingId,
+            String vinSnapshot,
+            String softwareTargetCode,
+            String softwarePartNo,
+            String softwareVersion,
+            String artifactHash,
+            String slot,
+            String changeType,
+            String source,
+            String sourceEventId,
+            Instant sourceEventTime,
+            Instant reportedAt,
+            Boolean isConfirmed,
+            Boolean isActiveSlot,
+            String observationKey,
+            Integer canonicalizationVersion,
+            String canonicalDigest,
+            Instant sourceAcceptedAt,
+            String softwareType) {
+
+        return applyManifest(partId, bindingId, vinSnapshot,
+                softwareTargetCode, softwarePartNo, softwareVersion,
+                artifactHash, slot, null, changeType, source, sourceEventId,
+                sourceEventTime, reportedAt, isConfirmed,
+                isActiveSlot, observationKey, canonicalizationVersion,
+                canonicalDigest, sourceAcceptedAt, softwareType);
+    }
+
+    /**
+     * 应用软件清单（CR-046 全量签名 + flashResult）
      * <p>
      * 消解算法：
      * 1. 幂等去重（source + sourceEventId + softwareTargetCode + slot）
@@ -112,6 +148,7 @@ public class SoftwareInventoryAppService {
      * @param softwareVersion 软件版本
      * @param artifactHash 制品摘要（可空）
      * @param slot 槽位（可空，SINGLE_IMAGE）
+     * @param flashResult 刷写结果（可空，EOL FLASH_RESULT；修复 BUG：此前读取但未持久化）
      * @param changeType 变更类型
      * @param source 来源
      * @param sourceEventId 来源事件幂等键
@@ -135,6 +172,7 @@ public class SoftwareInventoryAppService {
             String softwareVersion,
             String artifactHash,
             String slot,
+            String flashResult,
             String changeType,
             String source,
             String sourceEventId,
@@ -228,6 +266,7 @@ public class SoftwareInventoryAppService {
                 .softwareVersion(softwareVersion)
                 .artifactHash(artifactHash)
                 .slot(slot)
+                .flashResult(flashResult)
                 .installState("ACTIVE")
                 .changeType(changeType)
                 .effectiveFrom(Instant.now())
