@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="net.hwyz.iov.cloud.edd.vmd.service.timeit.TimeItMapper">
+
+    <!-- CR-073 G1 候选 resultMap：c_dt6 显式 typeHandler（Instant ↔ UTC DATETIME(6)，保留微秒） -->
+    <resultMap id="baseResultMap" type="net.hwyz.iov.cloud.edd.vmd.service.timeit.TimeItPo">
+        <id column="id" property="id"/>
+        <result column="row_key" property="rowKey"/>
+        <result column="c_ts" property="ts"/>
+        <result column="c_ts6" property="ts6"/>
+        <result column="c_dt" property="dt"/>
+        <result column="c_dt3" property="dt3"/>
+        <result column="c_dt6" property="dt6"
+                typeHandler="net.hwyz.iov.cloud.framework.mysql.typehandler.UtcInstantTypeHandler"/>
+    </resultMap>
+
+    <!-- 候选写路径：显式 typeHandler（UTC 墙钟存储） -->
+    <insert id="insertWithUtcHandler" parameterType="map">
+        INSERT INTO t_time_it (row_key, c_dt6)
+        VALUES (#{rowKey},
+                #{dt6,typeHandler=net.hwyz.iov.cloud.framework.mysql.typehandler.UtcInstantTypeHandler})
+    </insert>
+
+    <!-- 对照写路径：MyBatis 默认 InstantTypeHandler（setTimestamp，旧路径） -->
+    <insert id="insertWithDefaultInstant" parameterType="map">
+        INSERT INTO t_time_it (row_key, c_dt6)
+        VALUES (#{rowKey}, #{dt6})
+    </insert>
+
+    <select id="selectByRowKey" parameterType="string" resultMap="baseResultMap">
+        SELECT id, row_key, c_ts, c_ts6, c_dt, c_dt3, c_dt6
+        FROM t_time_it
+        WHERE row_key = #{rowKey}
+    </select>
+</mapper>

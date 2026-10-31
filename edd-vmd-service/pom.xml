@@ -84,6 +84,12 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
                     <skip>false</skip>
+                    <!-- CR-073 G1：显式让 *IT 隔离测试被测试执行器发现（用户确认第 5 点：
+                         *IT 必须被明确配置的测试执行器实际发现；脚本失败须返回非零） -->
+                    <includes>
+                        <include>**/*Test.java</include>
+                        <include>**/*IT.java</include>
+                    </includes>
                 </configuration>
             </plugin>
         </plugins>
