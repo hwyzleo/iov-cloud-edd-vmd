@@ -153,6 +153,8 @@ public class ModelAppService {
             throw new ProductDataReadOnlyException("车型", model.getCode());
         }
         Model updateModel = ModelAssembler.INSTANCE.toDomain(modelCmd);
+        // VMD-DSN-CR-075：CAS 更新必须携带可信原版本（取自刚加载的 model），冲突时返回 0 不得报成功
+        updateModel.setRowVersion(model.getRowVersion());
         return mdmModelRepository.update(updateModel);
     }
 

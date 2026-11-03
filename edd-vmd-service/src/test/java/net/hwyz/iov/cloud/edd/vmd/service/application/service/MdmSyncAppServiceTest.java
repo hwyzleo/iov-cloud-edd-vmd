@@ -332,6 +332,54 @@ class MdmSyncAppServiceTest {
     }
 
     @Test
+    @DisplayName("handleSeriesEvent CAS冲突应重读并按版本门禁有界重试一次（CR-075）")
+    void handleSeriesEvent_shouldRetryOnceOnCasConflict() {
+        // Given
+        MdmCarLineEvent event = new MdmCarLineEvent("UPDATED", "mdm-carline-004", 3L, "CARLINE004", "冲突更新", "BRAND004", LocalDateTime.now());
+        CarLine localCarLine = CarLine.builder()
+                .id(1L).code("CARLINE004").name("原始车系").brandCode("BRAND004")
+                .source(SourceType.MDM).externalRefId("mdm-carline-004").externalVersion(2L).rowVersion(1)
+                .build();
+        CarLine freshCarLine = CarLine.builder()
+                .id(1L).code("CARLINE004").name("原始车系").brandCode("BRAND004")
+                .source(SourceType.MDM).externalRefId("mdm-carline-004").externalVersion(2L).rowVersion(2)
+                .build();
+        when(mdmCarLineRepository.selectByCode("CARLINE004")).thenReturn(localCarLine, freshCarLine);
+        when(mdmCarLineRepository.updateById(any(CarLine.class))).thenReturn(0, 1);
+
+        // When
+        mdmSyncAppService.handleSeriesEvent(event);
+
+        // Then
+        verify(mdmCarLineRepository, times(2)).updateById(any(CarLine.class));
+        verify(mdmConsumerMetrics, never()).recordIgnored(eq(MdmProjectionType.CAR_LINE), anyString());
+    }
+
+    @Test
+    @DisplayName("handleSeriesEvent CAS冲突且并发已应用/版本不满足应记录忽略（CR-075）")
+    void handleSeriesEvent_shouldRecordIgnoredWhenCasConflictAndStale() {
+        // Given
+        MdmCarLineEvent event = new MdmCarLineEvent("UPDATED", "mdm-carline-005", 3L, "CARLINE005", "冲突更新", "BRAND005", LocalDateTime.now());
+        CarLine localCarLine = CarLine.builder()
+                .id(1L).code("CARLINE005").name("原始车系").brandCode("BRAND005")
+                .source(SourceType.MDM).externalRefId("mdm-carline-005").externalVersion(2L).rowVersion(1)
+                .build();
+        CarLine freshCarLine = CarLine.builder()
+                .id(1L).code("CARLINE005").name("并发已应用").brandCode("BRAND005")
+                .source(SourceType.MDM).externalRefId("mdm-carline-005").externalVersion(3L).rowVersion(2)
+                .build();
+        when(mdmCarLineRepository.selectByCode("CARLINE005")).thenReturn(localCarLine, freshCarLine);
+        when(mdmCarLineRepository.updateById(any(CarLine.class))).thenReturn(0);
+
+        // When
+        mdmSyncAppService.handleSeriesEvent(event);
+
+        // Then
+        verify(mdmCarLineRepository, times(1)).updateById(any(CarLine.class));
+        verify(mdmConsumerMetrics).recordIgnored(eq(MdmProjectionType.CAR_LINE), eq("stale"));
+    }
+
+    @Test
     @DisplayName("handleSeriesEvent应忽略版本不高于本地的车系事件")
     void handleSeriesEvent_shouldIgnoreWhenVersionNotHigher() {
         // Given

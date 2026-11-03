@@ -206,7 +206,29 @@ public class MdmSyncAppService {
                 localCarLine.setExternalRefId(event.getEntityId());
                 localCarLine.setExternalVersion(event.getVersion());
                 localCarLine.setLastSyncTime(LocalDateTime.now());
-                mdmCarLineRepository.updateById(localCarLine);
+                int updated = mdmCarLineRepository.updateById(localCarLine);
+                if (updated == 0) {
+                    // VMD-DSN-CR-075：row_version CAS 冲突 → 重读当前行后按 externalVersion 门禁有界重试一次
+                    CarLine fresh = mdmCarLineRepository.selectByCode(event.getCode());
+                    if (fresh != null && (fresh.getExternalVersion() == null
+                            || event.getVersion() > fresh.getExternalVersion())) {
+                        fresh.setName(event.getName());
+                        fresh.setBrandCode(event.getBrandCode());
+                        fresh.setExternalRefId(event.getEntityId());
+                        fresh.setExternalVersion(event.getVersion());
+                        fresh.setLastSyncTime(LocalDateTime.now());
+                        int retried = mdmCarLineRepository.updateById(fresh);
+                        if (retried == 0) {
+                            log.warn("车系投影 CAS 冲突（重试仍失败）: code={}, eventVersion={}, currentVersion={}",
+                                    event.getCode(), event.getVersion(), fresh.getExternalVersion());
+                            mdmConsumerMetrics.recordIgnored(MdmProjectionType.CAR_LINE, "cas_conflict");
+                        }
+                    } else {
+                        log.debug("车系投影 CAS 冲突但并发写入已应用/版本不满足: code={}, eventVersion={}",
+                                event.getCode(), event.getVersion());
+                        mdmConsumerMetrics.recordIgnored(MdmProjectionType.CAR_LINE, "stale");
+                    }
+                }
                 log.info("更新车系: code={}, version={}", event.getCode(), event.getVersion());
             } else {
                 log.info("忽略车系事件（版本不高于本地）: code={}, eventVersion={}, localVersion={}",
@@ -602,7 +624,12 @@ public class MdmSyncAppService {
                             existingCarLine.setExternalRefId(carLineData.getSourceId());
                             existingCarLine.setExternalVersion(carLineData.getVersion() != null ? carLineData.getVersion().longValue() : 0L);
                             existingCarLine.setLastSyncTime(convertToLocalDateTime(carLineData.getModifyTime()));
-                            mdmCarLineRepository.updateById(existingCarLine);
+                            int updated = mdmCarLineRepository.updateById(existingCarLine);
+                            if (updated == 0) {
+                                // VMD-DSN-CR-075：CAS 冲突（并发写入），Bootstrap 不重试，告警后继续并依赖下一轮/事件收敛
+                                log.warn("Bootstrap 更新 MDM 车系投影 CAS 冲突: code={}, rowVersion={}",
+                                        carLineData.getCode(), existingCarLine.getRowVersion());
+                            }
                             log.info("Bootstrap 更新 MDM 车系投影: code={}", carLineData.getCode());
                         }
                     }

@@ -27,6 +27,14 @@ public class CarLine implements DomainObj<CarLine> {
     private Long id;
 
     /**
+     * 行版本号（持久化乐观锁版本，VMD-DSN-CR-075 新增）
+     *
+     * <p>由基础设施层在读取/插入时回填，更新入口必须携带可信原版本（CAS），
+     * 成功后回传新版本（旧版本 + 1），冲突失败时丢弃或重读，不复用内存版本。</p>
+     */
+    private Integer rowVersion;
+
+    /**
      * 品牌代码
      */
     private String brandCode;

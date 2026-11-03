@@ -416,4 +416,95 @@ class MdmModelRepositoryTest extends BaseTest {
         assertEquals("PLATFORM_UPDATED", updatedModel.getPlatformCode());
         assertEquals("CARLINE_UPDATED", updatedModel.getCarLineCode());
     }
+    @Test
+    @DisplayName("CAS 冲突应返回 0 且不改内存版本（CR-075）")
+    void update_shouldReturnZeroOnStaleVersionCasConflict() {
+        // Given
+        Model model = Model.builder()
+                .code("TEST_MODEL_CAS")
+                .name("CASModel")
+                .platformCode("PLATFORM_CR1")
+                .carLineCode("CARLINE_CR1")
+                .source(SourceType.MANUAL)
+                .build();
+        mdmModelRepository.insert(model);
+        model.setName("冲突更新");
+        model.setRowVersion(999);
+
+        // When
+        int result = mdmModelRepository.update(model);
+
+        // Then
+        assertEquals(0, result, "过期版本 CAS 应返回 0");
+        assertEquals(999, model.getRowVersion(), "失败后不得修改内存版本");
+        Model inDb = mdmModelRepository.selectById(model.getId());
+        assertEquals("CASModel", inDb.getName(), "数据不得被陈旧更新覆盖");
+    }
+
+    @Test
+    @DisplayName("CAS 成功后应回传新版本（CR-075）")
+    void update_shouldRoundTripVersionAfterSuccess() {
+        // Given
+        Model model = Model.builder()
+                .code("TEST_MODEL_VER")
+                .name("版本回传")
+                .platformCode("PLATFORM_CR2")
+                .carLineCode("CARLINE_CR2")
+                .source(SourceType.MANUAL)
+                .build();
+        mdmModelRepository.insert(model);
+        assertEquals(1, model.getRowVersion());
+
+        // When
+        model.setName("更新后");
+        int result = mdmModelRepository.update(model);
+
+        // Then
+        assertEquals(1, result);
+        assertEquals(2, model.getRowVersion(), "成功后应回传新版本");
+        Integer rowVersion = jdbcTemplate.queryForObject(
+                "SELECT row_version FROM tb_mdm_model WHERE id = ?", Integer.class, model.getId());
+        assertEquals(2, rowVersion);
+    }
+
+    @Test
+    @DisplayName("插入后应回填行版本并保持 DB 生成时间与 row_valid=1（CR-075）")
+    void insert_shouldBackfillRowVersionAndDbGeneratedTimes() {
+        // Given
+        Model model = Model.builder()
+                .code("TEST_MODEL_FILL")
+                .name("CR075Model")
+                .platformCode("PLATFORM_CR3")
+                .carLineCode("CARLINE_CR3")
+                .source(SourceType.MANUAL)
+                .build();
+
+        // When
+        mdmModelRepository.insert(model);
+
+        // Then
+        assertEquals(1, model.getRowVersion(), "insert 后应回填 rowVersion=1");
+        assertNotNull(jdbcTemplate.queryForObject(
+                "SELECT create_time FROM tb_mdm_model WHERE id = ?", java.util.Date.class, model.getId()),
+                "create_time 应由 DB now() 生成");
+        assertNotNull(jdbcTemplate.queryForObject(
+                "SELECT modify_time FROM tb_mdm_model WHERE id = ?", java.util.Date.class, model.getId()),
+                "modify_time 应由 DB now() 生成");
+        Integer rowVersion = jdbcTemplate.queryForObject(
+                "SELECT row_version FROM tb_mdm_model WHERE id = ?", Integer.class, model.getId());
+        assertEquals(1, rowVersion);
+        Boolean rowValid = jdbcTemplate.queryForObject(
+                "SELECT row_valid FROM tb_mdm_model WHERE id = ?", Boolean.class, model.getId());
+        assertEquals(Boolean.TRUE, rowValid);
+    }
+
+    @Test
+    @DisplayName("空数组批量物理删除应返回 0（受控硬删除边界，CR-075）")
+    void batchPhysicalDelete_shouldReturnZeroForEmptyArray() {
+        // When
+        int result = mdmModelRepository.batchPhysicalDelete(new Long[0]);
+
+        // Then
+        assertEquals(0, result);
+    }
 }

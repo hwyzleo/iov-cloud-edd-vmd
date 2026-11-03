@@ -39,7 +39,8 @@ public class MdmCarLineRepositoryImpl implements MdmCarLineRepository {
 
     @Override
     public CarLine selectById(Long id) {
-        return CarLineConverter.INSTANCE.toDomain(mdmCarLineMapper.selectPoById(id));
+        // 原生 BaseMapper.selectById（@TableLogic 自动过滤 row_valid=1，与旧 selectPoById 等价）
+        return CarLineConverter.INSTANCE.toDomain(mdmCarLineMapper.selectById(id));
     }
 
     @Override
@@ -61,22 +62,42 @@ public class MdmCarLineRepositoryImpl implements MdmCarLineRepository {
     public int insert(CarLine carLine) {
         MdmCarLinePo po = CarLineConverter.INSTANCE.fromDomain(carLine);
         int result = mdmCarLineMapper.insertPo(po);
-        carLine.setId(po.getId());
+        if (result > 0) {
+            carLine.setId(po.getId());
+            // insertPo 专用 SQL 固定写入 row_version=1（事实性回填，非自动补版本）
+            carLine.setRowVersion(1);
+        }
         return result;
     }
 
     @Override
     public int update(CarLine carLine) {
-        return mdmCarLineMapper.updatePo(CarLineConverter.INSTANCE.fromDomain(carLine));
+        return updateWithCas(carLine);
     }
 
     @Override
     public int updateById(CarLine carLine) {
-        return mdmCarLineMapper.updatePo(CarLineConverter.INSTANCE.fromDomain(carLine));
+        return updateWithCas(carLine);
+    }
+
+    /**
+     * CAS 更新：必须携带可信原版本；成功回传新版本（DB 固定 +1），失败（0 行）不修改内存版本。
+     */
+    private int updateWithCas(CarLine carLine) {
+        MdmCarLinePo po = CarLineConverter.INSTANCE.fromDomain(carLine);
+        int result = mdmCarLineMapper.updatePo(po);
+        if (result > 0 && po.getRowVersion() != null) {
+            carLine.setRowVersion(po.getRowVersion() + 1);
+        }
+        return result;
     }
 
     @Override
     public int batchPhysicalDelete(Long[] ids) {
+        // 空集合明确 no-op，不生成 IN () 非法 SQL，也不触发全表删除（CR-075 受控硬删除边界）
+        if (ids == null || ids.length == 0) {
+            return 0;
+        }
         return mdmCarLineMapper.batchPhysicalDeletePo(ids);
     }
 

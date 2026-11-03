@@ -39,7 +39,8 @@ public class MdmModelRepositoryImpl implements MdmModelRepository {
 
     @Override
     public Model selectById(Long id) {
-        return ModelConverter.INSTANCE.toDomain(mdmModelMapper.selectPoById(id));
+        // 原生 BaseMapper.selectById（@TableLogic 自动过滤 row_valid=1，与旧 selectPoById 等价）
+        return ModelConverter.INSTANCE.toDomain(mdmModelMapper.selectById(id));
     }
 
     @Override
@@ -61,22 +62,42 @@ public class MdmModelRepositoryImpl implements MdmModelRepository {
     public int insert(Model model) {
         MdmModelPo po = ModelConverter.INSTANCE.fromDomain(model);
         int result = mdmModelMapper.insertPo(po);
-        model.setId(po.getId());
+        if (result > 0) {
+            model.setId(po.getId());
+            // insertPo 专用 SQL 固定写入 row_version=1（事实性回填，非自动补版本）
+            model.setRowVersion(1);
+        }
         return result;
     }
 
     @Override
     public int update(Model model) {
-        return mdmModelMapper.updatePo(ModelConverter.INSTANCE.fromDomain(model));
+        return updateWithCas(model);
     }
 
     @Override
     public int updateById(Model model) {
-        return mdmModelMapper.updatePo(ModelConverter.INSTANCE.fromDomain(model));
+        return updateWithCas(model);
+    }
+
+    /**
+     * CAS 更新：必须携带可信原版本；成功回传新版本（DB 固定 +1），失败（0 行）不修改内存版本。
+     */
+    private int updateWithCas(Model model) {
+        MdmModelPo po = ModelConverter.INSTANCE.fromDomain(model);
+        int result = mdmModelMapper.updatePo(po);
+        if (result > 0 && po.getRowVersion() != null) {
+            model.setRowVersion(po.getRowVersion() + 1);
+        }
+        return result;
     }
 
     @Override
     public int batchPhysicalDelete(Long[] ids) {
+        // 空集合明确 no-op，不生成 IN () 非法 SQL，也不触发全表删除（CR-075 受控硬删除边界）
+        if (ids == null || ids.length == 0) {
+            return 0;
+        }
         return mdmModelMapper.batchPhysicalDeletePo(ids);
     }
 

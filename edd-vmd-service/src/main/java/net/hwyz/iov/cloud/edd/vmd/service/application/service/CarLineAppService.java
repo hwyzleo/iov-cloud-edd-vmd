@@ -143,6 +143,8 @@ public class CarLineAppService {
             throw new ProductDataReadOnlyException("车系", carLine.getCode());
         }
         CarLine updateCarLine = CarLineAssembler.INSTANCE.toDomain(seriesCmd);
+        // VMD-DSN-CR-075：CAS 更新必须携带可信原版本（取自刚加载的 carLine），冲突时返回 0 不得报成功
+        updateCarLine.setRowVersion(carLine.getRowVersion());
         return mdmCarLineRepository.update(updateCarLine);
     }
 

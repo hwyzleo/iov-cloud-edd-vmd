@@ -384,4 +384,95 @@ class MdmCarLineRepositoryTest extends BaseTest {
         assertNotNull(result);
         assertTrue(result.stream().allMatch(c -> brandCode.equals(c.getBrandCode())));
     }
+    @Test
+    @DisplayName("CAS 冲突应返回 0 且不改内存版本（CR-075）")
+    void update_shouldReturnZeroOnStaleVersionCasConflict() {
+        // Given
+        CarLine carline = CarLine.builder()
+                .code("TEST_CARLINE_CAS")
+                .name("CASCarLine")
+                .enable(true)
+                .sort(1)
+                .source(SourceType.MANUAL)
+                .build();
+        mdmCarLineRepository.insert(carline);
+        carline.setName("冲突更新");
+        carline.setRowVersion(999);
+
+        // When
+        int result = mdmCarLineRepository.update(carline);
+
+        // Then
+        assertEquals(0, result, "过期版本 CAS 应返回 0");
+        assertEquals(999, carline.getRowVersion(), "失败后不得修改内存版本");
+        CarLine inDb = mdmCarLineRepository.selectById(carline.getId());
+        assertEquals("CASCarLine", inDb.getName(), "数据不得被陈旧更新覆盖");
+    }
+
+    @Test
+    @DisplayName("CAS 成功后应回传新版本（CR-075）")
+    void update_shouldRoundTripVersionAfterSuccess() {
+        // Given
+        CarLine carline = CarLine.builder()
+                .code("TEST_CARLINE_VER")
+                .name("版本回传")
+                .enable(true)
+                .sort(2)
+                .source(SourceType.MANUAL)
+                .build();
+        mdmCarLineRepository.insert(carline);
+        assertEquals(1, carline.getRowVersion());
+
+        // When
+        carline.setName("更新后");
+        int result = mdmCarLineRepository.update(carline);
+
+        // Then
+        assertEquals(1, result);
+        assertEquals(2, carline.getRowVersion(), "成功后应回传新版本");
+        Integer rowVersion = jdbcTemplate.queryForObject(
+                "SELECT row_version FROM tb_mdm_car_line WHERE id = ?", Integer.class, carline.getId());
+        assertEquals(2, rowVersion);
+    }
+
+    @Test
+    @DisplayName("插入后应回填行版本并保持 DB 生成时间与 row_valid=1（CR-075）")
+    void insert_shouldBackfillRowVersionAndDbGeneratedTimes() {
+        // Given
+        CarLine carline = CarLine.builder()
+                .code("TEST_CARLINE_FILL")
+                .name("CR075CarLine")
+                .enable(true)
+                .sort(3)
+                .source(SourceType.MANUAL)
+                .build();
+
+        // When
+        mdmCarLineRepository.insert(carline);
+
+        // Then
+        assertEquals(1, carline.getRowVersion(), "insert 后应回填 rowVersion=1");
+        assertNotNull(jdbcTemplate.queryForObject(
+                "SELECT create_time FROM tb_mdm_car_line WHERE id = ?", java.util.Date.class, carline.getId()),
+                "create_time 应由 DB now() 生成");
+        assertNotNull(jdbcTemplate.queryForObject(
+                "SELECT modify_time FROM tb_mdm_car_line WHERE id = ?", java.util.Date.class, carline.getId()),
+                "modify_time 应由 DB now() 生成");
+        Integer rowVersion = jdbcTemplate.queryForObject(
+                "SELECT row_version FROM tb_mdm_car_line WHERE id = ?", Integer.class, carline.getId());
+        assertEquals(1, rowVersion);
+        Boolean rowValid = jdbcTemplate.queryForObject(
+                "SELECT row_valid FROM tb_mdm_car_line WHERE id = ?", Boolean.class, carline.getId());
+        assertEquals(Boolean.TRUE, rowValid);
+    }
+
+    @Test
+    @DisplayName("空数组批量物理删除应返回 0（受控硬删除边界，CR-075）")
+    void batchPhysicalDelete_shouldReturnZeroForEmptyArray() {
+        // When
+        int result = mdmCarLineRepository.batchPhysicalDelete(new Long[0]);
+
+        // Then
+        assertEquals(0, result);
+    }
 }
