@@ -159,6 +159,8 @@ public class BrandAppService {
             throw new ProductDataReadOnlyException("品牌", brand.getCode());
         }
         Brand updateBrand = BrandAssembler.INSTANCE.toDomain(brandCmd);
+        // VMD-DSN-CR-075：CAS 更新必须携带可信原版本（取自刚加载的 brand），冲突时返回 0 不得报成功
+        updateBrand.setRowVersion(brand.getRowVersion());
         return mdmBrandRepository.update(updateBrand);
     }
 

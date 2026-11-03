@@ -12,6 +12,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmCarLineRepository
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -354,6 +355,37 @@ class BrandAppServiceTest {
         });
         verify(mdmBrandRepository).selectById(1L);
         verify(mdmBrandRepository, never()).update(any(Brand.class));
+    }
+
+    @Test
+    @DisplayName("modifyBrand应携带可信原版本执行CAS更新（CR-075）")
+    void modifyBrand_shouldCarryTrustedRowVersionForCasUpdate() {
+        // Given
+        BrandCmd cmd = BrandCmd.builder()
+                .id(1L)
+                .code("BRAND001")
+                .name("CAS修改")
+                .build();
+
+        Brand existingBrand = Brand.builder()
+                .id(1L)
+                .code("BRAND001")
+                .name("原始品牌")
+                .source(SourceType.MANUAL)
+                .rowVersion(5)
+                .build();
+
+        when(mdmBrandRepository.selectById(1L)).thenReturn(existingBrand);
+        when(mdmBrandRepository.update(any(Brand.class))).thenReturn(1);
+
+        // When
+        brandAppService.modifyBrand(cmd, "user1");
+
+        // Then
+        ArgumentCaptor<Brand> captor = ArgumentCaptor.forClass(Brand.class);
+        verify(mdmBrandRepository).update(captor.capture());
+        assertEquals(Integer.valueOf(5), captor.getValue().getRowVersion(),
+                "modifyBrand 必须携带取自已加载 brand 的可信原版本");
     }
 
     @Test

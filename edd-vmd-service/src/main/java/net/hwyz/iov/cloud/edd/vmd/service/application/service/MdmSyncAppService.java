@@ -144,7 +144,29 @@ public class MdmSyncAppService {
                 localBrand.setExternalRefId(event.getEntityId());
                 localBrand.setExternalVersion(event.getVersion());
                 localBrand.setLastSyncTime(LocalDateTime.now());
-                mdmBrandRepository.updateById(localBrand);
+                int updated = mdmBrandRepository.updateById(localBrand);
+                if (updated == 0) {
+                    // VMD-DSN-CR-075：row_version CAS 冲突 → 重读当前行后按 externalVersion 门禁有界重试一次
+                    // （不无条件重试覆盖、不丢失事件、不绕过排序/幂等规则）
+                    Brand fresh = mdmBrandRepository.selectByCode(event.getCode());
+                    if (fresh != null && (fresh.getExternalVersion() == null
+                            || event.getVersion() > fresh.getExternalVersion())) {
+                        fresh.setName(event.getName());
+                        fresh.setExternalRefId(event.getEntityId());
+                        fresh.setExternalVersion(event.getVersion());
+                        fresh.setLastSyncTime(LocalDateTime.now());
+                        int retried = mdmBrandRepository.updateById(fresh);
+                        if (retried == 0) {
+                            log.warn("MDM 品牌投影 CAS 冲突（重试仍失败）: code={}, eventVersion={}, currentVersion={}",
+                                    event.getCode(), event.getVersion(), fresh.getExternalVersion());
+                            mdmConsumerMetrics.recordIgnored(MdmProjectionType.BRAND, "cas_conflict");
+                        }
+                    } else {
+                        log.debug("MDM 品牌投影 CAS 冲突但并发写入已应用/版本不满足: code={}, eventVersion={}",
+                                event.getCode(), event.getVersion());
+                        mdmConsumerMetrics.recordIgnored(MdmProjectionType.BRAND, "stale");
+                    }
+                }
                 log.info("更新 MDM 品牌投影: code={}, oldVersion={}, newVersion={}",
                         event.getCode(), localBrand.getExternalVersion(), event.getVersion());
             } else {
@@ -512,7 +534,12 @@ public class MdmSyncAppService {
                             existingBrand.setExternalRefId(brandData.getSourceId());
                             existingBrand.setExternalVersion(brandData.getVersion() != null ? brandData.getVersion().longValue() : 0L);
                             existingBrand.setLastSyncTime(convertToLocalDateTime(brandData.getModifyTime()));
-                            mdmBrandRepository.updateById(existingBrand);
+                            int updated = mdmBrandRepository.updateById(existingBrand);
+                            if (updated == 0) {
+                                // VMD-DSN-CR-075：CAS 冲突（并发写入），Bootstrap 不重试，告警后继续并依赖下一轮/事件收敛
+                                log.warn("Bootstrap 更新 MDM 品牌投影 CAS 冲突: code={}, rowVersion={}",
+                                        brandData.getCode(), existingBrand.getRowVersion());
+                            }
                             log.info("Bootstrap 更新 MDM 品牌投影: code={}", brandData.getCode());
                         }
                     }

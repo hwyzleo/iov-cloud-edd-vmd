@@ -240,6 +240,54 @@ class MdmSyncAppServiceTest {
     }
 
     @Test
+    @DisplayName("handleBrandEvent CAS冲突应重读并按版本门禁有界重试一次（CR-075）")
+    void handleBrandEvent_shouldRetryOnceOnCasConflict() {
+        // Given
+        MdmBrandEvent event = new MdmBrandEvent("UPDATED", "mdm-brand-004", 3L, "BRAND004", "冲突更新", LocalDateTime.now());
+        Brand localBrand = Brand.builder()
+                .id(1L).code("BRAND004").name("原始")
+                .source(SourceType.MDM).externalRefId("mdm-brand-004").externalVersion(2L).rowVersion(1)
+                .build();
+        Brand freshBrand = Brand.builder()
+                .id(1L).code("BRAND004").name("原始")
+                .source(SourceType.MDM).externalRefId("mdm-brand-004").externalVersion(2L).rowVersion(2)
+                .build();
+        when(mdmBrandRepository.selectByCode("BRAND004")).thenReturn(localBrand, freshBrand);
+        when(mdmBrandRepository.updateById(any(Brand.class))).thenReturn(0, 1);
+
+        // When
+        mdmSyncAppService.handleBrandEvent(event);
+
+        // Then
+        verify(mdmBrandRepository, times(2)).updateById(any(Brand.class));
+        verify(mdmConsumerMetrics, never()).recordIgnored(eq(MdmProjectionType.BRAND), anyString());
+    }
+
+    @Test
+    @DisplayName("handleBrandEvent CAS冲突且并发已应用/版本不满足应记录忽略（CR-075）")
+    void handleBrandEvent_shouldRecordIgnoredWhenCasConflictAndStale() {
+        // Given
+        MdmBrandEvent event = new MdmBrandEvent("UPDATED", "mdm-brand-005", 3L, "BRAND005", "冲突更新", LocalDateTime.now());
+        Brand localBrand = Brand.builder()
+                .id(1L).code("BRAND005").name("原始")
+                .source(SourceType.MDM).externalRefId("mdm-brand-005").externalVersion(2L).rowVersion(1)
+                .build();
+        Brand freshBrand = Brand.builder()
+                .id(1L).code("BRAND005").name("并发已应用")
+                .source(SourceType.MDM).externalRefId("mdm-brand-005").externalVersion(3L).rowVersion(2)
+                .build();
+        when(mdmBrandRepository.selectByCode("BRAND005")).thenReturn(localBrand, freshBrand);
+        when(mdmBrandRepository.updateById(any(Brand.class))).thenReturn(0);
+
+        // When
+        mdmSyncAppService.handleBrandEvent(event);
+
+        // Then
+        verify(mdmBrandRepository, times(1)).updateById(any(Brand.class));
+        verify(mdmConsumerMetrics).recordIgnored(eq(MdmProjectionType.BRAND), eq("stale"));
+    }
+
+    @Test
     @DisplayName("handleSeriesEvent应新增本地不存在的车系投影")
     void handleSeriesEvent_shouldInsertWhenLocalCarLineNotExists() {
         // Given

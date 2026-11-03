@@ -1,21 +1,84 @@
 package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper;
 
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.MdmBrandPo;
-import net.hwyz.iov.cloud.framework.mysql.dao.BaseDao;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 import org.apache.ibatis.annotations.Select;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  * <p>
  * 车辆品牌表 DAO
  * </p>
  *
+ * <p>VMD-DSN-CR-075：由 legacy BaseDao 迁移为原生 BaseMapper。
+ * 基础查询（selectById 等）由 MP 注入；因时间来源（DB now()）与审计副作用裁决，
+ * INSERT/UPDATE/逻辑删除/物理删除保留明确命名的具名 SQL；自定义查询保留 XML/注解。</p>
+ *
  * @author hwyz_leo
  * @since 2024-09-24
  */
 @Mapper
-public interface MdmBrandMapper extends BaseDao<MdmBrandPo, Long> {
+public interface MdmBrandMapper extends BaseMapper<MdmBrandPo> {
+
+    /**
+     * 插入品牌（专用 SQL：create_time/modify_time 由 DB now() 生成，row_version=1、row_valid=1）
+     *
+     * @param po 品牌 PO
+     * @return 影响行数
+     */
+    int insertPo(MdmBrandPo po);
+
+    /**
+     * 更新品牌（专用 SQL：保持旧字段语义 + 审计副作用，自 CR-075 起带 row_version CAS）
+     *
+     * @param po 品牌 PO（必须携带可信原 rowVersion）
+     * @return 影响行数（0 表示 CAS 冲突或记录不存在）
+     */
+    int updatePo(MdmBrandPo po);
+
+    /**
+     * 逻辑删除品牌（专用 SQL：保留 row_valid=0、版本递增、修改时间等审计副作用）
+     *
+     * @param id 主键
+     * @return 影响行数
+     */
+    int logicalDeletePo(Long id);
+
+    /**
+     * 物理删除品牌（受控硬删除，保留授权/引用校验边界）
+     *
+     * @param id 主键
+     * @return 影响行数
+     */
+    int physicalDeletePo(Long id);
+
+    /**
+     * 批量物理删除品牌（受控硬删除，固定 Long[] 参数绑定）
+     *
+     * @param ids 主键数组
+     * @return 影响行数
+     */
+    int batchPhysicalDeletePo(Long[] ids);
+
+    /**
+     * 根据条件查询品牌列表（保留 XML：模糊名称、时间范围、排序）
+     *
+     * @param map 查询条件
+     * @return 品牌 PO 列表
+     */
+    List<MdmBrandPo> selectPoByMap(Map<String, Object> map);
+
+    /**
+     * 根据条件统计品牌数量（保留 XML）
+     *
+     * @param map 查询条件
+     * @return 数量
+     */
+    int countPoByMap(Map<String, Object> map);
 
     /**
      * 通过code查询车辆品牌信息
