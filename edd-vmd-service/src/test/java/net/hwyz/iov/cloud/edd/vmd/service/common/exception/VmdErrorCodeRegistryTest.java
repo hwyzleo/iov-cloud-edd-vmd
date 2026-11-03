@@ -8,12 +8,15 @@ import java.util.Set;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * VmdErrorCode 注册表校验（CR-040 延续 + CR-055 新增业务密钥域码）
+ * VmdErrorCode 注册表校验（CR-040 延续）
  * <p>
  * 校验：806xxx 格式、唯一性、范围（806000 基准码 + 业务码 806001～806999）。
+ * <p>
+ * VMD-DSN-CR-074：证书/运行期业务密钥/Keyprov 错误码（806040～806052、806060～806065、
+ * 806066～806077、806083～806089、806090～806131 中除 806106 外）已随迁出退役，退役编号
+ * 登记于 {@link VmdErrorCode} 类注释，禁止重新分配；本测试只校验保留业务错误码。
  *
  * @author hwyz_leo
- * @since 2026-10-08
  */
 class VmdErrorCodeRegistryTest {
 
@@ -30,30 +33,12 @@ class VmdErrorCodeRegistryTest {
     @Test
     void registry_builtConsistently() {
         assertEquals(VmdErrorCode.values().length, ErrorCodeRegistry.getRegisteredCount());
-        assertTrue(ErrorCodeRegistry.getAllCodes().contains("806065"));
-        // CR-055 新增业务密钥域错误码
-        assertTrue(ErrorCodeRegistry.getAllCodes().contains("806066"));
-        assertTrue(ErrorCodeRegistry.getAllCodes().contains("806077"));
-        // CR-056 新增零件导入后置处理重放域错误码
+        // 保留业务错误码（CR-056 零件导入后置处理重放域）
         assertTrue(ErrorCodeRegistry.getAllCodes().contains("806078"));
         assertTrue(ErrorCodeRegistry.getAllCodes().contains("806079"));
         assertTrue(ErrorCodeRegistry.getAllCodes().contains("806080"));
-    }
-
-    @Test
-    void businessKeyErrorCodes_present() {
-        assertEquals("806066", VmdErrorCode.BUSINESS_KEY_DEVICE_SESSION_MISMATCH.getCode());
-        assertEquals("806067", VmdErrorCode.BUSINESS_KEY_DOMAIN_NOT_AUTHORIZED.getCode());
-        assertEquals("806068", VmdErrorCode.BUSINESS_KEY_NOT_EXIST.getCode());
-        assertEquals("806069", VmdErrorCode.BUSINESS_KEY_MULTIPLE_ACTIVE.getCode());
-        assertEquals("806070", VmdErrorCode.BUSINESS_KEY_STATE_NOT_ALLOWED.getCode());
-        assertEquals("806071", VmdErrorCode.BUSINESS_KEY_IDEMPOTENCY_CONFLICT.getCode());
-        assertEquals("806072", VmdErrorCode.BUSINESS_KEY_ROTATION_CONFLICT.getCode());
-        assertEquals("806073", VmdErrorCode.BUSINESS_KEY_DEVICE_CERT_NOT_FOUND.getCode());
-        assertEquals("806074", VmdErrorCode.BUSINESS_KEY_KMS_UNAVAILABLE.getCode());
-        assertEquals("806075", VmdErrorCode.BUSINESS_KEY_WRAP_FAILED.getCode());
-        assertEquals("806076", VmdErrorCode.BUSINESS_KEY_REVOCATION_FAILED.getCode());
-        assertEquals("806077", VmdErrorCode.BUSINESS_KEY_OUTCOME_UNKNOWN.getCode());
+        // CR-072 device_category 最小快照域
+        assertTrue(ErrorCodeRegistry.getAllCodes().contains("806132"));
     }
 
     @Test
@@ -64,100 +49,46 @@ class VmdErrorCodeRegistryTest {
     }
 
     @Test
-    void businessKeyProvisioningErrorCodes_present() {
-        // CR-058 新增业务密钥多用途开通批次/设备导入ACK域错误码
-        assertEquals("806083", VmdErrorCode.BUSINESS_KEY_PROVISIONING_NOT_FOUND.getCode());
-        assertEquals("806084", VmdErrorCode.BUSINESS_KEY_PROVISIONING_PURPOSE_INCOMPLETE.getCode());
-        assertEquals("806085", VmdErrorCode.BUSINESS_KEY_PROVISIONING_ACK_CONFLICT.getCode());
-        assertEquals("806086", VmdErrorCode.BUSINESS_KEY_PROVISIONING_STATE_NOT_ALLOWED.getCode());
-        assertEquals("806087", VmdErrorCode.BUSINESS_KEY_PROVISIONING_ITEM_MISMATCH.getCode());
-        assertEquals("806088", VmdErrorCode.BUSINESS_KEY_PROVISIONING_DEVICE_NOT_ELIGIBLE.getCode());
-        assertEquals("806089", VmdErrorCode.BUSINESS_KEY_PROVISIONING_EXPIRED.getCode());
-        assertEquals(VmdErrorCode.BUSINESS_KEY_PROVISIONING_NOT_FOUND,
-                ErrorCodeRegistry.findByCode("806083").orElse(null));
+    void deviceCategoryErrorCodes_present() {
+        assertEquals("806132", VmdErrorCode.DEVICE_CATEGORY_NODE_CONFLICT.getCode());
+        assertEquals("806133", VmdErrorCode.DEVICE_CATEGORY_RESOLVE_FAILED.getCode());
+        assertEquals("806134", VmdErrorCode.DEVICE_CATEGORY_PREVIEW_STALE.getCode());
+        assertEquals("806135", VmdErrorCode.DEVICE_CATEGORY_CORRECTION_NOT_SUPPORTED.getCode());
+        assertEquals("806136", VmdErrorCode.DEVICE_CATEGORY_DISABLED.getCode());
     }
 
     @Test
-    void registry_lookup() {
-        assertEquals(VmdErrorCode.BUSINESS_KEY_NOT_EXIST,
-                ErrorCodeRegistry.findByCode("806068").orElse(null));
+    void softwareAndSecurityPresetErrorCodes_present() {
+        // 软件实装域（保留）
+        assertEquals("806053", VmdErrorCode.SOFTWARE_MANIFEST_INVALID.getCode());
+        assertEquals("806057", VmdErrorCode.SOFTWARE_IDEMPOTENCY_CONFLICT.getCode());
+        // 产线安全常量预置域（保留）
+        assertEquals("806058", VmdErrorCode.SECURITY_PRESET_INVALID_CAPABILITY.getCode());
+        assertEquals("806059", VmdErrorCode.SECURITY_PRESET_BIZ_TYPE_UNRESOLVED.getCode());
+    }
+
+    @Test
+    void vinInvalidErrorCode_retainedForVinCanonicalizer() {
+        // CR-074 迁出后：806106 KEYPROV_VIN_BINDING_INVALID 由 VMD 保留业务 VIN 规范化继续复用
+        assertEquals("806106", VmdErrorCode.KEYPROV_VIN_BINDING_INVALID.getCode());
+        assertEquals(VmdErrorCode.KEYPROV_VIN_BINDING_INVALID,
+                ErrorCodeRegistry.findByCode("806106").orElse(null));
+    }
+
+    @Test
+    void retiredCodes_notRegistered() {
+        // CR-074 退役编号不得再活动注册（抽查：证书 806040 / 业务密钥 806066 / Keyprov 806090）
+        assertTrue(ErrorCodeRegistry.findByCode("806040").isEmpty());
+        assertTrue(ErrorCodeRegistry.findByCode("806066").isEmpty());
+        assertTrue(ErrorCodeRegistry.findByCode("806090").isEmpty());
+        assertTrue(ErrorCodeRegistry.findByCode("806131").isEmpty());
+        // 未分配编号也不存在
         assertTrue(ErrorCodeRegistry.findByCode("999999").isEmpty());
     }
 
     @Test
-    void keyprovServiceErrorCodes_present() {
-        // CR-059 官方 Keyprov Service 契约域错误码（806090～806100）
-        assertEquals("806090", VmdErrorCode.KEYPROV_CALLER_UNAUTHORIZED.getCode());
-        assertEquals("806091", VmdErrorCode.KEYPROV_DEVICE_CONTEXT_MISMATCH.getCode());
-        assertEquals("806092", VmdErrorCode.KEYPROV_BINDING_INVALID.getCode());
-        assertEquals("806093", VmdErrorCode.KEYPROV_CERTIFICATE_INVALID.getCode());
-        assertEquals("806094", VmdErrorCode.KEYPROV_REQUEST_INVALID.getCode());
-        assertEquals("806095", VmdErrorCode.KEYPROV_IDEMPOTENCY_CONFLICT.getCode());
-        assertEquals("806096", VmdErrorCode.KEYPROV_DIRECTORY_UNAVAILABLE.getCode());
-        assertEquals("806097", VmdErrorCode.KEYPROV_WRAP_FAILED.getCode());
-        assertEquals("806098", VmdErrorCode.KEYPROV_OUTCOME_UNKNOWN.getCode());
-        assertEquals("806099", VmdErrorCode.KEYPROV_BATCH_NOT_FOUND.getCode());
-        assertEquals("806100", VmdErrorCode.KEYPROV_INTERNAL_UNAVAILABLE.getCode());
-        assertEquals(VmdErrorCode.KEYPROV_INTERNAL_UNAVAILABLE,
-                ErrorCodeRegistry.findByCode("806100").orElse(null));
-    }
-
-    @Test
-    void keyprovCertificateResolutionErrorCodes_present() {
-        // CR-060 framework 证书材料解析与 Provider 就绪门禁域错误码（806101～806105）
-        assertEquals("806101", VmdErrorCode.KEYPROV_CERTIFICATE_MATERIAL_UNAVAILABLE.getCode());
-        assertEquals("806102", VmdErrorCode.KEYPROV_CERTIFICATE_EVIDENCE_MISMATCH.getCode());
-        assertEquals("806103", VmdErrorCode.KEYPROV_CERTIFICATE_REFERENCE_AMBIGUOUS.getCode());
-        assertEquals("806104", VmdErrorCode.KEYPROV_CERTIFICATE_POLICY_REJECTED.getCode());
-        assertEquals("806105", VmdErrorCode.KEYPROV_PROVIDER_NOT_READY.getCode());
-        assertEquals(VmdErrorCode.KEYPROV_CERTIFICATE_POLICY_REJECTED,
-                ErrorCodeRegistry.findByCode("806104").orElse(null));
-    }
-
-    @Test
-    void keyprovDerivedRootErrorCodes_present() {
-        // CR-061 V2C 根派生域错误码（806106～806108）
-        assertEquals("806106", VmdErrorCode.KEYPROV_VIN_BINDING_INVALID.getCode());
-        assertEquals("806107", VmdErrorCode.KEYPROV_DERIVED_PROVIDER_NOT_READY.getCode());
-        assertEquals("806108", VmdErrorCode.KEYPROV_DERIVATION_UNSUPPORTED.getCode());
-        assertEquals(VmdErrorCode.KEYPROV_DERIVED_PROVIDER_NOT_READY,
-                ErrorCodeRegistry.findByCode("806107").orElse(null));
-    }
-
-    @Test
-    void tboxEcdhCertificateErrorCodes_present() {
-        // VMD-DSN-CR-063 逻辑 TBOX ECDH-ES v1 证书 Profile 域错误码（806112～806121）
-        assertEquals("806112", VmdErrorCode.CERTIFICATE_CSR_PUBLIC_KEY_NOT_ALLOWED.getCode());
-        assertEquals("806113", VmdErrorCode.CERTIFICATE_CSR_KEY_USAGE_INVALID.getCode());
-        assertEquals("806114", VmdErrorCode.CERTIFICATE_CSR_CLIENT_AUTH_MISSING.getCode());
-        assertEquals("806115", VmdErrorCode.CERTIFICATE_CSR_EKU_CONFLICT.getCode());
-        assertEquals("806116", VmdErrorCode.CERTIFICATE_CSR_UNSUPPORTED_CRITICAL_EXTENSION.getCode());
-        assertEquals("806117", VmdErrorCode.CERTIFICATE_PUBLIC_KEY_BINDING_MISMATCH.getCode());
-        assertEquals("806118", VmdErrorCode.CERTIFICATE_UID_BINDING_MISMATCH.getCode());
-        assertEquals("806119", VmdErrorCode.CERTIFICATE_ISSUED_PROFILE_MISMATCH.getCode());
-        assertEquals("806120", VmdErrorCode.CERTIFICATE_MATERIAL_UNAVAILABLE.getCode());
-        assertEquals("806121", VmdErrorCode.CERTIFICATE_ENROLLMENT_OUTCOME_UNKNOWN.getCode());
-        assertEquals(VmdErrorCode.CERTIFICATE_ISSUED_PROFILE_MISMATCH,
-                ErrorCodeRegistry.findByCode("806119").orElse(null));
-    }
-
-    @Test
-    void businessKeyProvisioningAddressingErrorCodes_present() {
-        // VMD-DSN-CR-065 §6.2 证书维度寻址域错误码（806128～806129）
-        assertEquals("806128", VmdErrorCode.BUSINESS_KEY_PROVISIONING_CERTIFICATE_DATA_INCOMPLETE.getCode());
-        assertEquals("806129", VmdErrorCode.BUSINESS_KEY_PROVISIONING_RESOLUTION_INCONSISTENT.getCode());
-        assertEquals(VmdErrorCode.BUSINESS_KEY_PROVISIONING_RESOLUTION_INCONSISTENT,
-                ErrorCodeRegistry.findByCode("806129").orElse(null));
-    }
-
-    @Test
-    void keyprovLogicalIdentityErrorCodes_present() {
-        // VMD-DSN-CR-066 逻辑材料身份与版本代际冲突域错误码（806130～806131），不可重试
-        assertEquals("806130", VmdErrorCode.KEYPROV_LOGICAL_IDENTITY_CONFLICT.getCode());
-        assertEquals("806131", VmdErrorCode.KEYPROV_VERSION_GENERATION_MISMATCH.getCode());
-        assertEquals(VmdErrorCode.KEYPROV_LOGICAL_IDENTITY_CONFLICT,
-                ErrorCodeRegistry.findByCode("806130").orElse(null));
-        assertEquals(VmdErrorCode.KEYPROV_VERSION_GENERATION_MISMATCH,
-                ErrorCodeRegistry.findByCode("806131").orElse(null));
+    void registry_lookup() {
+        assertEquals(VmdErrorCode.SOFTWARE_MANIFEST_INVALID,
+                ErrorCodeRegistry.findByCode("806053").orElse(null));
     }
 }

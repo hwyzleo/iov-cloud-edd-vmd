@@ -24,13 +24,13 @@ import java.util.List;
  *   <li>{@code vmd.vehicle-produce}：车辆生产事件，经 vmd_outbox → OutboxRelay 发布/补发</li>
  *   <li>{@code vmd.vehicle-software-inventory.changed}：车辆软件清单变更事件，
  *       经 vmd_outbox → OutboxRelay 发布</li>
- *   <li>{@code vmd.business-key.changed}：设备业务密钥变更事件（CR-055），
- *       经 vmd_outbox → OutboxRelay 发布</li>
  *   <li>{@code vmd.part-inbound.changed}：零件实例入站事件（CR-056），
  *       经 vmd_outbox → OutboxRelay 发布，重放场景</li>
- *   <li>{@code vmd.tbox-v2c-key-provisioned}：TBOX V2C 业务密钥导入完成事件（CR-058），
- *       经 vmd_outbox → OutboxRelay 发布</li>
  * </ul>
+ * <p>
+ * VMD-DSN-CR-074：vmd.business-key.changed 与 vmd.tbox-v2c-key-provisioned 随 Keyprov/业务密钥
+ * 职责迁出至 SEC-VIAM，不再由 VMD 声明创建/生产新业务事件；历史冻结 Outbox 读取与排空由
+ * 迁移记录指定的唯一 drain owner 处理，不在此声明。
  * <p>
  * 不声明 upstream.*（mdm.*、ota.* 等消费 Topic）或 DLQ Topic；消费 Topic
  * ota.vehicle-software-inventory.observed 由 IOV-OTA 管理，VMD 不创建。

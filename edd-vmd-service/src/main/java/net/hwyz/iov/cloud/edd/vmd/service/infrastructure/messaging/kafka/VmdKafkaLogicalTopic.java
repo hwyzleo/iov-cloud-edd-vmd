@@ -6,6 +6,9 @@ package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging.kafka;
  * VMD-DSN-CR-051：四个 EDD-VMD 相关 Topic 的逻辑名，与实际 Topic 名称一一对应，
  * 值来自类型化配置 {@link net.hwyz.iov.cloud.edd.vmd.service.infrastructure.config.VmdKafkaTopicProperties}。
  * <p>
+ * VMD-DSN-CR-074：vmd.business-key.changed 与 vmd.tbox-v2c-key-provisioned 随 Keyprov/业务密钥
+ * 职责迁出至 SEC-VIAM，已从本目录移除；VMD 不再生产这两个 Topic 的新业务事件。
+ * <p>
  * 注意：{@code part-binding-changed} 对应 {@code vmd.vehicle-part-binding.changed}，
  * Topic 名称以 Kafka Topic 目录治理值为准（RD-051-6）。
  *
@@ -34,19 +37,9 @@ public enum VmdKafkaLogicalTopic {
     SOFTWARE_INVENTORY_CHANGED("software-inventory-changed", VmdKafkaTopicRole.PRODUCER_OWNED),
 
     /**
-     * 设备业务密钥变更事件（Producer，VMD 幂等创建，经 Outbox→Relay 发布；CR-055）
-     */
-    BUSINESS_KEY_CHANGED("business-key-changed", VmdKafkaTopicRole.PRODUCER_OWNED),
-
-    /**
      * 零件实例入站事件（Producer，VMD 幂等创建，经 Outbox→Relay 发布；CR-056，重放场景）
      */
-    PART_INBOUND_CHANGED("part-inbound-changed", VmdKafkaTopicRole.PRODUCER_OWNED),
-
-    /**
-     * TBOX V2C 业务密钥件内导入完成事件（Producer，VMD 幂等创建，经 Outbox→Relay 发布；CR-058）
-     */
-    TBOX_V2C_KEY_PROVISIONED("tbox-v2c-key-provisioned", VmdKafkaTopicRole.PRODUCER_OWNED);
+    PART_INBOUND_CHANGED("part-inbound-changed", VmdKafkaTopicRole.PRODUCER_OWNED);
 
     private final String configKey;
     private final VmdKafkaTopicRole role;

@@ -1,84 +1,15 @@
-# Actuator 健康分组（VMD-DSN-CR-059 §7 / CR-060 §5.1、§7 / CR-061 §10）：Keyprov capability 独立呈现，
-# 聚合 VMD 编排 + 根派生 Provider（Transit/HSM v2c-comm-root）+ framework 证书解析（VAGW keyprov 流量门禁），
-# 并从主 readiness/liveness 聚合排除（KeyProvisioningHealthGroupsCustomizer）。
-# 生产以 /actuator/health/keyprov 决定是否启用 Keyprov 流量；DOWN 时停止新 Request/Wrap/轮换/吊销。
-management:
-  endpoint:
-    health:
-      group:
-        # Keyprov 域独立健康分组（CR-064：加入 FW-SEC transitDerivedKey 聚合指示器，
-        # 区分「路由正常但 Transit 实现异常」与「VMD 总体编排异常」）。
-        keyprov:
-          include: keyProvisioningCapability,derivedKeyProvider,transitDerivedKey,certificateResolution,importProofVerification,tboxEcdhCertificate
-          show-details: always
+# Actuator 健康分组：VMD-DSN-CR-074 迁出后不再注册 Keyprov 专属健康组
+# （KeyProvisioningCapability/DerivedKeyProvider/TboxEcdhCertificate 等指示器已随迁出删除），
+# 产线安全根预置/灌注与主数据健康保持默认分组。
 
 crypto:
+  # VMD-DSN-CR-074：Keyprov/业务密钥迁出后仅保留产线安全根预置/灌注共享的 provisioning 开关
+  # （PartSecurityPreset/VehicleSecurityPreset/OtaRoot/ImmoKey 依赖 KeyProvisioningTemplate，
+  # 受 crypto.provisioning.enabled 条件装配）。derived-key/business-key/kms.business-key/
+  # pki.certificate-resolution/import-proof 属迁出业务本地配置，已删除；共享 Nacos 配置源
+  # （bootstrap kms.yaml/pki.yaml）按 CR-074 保守保留，待零引用确认后再清理。
   provisioning:
     enabled: true
-    # CR-064：V2C DERIVED_ROOT 唯一 Provider 选择 = openbao-transit-local-wrap（FW-SEC-DSN-CR-019）。
-    # 无默认值占位符：缺失即启动 fail-closed，禁止隐式回退 legacy openbao-business-key（RD-064-2/REQ-064-1）。
-    # require-ready-at-startup=false 仅限 dev/test（跳过启动探测）。
-    derived-key:
-      provider: ${CRYPTO_PROVISIONING_DERIVED_KEY_PROVIDER}
-      require-ready-at-startup: ${CRYPTO_PROVISIONING_DERIVED_KEY_REQUIRE_READY_AT_STARTUP:true}
-      derivation-version: ${CRYPTO_PROVISIONING_DERIVED_KEY_DERIVATION_VERSION:v1}
-      # CR-068 / FW-SEC-DSN-CR-020：外部 AAD profile——FW 在 AES-GCM 加密前调用 VMD 注册的 encoder。
-      # 固定 PAR_PROTO_KEYPROV_AAD_V1；缺失/不一致时 keyprov Health 的 FW_EXTERNAL_AAD_PROFILE_READY 为 DOWN。
-      aad-profile-id: ${CRYPTO_PROVISIONING_DERIVED_KEY_AAD_PROFILE_ID:PAR_PROTO_KEYPROV_AAD_V1}
-      # CR-068 / FW-SEC-DSN-CR-020：Operation Result Store（字节级幂等重放）。生产必须使用持久化 store；
-      # allow-in-memory 仅限 dev/test（进程重启不保留）。
-      result-store:
-        enabled: ${CRYPTO_PROVISIONING_DERIVED_KEY_RESULT_STORE_ENABLED:true}
-        ttl: ${CRYPTO_PROVISIONING_DERIVED_KEY_RESULT_STORE_TTL:24h}
-        allow-in-memory: ${CRYPTO_PROVISIONING_DERIVED_KEY_RESULT_STORE_ALLOW_IN_MEMORY:true}
-      # 根映射声明：与 FW-SEC 编译期 allowlist 一致（TransitDerivedKeyProvider 启动校验必需）；
-      # 不开放 allowlist 之外任意 root/HMAC/context（CR-064 §4.1）。
-      roots:
-        V2C_COMM_ROOT:
-          transit-key: v2c-comm-root
-          hmac-algorithm: sha2-256
-          purposes: [UPLINK_AEAD, DOWNLINK_AEAD]
-          wrap-modes: [DEVICE_CERT_PUBLIC_KEY]
-  # 业务密钥域（CR-055）：VMD 作为目录 SSOT，framework 仅管密钥材料
-  business-key:
-    enabled: true
-    directory:
-      enabled: true
-  # CR-060：business-key Provider（FW-SEC-DSN-CR-011）——仓内安全默认关闭，生产经 Nacos/Secret 显式开启；
-  # 未就绪时 keyprov Health Group DOWN，禁止 keyprov 流量（发布顺序见 CR-060 §10.1）。
-  # CR-064：OpenBao 端点与认证（openbao-transit-local-wrap 启动必需）。
-  # RoleID/SecretID/Token 不写 Nacos 普通明文，经 Secret 引用注入（role-id-file/secret-id-file 或 token）。
-  kms:
-    business-key:
-      enabled: ${CRYPTO_KMS_BUSINESS_KEY_ENABLED:false}
-      api-version: ${CRYPTO_KMS_BUSINESS_KEY_API_VERSION:v1}
-      mount: ${CRYPTO_KMS_BUSINESS_KEY_MOUNT:business-key}
-      capability-path: ${CRYPTO_KMS_BUSINESS_KEY_CAPABILITY_PATH:/v1/business-key/capabilities}
-      require-ready-at-startup: ${CRYPTO_KMS_BUSINESS_KEY_REQUIRE_READY_AT_STARTUP:false}
-      reconcile-enabled: ${CRYPTO_KMS_BUSINESS_KEY_RECONCILE_ENABLED:false}
-  # CR-060：framework 默认证书材料解析（FW-SEC-DSN-CR-012）——仓内安全默认关闭；
-  # trust-anchors-pem 仅经 Secret 注入（Nacos 不保存秘密正文）；生产固定 require-good-status=true 且启用 revocation。
-  pki:
-    certificate-resolution:
-      enabled: ${CRYPTO_PKI_CERTIFICATE_RESOLUTION_ENABLED:false}
-      inline-first: true
-      provider-query-enabled: ${CRYPTO_PKI_CERTIFICATE_RESOLUTION_PROVIDER_QUERY_ENABLED:true}
-      domain-directory-enabled: ${CRYPTO_PKI_CERTIFICATE_RESOLUTION_DOMAIN_DIRECTORY_ENABLED:true}
-      require-unique-result: true
-      trust-anchors-pem: ${CRYPTO_PKI_CERTIFICATE_RESOLUTION_TRUST_ANCHORS_PEM:}
-      business-key-wrap:
-        require-certificate: true
-        require-trusted-chain: true
-        require-good-status: ${CRYPTO_PKI_CERTIFICATE_RESOLUTION_REQUIRE_GOOD_STATUS:false}
-  # CR-062 / FW-SEC-DSN-CR-016：导入证明验签能力。未就绪时 keyprov Health Group DOWN，不激活版本。
-  # 生产要求 require-trusted-chain=true 且经 Secret 注入信任锚；require-ready-at-startup 默认 false（仅上报 NOT_READY）。
-  import-proof:
-    enabled: ${CRYPTO_IMPORT_PROOF_ENABLED:true}
-    require-ready-at-startup: ${CRYPTO_IMPORT_PROOF_REQUIRE_READY_AT_STARTUP:false}
-    certificate:
-      require-certificate: true
-      require-trusted-chain: ${CRYPTO_IMPORT_PROOF_REQUIRE_TRUSTED_CHAIN:true}
-      require-good-status: ${CRYPTO_IMPORT_PROOF_REQUIRE_GOOD_STATUS:false}
 
 # VMD Kafka Topic 目录（VMD-DSN-CR-051 / VMD-DSN-CR-052）：Listener 占位符 / Producer / Outbox 统一引用
 vmd:
@@ -88,12 +19,8 @@ vmd:
       part-binding-changed: ${VMD_KAFKA_TOPIC_PART_BINDING_CHANGED:vmd.vehicle-part-binding.changed}
       vehicle-produce: ${VMD_KAFKA_TOPIC_VEHICLE_PRODUCE:vmd.vehicle-produce}
       software-inventory-changed: ${VMD_KAFKA_TOPIC_SOFTWARE_INVENTORY_CHANGED:vmd.vehicle-software-inventory.changed}
-      # 设备业务密钥变更事件（CR-055，VMD 幂等创建，经 Outbox→Relay 发布）
-      business-key-changed: ${VMD_KAFKA_TOPIC_BUSINESS_KEY_CHANGED:vmd.business-key.changed}
       # 零件实例入站事件（CR-056，VMD 幂等创建，经 Outbox→Relay 发布；重放场景）
       part-inbound-changed: ${VMD_KAFKA_TOPIC_PART_INBOUND_CHANGED:vmd.part-inbound.changed}
-      # TBOX V2C 业务密钥导入完成事件（CR-058，VMD 幂等创建，经 Outbox→Relay 发布，Key=deviceSn）
-      tbox-v2c-key-provisioned: ${VMD_KAFKA_TOPIC_TBOX_V2C_KEY_PROVISIONED:vmd.tbox-v2c-key-provisioned}
       # 11 个 EDD-MDM 消费 Topic（VMD-DSN-CR-052，全部 CONSUMER_ONLY，归 EDD-MDM 管理，VMD 只预检不创建）
       mdm:
         brand: ${VMD_KAFKA_TOPIC_MDM_BRAND:mdm.brand}
@@ -113,55 +40,6 @@ vmd:
     readiness:
       # 生产 Topic readiness=DOWN 时暂停 Outbox Relay 发布
       gate-producer: ${VMD_KAFKA_READINESS_GATE_PRODUCER:true}
-  # CR-063：逻辑证书 Profile 注册（仅逻辑开关与逻辑→框架 Profile 名映射；
-  # 禁止出现 Provisioner password/JWK私钥/OTT/CA私钥/模板路径，物理 provider route 由 FW-SEC 配置与 Secret 管理）
-  certificate:
-    profiles:
-      tbox-device-ecdh-es-p256-v1:
-        # enabled=false 时关闭整个新 ECDH-ES 证书签发与 Keyprov 请求路径（RD-063-6，不回退旧 Profile）
-        enabled: ${VMD_CERTIFICATE_PROFILE_TBOX_ECDH_ES_P256_V1_ENABLED:true}
-        framework-profile: ${VMD_CERTIFICATE_PROFILE_TBOX_ECDH_ES_P256_V1_FRAMEWORK:TBOX_DEVICE_ECDH_ES_P256_V1}
-  business-key:
-    policy:
-      # 版本化授权策略（fail-closed：未登记域/用途一律拒绝）。生产经 Nacos 下发受治理条目。
-      version: v1
-      entries:
-        # CR-058 冻结 V2C 业务域与用途代码（不可按环境改名）；调用方/算法/有效期/重叠窗口使用环境批准值。
-        - business-domain: V2C_COMM
-          purposes: [UPLINK_AEAD, DOWNLINK_AEAD]
-          device-categories: [TBOX]
-          allowed-actions: [PROVISION, RESOLVE_ACTIVE, DECRYPT, ROTATE, REVOKE]
-          algorithm: AES
-          key-spec: AES-256-GCM
-          validity: 365d
-          decrypt-window: 7d
-    mapping:
-      # CR-058：V2C_COMM_ROOT 仅为 framework/KMS 材料 BizType，绝不透传到车云协议业务域。
-      # 双向必须一一对应，缺失或冲突启动期 fail-fast。
-      biz-type-domain:
-        V2C_COMM_ROOT: V2C_COMM
-      domain-biz-type:
-        V2C_COMM: V2C_COMM_ROOT
-    provisioning:
-      # keyprov capability 功能开关（默认关闭 fail-closed，release-set 就绪后开启）
-      # enabled=false 时不装配官方 Keyprov Controller/Adapter，capability 状态 DISABLED
-      keyprov:
-        # canonical 协议版本 allowlist 值
-        schema-version: ${VMD_BUSINESS_KEY_KEYPROV_SCHEMA_VERSION:keyprov-v1}
-        # canonical payload 大小上限（bytes）
-        max-payload-bytes: ${VMD_BUSINESS_KEY_KEYPROV_MAX_PAYLOAD_BYTES:16384}
-      # Wrapped Key bundle 可接受期限（秒）
-      bundle-ttl-seconds: ${VMD_BUSINESS_KEY_BUNDLE_TTL_SECONDS:3600}
-      # WAIT_DEVICE_ACK 超时转 EXPIRED（秒）
-      ack-timeout-seconds: ${VMD_BUSINESS_KEY_ACK_TIMEOUT_SECONDS:900}
-      # RECONCILE_REQUIRED 告警与对账阈值（秒，独立于 ACK 短 TTL，不直接过期）
-      reconcile-alert-seconds: ${VMD_BUSINESS_KEY_RECONCILE_ALERT_SECONDS:86400}
-      # PREPARING 滞留告警阈值（秒，根派生依赖不可用待同requestId重试，不直接过期）
-      preparing-alert-seconds: ${VMD_BUSINESS_KEY_PREPARING_ALERT_SECONDS:86400}
-    maintenance:
-      scheduler:
-        enabled: ${VMD_BUSINESS_KEY_MAINTENANCE_ENABLED:true}
-        batch-size: ${VMD_BUSINESS_KEY_MAINTENANCE_BATCH_SIZE:200}
   binding:
     kafka:
       enabled: ${VMD_BINDING_KAFKA_ENABLED:true}

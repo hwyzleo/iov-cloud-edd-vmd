@@ -60,9 +60,7 @@ class VmdKafkaTopicInitializerTest {
     private static final String BINDING = "vmd.vehicle-part-binding.changed";
     private static final String PRODUCE = "vmd.vehicle-produce";
     private static final String SW_INVENTORY = "vmd.vehicle-software-inventory.changed";
-    private static final String BIZ_KEY = "vmd.business-key.changed";
     private static final String PART_INBOUND = "vmd.part-inbound.changed";
-    private static final String TBOX_V2C = "vmd.tbox-v2c-key-provisioned";
     private static final String OBSERVED = "ota.vehicle-software-inventory.observed";
 
     @Mock
@@ -152,22 +150,18 @@ class VmdKafkaTopicInitializerTest {
         KafkaFuture<TopicDescription> binding = KafkaFuture.completedFuture(topicDescription(BINDING, 3, 3));
         KafkaFuture<TopicDescription> produce = KafkaFuture.completedFuture(topicDescription(PRODUCE, 3, 3));
         KafkaFuture<TopicDescription> sw = KafkaFuture.completedFuture(topicDescription(SW_INVENTORY, 3, 3));
-        KafkaFuture<TopicDescription> bizKey = KafkaFuture.completedFuture(topicDescription(BIZ_KEY, 3, 3));
         KafkaFuture<TopicDescription> partInbound = KafkaFuture.completedFuture(topicDescription(PART_INBOUND, 3, 3));
-        KafkaFuture<TopicDescription> tbox = KafkaFuture.completedFuture(topicDescription(TBOX_V2C, 3, 3));
         producerDescribeResult = mock(DescribeTopicsResult.class);
         when(producerDescribeResult.topicNameValues()).thenReturn(Map.of(
                 BINDING, binding, PRODUCE, produce, SW_INVENTORY, sw,
-                BIZ_KEY, bizKey, PART_INBOUND, partInbound, TBOX_V2C, tbox));
+                PART_INBOUND, partInbound));
         when(admin.describeTopics(anyCollection())).thenReturn(producerDescribeResult);
 
         Map<ConfigResource, KafkaFuture<Config>> configFutures = Map.of(
                 new ConfigResource(ConfigResource.Type.TOPIC, BINDING), KafkaFuture.completedFuture(config(cleanupPolicy)),
                 new ConfigResource(ConfigResource.Type.TOPIC, PRODUCE), KafkaFuture.completedFuture(config(cleanupPolicy)),
                 new ConfigResource(ConfigResource.Type.TOPIC, SW_INVENTORY), KafkaFuture.completedFuture(config(cleanupPolicy)),
-                new ConfigResource(ConfigResource.Type.TOPIC, BIZ_KEY), KafkaFuture.completedFuture(config(cleanupPolicy)),
-                new ConfigResource(ConfigResource.Type.TOPIC, PART_INBOUND), KafkaFuture.completedFuture(config(cleanupPolicy)),
-                new ConfigResource(ConfigResource.Type.TOPIC, TBOX_V2C), KafkaFuture.completedFuture(config(cleanupPolicy)));
+                new ConfigResource(ConfigResource.Type.TOPIC, PART_INBOUND), KafkaFuture.completedFuture(config(cleanupPolicy)));
         DescribeConfigsResult configResult = mock(DescribeConfigsResult.class);
         when(configResult.values()).thenReturn(configFutures);
         when(admin.describeConfigs(anyCollection())).thenReturn(configResult);
@@ -213,22 +207,18 @@ class VmdKafkaTopicInitializerTest {
         KafkaFuture<TopicDescription> binding = KafkaFuture.completedFuture(topicDescription(BINDING, 2, 3));
         KafkaFuture<TopicDescription> produce = KafkaFuture.completedFuture(topicDescription(PRODUCE, 3, 3));
         KafkaFuture<TopicDescription> sw = KafkaFuture.completedFuture(topicDescription(SW_INVENTORY, 3, 3));
-        KafkaFuture<TopicDescription> bizKey = KafkaFuture.completedFuture(topicDescription(BIZ_KEY, 3, 3));
         KafkaFuture<TopicDescription> partInbound = KafkaFuture.completedFuture(topicDescription(PART_INBOUND, 3, 3));
-        KafkaFuture<TopicDescription> tbox = KafkaFuture.completedFuture(topicDescription(TBOX_V2C, 3, 3));
         producerDescribeResult = mock(DescribeTopicsResult.class);
         when(producerDescribeResult.topicNameValues()).thenReturn(Map.of(
                 BINDING, binding, PRODUCE, produce, SW_INVENTORY, sw,
-                BIZ_KEY, bizKey, PART_INBOUND, partInbound, TBOX_V2C, tbox));
+                PART_INBOUND, partInbound));
         when(admin.describeTopics(anyCollection())).thenReturn(producerDescribeResult);
 
         Map<ConfigResource, KafkaFuture<Config>> configFutures = Map.of(
                 new ConfigResource(ConfigResource.Type.TOPIC, BINDING), KafkaFuture.completedFuture(config("delete")),
                 new ConfigResource(ConfigResource.Type.TOPIC, PRODUCE), KafkaFuture.completedFuture(config("delete")),
                 new ConfigResource(ConfigResource.Type.TOPIC, SW_INVENTORY), KafkaFuture.completedFuture(config("delete")),
-                new ConfigResource(ConfigResource.Type.TOPIC, BIZ_KEY), KafkaFuture.completedFuture(config("delete")),
-                new ConfigResource(ConfigResource.Type.TOPIC, PART_INBOUND), KafkaFuture.completedFuture(config("delete")),
-                new ConfigResource(ConfigResource.Type.TOPIC, TBOX_V2C), KafkaFuture.completedFuture(config("delete")));
+                new ConfigResource(ConfigResource.Type.TOPIC, PART_INBOUND), KafkaFuture.completedFuture(config("delete")));
         DescribeConfigsResult configResult = mock(DescribeConfigsResult.class);
         when(configResult.values()).thenReturn(configFutures);
         when(admin.describeConfigs(anyCollection())).thenReturn(configResult);
@@ -252,22 +242,18 @@ class VmdKafkaTopicInitializerTest {
         KafkaFuture<TopicDescription> binding = KafkaFuture.completedFuture(topicDescription(BINDING, 3, 1));
         KafkaFuture<TopicDescription> produce = KafkaFuture.completedFuture(topicDescription(PRODUCE, 3, 3));
         KafkaFuture<TopicDescription> sw = KafkaFuture.completedFuture(topicDescription(SW_INVENTORY, 3, 3));
-        KafkaFuture<TopicDescription> bizKey = KafkaFuture.completedFuture(topicDescription(BIZ_KEY, 3, 3));
         KafkaFuture<TopicDescription> partInbound = KafkaFuture.completedFuture(topicDescription(PART_INBOUND, 3, 3));
-        KafkaFuture<TopicDescription> tbox = KafkaFuture.completedFuture(topicDescription(TBOX_V2C, 3, 3));
         producerDescribeResult = mock(DescribeTopicsResult.class);
         when(producerDescribeResult.topicNameValues()).thenReturn(Map.of(
                 BINDING, binding, PRODUCE, produce, SW_INVENTORY, sw,
-                BIZ_KEY, bizKey, PART_INBOUND, partInbound, TBOX_V2C, tbox));
+                PART_INBOUND, partInbound));
         when(admin.describeTopics(anyCollection())).thenReturn(producerDescribeResult);
 
         Map<ConfigResource, KafkaFuture<Config>> configFutures = Map.of(
                 new ConfigResource(ConfigResource.Type.TOPIC, BINDING), KafkaFuture.completedFuture(config("compact")),
                 new ConfigResource(ConfigResource.Type.TOPIC, PRODUCE), KafkaFuture.completedFuture(config("delete")),
                 new ConfigResource(ConfigResource.Type.TOPIC, SW_INVENTORY), KafkaFuture.completedFuture(config("delete")),
-                new ConfigResource(ConfigResource.Type.TOPIC, BIZ_KEY), KafkaFuture.completedFuture(config("delete")),
-                new ConfigResource(ConfigResource.Type.TOPIC, PART_INBOUND), KafkaFuture.completedFuture(config("delete")),
-                new ConfigResource(ConfigResource.Type.TOPIC, TBOX_V2C), KafkaFuture.completedFuture(config("delete")));
+                new ConfigResource(ConfigResource.Type.TOPIC, PART_INBOUND), KafkaFuture.completedFuture(config("delete")));
         DescribeConfigsResult configResult = mock(DescribeConfigsResult.class);
         when(configResult.values()).thenReturn(configFutures);
         when(admin.describeConfigs(anyCollection())).thenReturn(configResult);
@@ -306,13 +292,11 @@ class VmdKafkaTopicInitializerTest {
         KafkaFuture<TopicDescription> binding = failedFuture(new TimeoutException("timeout"));
         KafkaFuture<TopicDescription> produce = failedFuture(new TimeoutException("timeout"));
         KafkaFuture<TopicDescription> sw = failedFuture(new TimeoutException("timeout"));
-        KafkaFuture<TopicDescription> bizKey = failedFuture(new TimeoutException("timeout"));
         KafkaFuture<TopicDescription> partInbound = failedFuture(new TimeoutException("timeout"));
-        KafkaFuture<TopicDescription> tbox = failedFuture(new TimeoutException("timeout"));
         DescribeTopicsResult result = mock(DescribeTopicsResult.class);
         when(result.topicNameValues()).thenReturn(Map.of(
                 BINDING, binding, PRODUCE, produce, SW_INVENTORY, sw,
-                BIZ_KEY, bizKey, PART_INBOUND, partInbound, TBOX_V2C, tbox));
+                PART_INBOUND, partInbound));
         when(admin.describeTopics(anyCollection())).thenReturn(result);
 
         initializer.onTopicsReady(new KafkaTopicsReadyEvent());
@@ -328,13 +312,11 @@ class VmdKafkaTopicInitializerTest {
         KafkaFuture<TopicDescription> binding = failedFuture(new TimeoutException("timeout"));
         KafkaFuture<TopicDescription> produce = failedFuture(new TimeoutException("timeout"));
         KafkaFuture<TopicDescription> sw = failedFuture(new TimeoutException("timeout"));
-        KafkaFuture<TopicDescription> bizKey = failedFuture(new TimeoutException("timeout"));
         KafkaFuture<TopicDescription> partInbound = failedFuture(new TimeoutException("timeout"));
-        KafkaFuture<TopicDescription> tbox = failedFuture(new TimeoutException("timeout"));
         DescribeTopicsResult result = mock(DescribeTopicsResult.class);
         when(result.topicNameValues()).thenReturn(Map.of(
                 BINDING, binding, PRODUCE, produce, SW_INVENTORY, sw,
-                BIZ_KEY, bizKey, PART_INBOUND, partInbound, TBOX_V2C, tbox));
+                PART_INBOUND, partInbound));
         when(admin.describeTopics(anyCollection())).thenReturn(result);
 
         initializer.onTopicsReady(new KafkaTopicsReadyEvent());
@@ -374,9 +356,7 @@ class VmdKafkaTopicInitializerTest {
         verify(metrics).recordInit(BINDING, "ok");
         verify(metrics).recordInit(PRODUCE, "ok");
         verify(metrics).recordInit(SW_INVENTORY, "ok");
-        verify(metrics).recordInit(BIZ_KEY, "ok");
         verify(metrics).recordInit(PART_INBOUND, "ok");
-        verify(metrics).recordInit(TBOX_V2C, "ok");
         verify(metrics).recordInit(OBSERVED, "present");
     }
 }

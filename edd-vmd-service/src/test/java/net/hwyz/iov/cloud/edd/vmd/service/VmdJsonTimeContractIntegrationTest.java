@@ -2,16 +2,11 @@ package net.hwyz.iov.cloud.edd.vmd.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import net.hwyz.iov.cloud.edd.vmd.api.vo.keyprov.VmdKeyProvisioningRequest;
 import net.hwyz.iov.cloud.edd.vmd.api.vo.request.SoftwareManifestRequest;
 import net.hwyz.iov.cloud.edd.vmd.service.adapter.web.vo.response.VehicleLifecycleNodeResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.event.VehicleSoftwareInventoryObservedEvent;
-import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.BusinessKeyChangedEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmBrandEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmEvent;
-import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.TboxV2cKeyProvisionedEvent;
-import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.TboxV2cKeyProvisionedEvent.Key;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.config.VmdEventJsonCodec;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -19,7 +14,6 @@ import org.springframework.boot.test.context.SpringBootTest;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Date;
-import java.util.List;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.http.MediaType;
@@ -33,8 +27,10 @@ import static org.junit.jupiter.api.Assertions.*;
  * VMD-DSN-CR-070 JSON java.time 时间契约集成测试（真实生产 mapper）
  * <p>
  * 覆盖 CR-070 §4 验收：双读（ISO/10 位秒/13 位毫秒等值）、写单一（全局 epoch-millis
- * 旧输出）、两个事件的既有边界例外（专用 ISO codec）、排除面 golden（keyprov Proto
- * bytes / 普通 long / Date 语义不变）、非法格式 fail-closed。
+ * 旧输出）、排除面 golden（普通 byte[] / 普通 long / Date 语义不变）、非法格式 fail-closed。
+ * <p>
+ * VMD-DSN-CR-074：Keyprov/业务密钥事件及其专用 ISO codec（VmdEventJsonCodec）已随迁出删除，
+ * 原“两个事件既有边界例外”用例不再适用；时间契约覆盖保留业务路径（软件实装/OTA/MDM/生命周期）。
  * <p>
  * 使用注入的<b>生产 ObjectMapper</b>（已应用 framework IovJacksonAutoConfiguration
  * 与 Nacos spring.jackson 配置），而非测试内临时构造——以真实 mapper 证明双读与写模式。
@@ -51,9 +47,6 @@ class VmdJsonTimeContractIntegrationTest {
 
     @Autowired
     private ObjectMapper globalObjectMapper;
-
-    @Autowired
-    private VmdEventJsonCodec vmdEventJsonCodec;
 
     // ---------- 写单一：全局 epoch-millis 旧输出（兼容阶段保持） ----------
 
@@ -115,37 +108,6 @@ class VmdJsonTimeContractIntegrationTest {
         assertThrows(Exception.class, () -> globalObjectMapper.readValue("123", Instant.class));
         // JSON null 按字段可空性处理，不转换为 epoch 0
         assertNull(globalObjectMapper.readValue("null", Instant.class));
-    }
-
-    // ---------- 两个事件：既有边界例外（VMD-DSN-CR-070 §5.10.2 登记） ----------
-
-    @Test
-    void exceptionEvents_alwaysIso_regardlessOfGlobalMode() throws Exception {
-        BusinessKeyChangedEvent bizEvent = new BusinessKeyChangedEvent(
-                "SN001", "V2C_COMM", "UP_LINK_AEAD", "key-1", 2L, "ACTIVE", SAMPLE);
-        TboxV2cKeyProvisionedEvent tboxEvent = new TboxV2cKeyProvisionedEvent(
-                "e1", "rid-1", "SN001", "V2C_COMM", List.of(new Key("UP_LINK_AEAD", "key-1", 3L)),
-                "SUCCEEDED", SAMPLE);
-
-        // 专用 codec：occurredAt 固定 ISO-8601 字符串
-        for (String payload : new String[]{
-                vmdEventJsonCodec.writeAsString(bizEvent),
-                vmdEventJsonCodec.writeAsString(tboxEvent)}) {
-            JsonNode node = vmdEventJsonCodec.mapper().readTree(payload);
-            JsonNode occurredAt = node.get("occurredAt");
-            assertNotNull(occurredAt);
-            assertFalse(occurredAt.isNumber(), "专用 codec 的 occurredAt 不得为数字");
-            assertTrue(occurredAt.asText().matches("^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?Z$"),
-                    "ISO-8601 格式非法: " + occurredAt.asText());
-            assertEquals(SAMPLE, Instant.parse(occurredAt.asText()));
-        }
-
-        // 对照：全局 epoch-millis mapper 序列化同一事件 → occurredAt 为数字（证明该例外只
-        // 作用于这两个事件，不因专用 codec 改变其他受管字段；同时锁定例外边界）。
-        JsonNode globalBiz = globalObjectMapper.readTree(globalObjectMapper.writeValueAsString(bizEvent));
-        assertTrue(globalBiz.get("occurredAt").isNumber(),
-                "全局 mapper 对该事件仍按 epoch-millis 写出（例外仅由专用 codec 生效）");
-        assertEquals(MILLIS, globalBiz.get("occurredAt").asLong());
     }
 
     // ---------- DTO 级双读（CR-070 §2 影响字段：Service/Feign 请求、Kafka 事件、MPT 响应） ----------
@@ -244,26 +206,21 @@ class VmdJsonTimeContractIntegrationTest {
         assertEquals(MILLIS, body.get("reachTime").asLong());
     }
 
-    // ---------- 排除面 golden：keyprov 外层 DTO / Proto bytes 不受影响 ----------
+    // ---------- 排除面 golden：普通 byte[] / long 不受时间模块触碰 ----------
 
     @Test
-    void excludedContracts_unchanged() throws Exception {
-        // keyprov 请求：canonical payload bytes 原样（普通 byte[] 不被时间模块触碰）
+    void excludedPrimitiveShapes_unchanged() throws Exception {
+        // byte[] 以 base64 原样携带（Jackson byte[] 默认 base64），字节内容不变
         byte[] payloadBytes = new byte[]{0x0a, 0x01, 0x02, 0x03};
-        VmdKeyProvisioningRequest request = VmdKeyProvisioningRequest.builder()
-                .payloadType("security.keyprov.v1.KeyProvisioningRequest")
-                .schemaVersion("keyprov-v1")
-                .payloadBytes(payloadBytes)
-                .payloadDigest("sha256-hex")
-                .build();
-        JsonNode node = globalObjectMapper.valueToTree(request);
-        // payloadBytes 以 base64 原样携带（Jackson byte[] 默认 base64），字节内容不变
+        JsonNode node = globalObjectMapper.valueToTree(java.util.Map.of("payloadBytes", payloadBytes));
         assertNotNull(node.get("payloadBytes"));
         byte[] round = globalObjectMapper.convertValue(node.get("payloadBytes"), byte[].class);
         assertArrayEquals(payloadBytes, round, "Proto bytes 必须原样，不得被时间契约重映射");
 
-        // 普通 long（如 mqttReceivedAt 类字段）保持数值原样
-        assertTrue(node.get("schemaVersion").isTextual());
+        // 普通 long 保持数值原样
+        JsonNode longNode = globalObjectMapper.valueToTree(java.util.Map.of("v", 1793191412340L));
+        assertTrue(longNode.get("v").isNumber());
+        assertEquals(1793191412340L, longNode.get("v").asLong());
     }
 
     // ---------- 时区无关性：Instant 读写不依赖 JVM 默认时区 ----------

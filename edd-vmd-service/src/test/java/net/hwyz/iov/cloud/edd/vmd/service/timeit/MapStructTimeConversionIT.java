@@ -1,10 +1,7 @@
 package net.hwyz.iov.cloud.edd.vmd.service.timeit;
 
-import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.BusinessKeyProvisioning;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VmdOutbox;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter.BusinessKeyProvisioningConverter;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.converter.VmdOutboxConverter;
-import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.BusinessKeyProvisioningPo;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.VmdOutboxPo;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -54,30 +51,5 @@ class MapStructTimeConversionIT {
         VmdOutbox entity = VmdOutboxConverter.INSTANCE.toEntity(po);
         assertEquals(LocalDateTime.ofInstant(date.toInstant(), ZoneId.of("UTC")), entity.getCreateTime(),
                 "MapStruct 固定 UTC：Date 06:00Z → LDT 06:00（UTC 墙上）");
-    }
-
-    @Test
-    @DisplayName("BusinessKeyProvisioningConverter：领域 LDT audit → PO Date 固定 UTC（业务 key 域）")
-    void businessKeyConverter_auditTimes_isUtc() {
-        LocalDateTime modify = LocalDateTime.of(2026, 10, 30, 15, 30, 45, 123_456_000);
-        BusinessKeyProvisioning domain = BusinessKeyProvisioning.builder()
-                .requestId("rid")
-                .deviceSn("sn")
-                .businessDomain("V2C_COMM")
-                .status(net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.BusinessKeyProvisioningState.PREPARING)
-                .createTime(modify)
-                .modifyTime(modify)
-                .build();
-        BusinessKeyProvisioningPo po = BusinessKeyProvisioningConverter.INSTANCE.fromDomain(domain);
-        // java.util.Date 仅毫秒精度：LDT 微秒 → Date 必然截断到毫秒（BasePo 审计承载精度证据）
-        java.time.Instant expectedMillis = modify.toInstant(ZoneOffset.UTC)
-                .truncatedTo(java.time.temporal.ChronoUnit.MILLIS);
-        assertEquals(expectedMillis, po.getCreateTime().toInstant(),
-                "业务 key 域 MapStruct 同样固定 UTC（生成代码 ZoneOffset.UTC）；Date 毫秒精度截断为预期");
-        assertEquals(expectedMillis, po.getModifyTime().toInstant());
-        // 往返：PO → Domain 还原为 UTC 墙上（毫秒）
-        BusinessKeyProvisioning back = BusinessKeyProvisioningConverter.INSTANCE.toDomain(po);
-        assertEquals(LocalDateTime.ofInstant(expectedMillis, ZoneId.of("UTC")),
-                back.getModifyTime(), "PO→Domain 固定 UTC 还原（毫秒）");
     }
 }

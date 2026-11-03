@@ -62,13 +62,15 @@ class VmdKafkaTopicProvisioningBrokerDownTest {
                 "Catalog 应包含 vmd.vehicle-produce");
         assertTrue(kafkaTopicCatalog.contains("vmd.vehicle-software-inventory.changed"),
                 "Catalog 应包含 vmd.vehicle-software-inventory.changed");
-        assertTrue(kafkaTopicCatalog.contains("vmd.business-key.changed"),
-                "Catalog 应包含 vmd.business-key.changed（CR-055，VMD 应幂等创建）");
         assertTrue(kafkaTopicCatalog.contains("vmd.part-inbound.changed"),
                 "Catalog 应包含 vmd.part-inbound.changed（CR-056，VMD 应幂等创建）");
-        assertTrue(kafkaTopicCatalog.contains("vmd.tbox-v2c-key-provisioned"),
-                "Catalog 应包含 vmd.tbox-v2c-key-provisioned");
-        assertEquals(6, kafkaTopicCatalog.definitions().size());
+        // VMD-DSN-CR-074：vmd.business-key.changed / vmd.tbox-v2c-key-provisioned 已迁出至 VIAM，
+        // 不再由 VMD 声明生产；Catalog 仅含 4 个保留生产 Topic。
+        assertTrue(!kafkaTopicCatalog.contains("vmd.business-key.changed"),
+                "Catalog 不应包含已迁出 Topic vmd.business-key.changed（CR-074）");
+        assertTrue(!kafkaTopicCatalog.contains("vmd.tbox-v2c-key-provisioned"),
+                "Catalog 不应包含已迁出 Topic vmd.tbox-v2c-key-provisioned（CR-074）");
+        assertEquals(4, kafkaTopicCatalog.definitions().size());
 
         // 消费 Topic ota.vehicle-software-inventory.observed 不由 VMD 声明
         assertTrue(!kafkaTopicCatalog.contains("ota.vehicle-software-inventory.observed"),
@@ -87,7 +89,7 @@ class VmdKafkaTopicProvisioningBrokerDownTest {
         }
         assertTrue(provisioningStatus.lastFailure().isPresent(), "后台重试后应记录 broker 失败原因");
         assertEquals(KafkaTopicProvisioningStatus.State.NOT_READY, provisioningStatus.state());
-        assertEquals(6, provisioningStatus.missingTopics().size(),
-                "缺失 Topic 应为全部声明 Topic");
+        assertEquals(4, provisioningStatus.missingTopics().size(),
+                "缺失 Topic 应为全部声明 Topic（4 个保留生产 Topic）");
     }
 }

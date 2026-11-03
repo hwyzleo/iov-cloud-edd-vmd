@@ -46,9 +46,7 @@ class VmdKafkaTopicDefinitionProviderTest {
         topicProperties.setPartBindingChanged("vmd.vehicle-part-binding.changed");
         topicProperties.setVehicleProduce("vmd.vehicle-produce");
         topicProperties.setSoftwareInventoryChanged("vmd.vehicle-software-inventory.changed");
-        topicProperties.setBusinessKeyChanged("vmd.business-key.changed");
         topicProperties.setPartInboundChanged("vmd.part-inbound.changed");
-        topicProperties.setTboxV2cKeyProvisioned("vmd.tbox-v2c-key-provisioned");
 
         provider = new VmdKafkaTopicDefinitionProvider(provisioningProperties, topicProperties);
     }
@@ -68,12 +66,8 @@ class VmdKafkaTopicDefinitionProviderTest {
                 "缺少 Topic: vmd.vehicle-produce");
         assertTrue(topics.contains("vmd.vehicle-software-inventory.changed"),
                 "缺少 Topic: vmd.vehicle-software-inventory.changed");
-        assertTrue(topics.contains("vmd.business-key.changed"),
-                "缺少 Topic: vmd.business-key.changed（CR-055，VMD 应幂等创建）");
         assertTrue(topics.contains("vmd.part-inbound.changed"),
                 "缺少 Topic: vmd.part-inbound.changed（CR-056，VMD 应幂等创建）");
-        assertTrue(topics.contains("vmd.tbox-v2c-key-provisioned"),
-                "缺少 Topic: vmd.tbox-v2c-key-provisioned");
     }
 
     @Test
@@ -93,7 +87,7 @@ class VmdKafkaTopicDefinitionProviderTest {
     void declaresExpectedTotalWithNoDuplicates() {
         Collection<KafkaTopicDefinition> definitions = provider.topicDefinitions();
         Set<String> names = declaredTopics();
-        assertEquals(6, names.size(), "VMD 应声明 6 个生产 topic（枚举 PRODUCER_OWNED 条目）");
+        assertEquals(4, names.size(), "VMD 应声明 4 个生产 topic（枚举 PRODUCER_OWNED 条目）");
         assertEquals(definitions.size(), names.size(), "声明不应包含重复 topic");
     }
 

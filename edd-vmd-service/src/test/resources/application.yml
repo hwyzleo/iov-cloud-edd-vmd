@@ -16,85 +16,11 @@ crypto:
     token: test-static-token
   provisioning:
     enabled: true
-    # CR-061：测试环境显式跳过根派生 Provider 启动探测（无真实 Transit v2c-comm-root）
-    derived-key:
-      provider: openbao-transit-local-wrap
-      require-ready-at-startup: false
-      derivation-version: v1
-      # 与 FW-SEC 编译期 allowlist 一致的根映射声明（TransitDerivedKeyProvider 启动校验必需）
-      roots:
-        V2C_COMM_ROOT:
-          transit-key: v2c-comm-root
-          hmac-algorithm: sha2-256
-          purposes: [UPLINK_AEAD, DOWNLINK_AEAD]
-          wrap-modes: [DEVICE_CERT_PUBLIC_KEY]
-  # CR-062：VMD 集成测试以 @MockBean ImportProofVerifier 驱动编排；真实验签由 framework 单测/E2E 覆盖。
-  import-proof:
-    enabled: false
-    require-ready-at-startup: false
 
-# Actuator 健康分组契约（与 src/main/resources/application.yml 保持一致，供集成测试验证分组聚合与主聚合排除）
-management:
-  endpoint:
-    health:
-      group:
-        keyprov:
-          include: keyProvisioningCapability,derivedKeyProvider,transitDerivedKey,certificateResolution,importProofVerification
-          show-details: always
+# VMD-DSN-CR-074：Keyprov 专属健康分组与业务密钥测试策略已随迁出删除；
+# 保留产线安全根预置/灌注相关配置（crypto.kms / crypto.provisioning.enabled）。
 
-# CR-055 业务密钥域测试策略（真实授权策略 + BizType 映射，供集成测试使用）
 vmd:
-  business-key:
-    policy:
-      version: v1
-      entries:
-        - business-domain: SECURE_CHANNEL
-          purpose: SESSION_ENC
-          device-categories: [TBOX]
-          allowed-actions: [PROVISION, RESOLVE_ACTIVE, DECRYPT, ROTATE, REVOKE]
-          algorithm: AES
-          key-spec: AES-256-GCM
-          validity: 365d
-          decrypt-window: 7d
-          default-purpose: SESSION_ENC
-        # CR-058 V2C 多用途域
-        - business-domain: V2C_COMM
-          purposes: [UPLINK_AEAD, DOWNLINK_AEAD]
-          device-categories: [TBOX]
-          allowed-actions: [PROVISION, RESOLVE_ACTIVE, DECRYPT, ROTATE, REVOKE]
-          algorithm: AES
-          key-spec: AES-256-GCM
-          validity: 365d
-          decrypt-window: 7d
-    mapping:
-      biz-type-domain:
-        TBOX_DEVICE_ROOT: SECURE_CHANNEL
-        V2C_COMM_ROOT: V2C_COMM
-      domain-biz-type:
-        SECURE_CHANNEL: TBOX_DEVICE_ROOT
-        V2C_COMM: V2C_COMM_ROOT
-    provisioning:
-      keyprov:
-        enabled: true
-        allowed-callers: VAGW
-        schema-version: keyprov-v1
-        max-payload-bytes: 16384
-        protocol-release: test-release-v1
-        descriptor-set-hash: test-descriptor-set-hash
-      # CR-068 集成测试：Response 字节级重放存储密钥（Base64 AES-256，测试固定值）
-      response-store:
-        key: AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
-      bundle-ttl-seconds: 3600
-      ack-timeout-seconds: 900
-      reconcile-alert-seconds: 86400
-    maintenance:
-      scheduler:
-        enabled: false
-      # VMD-DSN-CR-065 集成测试：显式启用运维终止开关
-      terminate-enabled: true
-      terminate-stale-threshold-seconds: 0
-
-  # CR-071 集成测试：主软件类型优先级（APP 最主）
   software-inventory:
     snapshot:
       primary-software-types:
