@@ -157,9 +157,15 @@ public class MdmSyncAppService {
                         fresh.setLastSyncTime(LocalDateTime.now());
                         int retried = mdmBrandRepository.updateById(fresh);
                         if (retried == 0) {
-                            log.warn("MDM 品牌投影 CAS 冲突（重试仍失败）: code={}, eventVersion={}, currentVersion={}",
+                            // VMD-DSN-CR-075：有界重试耗尽仍冲突 → 显式失败（可恢复路径：消费者 failure 指标 +
+                            // Kafka 重试/DLT（若容器配置）或人工对账；消息不得在投影未更新时静默确认成功）
+                            log.error("MDM 品牌投影 CAS 冲突重试耗尽: code={}, eventVersion={}, currentVersion={}",
                                     event.getCode(), event.getVersion(), fresh.getExternalVersion());
-                            mdmConsumerMetrics.recordIgnored(MdmProjectionType.BRAND, "cas_conflict");
+                            mdmConsumerMetrics.recordVersionGap(MdmProjectionType.BRAND,
+                                    fresh.getExternalVersion() == null ? -1L : event.getVersion() - fresh.getExternalVersion());
+                            throw new IllegalStateException(
+                                    "MDM 品牌投影 CAS 冲突重试耗尽: code=" + event.getCode()
+                                            + ", eventVersion=" + event.getVersion());
                         }
                     } else {
                         log.debug("MDM 品牌投影 CAS 冲突但并发写入已应用/版本不满足: code={}, eventVersion={}",
@@ -219,9 +225,15 @@ public class MdmSyncAppService {
                         fresh.setLastSyncTime(LocalDateTime.now());
                         int retried = mdmCarLineRepository.updateById(fresh);
                         if (retried == 0) {
-                            log.warn("车系投影 CAS 冲突（重试仍失败）: code={}, eventVersion={}, currentVersion={}",
+                            // VMD-DSN-CR-075：有界重试耗尽仍冲突 → 显式失败（可恢复路径：消费者 failure 指标 +
+                            // Kafka 重试/DLT（若容器配置）或人工对账；消息不得在投影未更新时静默确认成功）
+                            log.error("车系投影 CAS 冲突重试耗尽: code={}, eventVersion={}, currentVersion={}",
                                     event.getCode(), event.getVersion(), fresh.getExternalVersion());
-                            mdmConsumerMetrics.recordIgnored(MdmProjectionType.CAR_LINE, "cas_conflict");
+                            mdmConsumerMetrics.recordVersionGap(MdmProjectionType.CAR_LINE,
+                                    fresh.getExternalVersion() == null ? -1L : event.getVersion() - fresh.getExternalVersion());
+                            throw new IllegalStateException(
+                                    "车系投影 CAS 冲突重试耗尽: code=" + event.getCode()
+                                            + ", eventVersion=" + event.getVersion());
                         }
                     } else {
                         log.debug("车系投影 CAS 冲突但并发写入已应用/版本不满足: code={}, eventVersion={}",
@@ -558,9 +570,14 @@ public class MdmSyncAppService {
                             existingBrand.setLastSyncTime(convertToLocalDateTime(brandData.getModifyTime()));
                             int updated = mdmBrandRepository.updateById(existingBrand);
                             if (updated == 0) {
-                                // VMD-DSN-CR-075：CAS 冲突（并发写入），Bootstrap 不重试，告警后继续并依赖下一轮/事件收敛
+                                // VMD-DSN-CR-075：Bootstrap CAS 冲突（并发写入）→ 记录版本差 Gauge 供对账，
+                                // 不抛异常毁整批；补偿路径 = 管理端重新触发 Bootstrap（MptMdmSyncController）
+                                // 或后续 MDM 事件按 externalVersion 门禁收敛，不依赖人工看日志
                                 log.warn("Bootstrap 更新 MDM 品牌投影 CAS 冲突: code={}, rowVersion={}",
                                         brandData.getCode(), existingBrand.getRowVersion());
+                                mdmConsumerMetrics.recordVersionGap(MdmProjectionType.BRAND,
+                                        brandData.getVersion() == null ? -1L : brandData.getVersion().longValue()
+                                                - (existingBrand.getExternalVersion() == null ? 0L : existingBrand.getExternalVersion()));
                             }
                             log.info("Bootstrap 更新 MDM 品牌投影: code={}", brandData.getCode());
                         }
@@ -626,9 +643,14 @@ public class MdmSyncAppService {
                             existingCarLine.setLastSyncTime(convertToLocalDateTime(carLineData.getModifyTime()));
                             int updated = mdmCarLineRepository.updateById(existingCarLine);
                             if (updated == 0) {
-                                // VMD-DSN-CR-075：CAS 冲突（并发写入），Bootstrap 不重试，告警后继续并依赖下一轮/事件收敛
+                                // VMD-DSN-CR-075：Bootstrap CAS 冲突（并发写入）→ 记录版本差 Gauge 供对账，
+                                // 不抛异常毁整批；补偿路径 = 管理端重新触发 Bootstrap（MptMdmSyncController）
+                                // 或后续 MDM 事件按 externalVersion 门禁收敛，不依赖人工看日志
                                 log.warn("Bootstrap 更新 MDM 车系投影 CAS 冲突: code={}, rowVersion={}",
                                         carLineData.getCode(), existingCarLine.getRowVersion());
+                                mdmConsumerMetrics.recordVersionGap(MdmProjectionType.CAR_LINE,
+                                        carLineData.getVersion() == null ? -1L : carLineData.getVersion().longValue()
+                                                - (existingCarLine.getExternalVersion() == null ? 0L : existingCarLine.getExternalVersion()));
                             }
                             log.info("Bootstrap 更新 MDM 车系投影: code={}", carLineData.getCode());
                         }

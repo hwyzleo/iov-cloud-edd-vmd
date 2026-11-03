@@ -288,6 +288,28 @@ class MdmSyncAppServiceTest {
     }
 
     @Test
+    @DisplayName("handleBrandEvent CAS 冲突重试耗尽应抛异常（消息不得静默确认，CR-075）")
+    void handleBrandEvent_shouldThrowWhenCasConflictRetryExhausted() {
+        // Given
+        MdmBrandEvent event = new MdmBrandEvent("UPDATED", "mdm-brand-006", 3L, "BRAND006", "冲突更新", LocalDateTime.now());
+        Brand localBrand = Brand.builder()
+                .id(1L).code("BRAND006").name("原始")
+                .source(SourceType.MDM).externalRefId("mdm-brand-006").externalVersion(2L).rowVersion(1)
+                .build();
+        Brand freshBrand = Brand.builder()
+                .id(1L).code("BRAND006").name("原始")
+                .source(SourceType.MDM).externalRefId("mdm-brand-006").externalVersion(2L).rowVersion(2)
+                .build();
+        when(mdmBrandRepository.selectByCode("BRAND006")).thenReturn(localBrand, freshBrand);
+        when(mdmBrandRepository.updateById(any(Brand.class))).thenReturn(0);
+
+        // When & Then
+        assertThrows(IllegalStateException.class, () -> mdmSyncAppService.handleBrandEvent(event));
+        verify(mdmBrandRepository, times(2)).updateById(any(Brand.class));
+        verify(mdmConsumerMetrics).recordVersionGap(eq(MdmProjectionType.BRAND), anyLong());
+    }
+
+    @Test
     @DisplayName("handleSeriesEvent应新增本地不存在的车系投影")
     void handleSeriesEvent_shouldInsertWhenLocalCarLineNotExists() {
         // Given
@@ -377,6 +399,28 @@ class MdmSyncAppServiceTest {
         // Then
         verify(mdmCarLineRepository, times(1)).updateById(any(CarLine.class));
         verify(mdmConsumerMetrics).recordIgnored(eq(MdmProjectionType.CAR_LINE), eq("stale"));
+    }
+
+    @Test
+    @DisplayName("handleSeriesEvent CAS 冲突重试耗尽应抛异常（消息不得静默确认，CR-075）")
+    void handleSeriesEvent_shouldThrowWhenCasConflictRetryExhausted() {
+        // Given
+        MdmCarLineEvent event = new MdmCarLineEvent("UPDATED", "mdm-carline-006", 3L, "CARLINE006", "冲突更新", "BRAND006", LocalDateTime.now());
+        CarLine localCarLine = CarLine.builder()
+                .id(1L).code("CARLINE006").name("原始车系").brandCode("BRAND006")
+                .source(SourceType.MDM).externalRefId("mdm-carline-006").externalVersion(2L).rowVersion(1)
+                .build();
+        CarLine freshCarLine = CarLine.builder()
+                .id(1L).code("CARLINE006").name("原始车系").brandCode("BRAND006")
+                .source(SourceType.MDM).externalRefId("mdm-carline-006").externalVersion(2L).rowVersion(2)
+                .build();
+        when(mdmCarLineRepository.selectByCode("CARLINE006")).thenReturn(localCarLine, freshCarLine);
+        when(mdmCarLineRepository.updateById(any(CarLine.class))).thenReturn(0);
+
+        // When & Then
+        assertThrows(IllegalStateException.class, () -> mdmSyncAppService.handleSeriesEvent(event));
+        verify(mdmCarLineRepository, times(2)).updateById(any(CarLine.class));
+        verify(mdmConsumerMetrics).recordVersionGap(eq(MdmProjectionType.CAR_LINE), anyLong());
     }
 
     @Test
