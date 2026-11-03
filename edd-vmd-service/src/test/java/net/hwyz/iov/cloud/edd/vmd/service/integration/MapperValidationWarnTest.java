@@ -3,6 +3,7 @@ package net.hwyz.iov.cloud.edd.vmd.service.integration;
 import net.hwyz.iov.cloud.edd.vmd.service.BaseTest;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -22,6 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * @author hwyz_leo
  */
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.NONE)
 @TestPropertySource(properties = "iov.mysql.mapper-validation.mode=warn")
 class MapperValidationWarnTest extends BaseTest {
 
