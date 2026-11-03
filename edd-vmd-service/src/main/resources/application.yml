@@ -3,13 +3,35 @@
 # 产线安全根预置/灌注与主数据健康保持默认分组。
 
 crypto:
-  # VMD-DSN-CR-074：Keyprov/业务密钥迁出后仅保留产线安全根预置/灌注共享的 provisioning 开关
-  # （PartSecurityPreset/VehicleSecurityPreset/OtaRoot/ImmoKey 依赖 KeyProvisioningTemplate，
-  # 受 crypto.provisioning.enabled 条件装配）。derived-key/business-key/kms.business-key/
-  # pki.certificate-resolution/import-proof 属迁出业务本地配置，已删除；共享 Nacos 配置源
-  # （bootstrap kms.yaml/pki.yaml）按 CR-074 保守保留，待零引用确认后再清理。
+  # VMD-DSN-CR-074：Keyprov/业务密钥迁出后，保留产线安全根预置/灌注共享的 provisioning 链。
+  # 产线灌注（PartSecurityPreset/VehicleSecurityPreset/OtaRoot/ImmoKey）依赖 KeyProvisioningTemplate
+  # （受 crypto.provisioning.enabled 条件装配）与 framework Transit 根派生装配链（derived-key 段），
+  # 该链在 provider=openbao-transit-local-wrap 时由 TransitDerivedKeyReadiness 启动 fail-closed 校验
+  # （含 crypto.provisioning.derived-key.aad-profile-id 与对应 EnvelopeAadEncoder 注册），
+  # 因此 derived-key 配置段与 PAR_PROTO_KEYPROV_AAD_V1 encoder 属共享能力，不能随迁出删除
+  # （对应 CR-074「不得回退的安全与协议约束：保留 PAR-PROTO canonical 语义」与共享依赖保留）。
+  # 已删除的迁出业务专属本地配置：business-key/kms.business-key/pki.certificate-resolution/import-proof。
   provisioning:
     enabled: true
+    # CR-064：V2C DERIVED_ROOT Provider（服务器经 Nacos/Secret 覆盖；产线灌注 legacy 门面经同一装配链）
+    derived-key:
+      provider: ${CRYPTO_PROVISIONING_DERIVED_KEY_PROVIDER}
+      require-ready-at-startup: ${CRYPTO_PROVISIONING_DERIVED_KEY_REQUIRE_READY_AT_STARTUP:true}
+      derivation-version: ${CRYPTO_PROVISIONING_DERIVED_KEY_DERIVATION_VERSION:v1}
+      # CR-068 / FW-SEC-DSN-CR-020：外部 AAD profile——FW 在 AES-GCM 加密前调用注册的 encoder。
+      # 固定 PAR_PROTO_KEYPROV_AAD_V1；缺失/不一致时 TransitDerivedKeyReadiness 启动 fail-closed。
+      aad-profile-id: ${CRYPTO_PROVISIONING_DERIVED_KEY_AAD_PROFILE_ID:PAR_PROTO_KEYPROV_AAD_V1}
+      result-store:
+        enabled: ${CRYPTO_PROVISIONING_DERIVED_KEY_RESULT_STORE_ENABLED:true}
+        ttl: ${CRYPTO_PROVISIONING_DERIVED_KEY_RESULT_STORE_TTL:24h}
+        allow-in-memory: ${CRYPTO_PROVISIONING_DERIVED_KEY_RESULT_STORE_ALLOW_IN_MEMORY:true}
+      # 根映射声明：与 FW-SEC 编译期 allowlist 一致（TransitDerivedKeyProvider 启动校验必需）
+      roots:
+        V2C_COMM_ROOT:
+          transit-key: v2c-comm-root
+          hmac-algorithm: sha2-256
+          purposes: [UPLINK_AEAD, DOWNLINK_AEAD]
+          wrap-modes: [DEVICE_CERT_PUBLIC_KEY]
 
 # VMD Kafka Topic 目录（VMD-DSN-CR-051 / VMD-DSN-CR-052）：Listener 占位符 / Producer / Outbox 统一引用
 vmd:

@@ -16,6 +16,20 @@ crypto:
     token: test-static-token
   provisioning:
     enabled: true
+    # CR-074 共享保留：产线灌注经同一 framework 装配链（provider=openbao-transit-local-wrap）；
+    # 测试环境 require-ready-at-startup=false 跳过启动探测（无真实 Transit v2c-comm-root），
+    # AAD encoder（ParProtoKeyprovAadEncoderV1）随 @Component 自动注册供装配校验。
+    derived-key:
+      provider: openbao-transit-local-wrap
+      require-ready-at-startup: false
+      derivation-version: v1
+      aad-profile-id: PAR_PROTO_KEYPROV_AAD_V1
+      roots:
+        V2C_COMM_ROOT:
+          transit-key: v2c-comm-root
+          hmac-algorithm: sha2-256
+          purposes: [UPLINK_AEAD, DOWNLINK_AEAD]
+          wrap-modes: [DEVICE_CERT_PUBLIC_KEY]
 
 # VMD-DSN-CR-074：Keyprov 专属健康分组与业务密钥测试策略已随迁出删除；
 # 保留产线安全根预置/灌注相关配置（crypto.kms / crypto.provisioning.enabled）。
