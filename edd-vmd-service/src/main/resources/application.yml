@@ -32,6 +32,19 @@ crypto:
           hmac-algorithm: sha2-256
           purposes: [UPLINK_AEAD, DOWNLINK_AEAD]
           wrap-modes: [DEVICE_CERT_PUBLIC_KEY]
+  # CR-074 共享保留：产线灌注（PartSecurityPreset/VehicleSecurityPreset/OtaRoot/ImmoKey）
+  # 经 KeyProvisioningTemplate legacy 门面（wrapFor/deriveByVin/deriveByUid）走 KmsClient
+  # openbao-business-key 通道，依赖 crypto.kms.business-key Provider 配置（CR-060）；
+  # 服务器经 Nacos/Secret 开启 enabled=true 且 require-ready-at-startup=true 时，
+  # KmsBusinessKeyProviderReadiness 启动探测 capability（mount/capability-path），缺省值不可删。
+  kms:
+    business-key:
+      enabled: ${CRYPTO_KMS_BUSINESS_KEY_ENABLED:false}
+      api-version: ${CRYPTO_KMS_BUSINESS_KEY_API_VERSION:v1}
+      mount: ${CRYPTO_KMS_BUSINESS_KEY_MOUNT:business-key}
+      capability-path: ${CRYPTO_KMS_BUSINESS_KEY_CAPABILITY_PATH:/v1/business-key/capabilities}
+      require-ready-at-startup: ${CRYPTO_KMS_BUSINESS_KEY_REQUIRE_READY_AT_STARTUP:false}
+      reconcile-enabled: ${CRYPTO_KMS_BUSINESS_KEY_RECONCILE_ENABLED:false}
 
 # VMD Kafka Topic 目录（VMD-DSN-CR-051 / VMD-DSN-CR-052）：Listener 占位符 / Producer / Outbox 统一引用
 vmd:
