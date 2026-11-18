@@ -72,4 +72,12 @@ public class VehicleRequest extends BaseRequest {
      */
     private Date createTime;
 
+    /**
+     * 车型配置代码
+     * <p>
+     * 仅用于可分配车辆查询：管理后台按订单车型配置代码筛选车辆，
+     * 与配置代码（configurationCode）同义，未传时回退使用 configurationCode
+     */
+    private String modelConfigCode;
+
 }

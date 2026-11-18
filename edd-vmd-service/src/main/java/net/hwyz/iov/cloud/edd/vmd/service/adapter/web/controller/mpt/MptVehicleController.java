@@ -1,5 +1,6 @@
 package net.hwyz.iov.cloud.edd.vmd.service.adapter.web.controller.mpt;
 
+import cn.hutool.core.util.StrUtil;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -52,6 +53,31 @@ public class MptVehicleController extends BaseController {
                 .configurationCode(vehicle.getConfigurationCode())
                 .beginTime(getBeginTime(vehicle))
                 .endTime(getEndTime(vehicle))
+                .build();
+        List<VehicleDto> vehicleDtoList = vehicleAppService.search(query);
+        return ApiResponse.ok(getPageResult(PageUtil.convert(vehicleDtoList, MptVehicleAssembler.INSTANCE::fromDto)));
+    }
+
+    /**
+     * 分页查询可分配车辆信息
+     * <p>
+     * 供订单配车（分配车辆）弹窗选择车辆使用：仅返回已下线（eol_time 非空）
+     * 且未绑定订单（order_num 为空）的车辆，并按订单车型配置代码筛选。
+     * 注意：必须显式声明为 GET，否则会被 {@code @DeleteMapping("/{vehicleIds}")}
+     * 路径模式匹配而导致 "Request method 'GET' is not supported"。
+     *
+     * @param vehicle 车辆信息
+     * @return 可分配车辆列表
+     */
+    @RequiresPermissions("completeVehicle:vehicle:info:list")
+    @GetMapping(value = "/listAssignable")
+    public ApiResponse<PageResult<VehicleResponse>> listAssignable(VehicleRequest vehicle) {
+        log.info("管理后台用户[{}]分页查询可分配车辆信息", SecurityContextHolder.getUserName());
+        startPage();
+        VehicleQuery query = VehicleQuery.builder()
+                .configurationCode(StrUtil.blankToDefault(vehicle.getModelConfigCode(), vehicle.getConfigurationCode()))
+                .isEol(true)
+                .isOrder(false)
                 .build();
         List<VehicleDto> vehicleDtoList = vehicleAppService.search(query);
         return ApiResponse.ok(getPageResult(PageUtil.convert(vehicleDtoList, MptVehicleAssembler.INSTANCE::fromDto)));
