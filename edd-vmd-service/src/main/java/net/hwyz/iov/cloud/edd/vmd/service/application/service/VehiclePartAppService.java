@@ -3,6 +3,7 @@ package net.hwyz.iov.cloud.edd.vmd.service.application.service;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import net.hwyz.iov.cloud.edd.vmd.service.application.assembler.VehiclePartAssembler;
+import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.VehicleByDeviceDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.result.VehiclePartDto;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.query.VehiclePartQuery;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.publish.VehiclePartBindingPublisher;
@@ -10,12 +11,14 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.PartInfo;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehiclePart;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.PartBindingConflictException;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.BindingChangeType;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.DeviceBindingFact;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.VehiclePartBindResult;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartInfoRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehiclePartRepository;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Service;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.VehiclePartCmd;
+import net.hwyz.iov.cloud.edd.vmd.api.vo.enums.VehicleBindingState;
 
 import java.time.Instant;
 import java.util.*;
@@ -56,6 +59,77 @@ public class VehiclePartAppService {
         List<VehiclePartDto> dtoList = PageUtil.convert(vehiclePartList, VehiclePartAssembler.INSTANCE::fromDomain);
         fillPartInfo(dtoList);
         return dtoList;
+    }
+
+    /**
+     * 按设备标识查询当前 active 绑定的车辆（VMD-DSN-CR-076，只读）
+     * <p>
+     * 三态结论：
+     * <ul>
+     *   <li>零条聚合行 → {@link VehicleBindingState#NO_ACTIVE_BINDING}</li>
+     *   <li>唯一 VIN → {@link VehicleBindingState#BOUND}，返回 vin、factRef、updatedAt</li>
+     *   <li>多个不同 VIN → {@link VehicleBindingState#BINDING_CONFLICT}，不返回任何 VIN</li>
+     * </ul>
+     * 只读：不发布事件、不写时间线、不写首次激活。
+     * </p>
+     *
+     * @param deviceId       设备序列号
+     * @param deviceCategory 设备类别
+     * @return 设备→当前绑定车辆结果
+     */
+    public VehicleByDeviceDto queryVehicleByDevice(String deviceId, String deviceCategory) {
+        List<DeviceBindingFact> facts =
+                vehiclePartRepository.selectActiveBindingFactsBySnAndDeviceCategory(deviceId, deviceCategory);
+        if (facts == null || facts.isEmpty()) {
+            return VehicleByDeviceDto.builder()
+                    .bindingState(VehicleBindingState.NO_ACTIVE_BINDING)
+                    .build();
+        }
+        if (facts.size() > 1) {
+            // 数据冲突不返回任何 VIN，避免调用方任选导致错绑，统一转人工核验
+            log.warn("设备[{}]类别[{}]存在{}个不同VIN的active绑定，判定为绑定冲突",
+                    maskDeviceId(deviceId), deviceCategory, facts.size());
+            return VehicleByDeviceDto.builder()
+                    .bindingState(VehicleBindingState.BINDING_CONFLICT)
+                    .build();
+        }
+        DeviceBindingFact fact = facts.get(0);
+        return VehicleByDeviceDto.builder()
+                .bindingState(VehicleBindingState.BOUND)
+                .vin(fact.getVin())
+                .factRef(buildFactRef(fact))
+                .updatedAt(fact.getUpdatedAt())
+                .build();
+    }
+
+    /**
+     * 构建绑定事实聚合摘要（不暴露自增主键与内部 seq）
+     *
+     * @param fact 绑定事实聚合
+     * @return factRef 摘要
+     */
+    private String buildFactRef(DeviceBindingFact fact) {
+        StringBuilder factRef = new StringBuilder("vehiclePartBinding:")
+                .append(fact.getVin())
+                .append(':')
+                .append(fact.getBindingCount());
+        if (fact.getUpdatedAt() != null) {
+            factRef.append(':').append(fact.getUpdatedAt());
+        }
+        return factRef.toString();
+    }
+
+    /**
+     * 设备标识脱敏（保留前 4 与后 4 位）
+     *
+     * @param deviceId 设备标识
+     * @return 脱敏后的设备标识
+     */
+    private String maskDeviceId(String deviceId) {
+        if (deviceId == null || deviceId.length() <= 8) {
+            return "****";
+        }
+        return deviceId.substring(0, 4) + "****" + deviceId.substring(deviceId.length() - 4);
     }
 
     /**

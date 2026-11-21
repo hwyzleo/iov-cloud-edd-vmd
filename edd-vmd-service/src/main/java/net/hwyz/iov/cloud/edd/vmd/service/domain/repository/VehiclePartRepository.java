@@ -1,6 +1,7 @@
 package net.hwyz.iov.cloud.edd.vmd.service.domain.repository;
 
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehiclePart;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.DeviceBindingFact;
 
 import java.util.List;
 import java.util.Map;
@@ -93,5 +94,18 @@ public interface VehiclePartRepository {
      * @return 影响行数
      */
     int physicalDeleteByVin(String vin);
+
+    /**
+     * 按设备序列号与设备类别查询 active 绑定事实聚合（CR-076，只读）
+     * <p>
+     * 仅匹配 bind_state=1 且 row_valid=1 的绑定事实；设备类别取实例快照，
+     * 快照为空时回退按实例车载节点解析的 MDM 节点类别；结果按 VIN 分组。
+     * </p>
+     *
+     * @param sn             设备序列号
+     * @param deviceCategory 设备类别
+     * @return 按 VIN 分组的聚合结果（无绑定时为空列表）
+     */
+    List<DeviceBindingFact> selectActiveBindingFactsBySnAndDeviceCategory(String sn, String deviceCategory);
 
 }
