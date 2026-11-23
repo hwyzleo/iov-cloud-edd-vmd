@@ -92,7 +92,12 @@ public enum VmdErrorCode implements ErrorCode {
     DEVICE_CATEGORY_RESOLVE_FAILED("806133", "车载节点设备类别解析失败（节点缺失/投影未就绪/类别空或超长）"),
     DEVICE_CATEGORY_PREVIEW_STALE("806134", "重导预览计划已过期或与当前状态不符，需重新预览"),
     DEVICE_CATEGORY_CORRECTION_NOT_SUPPORTED("806135", "deviceCategory 显式纠错第一阶段暂不支持，仅服务器派生补缺"),
-    DEVICE_CATEGORY_DISABLED("806136", "设备类别补缺功能未启用（vmd.part.device-category.enabled=false）");
+    DEVICE_CATEGORY_DISABLED("806136", "设备类别补缺功能未启用（vmd.part.device-category.enabled=false）"),
+
+    // ================= CR-077 首次激活事实只读查询域（806137，独占） =================
+    // 只读查询 fail-closed：存储不可用/超时/未知异常时占用本码，绝不降级为 NOT_RECORDED；
+    // PENDING 由状态表达，不新增原因码（CR-077 §7.3 / R-18 #4）。
+    ACTIVATION_FACT_QUERY_UNAVAILABLE("806137", "首次激活事实查询不可用");
 
     private final String code;
     private final String message;

@@ -56,6 +56,9 @@ vmd:
       software-inventory-changed: ${VMD_KAFKA_TOPIC_SOFTWARE_INVENTORY_CHANGED:vmd.vehicle-software-inventory.changed}
       # 零件实例入站事件（CR-056，VMD 幂等创建，经 Outbox→Relay 发布；重放场景）
       part-inbound-changed: ${VMD_KAFKA_TOPIC_PART_INBOUND_CHANGED:vmd.part-inbound.changed}
+      # IOV-TSP 车辆首次激活候选事实（CONSUMER_ONLY，归 IOV-TSP 管理，VMD 只预检不创建；VMD-DSN-CR-077）
+      # Key=VIN，schemaVersion=1；分区 6 / 副本 ≥2（生产），E2E 副本 1 为本地限制（R-11）
+      user-vehicle-activation-fact: ${VMD_KAFKA_TOPIC_USER_VEHICLE_ACTIVATION_FACT:tsp.user-vehicle-activation-fact}
       # 11 个 EDD-MDM 消费 Topic（VMD-DSN-CR-052，全部 CONSUMER_ONLY，归 EDD-MDM 管理，VMD 只预检不创建）
       mdm:
         brand: ${VMD_KAFKA_TOPIC_MDM_BRAND:mdm.brand}
@@ -83,6 +86,27 @@ vmd:
     observed:
       kafka:
         enabled: ${VMD_SOFTWARE_INVENTORY_OBSERVED_KAFKA_ENABLED:false}
+  # 车辆首次激活事实消费（VMD-DSN-CR-077）：默暗部署关闭（生产默认仍为消费关闭）
+  # 【终审 R-8】startOffset 策略 = earliest：开启消费前用 earliest 回放历史事实，
+  #   补齐「早期已激活但事实在开启前已投递」车辆的首次激活节点；
+  #   earliest 仅对「新消费组首次分配分区」生效（已有位点不受影响，不会被重复回放）；
+  #   回放完成（台账无新增 RECORDED、lag 归零）后，如需可经
+  #   VMD_ACTIVATION_FACT_KAFKA_AUTO_OFFSET_RESET=latest 切回 latest 仅消费增量（无需改代码）。
+  # 技术错误退避 3 次（100ms→1s）→ 台账 FAILED → 提交位点，不建 DLQ Topic（R-18 #6）
+  activation-fact:
+    kafka:
+      enabled: ${VMD_ACTIVATION_FACT_KAFKA_ENABLED:false}
+      group-id: ${VMD_ACTIVATION_FACT_KAFKA_GROUP_ID:edd-vmd-vehicle-activation-fact}
+      auto-offset-reset: ${VMD_ACTIVATION_FACT_KAFKA_AUTO_OFFSET_RESET:earliest}
+      # false=由启动协调器按门禁启动（Topic 缺失不阻塞启动，就绪后自恢复）
+      auto-startup: ${VMD_ACTIVATION_FACT_KAFKA_AUTO_STARTUP:false}
+      startup-gate-enabled: ${VMD_ACTIVATION_FACT_KAFKA_STARTUP_GATE_ENABLED:false}
+      topic-probe-retry-interval-ms: ${VMD_ACTIVATION_FACT_KAFKA_TOPIC_PROBE_RETRY_INTERVAL_MS:60000}
+      retry:
+        max-attempts: ${VMD_ACTIVATION_FACT_KAFKA_RETRY_MAX_ATTEMPTS:3}
+        initial-interval-ms: ${VMD_ACTIVATION_FACT_KAFKA_RETRY_INITIAL_INTERVAL_MS:100}
+        multiplier: ${VMD_ACTIVATION_FACT_KAFKA_RETRY_MULTIPLIER:2.0}
+        max-interval-ms: ${VMD_ACTIVATION_FACT_KAFKA_RETRY_MAX_INTERVAL_MS:1000}
     changed:
       kafka:
         # 软件清单变更事件经 vmd_outbox → OutboxRelay 发布（Key=VIN）；topic 由 vmd.kafka.topics.software-inventory-changed 提供

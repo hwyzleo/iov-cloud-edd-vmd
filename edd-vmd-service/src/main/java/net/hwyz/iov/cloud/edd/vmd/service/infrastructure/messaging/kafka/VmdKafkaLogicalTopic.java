@@ -22,6 +22,12 @@ public enum VmdKafkaLogicalTopic {
     INVENTORY_OBSERVED("inventory-observed", VmdKafkaTopicRole.CONSUMER_ONLY),
 
     /**
+     * IOV-TSP 车辆首次激活候选事实（Consumer，IOV-TSP 管理；VMD-DSN-CR-077）
+     * <p>CONSUMER_ONLY：VMD 只预检/消费，不创建、不改写，也不进入 Outbox 路由。</p>
+     */
+    USER_VEHICLE_ACTIVATION_FACT("user-vehicle-activation-fact", VmdKafkaTopicRole.CONSUMER_ONLY),
+
+    /**
      * 车辆-零件绑定变更事件（Producer，VMD 幂等创建）
      */
     PART_BINDING_CHANGED("part-binding-changed", VmdKafkaTopicRole.PRODUCER_OWNED),

@@ -1,6 +1,7 @@
 package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging.kafka;
 
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.config.MdmConsumerProperties;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.config.VmdActivationFactConsumerProperties;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -38,13 +39,18 @@ class MdmConsumerStartupCoordinatorTest {
 
     private MdmConsumerProperties properties;
     private MdmProjectionReadiness readiness;
+    private VmdActivationFactConsumerProperties activationFactProperties;
+    private VmdActivationFactTopicReadiness activationFactReadiness;
     private MdmConsumerStartupCoordinator coordinator;
 
     @BeforeEach
     void setUp() {
         properties = new MdmConsumerProperties();
         readiness = new MdmProjectionReadiness();
-        coordinator = new MdmConsumerStartupCoordinator(registry, properties, readiness);
+        activationFactProperties = new VmdActivationFactConsumerProperties();
+        activationFactReadiness = new VmdActivationFactTopicReadiness();
+        coordinator = new MdmConsumerStartupCoordinator(registry, properties, readiness,
+                activationFactProperties, activationFactReadiness);
     }
 
     private MessageListenerContainer stoppedContainer() {
@@ -125,6 +131,57 @@ class MdmConsumerStartupCoordinatorTest {
         stubContainersStopped();
         coordinator.onApplicationReady(null);
         verify(registry).getListenerContainer(MdmProjectionType.ConsumerIds.BRAND);
+    }
+
+    @Test
+    @DisplayName("CR-077：激活事实消费启用 + 门禁关闭 → Topic 缺失也启动容器（不阻塞启动）")
+    void activationFact_topicMissing_stillStarts() {
+        properties.setAutoStartup(true);
+        activationFactProperties.setEnabled(true);
+        activationFactProperties.setStartupGateEnabled(false);
+        activationFactReadiness.markNotPresent("上游 Topic 暂不存在");
+        activationFactReadiness.markUp(6);
+        MessageListenerContainer container = stoppedContainer();
+        when(registry.getListenerContainer(VmdConsumeType.ConsumerIds.USER_VEHICLE_ACTIVATION_FACT))
+                .thenReturn(container);
+
+        coordinator.onActivationFactTopicProbe(new VmdActivationFactTopicProbeEvent(
+                VmdActivationFactTopicReadiness.State.NOT_PRESENT, 0));
+
+        verify(container).start();
+        assertTrue(activationFactReadiness.consumerRunning());
+    }
+
+    @Test
+    @DisplayName("CR-077：门禁开启且 Topic 未就绪 → 暂不启动；探针就绪后自恢复启动")
+    void activationFact_gated_waitsThenStarts() {
+        properties.setAutoStartup(true);
+        activationFactProperties.setEnabled(true);
+        activationFactProperties.setStartupGateEnabled(true);
+        MessageListenerContainer container = stoppedContainer();
+        when(registry.getListenerContainer(VmdConsumeType.ConsumerIds.USER_VEHICLE_ACTIVATION_FACT))
+                .thenReturn(container);
+
+        activationFactReadiness.markNotPresent("上游 Topic 暂不存在");
+        coordinator.onActivationFactTopicProbe(new VmdActivationFactTopicProbeEvent(
+                VmdActivationFactTopicReadiness.State.NOT_PRESENT, 0));
+        verify(container, never()).start();
+
+        activationFactReadiness.markUp(6);
+        coordinator.onActivationFactTopicProbe(new VmdActivationFactTopicProbeEvent(
+                VmdActivationFactTopicReadiness.State.UP, 6));
+        verify(container).start();
+        assertTrue(activationFactReadiness.consumerRunning());
+    }
+
+    @Test
+    @DisplayName("CR-077：消费未启用 → 不触碰容器（默认暗部署关闭）")
+    void activationFact_disabled_noContainerLookup() {
+        properties.setAutoStartup(true);
+        activationFactProperties.setEnabled(false);
+        coordinator.onActivationFactTopicProbe(new VmdActivationFactTopicProbeEvent(
+                VmdActivationFactTopicReadiness.State.UP, 6));
+        verify(registry, never()).getListenerContainer(anyString());
     }
 
     @Test

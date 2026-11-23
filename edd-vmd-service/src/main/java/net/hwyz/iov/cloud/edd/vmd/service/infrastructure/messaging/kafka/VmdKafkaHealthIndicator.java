@@ -36,12 +36,19 @@ public class VmdKafkaHealthIndicator implements HealthIndicator {
     private final ObjectProvider<KafkaTopicProvisioningStatus> provisioningStatusProvider;
     private final VmdKafkaTopicReadiness readiness;
     private final MdmProjectionReadiness mdmProjectionReadiness;
+    private final VmdActivationFactTopicReadiness activationFactReadiness;
 
     /**
      * 观测消费者是否启用（默认关闭）。
      */
     @Value("${vmd.software-inventory.observed.kafka.enabled:false}")
     private boolean observedEnabled;
+
+    /**
+     * 首次激活事实消费者是否启用（默认关闭，VMD-DSN-CR-077）。
+     */
+    @Value("${vmd.activation-fact.kafka.enabled:false}")
+    private boolean activationFactEnabled;
 
     @Override
     public Health health() {
@@ -54,6 +61,11 @@ public class VmdKafkaHealthIndicator implements HealthIndicator {
         // 观测消费 Topic 健康项（独立，仅启用时上报）
         if (observedEnabled) {
             down |= buildInventoryObserved(builder);
+        }
+
+        // 首次激活事实消费（CR-077）：独立健康项，Topic 缺失不视为故障
+        if (activationFactEnabled) {
+            down |= buildActivationFact(builder);
         }
 
         // MDM 消费投影健康项（逐投影明细，不掩蔽单投影故障）
@@ -121,6 +133,31 @@ public class VmdKafkaHealthIndicator implements HealthIndicator {
                 return false;
             }
         }
+    }
+
+    /**
+     * 首次激活事实消费健康明细（VMD-DSN-CR-077 §8.2）。
+     * <p>
+     * 上游 Topic 暂不存在（{@code NOT_PRESENT}，E2E 常见）<strong>不置 DOWN</strong>：
+     * 属上游未就绪，不是 VMD 故障，且消费端会自恢复；
+     * ACL 拒绝 / Broker 不可达（{@code DOWN}）才视为不健康。
+     * </p>
+     */
+    private boolean buildActivationFact(Health.Builder builder) {
+        VmdActivationFactTopicReadiness.State state = activationFactReadiness.state();
+        builder.withDetail("activationFactConsumer", state.name())
+                .withDetail("activationFactConsumer.partitions", activationFactReadiness.partitions())
+                .withDetail("activationFactConsumer.consumerRunning", activationFactReadiness.consumerRunning());
+        if (state == VmdActivationFactTopicReadiness.State.DOWN) {
+            builder.withDetail("activationFactConsumer.reason",
+                    activationFactReadiness.reason() == null ? "Topic 预检失败" : activationFactReadiness.reason());
+            return true;
+        }
+        if (state == VmdActivationFactTopicReadiness.State.NOT_PRESENT) {
+            builder.withDetail("activationFactConsumer.reason",
+                    activationFactReadiness.reason() == null ? "上游 Topic 暂不存在" : activationFactReadiness.reason());
+        }
+        return false;
     }
 
     /**

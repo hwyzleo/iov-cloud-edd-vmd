@@ -35,14 +35,18 @@ class VmdKafkaHealthIndicatorTest {
 
     private VmdKafkaTopicReadiness readiness;
     private MdmProjectionReadiness mdmProjectionReadiness;
+    private VmdActivationFactTopicReadiness activationFactReadiness;
     private VmdKafkaHealthIndicator indicator;
 
     @BeforeEach
     void setUp() {
         readiness = new VmdKafkaTopicReadiness();
         mdmProjectionReadiness = new MdmProjectionReadiness();
-        indicator = new VmdKafkaHealthIndicator(provisioningStatusProvider, readiness, mdmProjectionReadiness);
+        activationFactReadiness = new VmdActivationFactTopicReadiness();
+        indicator = new VmdKafkaHealthIndicator(provisioningStatusProvider, readiness,
+                mdmProjectionReadiness, activationFactReadiness);
         ReflectionTestUtils.setField(indicator, "observedEnabled", false);
+        ReflectionTestUtils.setField(indicator, "activationFactEnabled", false);
     }
 
     private KafkaTopicProvisioningStatus provisioning(KafkaTopicProvisioningStatus.State state) {

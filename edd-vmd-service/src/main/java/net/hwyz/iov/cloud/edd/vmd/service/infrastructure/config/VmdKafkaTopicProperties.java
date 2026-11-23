@@ -38,6 +38,13 @@ public class VmdKafkaTopicProperties {
     private String inventoryObserved = "ota.vehicle-software-inventory.observed";
 
     /**
+     * IOV-TSP 车辆首次激活候选事实 Topic（Consumer，IOV-TSP 管理，VMD 不创建；VMD-DSN-CR-077）
+     * <p>Key=VIN，schemaVersion=1；分区 6 / 副本 ≥2（生产），E2E 环境副本 1 为本地限制（R-11）</p>
+     */
+    @NotBlank
+    private String userVehicleActivationFact = "tsp.user-vehicle-activation-fact";
+
+    /**
      * 车辆-零件绑定变更事件 Topic（Producer，VMD 幂等创建）
      * <p>Topic 名称以 Kafka Topic 目录治理值为准（RD-051-6）
      */
@@ -121,6 +128,7 @@ public class VmdKafkaTopicProperties {
     public void validate() {
         Map<String, String> values = new HashMap<>();
         values.put("inventory-observed", inventoryObserved);
+        values.put("user-vehicle-activation-fact", userVehicleActivationFact);
         values.put("part-binding-changed", partBindingChanged);
         values.put("vehicle-produce", vehicleProduce);
         values.put("software-inventory-changed", softwareInventoryChanged);
@@ -151,6 +159,7 @@ public class VmdKafkaTopicProperties {
     public String topic(VmdKafkaLogicalTopic logical) {
         return switch (logical) {
             case INVENTORY_OBSERVED -> inventoryObserved;
+            case USER_VEHICLE_ACTIVATION_FACT -> userVehicleActivationFact;
             case PART_BINDING_CHANGED -> partBindingChanged;
             case VEHICLE_PRODUCE -> vehicleProduce;
             case SOFTWARE_INVENTORY_CHANGED -> softwareInventoryChanged;
