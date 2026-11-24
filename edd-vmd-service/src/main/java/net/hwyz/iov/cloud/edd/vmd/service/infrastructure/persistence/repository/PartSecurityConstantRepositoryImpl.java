@@ -29,6 +29,26 @@ public class PartSecurityConstantRepositoryImpl implements PartSecurityConstantR
     }
 
     @Override
+    public java.util.Map<String, String> selectChipUidByKeys(java.util.Collection<String> keys) {
+        if (keys == null || keys.isEmpty()) {
+            return java.util.Collections.emptyMap();
+        }
+        java.util.List<PartSecurityConstantPo> poList =
+                partSecurityConstantMapper.selectPoListByPartCodeSnKeys(new java.util.ArrayList<>(keys));
+        if (poList == null || poList.isEmpty()) {
+            return java.util.Collections.emptyMap();
+        }
+        java.util.Map<String, String> result = new java.util.HashMap<>(poList.size());
+        for (PartSecurityConstantPo po : poList) {
+            if (po.getPartCode() == null || po.getSn() == null || po.getChipUid() == null) {
+                continue;
+            }
+            result.put(po.getPartCode() + ":" + po.getSn(), po.getChipUid());
+        }
+        return result;
+    }
+
+    @Override
     public java.util.List<PartSecurityConstant> selectListByChipUid(String chipUid) {
         java.util.List<PartSecurityConstantPo> poList = partSecurityConstantMapper.selectPoListByChipUid(chipUid);
         if (poList == null || poList.isEmpty()) {

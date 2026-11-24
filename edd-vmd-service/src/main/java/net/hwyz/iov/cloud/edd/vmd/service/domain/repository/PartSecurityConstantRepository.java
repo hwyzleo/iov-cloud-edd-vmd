@@ -22,6 +22,14 @@ public interface PartSecurityConstantRepository {
     PartSecurityConstant selectByPartCodeAndSn(String partCode, String sn);
 
     /**
+     * 批量按 (partCode, sn) 查询芯片 UID（SEC-VIAM-DSN-CR-006）
+     *
+     * @param keys (partCode, sn) 组合键，形如 {@code partCode:sn}
+     * @return key -> chipUid（未命中的 key 不出现在结果中）
+     */
+    java.util.Map<String, String> selectChipUidByKeys(java.util.Collection<String> keys);
+
+    /**
      * 根据安全芯片 UID 反查器件安全常量（CR-058 keyprov 按已认证 hsmUid 定位设备）
      *
      * @param chipUid 安全芯片/HSM 唯一标识

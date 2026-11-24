@@ -13,10 +13,13 @@ import net.hwyz.iov.cloud.edd.vmd.service.application.service.VehiclePartAppServ
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.VehicleNotExistException;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleNode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehiclePart;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartSecurityConstantRepository;
 import net.hwyz.iov.cloud.framework.web.controller.BaseController;
 import net.hwyz.iov.cloud.framework.web.exception.InputParamInvalidException;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -34,6 +37,7 @@ public class ServiceVehiclePartBindingController extends BaseController {
 
     private final VehiclePartAppService vehiclePartAppService;
     private final VehicleNodeAppService vehicleNodeAppService;
+    private final PartSecurityConstantRepository partSecurityConstantRepository;
 
     /**
      * 根据车架号查询当前全部 active 设备绑定
@@ -51,29 +55,7 @@ public class ServiceVehiclePartBindingController extends BaseController {
                 .build();
         List<VehiclePartDto> dtoList = vehiclePartAppService.search(query);
 
-        // 转换为 Response
-        List<VehiclePartBindingExResponse> responseList = dtoList.stream()
-                .map(dto -> {
-                    VehiclePartBindingExResponse response = VehiclePartBindingExResponse.builder()
-                            .bindingId(dto.getId())
-                            .vin(dto.getVin())
-                            .partCode(dto.getPartCode())
-                            .sn(dto.getSn())
-                            .vehicleNodeCode(dto.getVehicleNodeCode())
-                            .bindTime(dto.getBindTime())
-                            .build();
-                    // 获取设备分类
-                    if (dto.getVehicleNodeCode() != null) {
-                        VehicleNode vehicleNode = vehicleNodeAppService.getVehicleNodeByCode(dto.getVehicleNodeCode());
-                        if (vehicleNode != null) {
-                            response.setDeviceCategory(vehicleNode.getDeviceCategory());
-                        }
-                    }
-                    return response;
-                })
-                .collect(Collectors.toList());
-
-        return responseList;
+        return toResponses(dtoList);
     }
 
     /**
@@ -98,29 +80,7 @@ public class ServiceVehiclePartBindingController extends BaseController {
 
         List<VehiclePartDto> dtoList = vehiclePartAppService.search(query);
 
-        // 转换为 Response
-        List<VehiclePartBindingExResponse> responseList = dtoList.stream()
-                .map(dto -> {
-                    VehiclePartBindingExResponse response = VehiclePartBindingExResponse.builder()
-                            .bindingId(dto.getId())
-                            .vin(dto.getVin())
-                            .partCode(dto.getPartCode())
-                            .sn(dto.getSn())
-                            .vehicleNodeCode(dto.getVehicleNodeCode())
-                            .bindTime(dto.getBindTime())
-                            .build();
-                    // 获取设备分类
-                    if (dto.getVehicleNodeCode() != null) {
-                        VehicleNode vehicleNode = vehicleNodeAppService.getVehicleNodeByCode(dto.getVehicleNodeCode());
-                        if (vehicleNode != null) {
-                            response.setDeviceCategory(vehicleNode.getDeviceCategory());
-                        }
-                    }
-                    return response;
-                })
-                .collect(Collectors.toList());
-
-        return responseList;
+        return toResponses(dtoList);
     }
 
     /**
@@ -167,6 +127,80 @@ public class ServiceVehiclePartBindingController extends BaseController {
                 .factRef(dto.getFactRef())
                 .updatedAt(dto.getUpdatedAt())
                 .build();
+    }
+
+    /**
+     * 绑定事实 → 对外响应（批量组装 chipUid，避免 N+1）
+     * <p>
+     * SEC-VIAM-DSN-CR-006：`chipUid` 取自 `tb_part_security_constant.chip_uid`；
+     * 缺失返回 null，不臆造、不回退 SN/VIN。
+     * </p>
+     *
+     * @param dtoList 绑定事实
+     * @return 对外响应列表
+     */
+    private List<VehiclePartBindingExResponse> toResponses(List<VehiclePartDto> dtoList) {
+        if (dtoList == null || dtoList.isEmpty()) {
+            return new ArrayList<>();
+        }
+        Map<String, String> chipUidMap = loadChipUidMap(dtoList);
+        return dtoList.stream()
+                .map(dto -> {
+                    VehiclePartBindingExResponse response = VehiclePartBindingExResponse.builder()
+                            .bindingId(dto.getId())
+                            .vin(dto.getVin())
+                            .partCode(dto.getPartCode())
+                            .sn(dto.getSn())
+                            .vehicleNodeCode(dto.getVehicleNodeCode())
+                            .bindTime(dto.getBindTime())
+                            .chipUid(chipUidMap.get(chipUidKey(dto.getPartCode(), dto.getSn())))
+                            .build();
+                    // 获取设备分类（事实源：MDM 车辆节点）
+                    if (dto.getVehicleNodeCode() != null) {
+                        VehicleNode vehicleNode = vehicleNodeAppService.getVehicleNodeByCode(dto.getVehicleNodeCode());
+                        if (vehicleNode != null) {
+                            response.setDeviceCategory(vehicleNode.getDeviceCategory());
+                        }
+                    }
+                    return response;
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 批量加载 (partCode, sn) → chipUid
+     *
+     * @param dtoList 绑定事实
+     * @return 组合键 → chipUid
+     */
+    private Map<String, String> loadChipUidMap(List<VehiclePartDto> dtoList) {
+        List<String> keys = dtoList.stream()
+                .filter(dto -> dto.getPartCode() != null && dto.getSn() != null)
+                .map(dto -> chipUidKey(dto.getPartCode(), dto.getSn()))
+                .distinct()
+                .collect(Collectors.toList());
+        if (keys.isEmpty()) {
+            return new HashMap<>();
+        }
+        try {
+            Map<String, String> chipUidMap = partSecurityConstantRepository.selectChipUidByKeys(keys);
+            return chipUidMap == null ? new HashMap<>() : chipUidMap;
+        } catch (Exception e) {
+            // 芯片 UID 查询失败不得阻断绑定事实查询：返回 null 由调用方判定（VIAM 侧隔离）
+            log.warn("批量查询芯片UID失败, keys={}, err={}", keys.size(), e.getMessage());
+            return new HashMap<>();
+        }
+    }
+
+    /**
+     * (partCode, sn) 组合键
+     *
+     * @param partCode 零件编码
+     * @param sn       零件序列号
+     * @return 组合键
+     */
+    private static String chipUidKey(String partCode, String sn) {
+        return partCode + ":" + sn;
     }
 
     /**

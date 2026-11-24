@@ -41,6 +41,22 @@ public interface PartSecurityConstantMapper extends BaseDao<PartSecurityConstant
     java.util.List<PartSecurityConstantPo> selectPoListByChipUid(@Param("chipUid") String chipUid);
 
     /**
+     * 批量按 (part_code, sn) 查询芯片 UID（SEC-VIAM-DSN-CR-006）
+     * <p>
+     * key 形如 {@code partCode:sn}；用于绑定快照批量组装 chipUid，避免逐条查询产生 N+1。
+     * 仅返回未删除行，缺失即不返回（调用方按 null 处理，不得臆造）。
+     * </p>
+     *
+     * @param keys (part_code, sn) 组合键列表，非空
+     * @return 命中行（仅 id/partCode/sn/chipUid 有值）
+     */
+    @Select("<script>SELECT part_code, sn, chip_uid FROM tb_part_security_constant "
+            + "WHERE deleted = 0 AND CONCAT(part_code, ':', sn) IN "
+            + "<foreach collection='keys' item='key' open='(' separator=',' close=')'>#{key}</foreach>"
+            + "</script>")
+    java.util.List<PartSecurityConstantPo> selectPoListByPartCodeSnKeys(@Param("keys") java.util.List<String> keys);
+
+    /**
      * 根据零件编码和序列号逻辑删除
      *
      * @param partCode 零件编码

@@ -53,4 +53,13 @@ public class VehiclePartBindingExResponse {
      */
     private Instant bindTime;
 
+    /**
+     * 安全芯片/HSM 唯一标识（= tb_part_security_constant.chip_uid）
+     * <p>
+     * SEC-VIAM-DSN-CR-006：供 VIAM 登记安全主体使用；缺失时为 null，调用方不得以 SN/VIN 顶替。
+     * 仅追加字段，既有调用方（TSP 等）反序列化行为不变。
+     * </p>
+     */
+    private String chipUid;
+
 }
