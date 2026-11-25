@@ -2,6 +2,8 @@ package net.hwyz.iov.cloud.edd.vmd.service.domain.repository;
 
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleActivationNode;
 
+import java.util.List;
+
 /**
  * 车辆首次激活节点投影 仓储接口（VMD-DSN-CR-077 / D-VMD-077-04）
  * <p>
@@ -36,5 +38,35 @@ public interface VehicleActivationNodeRepository {
      * @return 影响行数（0=未纠正，说明已存在更早或相等事实）
      */
     int correctIfEarlier(VehicleActivationNode node);
+
+    /**
+     * 按建档标记游标分页查询投影（VMD-DSN-CR-079 / D079-05、D079-06）
+     * <p>
+     * keyset 分页（{@code id > afterId}），供未建档补偿与存量对齐有界扫描使用；
+     * 不得一次全表载入内存。
+     *
+     * @param vinResolved 建档标记（0=未建档，1=已建档）
+     * @param afterId     上一页最大主键（首页传 null）
+     * @param limit       单页上限
+     * @return 投影列表（按 id 升序）
+     */
+    List<VehicleActivationNode> selectPageByVinResolved(Integer vinResolved, Long afterId, int limit);
+
+    /**
+     * 更新建档标记（VMD-DSN-CR-079 / D079-05）
+     *
+     * @param id          投影主键
+     * @param vinResolved 建档标记（1=已建档）
+     * @return 影响行数
+     */
+    int updateVinResolved(Long id, Integer vinResolved);
+
+    /**
+     * 统计指定建档标记的投影数量（补偿 backlog 观测）
+     *
+     * @param vinResolved 建档标记
+     * @return 数量
+     */
+    long countByVinResolved(Integer vinResolved);
 
 }

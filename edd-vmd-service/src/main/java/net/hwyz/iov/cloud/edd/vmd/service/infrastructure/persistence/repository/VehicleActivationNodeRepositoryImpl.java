@@ -13,6 +13,7 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 车辆首次激活节点投影 仓储实现（VMD-DSN-CR-077 / D-VMD-077-04）
@@ -79,6 +80,41 @@ public class VehicleActivationNodeRepositoryImpl implements VehicleActivationNod
             node.setModifyTime(now);
         }
         return result;
+    }
+
+    @Override
+    public List<VehicleActivationNode> selectPageByVinResolved(Integer vinResolved, Long afterId, int limit) {
+        int effectiveLimit = limit <= 0 ? 100 : limit;
+        LambdaQueryWrapper<VehicleActivationNodePo> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(VehicleActivationNodePo::getRowValid, true)
+                .eq(vinResolved != null, VehicleActivationNodePo::getVinResolved, vinResolved)
+                .gt(afterId != null, VehicleActivationNodePo::getId, afterId)
+                .orderByAsc(VehicleActivationNodePo::getId)
+                .last("LIMIT " + effectiveLimit);
+        return VehicleActivationNodeConverter.INSTANCE.toDomainList(
+                vehicleActivationNodeMapper.selectList(wrapper));
+    }
+
+    @Override
+    public int updateVinResolved(Long id, Integer vinResolved) {
+        if (id == null || vinResolved == null) {
+            return 0;
+        }
+        VehicleActivationNodePo patch = new VehicleActivationNodePo();
+        patch.setVinResolved(vinResolved);
+        patch.setModifyTime(new java.util.Date());
+        LambdaUpdateWrapper<VehicleActivationNodePo> wrapper = new LambdaUpdateWrapper<>();
+        wrapper.eq(VehicleActivationNodePo::getId, id)
+                .eq(VehicleActivationNodePo::getRowValid, true);
+        return vehicleActivationNodeMapper.update(patch, wrapper);
+    }
+
+    @Override
+    public long countByVinResolved(Integer vinResolved) {
+        LambdaQueryWrapper<VehicleActivationNodePo> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(VehicleActivationNodePo::getRowValid, true)
+                .eq(vinResolved != null, VehicleActivationNodePo::getVinResolved, vinResolved);
+        return vehicleActivationNodeMapper.selectCount(wrapper);
     }
 
 }

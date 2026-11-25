@@ -11,6 +11,8 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoReposito
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehicleInfoChangeLogRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -38,6 +40,7 @@ public class VehicleInfoMutationAppService {
 
     private final VehBasicInfoRepository vehBasicInfoRepository;
     private final VehicleInfoChangeLogRepository vehicleInfoChangeLogRepository;
+    private final VehicleActivationLifecycleCompensationAppService activationLifecycleCompensationAppService;
 
     public static final String POLICY_FILL_MISSING = "FILL_MISSING";
     public static final String POLICY_CORRECT_EXPLICIT = "CORRECT_EXPLICIT";
@@ -156,7 +159,30 @@ public class VehicleInfoMutationAppService {
                 .rowVersion(1)
                 .build();
         vehicleInfoChangeLogRepository.insert(changeLog);
+
+        // CR-079 / D079-05：建档成功后置补偿该 VIN 未解析的首次激活投影（afterCommit，失败不影响建档主事务）
+        registerActivationLifecycleCompensation(vehicleBasicInfo.getVin());
         return MutationResult.applied(1, java.util.Map.of("created", true));
+    }
+
+    /**
+     * 注册建档后置激活生命周期补偿（仅在事务提交后执行，失败不阻断建档）
+     * <p>
+     * 补偿为独立短事务（REQUIRES_NEW）且幂等；无同步事务时立即执行。
+     *
+     * @param vin 车架号
+     */
+    private void registerActivationLifecycleCompensation(String vin) {
+        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
+            activationLifecycleCompensationAppService.compensateQuietly(vin);
+            return;
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                activationLifecycleCompensationAppService.compensateQuietly(vin);
+            }
+        });
     }
 
     private VehicleBasicInfo resolve(VehicleInfoPatchCmd cmd) {

@@ -17,6 +17,8 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.ActivationFac
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehicleActivationFactConsumeRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehicleActivationNodeRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.service.VehicleActivationLifecycleWriter;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging.kafka.VmdActivationFactMetrics;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -42,8 +44,13 @@ import java.time.ZoneOffset;
  * 事务边界：台账与投影同一短事务，投影失败整体回滚（不留「台账成功而投影缺失」半成品），
  * 由消费者错误处理器退避重试，耗尽后由 {@link #markFailed} 落 {@code FAILED} 证据。
  * <p>
- * 纯终端：不写 {@code vmd_outbox}、不发二次事件、不写 {@code tb_veh_lifecycle}、
+ * 纯终端：不写 {@code vmd_outbox}、不发二次事件、不调 Feign、
  * 不因 VIN 未建档而伪造车辆主档（D-VMD-077-08 / D-VMD-077-10）。
+ * <p>
+ * <strong>VMD-DSN-CR-079 部分修订</strong>：已建档 VIN 的合法事实在<strong>同一短事务</strong>内
+ * 幂等写入既有 {@code tb_veh_lifecycle(vin,node=VEHICLE_ACTIVE)}（复用生命周期 Repository，
+ * 只允许时间向前纠正）；未建档 VIN 仍只保留投影与 {@code vin_resolved=0}，
+ * 由建档钩子 / 有界定时对账补偿。写入失败整体回滚，交既有退避/FAILED/重放机制。
  *
  * @author hwyz_leo
  */
@@ -53,6 +60,9 @@ import java.time.ZoneOffset;
 public class VehicleActivationFactConsumeAppService {
 
     private static final String DESCRIPTION_CORRECTED = "CORRECTED";
+    private static final String DESCRIPTION_LIFECYCLE_CORRECTED = "LIFECYCLE_CORRECTED";
+    private static final String RESULT_PENDING_VIN = "PENDING_VIN";
+    private static final String RESULT_FAILED = "FAILED";
     private static final String DESCRIPTION_DIGEST_MISMATCH = "DIGEST_MISMATCH";
     private static final String DESCRIPTION_DIGEST_VERIFY_MISMATCH = "DIGEST_VERIFY_MISMATCH";
     private static final String DESCRIPTION_EVENT_ID_CONFLICT = "EVENT_ID_BUSINESS_KEY_MISMATCH";
@@ -62,6 +72,8 @@ public class VehicleActivationFactConsumeAppService {
     private final VehicleActivationFactConsumeRepository consumeRepository;
     private final VehicleActivationNodeRepository nodeRepository;
     private final VehBasicInfoRepository vehBasicInfoRepository;
+    private final VehicleActivationLifecycleWriter lifecycleWriter;
+    private final VmdActivationFactMetrics activationFactMetrics;
     private final ObjectMapper objectMapper;
 
     /**
@@ -102,10 +114,19 @@ public class VehicleActivationFactConsumeAppService {
         boolean applied = upsertProjection(existingNode, candidate);
         boolean corrected = applied && projectionExisted;
 
+        // CR-079：已建档 VIN 同事务写既有 VEHICLE_ACTIVE（只允许时间向前纠正）；未建档仅记待补偿指标
+        LocalDateTime effectiveFirstActivatedAt = resolveEffectiveFirstActivatedAt(existingNode, fact);
+        VehicleActivationLifecycleWriter.LifecycleWriteOutcome lifecycle = null;
+        if (vinUnresolved) {
+            activationFactMetrics.recordLifecycle(meta.topic(), RESULT_PENDING_VIN);
+        } else {
+            lifecycle = writeLifecycle(fact.vin(), effectiveFirstActivatedAt, meta);
+        }
+
         VehicleActivationFactConsume audit = buildAudit(fact, meta);
         audit.setStatus(ActivationFactConsumeStatus.RECORDED.name());
         audit.setApplied(applied ? 1 : 0);
-        audit.setDescription(corrected ? DESCRIPTION_CORRECTED : null);
+        audit.setDescription(buildRecordedDescription(corrected, lifecycle, fact));
         int inserted = consumeRepository.insert(audit);
         if (inserted == 0) {
             // 并发兜底：唯一键命中说明同事件/同业务键已被其它线程处理，转重复判定（投影单调安全）
@@ -199,6 +220,71 @@ public class VehicleActivationFactConsumeAppService {
      */
     private boolean vinResolved(String vin) {
         return vehBasicInfoRepository.selectByVin(vin) != null;
+    }
+
+    /**
+     * 计算生命周期目标时间：已存激活投影与当前事实 {@code occurredAt} 的最小值（D079-02）
+     * <p>
+     * 已存投影是已消费事实的最早值；即便本事实更晚（投影未改动），生命周期仍应取投影的最早时间，
+     * 从而与「首次激活 = occurredAt 最小值」口径一致。
+     *
+     * @param existingNode 既有投影（可空）
+     * @param fact         当前事实
+     * @return 事实最早激活时刻（UTC）
+     */
+    private LocalDateTime resolveEffectiveFirstActivatedAt(VehicleActivationNode existingNode,
+                                                           ActivationFactNormalized fact) {
+        LocalDateTime factTime = toLocalDateTime(fact.occurredAt());
+        if (existingNode == null || existingNode.getFirstActivatedAt() == null) {
+            return factTime;
+        }
+        return existingNode.getFirstActivatedAt().isBefore(factTime)
+                ? existingNode.getFirstActivatedAt() : factTime;
+    }
+
+    /**
+     * 写入/收敛生命周期节点并记指标（异常原样抛出，保证台账/投影/生命周期同事务回滚）
+     *
+     * @param vin          车架号
+     * @param earliest     事实最早激活时刻
+     * @param meta         来源位点
+     * @return 写入结论
+     */
+    private VehicleActivationLifecycleWriter.LifecycleWriteOutcome writeLifecycle(
+            String vin, LocalDateTime earliest, ActivationFactRecordMeta meta) {
+        try {
+            VehicleActivationLifecycleWriter.LifecycleWriteOutcome outcome =
+                    lifecycleWriter.write(vin, earliest);
+            activationFactMetrics.recordLifecycle(meta.topic(), outcome.result().name());
+            return outcome;
+        } catch (RuntimeException e) {
+            activationFactMetrics.recordLifecycle(meta.topic(), RESULT_FAILED);
+            log.error("首次激活生命周期节点写入失败（整事务回滚，交既有退避/FAILED/重放）: vin={}, location={}, error={}",
+                    maskVin(vin), meta, e.getMessage());
+            throw e;
+        }
+    }
+
+    /**
+     * 构建合法事实台账备注：投影纠正 + 生命周期向前纠正证据（D079-02）
+     *
+     * @param corrected 投影是否向前纠正
+     * @param lifecycle 生命周期写入结论（未建档为 null）
+     * @param fact      事实
+     * @return 备注（可空，≤255）
+     */
+    private String buildRecordedDescription(boolean corrected,
+                                            VehicleActivationLifecycleWriter.LifecycleWriteOutcome lifecycle,
+                                            ActivationFactNormalized fact) {
+        String description = corrected ? DESCRIPTION_CORRECTED : null;
+        if (lifecycle != null && lifecycle.corrected()) {
+            String evidence = DESCRIPTION_LIFECYCLE_CORRECTED
+                    + ":event=" + fact.eventId()
+                    + ":old=" + lifecycle.previousReachTime()
+                    + ":new=" + lifecycle.currentReachTime();
+            description = appendDescription(description, evidence);
+        }
+        return description;
     }
 
     /**

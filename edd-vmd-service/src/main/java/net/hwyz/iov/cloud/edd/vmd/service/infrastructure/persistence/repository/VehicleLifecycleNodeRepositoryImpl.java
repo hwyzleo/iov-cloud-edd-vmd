@@ -12,6 +12,7 @@ import net.hwyz.iov.cloud.framework.common.domain.AbstractRepository;
 import net.hwyz.iov.cloud.framework.web.util.PageUtil;
 import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -46,6 +47,20 @@ public class VehicleLifecycleNodeRepositoryImpl extends AbstractRepository<Strin
     @Override
     public Optional<VehicleLifecycleNode> getById(String s) {
         return Optional.empty();
+    }
+
+    @Override
+    public VehicleLifecycleNode selectByVinAndNode(String vin, VehicleLifecycleNodeEnum node) {
+        return VehicleLifecycleNodeConverter.INSTANCE.toDomain(
+                vehLifecycleMapper.selectPoByVinAndNode(vin, node.name()));
+    }
+
+    @Override
+    public int correctReachTimeIfLater(String vin, VehicleLifecycleNodeEnum node, Instant reachTime) {
+        if (reachTime == null) {
+            return 0;
+        }
+        return vehLifecycleMapper.correctReachTimeIfLaterPo(vin, node.name(), reachTime);
     }
 
     @Override

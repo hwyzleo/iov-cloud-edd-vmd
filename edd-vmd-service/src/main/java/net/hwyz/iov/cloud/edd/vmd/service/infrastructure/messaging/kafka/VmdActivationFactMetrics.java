@@ -1,6 +1,7 @@
 package net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging.kafka;
 
 import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.Gauge;
 import io.micrometer.core.instrument.MeterRegistry;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
@@ -8,6 +9,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * 车辆首次激活事实消费指标（VMD-DSN-CR-077 §8.1，R-18 #9 Micrometer）
@@ -20,6 +22,11 @@ import java.util.concurrent.ConcurrentHashMap;
  *       （{@code DIGEST_VERIFY_MISMATCH}，事件摘要仍为权威值落库，不降级 LOCAL）</li>
  *   <li>{@code vmd_activation_fact_vin_unresolved_total{topic}}：未建档 VIN</li>
  *   <li>{@code vmd_activation_fact_digest_source_total{source}}：EVENT（事件提供，权威）/ LOCAL（本地复算）</li>
+ *   <li>{@code vmd_activation_fact_lifecycle_total{topic,result}}（CR-079）：
+ *       {@code APPLIED / DUPLICATE / CORRECTED / PENDING_VIN / FAILED}，标签仅 topic/result，
+ *       完整 VIN/eventId 不得作为标签</li>
+ *   <li>{@code vmd_activation_fact_lifecycle_pending{reason}}（CR-079）：补偿 backlog，
+ *       仅观测未建档待解析投影数量，不参与 Kafka 就绪判定（不得误报 Kafka DOWN）</li>
  * </ul>
  *
  * @author hwyz_leo
@@ -33,9 +40,12 @@ public class VmdActivationFactMetrics {
     private static final String DIGEST_MISMATCH_TOTAL = "vmd_activation_fact_digest_mismatch_total";
     private static final String VIN_UNRESOLVED_TOTAL = "vmd_activation_fact_vin_unresolved_total";
     private static final String DIGEST_SOURCE_TOTAL = "vmd_activation_fact_digest_source_total";
+    private static final String LIFECYCLE_TOTAL = "vmd_activation_fact_lifecycle_total";
+    private static final String LIFECYCLE_PENDING = "vmd_activation_fact_lifecycle_pending";
 
     private final MeterRegistry meterRegistry;
     private final Map<String, Counter> counters = new ConcurrentHashMap<>();
+    private final Map<String, AtomicLong> gauges = new ConcurrentHashMap<>();
 
     public VmdActivationFactMetrics(MeterRegistry meterRegistry) {
         this.meterRegistry = meterRegistry;
@@ -78,6 +88,39 @@ public class VmdActivationFactMetrics {
      */
     public void recordDigestSource(String source) {
         counter(DIGEST_SOURCE_TOTAL, "source", source, null, null).increment();
+    }
+
+    /**
+     * 记录生命周期写入结果（CR-079 / D079-07）
+     * <p>
+     * result ∈ {@code APPLIED / DUPLICATE / CORRECTED / PENDING_VIN / FAILED}；
+     * topic 使用激活事实原始 Topic（补偿/存量对齐同样归属该 Topic 事实），不使用 VIN/eventId 作标签。
+     *
+     * @param topic  激活事实 Topic
+     * @param result 生命周期写入结果
+     */
+    public void recordLifecycle(String topic, String result) {
+        counter(LIFECYCLE_TOTAL, "topic", topic, "result", result).increment();
+    }
+
+    /**
+     * 更新补偿 backlog（未建档待解析投影数量，CR-079 / D079-05、D079-07）
+     * <p>
+     * 仅作补偿观测，不参与 Kafka 消费就绪判定，避免把「待建档数」误报为 Kafka DOWN。
+     *
+     * @param reason 待补偿原因（vin_unresolved）
+     * @param count  当前积压数量
+     */
+    public void updateLifecyclePending(String reason, long count) {
+        String cacheKey = LIFECYCLE_PENDING + '|' + reason;
+        AtomicLong holder = gauges.computeIfAbsent(cacheKey, key -> {
+            AtomicLong value = new AtomicLong();
+            Gauge.builder(LIFECYCLE_PENDING, value, AtomicLong::get)
+                    .tag("reason", reason)
+                    .register(meterRegistry);
+            return value;
+        });
+        holder.set(count);
     }
 
     private Counter counter(String name, String tagKey, String tagValue, String secondKey, String secondValue) {

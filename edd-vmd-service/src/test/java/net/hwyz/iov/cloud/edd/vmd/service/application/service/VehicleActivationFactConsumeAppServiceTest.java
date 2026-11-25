@@ -13,6 +13,8 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.ActivationFac
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehBasicInfoRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehicleActivationFactConsumeRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.VehicleActivationNodeRepository;
+import net.hwyz.iov.cloud.edd.vmd.service.domain.service.VehicleActivationLifecycleWriter;
+import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.messaging.kafka.VmdActivationFactMetrics;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -28,6 +30,7 @@ import java.time.ZoneOffset;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -62,13 +65,17 @@ class VehicleActivationFactConsumeAppServiceTest {
     private VehicleActivationNodeRepository nodeRepository;
     @Mock
     private VehBasicInfoRepository vehBasicInfoRepository;
+    @Mock
+    private VehicleActivationLifecycleWriter lifecycleWriter;
+    @Mock
+    private VmdActivationFactMetrics activationFactMetrics;
 
     private VehicleActivationFactConsumeAppService appService;
 
     @BeforeEach
     void setUp() {
         appService = new VehicleActivationFactConsumeAppService(consumeRepository, nodeRepository,
-                vehBasicInfoRepository, new ObjectMapper());
+                vehBasicInfoRepository, lifecycleWriter, activationFactMetrics, new ObjectMapper());
     }
 
     private ActivationFactNormalized fact(String eventId, String op, String occurredAt) {
@@ -419,6 +426,9 @@ class VehicleActivationFactConsumeAppServiceTest {
                         .vin(VIN).build());
         when(nodeRepository.selectByVin(VIN)).thenReturn(null);
         when(nodeRepository.insert(any(VehicleActivationNode.class))).thenReturn(1);
+        when(lifecycleWriter.write(eq(VIN), any(LocalDateTime.class)))
+                .thenReturn(VehicleActivationLifecycleWriter.LifecycleWriteOutcome
+                        .applied(toLocal("2026-11-22T09:45:01.234Z").toInstant(ZoneOffset.UTC)));
         lenient().when(consumeRepository.insert(any(VehicleActivationFactConsume.class))).thenReturn(1);
 
         VehicleActivationConsumeResult result = appService.consume(
@@ -428,6 +438,124 @@ class VehicleActivationFactConsumeAppServiceTest {
         ArgumentCaptor<VehicleActivationNode> captor = ArgumentCaptor.forClass(VehicleActivationNode.class);
         verify(nodeRepository).insert(captor.capture());
         assertEquals(1, captor.getValue().getVinResolved());
+    }
+
+    @Test
+    @DisplayName("TC079-01：已建档合法事实 → 同事务写 VEHICLE_ACTIVE，时间取事实 occurredAt")
+    void cr079_resolvedVin_writesLifecycleWithOccurredAt() {
+        when(consumeRepository.selectByEventId(EVENT_ID)).thenReturn(null);
+        when(consumeRepository.selectByBusinessKey(VIN, OP)).thenReturn(null);
+        when(vehBasicInfoRepository.selectByVin(VIN)).thenReturn(
+                net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleBasicInfo.builder()
+                        .vin(VIN).build());
+        when(nodeRepository.selectByVin(VIN)).thenReturn(null);
+        when(nodeRepository.insert(any(VehicleActivationNode.class))).thenReturn(1);
+        when(lifecycleWriter.write(eq(VIN), any(LocalDateTime.class)))
+                .thenReturn(VehicleActivationLifecycleWriter.LifecycleWriteOutcome
+                        .applied(toLocal("2026-11-22T09:45:01.234Z").toInstant(ZoneOffset.UTC)));
+        when(consumeRepository.insert(any(VehicleActivationFactConsume.class))).thenReturn(1);
+
+        appService.consume(fact(EVENT_ID, OP, "2026-11-22T09:45:01.234Z"), META);
+
+        ArgumentCaptor<LocalDateTime> reachTimeCaptor = ArgumentCaptor.forClass(LocalDateTime.class);
+        verify(lifecycleWriter).write(eq(VIN), reachTimeCaptor.capture());
+        assertEquals(toLocal("2026-11-22T09:45:01.234Z"), reachTimeCaptor.getValue(),
+                "生命周期时间必须取事实 occurredAt，不得使用 receivedAt/当前时间");
+        verify(activationFactMetrics).recordLifecycle(META.topic(), "APPLIED");
+    }
+
+    @Test
+    @DisplayName("TC079-02：同 eventId 重投 → 不写生命周期、不新增节点")
+    void cr079_duplicate_doesNotWriteLifecycle() {
+        when(consumeRepository.selectByEventId(EVENT_ID))
+                .thenReturn(audit(EVENT_ID, OP, fact(EVENT_ID, OP, "2026-11-22T09:45:01.234Z").payloadDigest()));
+
+        appService.consume(fact(EVENT_ID, OP, "2026-11-22T09:45:01.234Z"), META);
+
+        verify(lifecycleWriter, never()).write(anyString(), any(LocalDateTime.class));
+    }
+
+    @Test
+    @DisplayName("TC079-03：晚到事实 → 生命周期取已存投影的最早时间（不前移）")
+    void cr079_laterFact_usesExistingEarliestProjection() {
+        when(consumeRepository.selectByEventId("UVA-LATE")).thenReturn(null);
+        when(consumeRepository.selectByBusinessKey(VIN, "BOP-LATE")).thenReturn(null);
+        when(vehBasicInfoRepository.selectByVin(VIN)).thenReturn(
+                net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleBasicInfo.builder()
+                        .vin(VIN).build());
+        when(nodeRepository.selectByVin(VIN)).thenReturn(node("2026-11-20T01:00:00.000Z"));
+        when(lifecycleWriter.write(eq(VIN), any(LocalDateTime.class)))
+                .thenReturn(VehicleActivationLifecycleWriter.LifecycleWriteOutcome
+                        .duplicate(Instant.parse("2026-11-20T01:00:00.000Z")));
+        when(consumeRepository.insert(any(VehicleActivationFactConsume.class))).thenReturn(1);
+
+        appService.consume(fact("UVA-LATE", "BOP-LATE", "2026-11-25T01:00:00.000Z"), META);
+
+        ArgumentCaptor<LocalDateTime> reachTimeCaptor = ArgumentCaptor.forClass(LocalDateTime.class);
+        verify(lifecycleWriter).write(eq(VIN), reachTimeCaptor.capture());
+        assertEquals(toLocal("2026-11-20T01:00:00.000Z"), reachTimeCaptor.getValue());
+        verify(activationFactMetrics).recordLifecycle(META.topic(), "DUPLICATE");
+    }
+
+    @Test
+    @DisplayName("TC079-03：更早事实 → 生命周期纠正证据 LIFECYCLE_CORRECTED")
+    void cr079_earlierFact_recordsCorrectionEvidence() {
+        when(consumeRepository.selectByEventId("UVA-EARLY")).thenReturn(null);
+        when(consumeRepository.selectByBusinessKey(VIN, "BOP-EARLY")).thenReturn(null);
+        when(vehBasicInfoRepository.selectByVin(VIN)).thenReturn(
+                net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleBasicInfo.builder()
+                        .vin(VIN).build());
+        when(nodeRepository.selectByVin(VIN)).thenReturn(node("2026-11-22T09:45:01.234Z"));
+        when(nodeRepository.correctIfEarlier(any(VehicleActivationNode.class))).thenReturn(1);
+        when(lifecycleWriter.write(eq(VIN), any(LocalDateTime.class)))
+                .thenReturn(VehicleActivationLifecycleWriter.LifecycleWriteOutcome.corrected(
+                        Instant.parse("2026-11-22T09:45:01.234Z"),
+                        Instant.parse("2026-11-20T01:00:00.000Z")));
+        when(consumeRepository.insert(any(VehicleActivationFactConsume.class))).thenReturn(1);
+
+        appService.consume(fact("UVA-EARLY", "BOP-EARLY", "2026-11-20T01:00:00.000Z"), META);
+
+        ArgumentCaptor<VehicleActivationFactConsume> auditCaptor =
+                ArgumentCaptor.forClass(VehicleActivationFactConsume.class);
+        verify(consumeRepository).insert(auditCaptor.capture());
+        String description = auditCaptor.getValue().getDescription();
+        assertTrue(description.contains("LIFECYCLE_CORRECTED"), "应留下生命周期纠正证据");
+        assertTrue(description.contains("event=UVA-EARLY"));
+        verify(activationFactMetrics).recordLifecycle(META.topic(), "CORRECTED");
+    }
+
+    @Test
+    @DisplayName("TC079-07：未建档 VIN → 不写生命周期，只记 PENDING_VIN")
+    void cr079_unresolvedVin_skipsLifecycle() {
+        when(consumeRepository.selectByEventId(EVENT_ID)).thenReturn(null);
+        when(consumeRepository.selectByBusinessKey(VIN, OP)).thenReturn(null);
+        when(vehBasicInfoRepository.selectByVin(VIN)).thenReturn(null);
+        when(nodeRepository.selectByVin(VIN)).thenReturn(null);
+        when(nodeRepository.insert(any(VehicleActivationNode.class))).thenReturn(1);
+        when(consumeRepository.insert(any(VehicleActivationFactConsume.class))).thenReturn(1);
+
+        appService.consume(fact(EVENT_ID, OP, "2026-11-22T09:45:01.234Z"), META);
+
+        verify(lifecycleWriter, never()).write(anyString(), any(LocalDateTime.class));
+        verify(activationFactMetrics).recordLifecycle(META.topic(), "PENDING_VIN");
+    }
+
+    @Test
+    @DisplayName("TC079-05：生命周期写入异常 → 异常抛出（事务回滚）+ FAILED 指标")
+    void cr079_lifecycleFailure_propagatesAndMarksFailed() {
+        when(consumeRepository.selectByEventId(EVENT_ID)).thenReturn(null);
+        when(consumeRepository.selectByBusinessKey(VIN, OP)).thenReturn(null);
+        when(vehBasicInfoRepository.selectByVin(VIN)).thenReturn(
+                net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleBasicInfo.builder()
+                        .vin(VIN).build());
+        when(nodeRepository.selectByVin(VIN)).thenReturn(null);
+        when(nodeRepository.insert(any(VehicleActivationNode.class))).thenReturn(1);
+        when(lifecycleWriter.write(eq(VIN), any(LocalDateTime.class)))
+                .thenThrow(new org.springframework.dao.DataAccessResourceFailureException("db down"));
+
+        assertThrows(org.springframework.dao.DataAccessResourceFailureException.class,
+                () -> appService.consume(fact(EVENT_ID, OP, "2026-11-22T09:45:01.234Z"), META));
+        verify(activationFactMetrics).recordLifecycle(META.topic(), "FAILED");
     }
 
 }
