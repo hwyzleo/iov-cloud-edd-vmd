@@ -4,6 +4,7 @@ import net.hwyz.iov.cloud.edd.mdm.api.vo.response.VehicleNodeResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.VehicleNodeProjectionCommand;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmVehicleNodeEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.VehicleNodeProjectionException;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartCategoryAutoConvergenceService;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleNode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmVehicleNodeRepository;
@@ -30,12 +31,14 @@ import static org.mockito.Mockito.*;
 class MdmVehicleNodeProjectionMapperTest {
 
     private MdmVehicleNodeRepository mdmVehicleNodeRepository;
+    private PartCategoryAutoConvergenceService partCategoryAutoConvergenceService;
     private MdmVehicleNodeProjectionMapper mapper;
 
     @BeforeEach
     void setUp() {
         mdmVehicleNodeRepository = mock(MdmVehicleNodeRepository.class);
-        mapper = new MdmVehicleNodeProjectionMapper(mdmVehicleNodeRepository);
+        partCategoryAutoConvergenceService = mock(PartCategoryAutoConvergenceService.class);
+        mapper = new MdmVehicleNodeProjectionMapper(mdmVehicleNodeRepository, partCategoryAutoConvergenceService);
     }
 
     private MdmVehicleNodeEvent event(String code, String entityId, long version, String deviceCategory,
@@ -162,5 +165,104 @@ class MdmVehicleNodeProjectionMapperTest {
 
         verify(mdmVehicleNodeRepository, never()).insert(any());
         verify(mdmVehicleNodeRepository, never()).updateById(any());
+    }
+
+    @Test
+    @DisplayName("CR-078 TC-VMD-78-04：类别变更应触发零件派生类别自动收敛")
+    void apply_shouldTriggerConvergenceWhenCategoryChanged() {
+        VehicleNodeProjectionCommand command = VehicleNodeProjectionCommand.builder()
+                .code("DCU_COCKPIT_SA8295P").name("座舱域控")
+                .deviceCategory("IVI").hsmCapability("HSM_FULL")
+                .externalRefId("mdm-vn-dcu").externalVersion(3L)
+                .build();
+        VehicleNode local = VehicleNode.builder()
+                .id(2L).code("DCU_COCKPIT_SA8295P").name("座舱域控")
+                .deviceCategory("DCU").externalVersion(2L).source(SourceType.MDM)
+                .build();
+        when(mdmVehicleNodeRepository.selectByCode("DCU_COCKPIT_SA8295P")).thenReturn(local);
+        when(mdmVehicleNodeRepository.updateById(any())).thenReturn(1);
+
+        mapper.apply(command);
+
+        verify(partCategoryAutoConvergenceService)
+                .onNodeCategoryChanged("DCU_COCKPIT_SA8295P", "DCU", "IVI");
+    }
+
+    @Test
+    @DisplayName("CR-078 TC-VMD-78-04：类别未变（忽略大小写/空白）不触发收敛")
+    void apply_shouldNotTriggerConvergenceWhenCategoryUnchanged() {
+        VehicleNodeProjectionCommand command = VehicleNodeProjectionCommand.builder()
+                .code("TBOX_5G").name("车联终端")
+                .deviceCategory(" tbox ").hsmCapability("HSM_FULL")
+                .externalRefId("mdm-vn-tbox").externalVersion(8L)
+                .build();
+        VehicleNode local = VehicleNode.builder()
+                .id(1L).code("TBOX_5G").name("车联终端")
+                .deviceCategory("TBOX").externalVersion(7L).source(SourceType.MDM)
+                .build();
+        when(mdmVehicleNodeRepository.selectByCode("TBOX_5G")).thenReturn(local);
+        when(mdmVehicleNodeRepository.updateById(any())).thenReturn(1);
+
+        mapper.apply(command);
+
+        verify(partCategoryAutoConvergenceService, never()).onNodeCategoryChanged(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("CR-078 TC-VMD-78-07：类别置空不触发收敛（无有效期望值）")
+    void apply_shouldNotTriggerConvergenceWhenCategoryCleared() {
+        VehicleNodeProjectionCommand command = VehicleNodeProjectionCommand.builder()
+                .code("DCU_COCKPIT_SA8295P").name("座舱域控")
+                .deviceCategory(null).hsmCapability("HSM_FULL")
+                .externalRefId("mdm-vn-dcu").externalVersion(4L)
+                .build();
+        VehicleNode local = VehicleNode.builder()
+                .id(2L).code("DCU_COCKPIT_SA8295P").name("座舱域控")
+                .deviceCategory("IVI").externalVersion(3L).source(SourceType.MDM)
+                .build();
+        when(mdmVehicleNodeRepository.selectByCode("DCU_COCKPIT_SA8295P")).thenReturn(local);
+        when(mdmVehicleNodeRepository.updateById(any())).thenReturn(1);
+
+        mapper.apply(command);
+
+        verify(partCategoryAutoConvergenceService, never()).onNodeCategoryChanged(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("CR-078：节点首次投影落地也应兜底收敛（零件实例可能早于投影）")
+    void apply_shouldTriggerConvergenceOnInsert() {
+        VehicleNodeProjectionCommand command = VehicleNodeProjectionCommand.builder()
+                .code("DCU_COCKPIT_NEW").name("座舱域控")
+                .deviceCategory("IVI").hsmCapability("HSM_FULL")
+                .externalRefId("mdm-vn-new").externalVersion(1L)
+                .build();
+        when(mdmVehicleNodeRepository.selectByCode("DCU_COCKPIT_NEW")).thenReturn(null);
+        when(mdmVehicleNodeRepository.insert(any())).thenReturn(1);
+
+        mapper.apply(command);
+
+        verify(partCategoryAutoConvergenceService)
+                .onNodeCategoryChanged("DCU_COCKPIT_NEW", null, "IVI");
+    }
+
+    @Test
+    @DisplayName("CR-078 TC-VMD-78-06：收敛异常不得向上抛出（节点投影已成功）")
+    void apply_shouldNotFailWhenConvergenceThrows() {
+        VehicleNodeProjectionCommand command = VehicleNodeProjectionCommand.builder()
+                .code("DCU_COCKPIT_SA8295P").name("座舱域控")
+                .deviceCategory("IVI").hsmCapability("HSM_FULL")
+                .externalRefId("mdm-vn-dcu").externalVersion(3L)
+                .build();
+        VehicleNode local = VehicleNode.builder()
+                .id(2L).code("DCU_COCKPIT_SA8295P").name("座舱域控")
+                .deviceCategory("DCU").externalVersion(2L).source(SourceType.MDM)
+                .build();
+        when(mdmVehicleNodeRepository.selectByCode("DCU_COCKPIT_SA8295P")).thenReturn(local);
+        when(mdmVehicleNodeRepository.updateById(any())).thenReturn(1);
+        doThrow(new IllegalStateException("db down")).when(partCategoryAutoConvergenceService)
+                .onNodeCategoryChanged(any(), any(), any());
+
+        assertDoesNotThrow(() -> mapper.apply(command));
+        verify(mdmVehicleNodeRepository).updateById(local);
     }
 }

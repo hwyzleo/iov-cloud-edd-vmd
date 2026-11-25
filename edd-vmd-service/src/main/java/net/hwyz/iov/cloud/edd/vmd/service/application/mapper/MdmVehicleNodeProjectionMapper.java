@@ -6,6 +6,7 @@ import net.hwyz.iov.cloud.edd.mdm.api.vo.response.VehicleNodeResponse;
 import net.hwyz.iov.cloud.edd.vmd.service.application.dto.cmd.VehicleNodeProjectionCommand;
 import net.hwyz.iov.cloud.edd.vmd.service.application.event.event.MdmVehicleNodeEvent;
 import net.hwyz.iov.cloud.edd.vmd.service.common.exception.VehicleNodeProjectionException;
+import net.hwyz.iov.cloud.edd.vmd.service.application.service.PartCategoryAutoConvergenceService;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.entity.VehicleNode;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.model.valueobject.SourceType;
 import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.MdmVehicleNodeRepository;
@@ -33,6 +34,11 @@ import java.util.Date;
 public class MdmVehicleNodeProjectionMapper {
 
     private final MdmVehicleNodeRepository mdmVehicleNodeRepository;
+
+    /**
+     * CR-078（D-VMD-78-03）：节点设备类别变更后触发零件派生类别自动收敛（best-effort）
+     */
+    private final PartCategoryAutoConvergenceService partCategoryAutoConvergenceService;
 
     /**
      * MDM 快照转投影命令
@@ -138,6 +144,8 @@ public class MdmVehicleNodeProjectionMapper {
             mdmVehicleNodeRepository.insert(vehicleNode);
             log.info("VehicleNode 投影新增: code={}, hsmCapability={}, deviceCategory={}, version={}",
                     command.getCode(), command.getHsmCapability(), command.getDeviceCategory(), command.getExternalVersion());
+            // CR-078：节点首次投影落地后，可能存在早于投影建立的零件实例，按节点类别兜底收敛
+            triggerConvergenceQuietly(command.getCode(), null, command.getDeviceCategory());
         } else {
             // 本地 externalVersion 可能为 NULL（历史遗留投影数据），视为无版本信息：
             // 直接接受事件覆盖并回填版本，避免版本门禁对 null 做拆箱引发 NPE（CR-049 修复）
@@ -147,6 +155,7 @@ public class MdmVehicleNodeProjectionMapper {
                         command.getCode(), command.getExternalVersion(), localVersion);
                 return;
             }
+            String previousCategory = local.getDeviceCategory();
             local.setName(command.getName());
             local.setNameLocal(command.getNameLocal());
             local.setDeviceCategory(command.getDeviceCategory());
@@ -162,7 +171,44 @@ public class MdmVehicleNodeProjectionMapper {
             mdmVehicleNodeRepository.updateById(local);
             log.info("VehicleNode 投影更新: code={}, hsmCapability={}, deviceCategory={}, version={}",
                     command.getCode(), command.getHsmCapability(), command.getDeviceCategory(), command.getExternalVersion());
+            // CR-078（D-VMD-78-03）：仅当节点类别实际变化且新值非空时触发零件派生类别收敛
+            if (isCategoryChanged(previousCategory, command.getDeviceCategory())) {
+                triggerConvergenceQuietly(command.getCode(), previousCategory, command.getDeviceCategory());
+            }
         }
+    }
+
+    /**
+     * 触发零件派生类别收敛（D-VMD-78-04：任何异常不得影响节点投影与消费位点）
+     *
+     * @param nodeCode         节点码
+     * @param previousCategory 变更前类别
+     * @param currentCategory  变更后类别
+     */
+    private void triggerConvergenceQuietly(String nodeCode, String previousCategory, String currentCategory) {
+        try {
+            partCategoryAutoConvergenceService.onNodeCategoryChanged(nodeCode, previousCategory, currentCategory);
+        } catch (Exception e) {
+            log.warn("节点[{}]类别变更触发零件派生类别收敛异常（已隔离，不影响节点投影）: {}",
+                    nodeCode, e.getMessage(), e);
+        }
+    }
+
+    /**
+     * 判定节点设备类别是否发生变化（trim + 忽略大小写；新值为空视为无有效期望，不触发收敛）
+     *
+     * @param previousCategory 变更前类别
+     * @param currentCategory  变更后类别
+     * @return 是否变化
+     */
+    private boolean isCategoryChanged(String previousCategory, String currentCategory) {
+        if (isBlank(currentCategory)) {
+            return false;
+        }
+        if (isBlank(previousCategory)) {
+            return true;
+        }
+        return !previousCategory.trim().equalsIgnoreCase(currentCategory.trim());
     }
 
     private boolean isBlank(String value) {

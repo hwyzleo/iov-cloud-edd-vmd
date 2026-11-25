@@ -12,6 +12,7 @@ import net.hwyz.iov.cloud.edd.vmd.service.domain.repository.PartInfoRepository;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.mapper.PartCategoryConsistencyMapper;
 import net.hwyz.iov.cloud.edd.vmd.service.infrastructure.persistence.po.PartCategoryInconsistencyPo;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.nio.charset.StandardCharsets;
@@ -46,6 +47,15 @@ public class PartCategoryConsistencyAppService {
     /** 单次巡检返回上限 */
     private static final int MAX_PREVIEW_LIMIT = 500;
 
+    /** 修复触发来源：人工受控修复（MPT） */
+    public static final String TRIGGER_MANUAL = "MANUAL";
+
+    /** 修复触发来源：MDM 节点类别变更自动收敛 */
+    public static final String TRIGGER_NODE_CHANGED = "NODE_CHANGED";
+
+    /** 修复触发来源：定时巡检自动收敛 */
+    public static final String TRIGGER_SCHEDULED = "SCHEDULED";
+
     private final PartCategoryConsistencyMapper consistencyMapper;
     private final PartInfoRepository partInfoRepository;
     private final MdmVehicleNodeRepository mdmVehicleNodeRepository;
@@ -70,15 +80,30 @@ public class PartCategoryConsistencyAppService {
      * 受控修复（事务内逐项处理，逐项返回结果，不静默成功）
      * <p>
      * 两种用法：显式 items；或只给 vehicleNodeCode（节点类别变更后批量重算该节点下全部不一致零件）。
+     * 默认按人工受控修复（{@link #TRIGGER_MANUAL}）记录审计。
      * </p>
      *
-     * @param command    修复命令
-     * @param operatorId 操作人ID（服务端注入）
+     * @param command      修复命令
+     * @param operatorId   操作人ID（服务端注入）
      * @param operatorName 操作人名称
      * @return 修复结果
      */
-    @Transactional(rollbackFor = Exception.class)
     public RepairResult repair(RepairCommand command, String operatorId, String operatorName) {
+        return repair(command, operatorId, operatorName, TRIGGER_MANUAL);
+    }
+
+    /**
+     * 受控修复（按触发来源记录审计，CR-078 / D-VMD-78-06）
+     *
+     * @param command      修复命令
+     * @param operatorId   操作人ID
+     * @param operatorName 操作人名称
+     * @param trigger      触发来源：MANUAL / NODE_CHANGED / SCHEDULED
+     * @return 修复结果
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public RepairResult repair(RepairCommand command, String operatorId, String operatorName, String trigger) {
+        String effectiveTrigger = isBlank(trigger) ? TRIGGER_MANUAL : trigger.trim();
         List<RepairItemCmd> items = resolveItems(command);
         String operationId = command.getOperationId() == null || command.getOperationId().isBlank()
                 ? "CAT-CONSISTENCY-" + java.time.Instant.now().toEpochMilli()
@@ -92,7 +117,7 @@ public class PartCategoryConsistencyAppService {
         for (RepairItemCmd item : items) {
             seq++;
             RepairItemResult result = repairOne(item, operatorId, operatorName, operationId, seq,
-                    command.getReason(), command.getTicketNo());
+                    command.getReason(), command.getTicketNo(), effectiveTrigger);
             results.add(result);
             switch (result.getResult()) {
                 case "APPLIED" -> applied++;
@@ -101,8 +126,8 @@ public class PartCategoryConsistencyAppService {
                 default -> failed++;
             }
         }
-        log.info("零件类别一致性修复: operationId={}, total={}, applied={}, skipped={}, conflict={}, failed={}",
-                operationId, items.size(), applied, skipped, conflict, failed);
+        log.info("零件类别一致性修复: operationId={}, trigger={}, total={}, applied={}, skipped={}, conflict={}, failed={}",
+                operationId, effectiveTrigger, items.size(), applied, skipped, conflict, failed);
         return new RepairResult(items.size(), applied, skipped, conflict, failed, results);
     }
 
@@ -121,7 +146,46 @@ public class PartCategoryConsistencyAppService {
         RepairCommand command = new RepairCommand();
         command.setVehicleNodeCode(vehicleNodeCode);
         command.setReason(reason);
-        return repair(command, operatorId, operatorName);
+        return repair(command, operatorId, operatorName, TRIGGER_NODE_CHANGED);
+    }
+
+    /**
+     * 按节点收敛派生类别（独立事务，供自动路径使用，CR-078 / D-VMD-78-04）
+     * <p>
+     * 以 {@code REQUIRES_NEW} 开启独立事务：自动路径的失败不得把外层（MDM 节点投影/定时巡检）
+     * 事务标记为回滚，也不影响 Kafka 消费位点。
+     * </p>
+     *
+     * @param vehicleNodeCode 车载节点代码
+     * @param trigger         触发来源（NODE_CHANGED / SCHEDULED）
+     * @return 修复结果
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW, rollbackFor = Exception.class)
+    public RepairResult convergeByVehicleNodeCode(String vehicleNodeCode, String trigger) {
+        RepairCommand command = new RepairCommand();
+        command.setVehicleNodeCode(vehicleNodeCode);
+        command.setReason("派生类别自动收敛（trigger=" + trigger + "）");
+        command.setTicketNo("AUTO-CATEGORY-CONSISTENCY");
+        return repair(command, "SYSTEM", "SYSTEM", trigger);
+    }
+
+    /**
+     * 只读：统计派生类别与 MDM 节点类别不一致条数（CR-078 指标）
+     *
+     * @return 不一致条数
+     */
+    public long countInconsistent() {
+        return consistencyMapper.countInconsistent();
+    }
+
+    /**
+     * 只读：列出存在不一致的车载节点代码（CR-078 定时收敛分组键）
+     *
+     * @return 节点代码列表
+     */
+    public List<String> listInconsistentVehicleNodeCodes() {
+        List<String> nodeCodes = consistencyMapper.selectInconsistentVehicleNodeCodes();
+        return nodeCodes == null ? List.of() : nodeCodes;
     }
 
     /**
@@ -165,7 +229,8 @@ public class PartCategoryConsistencyAppService {
      * @return 单项结果
      */
     private RepairItemResult repairOne(RepairItemCmd item, String operatorId, String operatorName,
-                                       String operationId, int seq, String reason, String ticketNo) {
+                                       String operationId, int seq, String reason, String ticketNo,
+                                       String trigger) {
         if (isBlank(item.getPartCode()) || isBlank(item.getSn())) {
             return RepairItemResult.failed(item, "partCode/sn 不能为空");
         }
@@ -207,26 +272,31 @@ public class PartCategoryConsistencyAppService {
         }
         int newRowVersion = part.getRowVersion() + 1;
         partInfoChangeLogRepository.insert(buildChangeLog(part, current, expected, operator, operatorName,
-                operationId, seq, newRowVersion, reason, ticketNo));
-        log.info("零件类别已按 MDM 节点收敛: partCode={}, sn={}, {} -> {}, version={}",
-                part.getPartCode(), part.getSn(), current, expected, newRowVersion);
+                operationId, seq, newRowVersion, reason, ticketNo, trigger));
+        log.info("零件类别已按 MDM 节点收敛: partCode={}, sn={}, {} -> {}, version={}, trigger={}",
+                part.getPartCode(), part.getSn(), current, expected, newRowVersion, trigger);
         return RepairItemResult.applied(item, current, expected, newRowVersion);
     }
 
     /**
      * 构造属性变更历史（同事务）
+     * <p>
+     * CR-078 / D-VMD-78-06：人工修复保持 MANUAL/MPT；自动触发（节点变更、定时）
+     * 统一为 SYSTEM/SYSTEM，并在 metadata 中标明 trigger 与 nodeCode。
+     * </p>
      */
     private PartInfoChangeLog buildChangeLog(PartInfo part, String current, String expected, String operatorId,
                                              String operatorName, String operationId, int seq, int newRowVersion,
-                                             String reason, String ticketNo) {
+                                             String reason, String ticketNo, String trigger) {
+        boolean auto = trigger != null && !TRIGGER_MANUAL.equals(trigger);
         return PartInfoChangeLog.builder()
                 .partId(part.getId())
                 .changeType("ATTRIBUTE_UPDATE")
                 .beforeJson("{\"deviceCategory\":" + jsonString(current) + "}")
                 .afterJson("{\"deviceCategory\":" + jsonString(expected) + "}")
                 .changedFields("[\"deviceCategory\"]")
-                .source("MANUAL")
-                .operationSource("MPT")
+                .source(auto ? "SYSTEM" : "MANUAL")
+                .operationSource(auto ? "SYSTEM" : "MPT")
                 .operatorId(operatorId)
                 .operatorName(operatorName)
                 .changeTime(LocalDateTime.now(ZoneOffset.UTC))
@@ -234,7 +304,9 @@ public class PartCategoryConsistencyAppService {
                 .mutationKey(sha256(operationId + ":" + part.getId() + ":CATEGORY_CONSISTENCY:" + seq))
                 .rowVersion(newRowVersion)
                 .metadataJson("{\"reason\":" + jsonString(reason) + ",\"ticketNo\":" + jsonString(ticketNo)
-                        + ",\"expectedCategory\":" + jsonString(expected) + "}")
+                        + ",\"expectedCategory\":" + jsonString(expected)
+                        + ",\"trigger\":" + jsonString(trigger)
+                        + ",\"nodeCode\":" + jsonString(part.getVehicleNodeCode()) + "}")
                 .build();
     }
 

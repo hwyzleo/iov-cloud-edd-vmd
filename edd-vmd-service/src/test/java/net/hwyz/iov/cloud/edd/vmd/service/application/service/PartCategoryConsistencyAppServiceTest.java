@@ -255,4 +255,82 @@ class PartCategoryConsistencyAppServiceTest {
 
         assertThrows(IllegalArgumentException.class, () -> appService.repair(command, "1", "admin"));
     }
+
+    @Test
+    @DisplayName("CR-078 TC-VMD-78-04：自动触发（NODE_CHANGED）审计为 SYSTEM 并记录 trigger/nodeCode")
+    void repair_shouldMarkAuditAsSystemWhenTriggeredAutomatically() {
+        when(partInfoRepository.selectByPartCodeAndSn("00000004AA", "00000005AA00000001"))
+                .thenReturn(part("DCU", 13));
+        when(mdmVehicleNodeRepository.selectByCode("DCU_COCKPIT_SA8295P")).thenReturn(node("IVI"));
+        when(partInfoRepository.patchByExpectedVersion(any(PartInfo.class), eq(13), anyList())).thenReturn(1);
+
+        PartCategoryConsistencyAppService.RepairResult result = appService.repair(command(), "SYSTEM", "SYSTEM",
+                PartCategoryConsistencyAppService.TRIGGER_NODE_CHANGED);
+
+        assertEquals(1, result.getApplied());
+        ArgumentCaptor<PartInfoChangeLog> logCaptor = ArgumentCaptor.forClass(PartInfoChangeLog.class);
+        verify(partInfoChangeLogRepository).insert(logCaptor.capture());
+        PartInfoChangeLog changeLog = logCaptor.getValue();
+        assertEquals("SYSTEM", changeLog.getSource());
+        assertEquals("SYSTEM", changeLog.getOperationSource());
+        assertEquals("SYSTEM", changeLog.getOperatorId());
+        assertTrue(changeLog.getMetadataJson().contains("NODE_CHANGED"));
+        assertTrue(changeLog.getMetadataJson().contains("DCU_COCKPIT_SA8295P"));
+    }
+
+    @Test
+    @DisplayName("CR-078：人工触发审计仍为 MANUAL/MPT")
+    void repair_shouldKeepManualAuditForManualTrigger() {
+        when(partInfoRepository.selectByPartCodeAndSn("00000004AA", "00000005AA00000001"))
+                .thenReturn(part("DCU", 13));
+        when(mdmVehicleNodeRepository.selectByCode("DCU_COCKPIT_SA8295P")).thenReturn(node("IVI"));
+        when(partInfoRepository.patchByExpectedVersion(any(PartInfo.class), eq(13), anyList())).thenReturn(1);
+
+        appService.repair(command(), "1", "admin");
+
+        ArgumentCaptor<PartInfoChangeLog> logCaptor = ArgumentCaptor.forClass(PartInfoChangeLog.class);
+        verify(partInfoChangeLogRepository).insert(logCaptor.capture());
+        assertEquals("MANUAL", logCaptor.getValue().getSource());
+        assertEquals("MPT", logCaptor.getValue().getOperationSource());
+        assertTrue(logCaptor.getValue().getMetadataJson().contains("MANUAL"));
+    }
+
+    @Test
+    @DisplayName("CR-078 TC-VMD-78-08：按节点收敛入口走 NODE_CHANGED 触发来源并写 SYSTEM 审计")
+    void recomputeByVehicleNodeCode_shouldUseNodeChangedTrigger() {
+        PartCategoryInconsistencyPo po = po();
+        when(consistencyMapper.selectInconsistentByVehicleNodeCode("DCU_COCKPIT_SA8295P"))
+                .thenReturn(List.of(po));
+        when(partInfoRepository.selectByPartCodeAndSn("00000004AA", "00000005AA00000001"))
+                .thenReturn(part("DCU", 13));
+        when(mdmVehicleNodeRepository.selectByCode("DCU_COCKPIT_SA8295P")).thenReturn(node("IVI"));
+        when(partInfoRepository.patchByExpectedVersion(any(PartInfo.class), eq(13), anyList())).thenReturn(1);
+
+        PartCategoryConsistencyAppService.RepairResult result = appService.recomputeByVehicleNodeCode(
+                "DCU_COCKPIT_SA8295P", "SYSTEM", "SYSTEM", "MDM 节点类别变更");
+
+        assertEquals(1, result.getApplied());
+        ArgumentCaptor<PartInfoChangeLog> logCaptor = ArgumentCaptor.forClass(PartInfoChangeLog.class);
+        verify(partInfoChangeLogRepository).insert(logCaptor.capture());
+        assertEquals("SYSTEM", logCaptor.getValue().getSource());
+        assertTrue(logCaptor.getValue().getMetadataJson().contains("NODE_CHANGED"));
+    }
+
+    @Test
+    @DisplayName("CR-078：count/list 只读入口透传统计与节点分组")
+    void countAndListInconsistent_shouldDelegateToMapper() {
+        when(consistencyMapper.countInconsistent()).thenReturn(3L);
+        when(consistencyMapper.selectInconsistentVehicleNodeCodes()).thenReturn(List.of("NODE_A"));
+
+        assertEquals(3L, appService.countInconsistent());
+        assertEquals(List.of("NODE_A"), appService.listInconsistentVehicleNodeCodes());
+    }
+
+    @Test
+    @DisplayName("CR-078：list 返回 null 时降级为空列表，不抛 NPE")
+    void listInconsistentVehicleNodeCodes_shouldHandleNull() {
+        when(consistencyMapper.selectInconsistentVehicleNodeCodes()).thenReturn(null);
+
+        assertTrue(appService.listInconsistentVehicleNodeCodes().isEmpty());
+    }
 }

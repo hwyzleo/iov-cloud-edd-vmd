@@ -56,4 +56,14 @@ public interface PartCategoryConsistencyMapper {
             + "AND p.vehicle_node_code = #{vehicleNodeCode} ORDER BY p.id")
     List<PartCategoryInconsistencyPo> selectInconsistentByVehicleNodeCode(
             @Param("vehicleNodeCode") String vehicleNodeCode);
+
+    /**
+     * 查询存在不一致的车载节点代码（CR-078：定时巡检按节点批量收敛的分组键）
+     *
+     * @return 节点代码列表（升序、去重、非空）
+     */
+    @Select("SELECT DISTINCT p.vehicle_node_code" + INCONSISTENT_WHERE
+            + "AND p.vehicle_node_code IS NOT NULL AND p.vehicle_node_code <> '' "
+            + "ORDER BY p.vehicle_node_code")
+    List<String> selectInconsistentVehicleNodeCodes();
 }
